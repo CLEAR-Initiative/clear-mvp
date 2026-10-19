@@ -135,6 +135,137 @@ export interface GqlEvent {
   alerts: Array<{ id: string; status: string }>;
 }
 
+/* ─── Tasks, proposed signals and computed ImpactPriors (clear-api ADR-0010) ─── */
+
+export type GqlTaskStatus = "PENDING" | "LEASED" | "COMPLETED" | "FAILED" | "CANCELLED";
+
+/** One unit of Worker-performed work about an Event (first kind: `event.impact_prior`). */
+export interface GqlTask {
+  id: string;
+  /** `event.impact_prior.web` (the web Worker's "Web search"), … — a Worker
+   * claims by exact kind. Older kinds (`event.impact_prior`,
+   * `event.impact_prior.clear`) may remain in an Event's history. */
+  kind: string;
+  /** Shared by the Tasks one request fanned out into (one per source kind). */
+  requestId: string;
+  subjectType: string;
+  subjectId: string;
+  status: GqlTaskStatus;
+  origin: "user" | "rule" | "api";
+  requesterId: string | null;
+  requester: { id: string; name: string | null } | null;
+  /** The Worker (a service user) holding or last holding the lease — who did the work. */
+  leaseOwner: { id: string; name: string | null } | null;
+  teamId: string | null;
+  attempts: number;
+  maxAttempts: number;
+  /** Requester and platform admins only; null for everyone else. */
+  lastError: string | null;
+  cancelRequestedAt: string | null;
+  /** `produced` | `no_prior_found` | `no_new_cases` for an enrichment Task; null until completed. */
+  outcome: string | null;
+  model: string | null;
+  costUsd: number | null;
+  completedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type GqlCaseProposalState = "proposed" | "accepted" | "rejected";
+
+/** One figure a case's source gives, on one of the Domain Ontology's seven
+ * metric types (`people_affected`, `people_displaced_new`, …). */
+export interface GqlCaseFigure {
+  metric: string;
+  value: number;
+  lowerBound?: number | null;
+  upperBound?: number | null;
+  unit?: string | null;
+  populationGroup?: string | null;
+}
+
+/** One historical case a web Worker found while enriching an Event
+ * (clear-api V4): the unit a decider accepts or rejects, one by one. */
+export interface GqlCaseProposal {
+  id: string;
+  /** The Event whose enrichment request produced the case. */
+  eventId: string;
+  taskId: string;
+  state: GqlCaseProposalState;
+  sourceUrl: string;
+  /** The source's own words, verbatim. */
+  quote: string;
+  /** When the incident happened (valid time). */
+  occurredAt: string;
+  locationLabel: string;
+  locationId: string | null;
+  hazardType: string;
+  geographicScope: string;
+  figures: GqlCaseFigure[];
+  /** The CLEAR Event this case describes, when CLEAR already holds it. */
+  matchedEventId: string | null;
+  methodVersion: string;
+  decidedById: string | null;
+  decidedAt: string | null;
+  decisionRationale: string | null;
+  /** What accepting wrote into CLEAR: the Signal, and the Event it sits on
+   * (the matched one or a new historical Event). */
+  resultSignalId: string | null;
+  resultEventId: string | null;
+  createdAt: string;
+}
+
+export type GqlCaseProposalDecision = "accepted" | "rejected";
+
+/** An Inbox Review item: a proposed case with the Event whose enrichment
+ * produced it, as clear-api's `caseProposals(state: proposed)` returns it. */
+export interface GqlReviewCaseProposal extends GqlCaseProposal {
+  event: { id: string; title: string | null; types: string[] };
+}
+
+/** What has typically happened before, computed on read from CLEAR's
+ * accepted history (clear-api V4, `Event.computedImpactPriors`): one per
+ * hazard × metric × population group × unit with any history. Nothing to
+ * review. */
+export interface GqlComputedImpactPrior {
+  hazardType: string;
+  countryLocationId: string;
+  horizonYears: number;
+  metric: string;
+  populationGroup: string | null;
+  /** Lower-cased; null when the figures state none (people). */
+  unit: string | null;
+  /** The median of the historical figures. */
+  centralValue: number;
+  lowerBound: number;
+  upperBound: number;
+  /** How many historical Events it rests on. */
+  numberOfCases: number;
+  /** Below three cases: a starting point, not a basis. */
+  lowConfidence: boolean;
+  eventIds: string[];
+  estimateIds: string[];
+  methodVersion: string;
+}
+
+/* ─── Notifications ─── */
+
+export type GqlNotificationStatus = "PENDING" | "DELIVERED" | "FAILED" | "READ";
+
+/** An in-app notification row for the signed-in user (clear-api
+ * `notifications`). Task outcomes arrive as `notificationType: "task"` with
+ * `actionUrl: /event/{id}` (clear-api ADR-0010, V2). */
+export interface GqlNotification {
+  id: string;
+  message: string;
+  notificationType: string;
+  actionUrl: string | null;
+  actionText: string | null;
+  status: GqlNotificationStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
 /* ─── Comments ─── */
 
 export interface GqlCommentUser {

@@ -383,13 +383,12 @@
       "member": "عضو",
       "orgAdmin": "مدير المنظمة",
       "teamMember": "عضو فريق",
-      "fieldCoordinator": "منسق ميداني",
+      "analyst": "محلل",
       "teamAdmin": "مدير الفريق"
     },
     "users": {
       "roles": {
-        "viewer": "مشاهد",
-        "analyst": "محلل",
+        "member": "عضو",
         "admin": "مدير"
       },
       "unauthorized": "تحتاج إلى صلاحيات المدير لعرض إدارة المستخدمين.",
@@ -421,7 +420,7 @@
       "roleUpdatedDetail": "الدور الآن {role}.",
       "roleUpdateFailed": "تعذر تحديث الدور",
       "approved": "تمت الموافقة على المستخدم",
-      "approvedDetail": "أصبح لديه صلاحية المشاهد.",
+      "approvedDetail": "أصبح لديه صلاحية العضو.",
       "approveFailed": "تعذر الموافقة على المستخدم"
     },
     "features": {
@@ -877,7 +876,9 @@
       "edit": "تعديل",
       "delete": "حذف",
       "confirm": "تأكيد",
-      "retry": "إعادة المحاولة"
+      "retry": "إعادة المحاولة",
+      "copy": "نسخ",
+      "copied": "تم النسخ"
     },
     "states": {
       "loading": "جارٍ التحميل...",
@@ -1849,7 +1850,7 @@
       "confirmPrompt": "رفع هذا الحدث كتنبيه؟",
       "failed": "فشل. حاول مجدداً.",
       "turnIntoAlert": "تحويل إلى تنبيه",
-      "noPermission": "يمكن للمسؤولين والمحللين فقط رفع التنبيهات"
+      "noPermission": "يمكن للمسؤولين ومحللي الفرق فقط رفع التنبيهات"
     },
     "systemData": {
       "title": "بيانات النظام",
@@ -1891,6 +1892,55 @@
       "previous": "الحدث السابق",
       "next": "الحدث التالي",
       "position": "الحدث {current} من {total}"
+    },
+    "enrichment": {
+      "title": "الإثراء",
+      "request": "طلب إثراء",
+      "confirmPrompt": "هل تطلب من عامل معرفة ما حدث عادةً من قبل لهذا الخطر هنا؟ قد يستغرق ذلك بضع دقائق.",
+      "requested": "تم طلب الإثراء",
+      "failed": "فشل الطلب. حاول مجدداً.",
+      "noPermission": "يمكن للمسؤولين ومحللي الفرق وأعضاء الفرق فقط طلب الإثراء",
+      "capReached": "لقد وصلت إلى الحد اليومي لطلبات الإثراء",
+      "cancel": "إلغاء الطلب",
+      "cancelled": "تم إلغاء الطلب",
+      "empty": "لم يُطلب أي إثراء بعد.",
+      "kinds": {
+        "impactPrior": "سابقة الأثر"
+      },
+      "status": {
+        "PENDING": "قيد الانتظار",
+        "LEASED": "قيد التنفيذ",
+        "COMPLETED": "مكتمل",
+        "FAILED": "فشل",
+        "CANCELLED": "ملغى"
+      },
+      "outcome": {
+        "produced": "تم اقتراح سابقة",
+        "no_prior_found": "لم يُعثر على سابقة",
+        "no_new_cases": "لا حالات جديدة"
+      },
+      "requestedBy": "طلبه {name}",
+      "errorLabel": "خطأ",
+      "prior": {
+        "proposed": "مقترح",
+        "accepted": "مقبول",
+        "rejected": "مرفوض"
+      },
+      "scope": {
+        "district": "المحلية",
+        "country": "البلد"
+      },
+      "horizon": "أفق {years} سنوات",
+      "tier": {
+        "web": "الويب"
+      },
+      "method": "الطريقة {version}",
+      "source": "المصدر",
+      "loadFailed": "تعذر تحميل الإثراء.",
+      "worker": "العامل: {name}",
+      "kindStatus": "{source} · {status}",
+      "cancelFailed": "تعذر إلغاء بعض الطلبات. حاول مرة أخرى.",
+      "webSearch": "بحث على الويب"
     }
   },
   "knowledge": {
@@ -2092,6 +2142,7 @@
       "inbox": "الوارد",
       "map": "الخريطة",
       "insights": "الرؤى",
+      "metrics": "المؤشرات",
       "operations": "العمليات",
       "cash": "المساعدة النقدية",
       "knowledge": "مركز المعرفة",
@@ -2103,7 +2154,13 @@
     "feedback": "ملاحظات",
     "admin": "المدير",
     "settings": "الإعدادات",
-    "signOut": "تسجيل الخروج"
+    "signOut": "تسجيل الخروج",
+    "notifications": {
+      "title": "الإشعارات",
+      "unread": "{count, plural, one {إشعار واحد غير مقروء} other {# إشعارات غير مقروءة}}",
+      "empty": "لا جديد",
+      "loadError": "تعذّر تحميل الإشعارات"
+    }
   },
   "noAccess": {
     "title": "في انتظار الوصول",
@@ -2595,7 +2652,7 @@
         "noTeams": "لا توجد فرق في هذه المنظمة. أنشئ فريقاً قبل الدعوة.",
         "teamRoles": {
           "team_member": "عضو فريق",
-          "field_coordinator": "منسق ميداني",
+          "analyst": "محلل",
           "emergency_response_manager": "مدير الاستجابة للطوارئ",
           "team_admin": "مدير الفريق"
         },
@@ -2634,6 +2691,42 @@
         "title": "نطاق المواقع",
         "save": "حفظ المواقع",
         "none": "لم تُحدَّد مواقع"
+      },
+      "webhooks": {
+        "title": "خطافات الويب",
+        "description": "إرسال طلب HTTP POST إلى أنظمتك عند إنشاء تنبيه CLEAR لهذا الفريق.",
+        "none": "لا توجد خطافات ويب مُهيأة",
+        "toggleActive": "تفعيل أو تعطيل خطاف الويب هذا",
+        "rotate": "تدوير السر",
+        "rotateConfirm": "هل تريد تدوير سر خطاف الويب هذا؟ سيتوقف السر الحالي عن العمل فورًا.",
+        "deleteConfirm": "هل تريد حذف خطاف الويب هذا؟ لا يمكن التراجع عن هذا الإجراء.",
+        "columns": {
+          "name": "الاسم",
+          "targetUrl": "عنوان URL الهدف",
+          "filters": "عوامل التصفية",
+          "active": "نشط"
+        },
+        "filters": {
+          "all": "جميع التنبيهات",
+          "minSeverity": "الحد الأدنى للخطورة {level}"
+        },
+        "secret": {
+          "title": "سر التوقيع",
+          "note": "احفظ هذا السر الآن — لن يُعرض مرة أخرى. استخدمه للتحقق من توقيع طلبات خطاف الويب الواردة."
+        },
+        "add": {
+          "title": "إضافة خطاف ويب",
+          "nameLabel": "الاسم",
+          "targetUrlLabel": "عنوان URL الهدف",
+          "filterLabel": "تصفية حسب نوع التنبيه",
+          "filterPlaceholder": "مثل CF، FL (مفصولة بفواصل)",
+          "minSeverityLabel": "الحد الأدنى للخطورة",
+          "minSeverityPlaceholder": "الكل",
+          "submit": "إضافة خطاف الويب"
+        },
+        "loading": "جارٍ تحميل الـ webhooks…",
+        "loadError": "تعذّر تحميل الـ webhooks.",
+        "retry": "إعادة المحاولة"
       },
       "danger": {
         "title": "منطقة الخطر",
@@ -2766,12 +2859,14 @@
     "goToProfile": "الذهاب إلى الملف الشخصي"
   },
   "inbox": {
-    "title": "وارد الخط الساخن",
+    "title": "صندوق الوارد",
     "awaiting": "{count, plural, one {# بانتظار المراجعة} other {# بانتظار المراجعة}}",
     "filters": {
       "reports": "تقارير ميدانية",
       "unclassified": "غير مصنّف",
       "chatter": "دردشة",
+      "proposals": "الإشارات المقترحة",
+      "requests": "طلباتي",
       "all": "الكل"
     },
     "search": "بحث في النص ومراجع الاستقبال",
@@ -2867,7 +2962,7 @@
       "addedNoSignal": "تمت الموافقة لكن لم يُعد أي معرّف إشارة. تحقق من الإشارة في الكشف قبل الاعتماد عليها.",
       "retried": "أُعيد إلى قائمة الانتظار لمحاولة أخرى"
     },
-    "noAccess": "وارد الخط الساخن متاح للمسؤولين فقط حالياً.",
+    "noAccess": "صندوق الوارد متاح للمسؤولين ومحللي الفرق فقط.",
     "loadError": "تعذر تحميل الوارد",
     "translate": {
       "button": "ترجمة إلى {locale}",
@@ -2894,6 +2989,25 @@
       "retry": "إعادة المحاولة",
       "retrying": "جارٍ إعادة المحاولة…",
       "partial": "أُعيد إلى قائمة الانتظار: {done} من أصل {total} رسائل. {error}"
+    },
+    "kinds": {
+      "task": "طلبي",
+      "cases": "الإشارات المقترحة"
+    },
+    "event": {
+      "untitled": "حدث بلا عنوان",
+      "open": "فتح الحدث",
+      "proposedAt": "اقتُرح في {date}"
+    },
+    "requests": {
+      "requestedAt": "طُلب في {date}",
+      "awaitingReview": "مقترح، بانتظار المراجعة",
+      "cancelFailed": "تعذر إلغاء هذا الطلب. حاول مرة أخرى.",
+      "producedSeeEvent": "تم تقديم مقترح — راجع الحدث",
+      "proposalLoadFailed": "تعذر تحميل المقترح. افتح الحدث لرؤيته."
+    },
+    "cases": {
+      "preview": "{count, plural, =0 {تم البت في كل الإشارات المقترحة} one {إشارة مقترحة واحدة للمراجعة} two {إشارتان مقترحتان للمراجعة} few {# إشارات مقترحة للمراجعة} many {# إشارة مقترحة للمراجعة} other {# إشارة مقترحة للمراجعة}} · {hazard}"
     }
   },
   "analysis": {
@@ -3276,6 +3390,146 @@
         "eventTypes": "أنواع الأحداث",
         "sourceNames": "المصادر"
       }
+    }
+  },
+  "caseReview": {
+    "group": "{count, plural, one {إشارة مقترحة واحدة} two {إشارتان مقترحتان} few {# إشارات مقترحة} many {# إشارة مقترحة} other {# إشارة مقترحة}}",
+    "matchesEvent": "يطابق حدثًا في CLEAR",
+    "resultEvent": "افتح الحدث الناتج",
+    "accept": "قبول",
+    "reject": "رفض",
+    "confirmReject": "رفض الحالة",
+    "cancel": "إلغاء",
+    "rationaleLabel": "لماذا ترفض هذه الحالة؟",
+    "rationalePlaceholder": "السبب، لسجل التدقيق",
+    "rationaleRequired": "يلزم ذكر سبب للرفض",
+    "rationaleTooLong": "يجب ألا يتجاوز السبب {max} حرف",
+    "conflict": "سبقك شخص آخر إلى البت في هذه الحالة.",
+    "toast": {
+      "accepted": "تم قبول الحالة",
+      "rejected": "تم رفض الحالة"
+    },
+    "metric": {
+      "people_affected": "الأشخاص المتأثرون",
+      "people_displaced_new": "النازحون حديثًا",
+      "people_displaced_cumulative": "النازحون (تراكمي)",
+      "people_in_need": "الأشخاص المحتاجون",
+      "people_targeted": "الأشخاص المستهدفون",
+      "people_reached": "الأشخاص الذين تم الوصول إليهم",
+      "households_affected": "الأسر المتأثرة"
+    }
+  },
+  "computedPrior": {
+    "title": "من سجل CLEAR",
+    "figurePeople": "{value} شخص",
+    "figureUnit": "{value} {unit}",
+    "range": "(النطاق {low}–{high})",
+    "fromEvents": "{count, plural, one {من حدث سابق واحد} two {من حدثين سابقين} few {من # أحداث سابقة} many {من # حدثًا سابقًا} other {من # حدث سابق}}",
+    "lowConfidence": "ثقة منخفضة",
+    "pastEvent": "حدث سابق {n}",
+    "moreEvents": "+{count} أخرى"
+  },
+  "metrics": {
+    "page": {
+      "title": "المؤشرات",
+      "breadcrumb": "المؤشرات"
+    },
+    "loading": "جارٍ تحميل المؤشرات…",
+    "error": {
+      "title": "تعذّر تحميل المؤشرات"
+    },
+    "unavailable": {
+      "title": "واجهة برمجة المؤشرات لم تُنشر بعد",
+      "body": "لا توفّر واجهة CLEAR البرمجية في هذه البيئة زمن الكشف بعد. ستمتلئ الصفحة بمجرد توفّره."
+    },
+    "tiles": {
+      "counted": {
+        "label": "الأحداث المقيسة",
+        "detail": "من أصل {total, number} حدثًا في الفترة"
+      },
+      "byNextDay": {
+        "label": "رُصدت بحلول اليوم التالي"
+      },
+      "sameDay": {
+        "label": "رُصدت في اليوم نفسه"
+      },
+      "withOnset": {
+        "label": "أحداث لها تاريخ بدء"
+      },
+      "ofCounted": "{n, number} من أصل {counted, number} مقيسة",
+      "ofInRange": "{n, number} من أصل {total, number} في الفترة"
+    },
+    "histogram": {
+      "title": "الأيام من البدء حتى أول إشارة",
+      "subtitle": "الأحداث المقيسة حسب عدد الأيام بعد البدء التي تلقّى فيها CLEAR أول إشارة",
+      "series": "الأحداث",
+      "tooltip": "{count, plural, zero {لا أحداث} one {حدث واحد} two {حدثان} few {# أحداث} many {# حدثًا} other {# حدث}} · {share} من المقيسة",
+      "footnote": "من أصل {counted, plural, zero {صفر حدث مقيس} one {حدث مقيس واحد} two {حدثين مقيسين} few {# أحداث مقيسة} many {# حدثًا مقيسًا} other {# حدث مقيس}}. الأيام أيام تقويمية كاملة: اليوم نفسه = 0، اليوم التالي = 1.",
+      "buckets": {
+        "sameDay": "اليوم نفسه",
+        "nextDay": "اليوم التالي",
+        "plusDays": "+{days} ي",
+        "openEnded": "{days} ي فأكثر"
+      }
+    },
+    "weekly": {
+      "title": "الاتجاه الأسبوعي",
+      "subtitle": "نسبة الأحداث المقيسة في كل أسبوع ISO",
+      "legend": "مفتاح الرسم",
+      "series": {
+        "byNextDay": "بحلول اليوم التالي",
+        "sameDay": "اليوم نفسه"
+      },
+      "partial": "جزئي",
+      "tooltip": {
+        "week": "{week} · من {start}",
+        "n": "n = {n, plural, zero {لا أحداث مقيسة} one {حدث مقيس واحد} two {حدثان مقيسان} few {# أحداث مقيسة} many {# حدثًا مقيسًا} other {# حدث مقيس}}",
+        "partial": "أسبوع جزئي: لا يزال جاريًا"
+      }
+    },
+    "empty": {
+      "title": "لا توجد أحداث قابلة للقياس في هذه الفترة",
+      "body": "{inRange, plural, =0 {لا توجد أحداث في هذه الفترة.} one {لا يمكن قياس الحدث الوحيد في هذه الفترة؛ السبب مذكور أدناه.} other {لا يمكن قياس أيٍّ من أحداث هذه الفترة البالغ عددها #؛ الأسباب مذكورة أدناه.}}"
+    },
+    "exclusions": {
+      "title": "غير مقيسة",
+      "subtitle": "{total, number} من أصل {inRange, number} حدثًا في الفترة، حسب السبب",
+      "reasons": {
+        "NO_INGESTED_SIGNAL": {
+          "label": "لا توجد إشارة مستوعبة",
+          "description": "سجل تاريخي فقط: لم تصل أي إشارة إلى CLEAR عبر مصدر تلقائي."
+        },
+        "NO_ONSET": {
+          "label": "لا يوجد تاريخ بدء",
+          "description": "لا يوجد للحدث تاريخ بدء مسجّل يُقاس منه."
+        },
+        "DATE_ONLY_FIRST_SIGNAL": {
+          "label": "أول إشارة بلا وقت",
+          "description": "يذكر المصدر تاريخًا دون وقت من اليوم."
+        },
+        "BEFORE_ONSET": {
+          "label": "أول إشارة قبل البدء",
+          "description": "تاريخ أول إشارة سابق لتاريخ البدء: خطأ في البيانات."
+        }
+      }
+    },
+    "method": {
+      "title": "كيف يُقاس هذا",
+      "intro": "زمن الكشف هو المدة بين البدء الفعلي للحدث وتلقّي CLEAR أول إشارة عنه.",
+      "points": {
+        "counted": "لا يُقاس الحدث إلا إذا كان له تاريخ بدء، وكانت أول إشارة له تحمل وقتًا فعليًا من اليوم، وكانت تلك الإشارة في يوم البدء أو بعده.",
+        "excluded": "تُستبعد بقية أحداث الفترة لأحد أربعة أسباب: لا توجد إشارة مستوعبة، أو لا يوجد تاريخ بدء، أو أول إشارة لها تاريخ دون وقت، أو أول إشارة مؤرخة قبل البدء (خطأ في البيانات).",
+        "wholeDays": "يُسجَّل البدء باليوم، لذا يُحسب زمن الكشف بأيام كاملة: اليوم نفسه = 0، اليوم التالي = 1.",
+        "definition": "التعريف الكامل في ADR-0011 الخاص بـ clear-api، «Time to detection»."
+      }
+    },
+    "range": "من {from} إلى {to}",
+    "filters": {
+      "from": "من",
+      "to": "إلى",
+      "country": "البلد",
+      "allCountries": "كل البلدان",
+      "hint": "الأيام بالتوقيت العالمي المنسق (UTC). اترك التاريخين فارغين لعرض آخر 12 أسبوعًا."
     }
   }
 }

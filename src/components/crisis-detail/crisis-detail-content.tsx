@@ -829,7 +829,10 @@ export function CrisisDetailContent({
                     <Box pr={8} py={8} style={{ flexShrink: 0 }}>
                       <AddEventsToCrisisButton
                         crisisId={crisis.id}
-                        canAdd={canWriteCrisisEvents(meQuery.data?.user?.role)}
+                        canAdd={canWriteCrisisEvents(
+                          meQuery.data?.user?.role,
+                          meQuery.data?.user?.teamMemberships,
+                        )}
                       />
                     </Box>
                   )}

@@ -78,6 +78,70 @@ An **Event** (or set of Events) raised into the attention lifecycle
 (`draft` | `published` | `archived`) — what analysts act on first.
 _Avoid_: using Alert for any raw Signal; "notification" (product push/tagging is separate).
 
+**Time to detection** (TTD): defined by clear-api (its `CONTEXT.md` "Time to detection" entry and ADR-0011), shown read-only on the admin `/metrics` page, never recomputed here.
+
+### Review
+
+**Inbox**:
+The one queue of **Review items** a reader may act on (`/inbox`): hotline threads for
+platform admins (`hotline_inbox`), **Proposed signals** for deciders — admins and
+analysts (`impact_prior_review`, a flag key kept from before the rename). One access rule
+(`src/lib/inbox-access.ts`) gates the page and its nav entry; clear-api's guards are the
+enforcement.
+_Avoid_: "hotline inbox" for the whole page — that is one kind of Review item.
+
+**Review item**:
+One thing in the **Inbox** waiting for a person's decision: a hotline thread (Add to
+CLEAR / Archive / Reject) or a **Proposed signal** (accept, or reject with a rationale). A
+Proposed signal is also decidable from its **Event** page — two doors, one decision. The
+Inbox groups an Event's Proposed signals into one entry and counts decisions waiting: one
+per thread or undecided Proposed signal. In product copy the filter and an Event's group
+read "Proposed signals"; a web request reads "Web search".
+_Avoid_: a whole ImpactPrior as a Review item — nothing proposes one any more (the
+**ImpactPrior** is computed).
+
+**Proposed signal** (clear-api `CaseProposal`; "Web case" in older notes):
+One historical case the web Worker found while enriching an **Event**: when and where, the
+source's words and link, the figures it gives (on the ontology's seven metric types), and
+the CLEAR Event it matches when CLEAR already holds one. The unit a decider accepts or
+rejects, one by one (a rationale is required to reject). The Inbox groups the proposed ones
+under the Event they were found for; a decided one turns to its decision in place, and an
+accepted one links to the Event it now sits on (the matched one or a new historical Event).
+_Avoid_: "web prior", "web case" in product copy.
+
+**ImpactPrior** (clear-api `Event.computedImpactPriors`; "Computed ImpactPrior"):
+What has typically happened before for an Event's hazard in its country, computed on read
+from CLEAR's accepted history (the median figure and its range per metric, population group
+and unit), with the number of past Events it rests on shown beside the figure and a "low
+confidence" marker below three. Shown read-only on the Event page's Enrichment section as
+"From CLEAR's history": nothing to decide. Accepting a **Proposed signal** adds to the
+history it is computed from. The only ImpactPrior clear-mvp knows: the Worker-proposed whole
+prior (clear-api `impactPriors`, `decideImpactPrior`) is retired and no longer read.
+_Avoid_: "evidence" alone; "proposed prior".
+
+**My requests**:
+The Inbox's view of the Tasks the signed-in user requested (clear-api `myTasks`), under
+their own filter: kind and source, status, error, outcome, and the Proposed signals a Task
+produced, read-only, with Cancel while a Task is open. Status, not a **Review item**: never
+in "Everything", the awaiting count or the nav badge, and visible only to its requester.
+Any content reader with `event_enrichment` on reaches the Inbox for it.
+_Avoid_: "my tasks" in product copy (a Task is the system's unit; the person made a request)
+
+**Source kind**:
+Which Worker kind a Task is for, under the `event.impact_prior` family: today
+`event.impact_prior.web` alone (the Claude routine that searches CLEAR, then the web, shown
+as "Web search"). One request fans out into one Task per enabled kind (clear-api
+`TASK_IMPACT_PRIOR_KINDS`). Older kinds — the bare `event.impact_prior`, the retired
+`event.impact_prior.clear` — can remain in an Event's Task history and read as a generic
+"Impact prior" request.
+_Avoid_: tier, worker type, provider
+
+**Notification** (in-app):
+A row clear-api writes for one user, shown in the nav's bell; today only **Task**
+outcomes (`notificationType: "task"`), each linking an in-app path. Distinct from an
+**Alert** and from alert-subscription push/email.
+_Avoid_: "notification" for an Alert or for the attention lifecycle.
+
 ### Location trust
 
 **Location challenge**:

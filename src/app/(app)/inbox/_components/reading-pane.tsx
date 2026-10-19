@@ -13,19 +13,28 @@ import {
   IconRefresh,
   IconShield,
 } from "@tabler/icons-react";
+import Link from "next/link";
 import { api } from "~/trpc/react";
 import {
   REJECT_REASONS,
   TRANSLATION_POLL_LIMIT_MS,
   TRANSLATION_POLL_MS,
   attachmentKey,
+  isCaseGroupEntry,
+  isTaskEntry,
   needsTranslation,
   shownTranslation,
+  type CaseGroupEntry,
+  type HotlineEntry,
   type InboxAttachment,
   type InboxEntry,
   type RejectReason,
+  type TaskEntry,
   type VoiceTranscript,
 } from "~/lib/hotline-inbox";
+import type { GqlCaseProposal, GqlCaseProposalDecision, GqlReviewCaseProposal } from "~/lib/types/graphql";
+import { CaseProposalRow } from "~/components/impact-prior/case-proposal-row";
+import { TaskRow } from "~/components/event-detail/enrichment-section";
 import { InboxEntryPills } from "./classification-pill";
 import { VoiceNote } from "./voice-note";
 import styles from "../inbox.module.css";
@@ -34,7 +43,14 @@ interface ReadingPaneProps {
   entry: InboxEntry | null;
   /** The `hotline_translation` flag: offer on-demand translation. */
   translation: boolean;
+  /** Hotline threads: the reader may review the selected entry's source. */
   canReview: boolean;
+  /** Proposed signals: the reader is a decider (admin or analyst). */
+  canDecide?: boolean;
+  /** A web case was decided from its row. */
+  onCaseDecided?: (proposal: GqlReviewCaseProposal, decided: GqlCaseProposal, decision: GqlCaseProposalDecision) => void;
+  /** clear-api answered CONFLICT / NOT_FOUND on a case: the copy is stale. */
+  onCaseStale?: (proposal: GqlReviewCaseProposal) => void;
   busy: boolean;
   error: string | null;
   rejectOpen: boolean;
@@ -122,7 +138,7 @@ function FailureNotice({
   error,
   onRetry,
 }: {
-  entry: InboxEntry;
+  entry: HotlineEntry;
   retrying: boolean;
   /** Another action on this entry is in flight. */
   disabled: boolean;
@@ -175,7 +191,7 @@ function FailureNotice({
  * translation renders right-to-left whatever the UI locale. Keyed by entry
  * where it is rendered, so nothing carries over from another entry.
  */
-export function TranslationBlock({ entry }: { entry: InboxEntry }) {
+export function TranslationBlock({ entry }: { entry: HotlineEntry }) {
   const t = useTranslations("inbox");
   const locale = useLocale();
   const utils = api.useUtils();
@@ -248,7 +264,205 @@ export function TranslationBlock({ entry }: { entry: InboxEntry }) {
   );
 }
 
-export function ReadingPane({
+/** The reading pane dispatches on the entry's kind: each kind has its own
+ * pane, sharing the frame (header with back button, scrolling body). */
+export function ReadingPane(props: ReadingPaneProps) {
+  const t = useTranslations("inbox");
+  const { entry } = props;
+
+  if (!entry) {
+    return (
+      <section className={styles.pane} data-testid="inbox-pane">
+        <div className={styles.paneEmpty}>{t("pane.select")}</div>
+      </section>
+    );
+  }
+  if (isTaskEntry(entry)) {
+    return <InboxTaskPane key={entry.id} entry={entry} onBack={props.onBack} />;
+  }
+  if (isCaseGroupEntry(entry)) {
+    return (
+      <InboxCaseGroupPane
+        key={entry.id}
+        entry={entry}
+        canDecide={!!props.canDecide}
+        onCaseDecided={props.onCaseDecided}
+        onCaseStale={props.onCaseStale}
+        onBack={props.onBack}
+      />
+    );
+  }
+  return <HotlinePane {...props} entry={entry} />;
+}
+
+/**
+ * One of the reader's own requests ("My requests"): read-only status, never
+ * a decision. The Task's line (kind and source, status, Worker, outcome,
+ * error), Cancel while it is PENDING or LEASED, and — once its Worker
+ * proposed something — the proposed signals (web cases) as the reader may
+ * see them, read-only (the decision stays with the deciders' Review items).
+ * "Awaiting review" while any of them is proposed, and polled meanwhile so
+ * a decision taken elsewhere shows here; cases the reader may not see (a
+ * rejected one, for a requester who is not a decider) point to the Event;
+ * a failed read says so.
+ */
+function InboxTaskPane({ entry, onBack }: { entry: TaskEntry; onBack: () => void }) {
+  const t = useTranslations("inbox");
+  const tEnrichment = useTranslations("eventDetail.enrichment");
+  const format = useFormatter();
+  const utils = api.useUtils();
+  const { task } = entry;
+  const produced = task.status === "COMPLETED" && task.outcome === "produced";
+  // The Event's enrichment carries what this Task produced, if the reader
+  // may see it; only asked for once there is something to show, and polled
+  // while it still waits for a decision.
+  const enrichment = api.tasks.forEvent.useQuery(
+    { eventId: entry.eventId },
+    {
+      enabled: produced,
+      staleTime: 30_000,
+      refetchInterval: (q) =>
+        q.state.data?.caseProposals.some((c) => c.taskId === task.id && c.state === "proposed") ? 60_000 : false,
+    },
+  );
+  const cases = enrichment.data?.caseProposals.filter((c) => c.taskId === task.id) ?? [];
+  const awaiting = cases.some((c) => c.state === "proposed");
+  // Once loaded and nothing it produced is among what the reader may see (a
+  // rejected one is visible to deciders only), say so neutrally rather than
+  // claim it is still awaiting review.
+  const proposalHidden = produced && enrichment.isSuccess && cases.length === 0;
+  const open = task.status === "PENDING" || task.status === "LEASED";
+  const cancelRequested = task.cancelRequestedAt !== null;
+  const cancel = api.tasks.cancel.useMutation({
+    onSettled: () => {
+      void utils.tasks.myTasks.invalidate();
+      void utils.tasks.forEvent.invalidate({ eventId: entry.eventId });
+    },
+  });
+
+  return (
+    <section className={styles.pane} data-testid="inbox-pane" data-kind="task" data-status={task.status}>
+      <header className={styles.paneHeader}>
+        <div className={styles.paneTitleGroup}>
+          <button type="button" className={styles.backBtn} onClick={onBack} aria-label={t("pane.back")}>
+            <IconArrowLeft size={16} />
+          </button>
+          <span className={styles.paneTitle}>{entry.eventTitle ?? t("event.untitled")}</span>
+          <InboxEntryPills entry={entry} />
+        </div>
+        <span className={styles.paneRef}>
+          {t("requests.requestedAt", { date: format.dateTime(new Date(entry.sentAt), "short") })}
+        </span>
+      </header>
+      <div className={styles.paneBody}>
+        <Link href={`/event/${encodeURIComponent(entry.eventId)}`} className={styles.translateBtn} data-testid="inbox-task-event-link">
+          {t("event.open")}
+        </Link>
+        <TaskRow task={task} />
+        {awaiting && (
+          <p className={styles.sectionLabel} data-testid="inbox-task-awaiting-review">
+            {t("requests.awaitingReview")}
+          </p>
+        )}
+        {proposalHidden && (
+          <p className={styles.sectionLabel} data-testid="inbox-task-proposal-hidden">
+            {t("requests.producedSeeEvent")}
+          </p>
+        )}
+        {produced && enrichment.isError && (
+          <p className={styles.actionError} role="alert" data-testid="inbox-task-proposal-error">
+            {t("requests.proposalLoadFailed")}
+          </p>
+        )}
+        {cases.map((proposal) => (
+          <CaseProposalRow key={proposal.id} proposal={proposal} canDecide={false} />
+        ))}
+      </div>
+      {open && (
+        <footer className={styles.actionBar} data-testid="inbox-task-actions">
+          <div className={styles.actionGroup}>
+            <button
+              type="button"
+              className={styles.btn}
+              // Disabled after success too: the list refetch that shows the
+              // Task as CANCELLED may land a moment later.
+              disabled={cancel.isPending || cancel.isSuccess || cancelRequested}
+              onClick={() => cancel.mutate({ id: task.id })}
+              data-testid="inbox-task-cancel"
+            >
+              <IconCircleX size={15} />
+              {cancelRequested ? tEnrichment("cancelled") : tEnrichment("cancel")}
+            </button>
+          </div>
+          {cancel.isError && (
+            <span className={styles.actionError} role="alert" data-testid="inbox-task-cancel-error">
+              {t("requests.cancelFailed")}
+            </span>
+          )}
+        </footer>
+      )}
+    </section>
+  );
+}
+
+/**
+ * An Event's proposed signals (web cases, V4) as a Review item: each case with its own
+ * Accept / Reject (the row the Event page mounts too), under the Event they
+ * were found for, with a link to it. A decided case turns to its decision
+ * in place; the group stays until the Inbox is reloaded.
+ */
+function InboxCaseGroupPane({
+  entry,
+  canDecide,
+  onCaseDecided,
+  onCaseStale,
+  onBack,
+}: {
+  entry: CaseGroupEntry;
+  canDecide: boolean;
+  onCaseDecided?: ReadingPaneProps["onCaseDecided"];
+  onCaseStale?: ReadingPaneProps["onCaseStale"];
+  onBack: () => void;
+}) {
+  const t = useTranslations("inbox");
+  const tCases = useTranslations("caseReview");
+  const format = useFormatter();
+  return (
+    <section className={styles.pane} data-testid="inbox-pane" data-kind="cases">
+      <header className={styles.paneHeader}>
+        <div className={styles.paneTitleGroup}>
+          <button type="button" className={styles.backBtn} onClick={onBack} aria-label={t("pane.back")}>
+            <IconArrowLeft size={16} />
+          </button>
+          <span className={styles.paneTitle}>{entry.eventTitle ?? t("event.untitled")}</span>
+          <InboxEntryPills entry={entry} />
+        </div>
+        <span className={styles.paneRef}>
+          {t("event.proposedAt", { date: format.dateTime(new Date(entry.sentAt), "short") })}
+        </span>
+      </header>
+      <div className={styles.paneBody}>
+        <Link href={`/event/${encodeURIComponent(entry.eventId)}`} className={styles.translateBtn} data-testid="inbox-cases-event-link">
+          {t("event.open")}
+        </Link>
+        <p className={styles.sectionLabel} data-testid="inbox-cases-title">
+          {tCases("group", { count: entry.cases.length })}
+        </p>
+        {entry.cases.map((proposal) => (
+          <CaseProposalRow
+            key={proposal.id}
+            proposal={proposal}
+            canDecide={canDecide}
+            onDecided={(decided, decision) => onCaseDecided?.(proposal, decided, decision)}
+            onStale={() => onCaseStale?.(proposal)}
+          />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function HotlinePane({
   entry,
   translation,
   canReview,
@@ -263,17 +477,9 @@ export function ReadingPane({
   retrying,
   retryError,
   onBack,
-}: ReadingPaneProps) {
+}: ReadingPaneProps & { entry: HotlineEntry }) {
   const t = useTranslations("inbox");
   const format = useFormatter();
-
-  if (!entry) {
-    return (
-      <section className={styles.pane} data-testid="inbox-pane">
-        <div className={styles.paneEmpty}>{t("pane.select")}</div>
-      </section>
-    );
-  }
 
   return (
     <section className={styles.pane} data-testid="inbox-pane">

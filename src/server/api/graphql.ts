@@ -3,15 +3,17 @@ import { GRAPHQL_URL } from "~/server/env";
 
 interface GraphQLResponse<T> {
   data: T;
-  errors?: Array<{ message: string; extensions?: { code?: unknown } }>;
+  errors?: Array<{ message: string; extensions?: { code?: unknown; subCode?: unknown } }>;
 }
 
-/** A GraphQL error from clear-api, keeping its `extensions.code`. */
+/** A GraphQL error from clear-api, keeping its `extensions.code` (and `subCode`). */
 export class GraphQLRequestError extends Error {
   constructor(
     message: string,
     /** clear-api's error code, e.g. `FORBIDDEN` or `NOT_FOUND`. */
     readonly code: string | undefined,
+    /** clear-api's finer reason a client branches on, e.g. `DAILY_CAP` or `PENDING_APPROVAL`. */
+    readonly subCode: string | undefined = undefined,
   ) {
     super(message);
     this.name = "GraphQLRequestError";
@@ -33,11 +35,13 @@ export async function graphqlFetch<T>(
   query: string,
   variables?: Record<string, unknown>,
   headers?: Record<string, string>,
+  signal?: AbortSignal,
 ): Promise<T> {
   const res = await fetch(GRAPHQL_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json", ...headers },
     body: JSON.stringify({ query, variables }),
+    signal,
   });
 
   const json = (await res.json()) as GraphQLResponse<T>;
@@ -48,7 +52,12 @@ export async function graphqlFetch<T>(
       throw new TRPCError({ code: "UNAUTHORIZED", message: msg });
     }
     const code = json.errors[0]?.extensions?.code;
-    throw new GraphQLRequestError(msg, typeof code === "string" ? code : undefined);
+    const subCode = json.errors[0]?.extensions?.subCode;
+    throw new GraphQLRequestError(
+      msg,
+      typeof code === "string" ? code : undefined,
+      typeof subCode === "string" ? subCode : undefined,
+    );
   }
 
   return json.data;

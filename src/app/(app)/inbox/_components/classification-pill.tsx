@@ -2,8 +2,14 @@
 
 import type { CSSProperties } from "react";
 import { useTranslations } from "next-intl";
-import { IconAlertTriangle } from "@tabler/icons-react";
-import type { InboxClassification, InboxEntry, InboxFailure } from "~/lib/hotline-inbox";
+import { IconAlertTriangle, IconSend, IconWorld } from "@tabler/icons-react";
+import type {
+  CaseGroupEntry,
+  HotlineEntry,
+  InboxClassification,
+  InboxFailure,
+  TaskEntry,
+} from "~/lib/hotline-inbox";
 
 const STYLES: Record<InboxClassification, { bg: string; color: string }> = {
   field_report: { bg: "var(--color-critical-light)", color: "var(--color-critical)" },
@@ -75,10 +81,66 @@ export function InboxFailedPill({ failures }: { failures: readonly InboxFailure[
   );
 }
 
-/** An entry's pills: its classification, plus the failed pill when the
- * pipeline gave up on a message. "Unclassified" is dropped once the entry
- * has failed: the failed pill says why it has no label. */
-export function InboxEntryPills({ entry }: { entry: Pick<InboxEntry, "classification" | "processing" | "failures"> }) {
+/** The Review-item kind pill for an Event's proposed signals (web cases,
+ * V4): what the row is, since it sits beside hotline threads in the same
+ * list. */
+export function InboxCasesPill() {
+  const t = useTranslations("inbox");
+  return (
+    <span
+      data-testid="inbox-kind-pill"
+      data-kind="cases"
+      style={{
+        ...PILL,
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 4,
+        padding: "1px 7px",
+        background: "var(--color-info-light)",
+        color: "var(--color-info)",
+      }}
+    >
+      <IconWorld size={11} aria-hidden />
+      {t("kinds.cases")}
+    </span>
+  );
+}
+
+/** The reader's own request: status, not a Review item. */
+export function InboxTaskPill() {
+  const t = useTranslations("inbox");
+  return (
+    <span
+      data-testid="inbox-kind-pill"
+      data-kind="task"
+      style={{
+        ...PILL,
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 4,
+        padding: "1px 7px",
+        background: "var(--color-bg-muted)",
+        color: "var(--color-text-secondary)",
+      }}
+    >
+      <IconSend size={11} aria-hidden />
+      {t("kinds.task")}
+    </span>
+  );
+}
+
+type PillEntry =
+  | Pick<HotlineEntry, "kind" | "classification" | "processing" | "failures">
+  | Pick<CaseGroupEntry, "kind">
+  | Pick<TaskEntry, "kind">;
+
+/** An entry's pills, per kind. A hotline thread: its classification, plus
+ * the failed pill when the pipeline gave up on a message ("Unclassified"
+ * is dropped once the entry has failed: the failed pill says why it has no
+ * label). A case group, a request: its kind. */
+export function InboxEntryPills({ entry }: { entry: PillEntry }) {
+  if (entry.kind === "cases") return <InboxCasesPill />;
+  if (entry.kind === "task") return <InboxTaskPill />;
   const failed = entry.processing === "failed";
   return (
     <>

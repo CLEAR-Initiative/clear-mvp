@@ -30,7 +30,10 @@ export function EventBulkBar({
   // Raise Alert + Add to existing crisis are requireRole(admin|analyst)
   // on clear-api. Create Crisis is wider (team writers via teamId) so
   // it stays visible even when this is false.
-  const canAddToCrisis = canWriteCrisisEvents(authData?.user?.role);
+  const canAddToCrisis = canWriteCrisisEvents(
+    authData?.user?.role,
+    authData?.user?.teamMemberships,
+  );
   const [menuOpened, setMenuOpened] = useState(false);
   const [createOpened, setCreateOpened] = useState(false);
   const [alertOpened, setAlertOpened] = useState(false);

@@ -22,6 +22,7 @@ import { useReportStaleCountryPick } from "~/lib/report-stale-country-pick";
 import type { MapMarker } from "~/components/map/crisis-map";
 import { parseDateFilter, resolveCountryConfig, staticCountryBounds } from "~/lib/constants/country-config";
 import { isoForCountryName } from "~/lib/constants/countries";
+import { isPlatformAdmin, isTeamAnalyst } from "~/lib/roles";
 import { scopeIsosMissingPaintableBoundaries } from "~/lib/geo/country-mask";
 import { useLocations } from "~/hooks/use-locations";
 import { useLastFocusedCountry } from "~/hooks/use-last-focused-country";
@@ -323,16 +324,18 @@ function DetectionPageContent() {
   );
 
   // Ground intel is a PRIVATE staging tier (sender names, unvetted claims):
-  // clear-api rejects every ground query for roles other than admin/analyst,
-  // so the tab is hidden for everyone else rather than rendering a surface
-  // that can only error. Mirrors event-detail's promote gating pattern.
-  // Additionally gated behind the `ground_intel` feature flag (admin Features
-  // tab) so the whole tab can be switched off for everyone, independent of role.
+  // clear-api rejects every ground query for roles other than admin or a team
+  // analyst (location-scoped server-side), so the tab is hidden for everyone
+  // else rather than rendering a surface that can only error. Mirrors
+  // event-detail's promote gating pattern. Additionally gated behind the
+  // `ground_intel` feature flag (admin Features tab) so the whole tab can be
+  // switched off for everyone, independent of role.
   const groundIntelEnabled = useFeatureEnabled("ground_intel");
   const { data: authData } = api.auth.me.useQuery(undefined, { staleTime: 60_000 });
   const canSeeGround =
     groundIntelEnabled &&
-    (authData?.user?.role === "admin" || authData?.user?.role === "analyst");
+    (isPlatformAdmin(authData?.user?.role) ||
+      isTeamAnalyst(authData?.user?.teamMemberships));
 
   // Tab order drives the sliding indicator geometry - 4 or 5 equal slots
   // depending on whether the ground tab is visible for this role.

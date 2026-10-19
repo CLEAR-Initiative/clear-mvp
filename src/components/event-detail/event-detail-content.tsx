@@ -43,6 +43,7 @@ import {
 import { api } from "~/trpc/react";
 import { useTeamCountry } from "~/hooks/use-team-country";
 import { resolveCountryConfig } from "~/lib/constants/country-config";
+import { canWriteCrisisEvents } from "~/lib/roles";
 import { MinimapCard } from "~/components/map/minimap-card";
 import type { MapMarker } from "~/components/map/crisis-map";
 import { mapFocusHref } from "~/lib/map-focus-href";
@@ -54,6 +55,8 @@ import { resolveLocationName } from "~/lib/location";
 import { CommentsSection } from "~/components/comments-section";
 import { FeedbackSection } from "~/components/feedback-section";
 import { AddToCrisisButton } from "~/components/event-detail/add-to-crisis-button";
+import { RequestEnrichmentButton } from "~/components/event-detail/request-enrichment-button";
+import { EnrichmentSection } from "~/components/event-detail/enrichment-section";
 import { severityColors } from "~/lib/constants/severity";
 import { KpiStack } from "~/components/ui/kpi-stack";
 import { SkeletonSlot } from "~/components/ui/skeleton-slot";
@@ -146,12 +149,15 @@ export function EventDetailContent({
   const promoteToAlert = api.alerts.promoteToAlert.useMutation({
     onSuccess: () => { setPromoted(true); setConfirmPromote(false); },
   });
-  // Promoting an event to an alert is gated to admin/analyst on the backend
-  // (createAlert -> requireRole(["admin", "analyst"])). Mirror that here so
-  // other roles don't see an action that always fails for them.
+  // Promoting an event to an alert is gated to admin or a team analyst on the
+  // backend (createAlert -> requireRole(["admin", "analyst"]), the analyst now
+  // a location-scoped team role). Mirror that here so other roles don't see an
+  // action that always fails for them.
   const { data: authData } = api.auth.me.useQuery(undefined, { staleTime: 60_000 });
-  const canPromote =
-    authData?.user?.role === "admin" || authData?.user?.role === "analyst";
+  const canPromote = canWriteCrisisEvents(
+    authData?.user?.role,
+    authData?.user?.teamMemberships,
+  );
 
   const mapMarkers = useMemo<MapMarker[]>(() => {
     if (!event) return [];
@@ -778,7 +784,7 @@ export function EventDetailContent({
             skeleton={<RelatedEventsCardSkeleton />}
           >
           {/* Related Events */}
-          <Card p={0} style={{ border: "1px solid var(--color-border)" }}>
+          <Card p={0} mb={20} style={{ border: "1px solid var(--color-border)" }}>
             <Box px={16} py={12} className="border-b border-[var(--color-border)]">
               <Group justify="space-between">
                 <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 14 }}>
@@ -859,6 +865,10 @@ export function EventDetailContent({
             </Box>
           </Card>
           </SkeletonSlot>
+
+          {/* Enrichment results - requested from the Actions card in the sidebar,
+              shown here where the cited cases have room to breathe. */}
+          {!isCompact && <EnrichmentSection eventId={event.id} />}
         </Box>
 
         {/* Right sidebar - full-width under main column on phone */}
@@ -988,6 +998,7 @@ export function EventDetailContent({
                         event.severity ?? Math.round((event.rank ?? 0) * 5)
                       }
                     />
+                    <RequestEnrichmentButton eventId={event.id} />
                   </Stack>
                 </Box>
               </Card>

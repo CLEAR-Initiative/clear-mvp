@@ -7,32 +7,55 @@ import { Box, Loader, Text } from "@mantine/core";
 import { IconX } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
 import { useFeatureEnabled } from "~/components/feature-flags-provider";
-import { isPlatformAdmin } from "~/lib/roles";
+import { inboxAccess } from "~/lib/inbox-access";
+import { isEmergencyResponseManager } from "~/lib/roles";
 import { canReviewSource } from "~/lib/ground-review";
 import {
-  INBOX_FILTERS,
+  buildCaseGroupEntries,
   buildInboxEntries,
+  buildTaskEntries,
   countByFilter,
+  countUnreadByFilter,
+  filtersFor,
+  isHotlineEntry,
   loadReadIds,
   moveSelection,
   nextSelection,
+  readMarks,
   saveReadIds,
   visibleEntries,
+  withDecision,
+  type InboxEntry,
   type InboxFailure,
   type InboxFilter,
   type InboxSort,
   type RejectReason,
 } from "~/lib/hotline-inbox";
+import type { GqlCaseProposal, GqlCaseProposalDecision, GqlReviewCaseProposal } from "~/lib/types/graphql";
+import { proposalQueueMatchesServer, publishInboxUnread } from "~/lib/inbox-badge";
 import { EntryList } from "./_components/entry-list";
 import { ReadingPane } from "./_components/reading-pane";
 import { AddToClearModal, type SignalDraft } from "./_components/add-to-clear-modal";
 import styles from "./inbox.module.css";
 
+/** Opening a row records its id, and for a case group each undecided case,
+ * so a proposal that arrives later on that Event counts as unread. */
+function rememberOpened(prev: Set<string>, id: string, entries: readonly InboxEntry[]): Set<string> {
+  const entry = entries.find((e) => e.id === id);
+  const marks = entry ? readMarks(entry) : [id];
+  if (marks.every((mark) => prev.has(mark))) return prev;
+  const next = new Set(prev);
+  for (const mark of marks) next.add(mark);
+  saveReadIds(next);
+  return next;
+}
+
 /**
- * Hotline inbox: ERM triage of WhatsApp hotline submissions.
+ * Inbox: Review items of two kinds, side by side (see InboxEntry.kind).
  *
- * One entry per open (unverified) ground thread from an active hotline
- * source. Actions map 1:1 onto clear-api's ground review state machine:
+ * Hotline threads: ERM triage of WhatsApp hotline submissions. One entry
+ * per open (unverified) ground thread from an active hotline source.
+ * Actions map 1:1 onto clear-api's ground review state machine:
  *   Add to CLEAR -> approve_public, carrying the reviewer's edits (title,
  *                   description, severity, location) as promotion overrides
  *   Archive      -> approve_private
@@ -47,6 +70,19 @@ import styles from "./inbox.module.css";
  *
  * PRIVACY: hotline entries carry no sender identity. Only the per-
  * conversation pseudonym is shown (as an intake ref).
+ *
+ * Proposed signals (clear-api V4 web cases, CaseProposal): the proposed
+ * cases grouped under the Event whose enrichment produced them, one Review
+ * item per Event, for the deciders (admins and analysts),
+ * each case with its own Accept / Reject (the same row the Event page
+ * mounts). A decided case turns to its decision in place and stays in its
+ * group until the Inbox is reloaded; the awaiting line is the undecided
+ * cases. The small number on each filter is how many of those rows are
+ * still unopened, so it drops as soon as a row is opened or reviewed.
+ *
+ * My requests (clear-api `myTasks`): the Tasks the reader asked for, under
+ * their own filter, read-only with Cancel. Status, not Review items: they
+ * are never in "Everything", the awaiting count or the nav badge.
  */
 
 const TOAST_MS = 6000;
@@ -70,31 +106,87 @@ function pendingOnly(prev: Record<string, RetryState>): Record<string, RetryStat
 
 export default function InboxPage() {
   const t = useTranslations("inbox");
+  const tCases = useTranslations("caseReview");
   const utils = api.useUtils();
 
-  const enabled = useFeatureEnabled("hotline_inbox");
+  const hotlineInbox = useFeatureEnabled("hotline_inbox");
   const translation = useFeatureEnabled("hotline_translation");
+  const impactPriorReview = useFeatureEnabled("impact_prior_review");
+  const eventEnrichment = useFeatureEnabled("event_enrichment");
   const { data: authData, isLoading: authLoading } = api.auth.me.useQuery(undefined, { staleTime: 60_000 });
   const role = authData?.user?.role;
-  const canSee = enabled && isPlatformAdmin(role);
+  // An emergency_response_manager (global viewer + ERM team membership) reaches
+  // the hotline inbox even though their global role is only viewer.
+  const teamMemberships = authData?.user?.teamMemberships;
+  const isErm = isEmergencyResponseManager(teamMemberships);
+  // One rule with the nav entry (src/lib/inbox-access.ts): the page shows
+  // for whichever kinds the reader may see, and lists only those.
+  const access = inboxAccess({ role, teamMemberships, isErm, hotlineInbox, impactPriorReview, eventEnrichment });
+  const canSee = access.any;
+  /** Deciders see the proposed signals beside the hotline threads. */
+  const canDecide = access.proposals;
 
   const inboxQuery = api.ground.hotlineInbox.useQuery(undefined, {
-    enabled: canSee,
+    enabled: access.hotline,
     staleTime: 30_000,
     refetchInterval: 60_000,
   });
+  // Every proposed case, page by page (the router reads clear-api's pages
+  // until they run out): one enrichment can propose dozens, so one page of
+  // 200 would leave older cases with no row to decide them from.
+  const casesQuery = api.tasks.proposedCaseProposals.useQuery(undefined, {
+    enabled: access.proposals,
+    staleTime: 30_000,
+    refetchInterval: 60_000,
+  });
+  // Same query the nav badge polls. Publishing the unread count against
+  // this total lets the badge follow proposals that arrive after the
+  // reader leaves the Inbox.
+  const reviewCount = api.tasks.reviewCount.useQuery(undefined, {
+    enabled: access.proposals,
+    staleTime: 60_000,
+  });
+  /** Cases decided in this session, as their decision (or, after a
+   * CONFLICT, the Event's own copy) returned them: they keep their row,
+   * now showing the decision, after the proposed list stops returning
+   * them. */
+  const [decidedCases, setDecidedCases] = useState<Record<string, GqlReviewCaseProposal>>({});
 
-  const entries = useMemo(
-    () => (inboxQuery.data ? buildInboxEntries(inboxQuery.data) : []),
-    [inboxQuery.data],
-  );
+  // The reader's own requests: polled faster while one is still open, so a
+  // request made a moment ago settles here without a reload.
+  const myTasksQuery = api.tasks.myTasks.useQuery(undefined, {
+    enabled: access.requests,
+    staleTime: 15_000,
+    refetchInterval: (q) =>
+      q.state.data?.tasks.some((task) => task.status === "PENDING" || task.status === "LEASED") ? 30_000 : 120_000,
+  });
+
+  /** Hotline threads reviewed this visit. They leave the queue before the
+   * refetch returns, so the counts do not sit on the old total. */
+  const [dismissedIds, setDismissedIds] = useState<ReadonlySet<string>>(() => new Set());
+
+  const entries = useMemo<InboxEntry[]>(() => {
+    const built: InboxEntry[] = [
+      ...(inboxQuery.data ? buildInboxEntries(inboxQuery.data) : []),
+      ...(casesQuery.data ? buildCaseGroupEntries(casesQuery.data, decidedCases) : []),
+      ...(myTasksQuery.data ? buildTaskEntries(myTasksQuery.data.tasks, myTasksQuery.data.eventTitles) : []),
+    ];
+    return dismissedIds.size === 0 ? built : built.filter((entry) => !dismissedIds.has(entry.id));
+  }, [inboxQuery.data, casesQuery.data, decidedCases, myTasksQuery.data, dismissedIds]);
   const sourceById = useMemo(() => {
     const m = new Map<string, string[]>();
     for (const s of inboxQuery.data?.sources ?? []) m.set(s.id, s.reviewerRoles);
     return m;
   }, [inboxQuery.data]);
 
-  const [filter, setFilter] = useState<InboxFilter>("reports");
+  const filters = useMemo(() => filtersFor(access), [access.hotline, access.proposals, access.requests]); // eslint-disable-line react-hooks/exhaustive-deps
+  const [chosenFilter, setFilter] = useState<InboxFilter>("reports");
+  // The filter in force is derived, never synced: the session and the
+  // feature flags land at different times, and a fallback stored while
+  // nothing applied yet would stick. A reader without the hotline starts
+  // on the first filter they have (proposals); a choice that stops applying
+  // (flag flipped) falls back the same way.
+  const filter: InboxFilter = filters.includes(chosenFilter) ? chosenFilter : (filters[0] ?? "all");
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState<InboxSort>("reportsFirst");
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -111,9 +203,38 @@ export default function InboxPage() {
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [readIds, setReadIds] = useState<Set<string>>(() => new Set());
-  useEffect(() => setReadIds(loadReadIds()), []);
+  const [readReady, setReadReady] = useState(false);
+  useEffect(() => {
+    setReadIds(loadReadIds());
+    setReadReady(true);
+  }, []);
 
   const counts = useMemo(() => countByFilter(entries), [entries]);
+  const unreadCounts = useMemo(() => countUnreadByFilter(entries, readIds), [entries, readIds]);
+  // Wait until the stored read set and the proposal list have landed.
+  // Publishing earlier would flash the full queue, then hide a badge the
+  // server still has while the list is in flight.
+  const serverProposals = reviewCount.data?.count;
+  const serverCapped = reviewCount.data?.capped === true;
+  useEffect(() => {
+    if (!readReady || !access.proposals || casesQuery.isLoading || casesQuery.isError) return;
+    if (casesQuery.isFetching || reviewCount.isFetching || reviewCount.isError) return;
+    if (serverProposals == null) return;
+    if (!proposalQueueMatchesServer(counts.proposals, serverProposals, serverCapped)) return;
+    publishInboxUnread(unreadCounts.proposals, serverProposals);
+  }, [
+    readReady,
+    access.proposals,
+    casesQuery.isLoading,
+    casesQuery.isError,
+    casesQuery.isFetching,
+    reviewCount.isFetching,
+    reviewCount.isError,
+    counts.proposals,
+    unreadCounts.proposals,
+    serverProposals,
+    serverCapped,
+  ]);
   const visible = useMemo(() => visibleEntries(entries, filter, search, sort), [entries, filter, search, sort]);
   const selected = useMemo(() => entries.find((e) => e.id === selectedId) ?? null, [entries, selectedId]);
 
@@ -133,14 +254,9 @@ export default function InboxPage() {
     setToast(null);
     if (id) {
       setMobilePane(true);
-      setReadIds((prev) => {
-        if (prev.has(id)) return prev;
-        const next = new Set(prev).add(id);
-        saveReadIds(next);
-        return next;
-      });
+      setReadIds((prev) => rememberOpened(prev, id, entries));
     }
-  }, []);
+  }, [entries]);
 
   // Selection follows the visible list: nothing selected picks the top,
   // a selection that scrolled out of the filter is dropped.
@@ -152,17 +268,15 @@ export default function InboxPage() {
     if (!selectedId || !visible.some((e) => e.id === selectedId)) {
       const first = visible[0]!.id;
       setSelectedId(first);
-      setReadIds((prev) => {
-        if (prev.has(first)) return prev;
-        const next = new Set(prev).add(first);
-        saveReadIds(next);
-        return next;
-      });
+      setReadIds((prev) => rememberOpened(prev, first, visible));
     }
   }, [visible, selectedId]);
 
+  /** Hotline review rights follow the selected thread's source; a Review
+   * item of another kind has its own gate (canDecide). */
+  const selectedThread = selected && isHotlineEntry(selected) ? selected : null;
   const canReviewSelected =
-    !!selected && canReviewSource(role, sourceById.get(selected.thread.groundSourceId) ?? []);
+    !!selectedThread && canReviewSource(role, sourceById.get(selectedThread.thread.groundSourceId) ?? [], isErm);
 
   const review = api.ground.review.useMutation();
   const selectedRetry = selectedId ? retries[selectedId] : undefined;
@@ -180,6 +294,12 @@ export default function InboxPage() {
       setActionError(null);
       setRetries(pendingOnly);
       showToast(next);
+      setDismissedIds((prev) => {
+        if (prev.has(actedId)) return prev;
+        const nextIds = new Set(prev);
+        nextIds.add(actedId);
+        return nextIds;
+      });
       void utils.ground.hotlineInbox.invalidate();
       void utils.ground.threads.invalidate();
       void utils.ground.messages.invalidate();
@@ -202,6 +322,7 @@ export default function InboxPage() {
    * allows it to every admin/analyst.
    */
   const retry = useCallback(async () => {
+    const selected = selectedThread;
     if (!selected || busy || selected.failures.length === 0) return;
     const entryId = selected.id;
     const setRetry = (state: RetryState | null) =>
@@ -236,9 +357,10 @@ export default function InboxPage() {
           ? t("failure.partial", { done: results.length - rejected.length, total: results.length, error: reason })
           : reason,
     });
-  }, [selected, busy, retryMessage, utils, showToast, t]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [selectedThread, busy, retryMessage, utils, showToast, t]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const archive = useCallback(() => {
+    const selected = selectedThread;
     if (!selected || busy) return;
     review.mutate(
       { id: selected.id, decision: "approve_private" },
@@ -247,10 +369,11 @@ export default function InboxPage() {
         onError: (err) => setActionError(errorMessage(err)),
       },
     );
-  }, [selected, busy, review, afterAction, t]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [selectedThread, busy, review, afterAction, t]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const reject = useCallback(
     (reason: RejectReason) => {
+      const selected = selectedThread;
       if (!selected || busy) return;
       const label = t(`rejectReasons.${reason}.label`);
       review.mutate(
@@ -261,7 +384,32 @@ export default function InboxPage() {
         },
       );
     },
-    [selected, busy, review, afterAction, t], // eslint-disable-line react-hooks/exhaustive-deps
+    [selectedThread, busy, review, afterAction, t], // eslint-disable-line react-hooks/exhaustive-deps
+  );
+
+  /** A case was decided from its row: it keeps its place, now decided, and
+   * the selection stays on its Event (its siblings may still wait). */
+  const caseDecided = useCallback(
+    (proposal: GqlReviewCaseProposal, decided: GqlCaseProposal, decision: GqlCaseProposalDecision) => {
+      setDecidedCases((prev) => ({ ...prev, [proposal.id]: withDecision(proposal, decided) }));
+      showToast({ message: tCases(`toast.${decision}`) });
+    },
+    [showToast, tCases],
+  );
+
+  /** Another decider got to a case first (CONFLICT): read the Event's copy
+   * so the row shows what was decided, rather than stay decidable. */
+  const caseStale = useCallback(
+    (proposal: GqlReviewCaseProposal) => {
+      void utils.tasks.forEvent
+        .fetch({ eventId: proposal.eventId }, { staleTime: 0 })
+        .then((data) => {
+          const current = data?.caseProposals.find((c) => c.id === proposal.id);
+          if (current) setDecidedCases((prev) => ({ ...prev, [proposal.id]: withDecision(proposal, current) }));
+        })
+        .catch(() => undefined);
+    },
+    [utils],
   );
 
   /**
@@ -272,6 +420,7 @@ export default function InboxPage() {
    */
   const confirmAdd = useCallback(
     (draft: SignalDraft) => {
+      const selected = selectedThread;
       if (!selected || busy) return;
       setActionError(null);
       review.mutate(
@@ -297,10 +446,11 @@ export default function InboxPage() {
         },
       );
     },
-    [selected, busy, review, afterAction, t], // eslint-disable-line react-hooks/exhaustive-deps
+    [selectedThread, busy, review, afterAction, t], // eslint-disable-line react-hooks/exhaustive-deps
   );
 
-  // Keyboard: Escape closes modal > popover; A/E/R act; J/K move.
+  // Keyboard: Escape closes modal > popover; A/E/R act (hotline threads
+  // only: a case is decided on its own row); J/K move.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
@@ -320,19 +470,19 @@ export default function InboxPage() {
           select(moveSelection(visible, selectedId, -1));
           break;
         case "a":
-          if (canReviewSelected && selected) { setRejectOpen(false); setAddOpen(true); }
+          if (canReviewSelected && selectedThread) { setRejectOpen(false); setAddOpen(true); }
           break;
         case "e":
           if (canReviewSelected) archive();
           break;
         case "r":
-          if (canReviewSelected && selected) setRejectOpen((v) => !v);
+          if (canReviewSelected && selectedThread) setRejectOpen((v) => !v);
           break;
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [addOpen, rejectOpen, visible, selectedId, selected, canReviewSelected, select, archive]);
+  }, [addOpen, rejectOpen, visible, selectedId, selectedThread, canReviewSelected, select, archive]);
 
   if (authLoading) {
     return (
@@ -357,13 +507,15 @@ export default function InboxPage() {
         <div className={styles.headerRow}>
           <span className={styles.title}>{t("title")}</span>
           <span className={styles.awaiting}>{t("awaiting", { count: counts.all })}</span>
-          {inboxQuery.isFetching && <Loader size={12} />}
-          {inboxQuery.error && (
+          {(inboxQuery.isFetching || casesQuery.isFetching || myTasksQuery.isFetching) && (
+            <Loader size={12} />
+          )}
+          {(inboxQuery.error || casesQuery.error || myTasksQuery.error) && (
             <span className={styles.actionError}>{t("loadError")}</span>
           )}
         </div>
         <div className={styles.filters} data-testid="inbox-filters">
-          {INBOX_FILTERS.map((f) => (
+          {filters.map((f) => (
             <button
               type="button"
               key={f}
@@ -373,7 +525,7 @@ export default function InboxPage() {
               onClick={() => { setFilter(f); setRejectOpen(false); }}
             >
               {t(`filters.${f}`)}
-              <span className={styles.filterCount}>{counts[f]}</span>
+              <span className={styles.filterCount}>{unreadCounts[f]}</span>
             </button>
           ))}
         </div>
@@ -389,11 +541,19 @@ export default function InboxPage() {
           onSearchChange={setSearch}
           onSortToggle={() => setSort((s) => (s === "reportsFirst" ? "newest" : "reportsFirst"))}
           onSelect={select}
+          loading={
+            (access.hotline && inboxQuery.isLoading) ||
+            (access.proposals && casesQuery.isLoading) ||
+            (access.requests && myTasksQuery.isLoading)
+          }
         />
         <ReadingPane
           entry={selected}
           translation={translation}
           canReview={canReviewSelected}
+          canDecide={canDecide}
+          onCaseDecided={caseDecided}
+          onCaseStale={caseStale}
           busy={busy}
           error={actionError}
           rejectOpen={rejectOpen}
@@ -408,9 +568,9 @@ export default function InboxPage() {
         />
       </div>
 
-      {addOpen && selected && (
+      {addOpen && selectedThread && (
         <AddToClearModal
-          entry={selected}
+          entry={selectedThread}
           busy={busy}
           error={actionError}
           onCancel={() => {

@@ -139,6 +139,14 @@ export function getDisasterLabel(code: string): string {
   return DISASTER_META[code.toLowerCase()]?.label ?? code.toUpperCase();
 }
 
+/** The hazard a GLIDE code names, as a person reads it ("fl" -> "Flood",
+ * "ba" -> "Armed Clash"): the most specific label, the raw code uppercased
+ * when the taxonomy does not know it. */
+export function getHazardName(code: string): string {
+  const meta = DISASTER_META[code.toLowerCase()];
+  return meta?.specificType ?? (meta?.label || code.toUpperCase());
+}
+
 /** All GLIDE codes known to the pill system (including hidden). */
 export function allDisasterTypeCodes(): string[] {
   return Object.keys(DISASTER_META);

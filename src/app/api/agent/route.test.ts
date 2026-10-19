@@ -72,7 +72,7 @@ beforeEach(() => {
   vi.stubEnv("NRC_FIND_API_TOKEN", "find-secret");
   vi.stubEnv("CLEAR_AGENT_API_KEY", FAKE_AGENT_KEY);
   clearApi = createFakeClearApi({ alice: "u-alice", bob: "u-bob" });
-  roles = { alice: "viewer", bob: "analyst" };
+  roles = { alice: "member", bob: "member" };
   scripted.modelId = "anthropic/claude-sonnet-5-5";
   useScript([]);
   fetchMock = vi.fn<Handler>((url, init) => {
@@ -284,7 +284,7 @@ describe("POST /api/agent — a Thread", () => {
       if (url === GRAPHQL_URL) return clearApi.handle(init);
       return Response.json({
         session: { id: "s1" },
-        user: { id: "u-alice", role: "viewer" },
+        user: { id: "u-alice", role: "member" },
       });
     });
     useScript([
@@ -662,7 +662,7 @@ describe("POST /api/agent — Agent navigation", () => {
     beforeEach(() => {
       myTeams = [];
       clearApi.dataHandlers.set("ClearWhoami", () => ({
-        me: { id: "u-alice", name: "Alice", role: "viewer", language: "en", isActive: true, defaultTeam: null },
+        me: { id: "u-alice", name: "Alice", role: "member", language: "en", isActive: true, defaultTeam: null },
         myTeams,
       }));
     });

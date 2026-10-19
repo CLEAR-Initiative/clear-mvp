@@ -383,13 +383,12 @@
       "member": "Miembro",
       "orgAdmin": "Admin. de organización",
       "teamMember": "Miembro del equipo",
-      "fieldCoordinator": "Coordinador de terreno",
+      "analyst": "Analista",
       "teamAdmin": "Admin. de equipo"
     },
     "users": {
       "roles": {
-        "viewer": "Observador",
-        "analyst": "Analista",
+        "member": "Miembro",
         "admin": "Admin"
       },
       "unauthorized": "Se requieren privilegios de administrador para ver la gestión de usuarios.",
@@ -421,7 +420,7 @@
       "roleUpdatedDetail": "El rol ahora es {role}.",
       "roleUpdateFailed": "No se pudo actualizar el rol",
       "approved": "Usuario aprobado",
-      "approvedDetail": "Ahora tiene acceso de visor.",
+      "approvedDetail": "Ahora tiene acceso de miembro.",
       "approveFailed": "No se pudo aprobar al usuario"
     },
     "features": {
@@ -877,7 +876,9 @@
       "edit": "Editar",
       "delete": "Eliminar",
       "confirm": "Confirmar",
-      "retry": "Reintentar"
+      "retry": "Reintentar",
+      "copy": "Copiar",
+      "copied": "Copiado"
     },
     "states": {
       "loading": "Cargando...",
@@ -1854,7 +1855,7 @@
       "confirmPrompt": "¿Elevar este evento a alerta?",
       "failed": "Error. Inténtelo de nuevo.",
       "turnIntoAlert": "Convertir en alerta",
-      "noPermission": "Solo admins y analistas pueden elevar alertas"
+      "noPermission": "Solo admins y analistas de equipo pueden elevar alertas"
     },
     "systemData": {
       "title": "Datos del sistema",
@@ -1891,6 +1892,55 @@
       "namePlaceholder": "p. ej. Inundaciones en Jartum, agosto 2026",
       "confirmCreate": "Crear crisis",
       "cancel": "Cancelar"
+    },
+    "enrichment": {
+      "title": "Enriquecimiento",
+      "request": "Solicitar enriquecimiento",
+      "confirmPrompt": "¿Pedir a un Worker qué ha ocurrido normalmente antes con esta amenaza aquí? Puede tardar unos minutos.",
+      "requested": "Enriquecimiento solicitado",
+      "failed": "La solicitud falló. Inténtelo de nuevo.",
+      "noPermission": "Solo admins, analistas de equipo y miembros de equipo pueden solicitar enriquecimiento",
+      "capReached": "Ha alcanzado el límite de solicitudes de enriquecimiento de hoy",
+      "cancel": "Cancelar solicitud",
+      "cancelled": "Solicitud cancelada",
+      "empty": "Aún no se ha solicitado enriquecimiento.",
+      "kinds": {
+        "impactPrior": "Precedente de impacto"
+      },
+      "status": {
+        "PENDING": "Pendiente",
+        "LEASED": "En curso",
+        "COMPLETED": "Completado",
+        "FAILED": "Fallido",
+        "CANCELLED": "Cancelado"
+      },
+      "outcome": {
+        "produced": "Precedente propuesto",
+        "no_prior_found": "Sin precedente",
+        "no_new_cases": "No hay casos nuevos"
+      },
+      "requestedBy": "Solicitado por {name}",
+      "errorLabel": "Error",
+      "prior": {
+        "proposed": "Propuesto",
+        "accepted": "Aceptado",
+        "rejected": "Rechazado"
+      },
+      "scope": {
+        "district": "distrito",
+        "country": "país"
+      },
+      "horizon": "Horizonte de {years} años",
+      "tier": {
+        "web": "Web"
+      },
+      "method": "Método {version}",
+      "source": "Fuente",
+      "loadFailed": "No se pudo cargar el enriquecimiento.",
+      "worker": "Worker: {name}",
+      "kindStatus": "{source} · {status}",
+      "cancelFailed": "Algunas solicitudes no se pudieron cancelar. Inténtalo de nuevo.",
+      "webSearch": "Búsqueda web"
     }
   },
   "knowledge": {
@@ -2092,6 +2142,7 @@
       "inbox": "Bandeja",
       "map": "Mapa",
       "insights": "Hallazgos",
+      "metrics": "Métricas",
       "operations": "Operaciones",
       "cash": "Asistencia en efectivo",
       "knowledge": "Centro de conocimiento",
@@ -2103,7 +2154,13 @@
     "feedback": "Comentarios",
     "admin": "Admin",
     "settings": "Configuración",
-    "signOut": "Cerrar sesión"
+    "signOut": "Cerrar sesión",
+    "notifications": {
+      "title": "Notificaciones",
+      "unread": "{count, plural, one {# notificación sin leer} other {# notificaciones sin leer}}",
+      "empty": "Nada nuevo",
+      "loadError": "No se pudieron cargar las notificaciones"
+    }
   },
   "noAccess": {
     "title": "En espera de acceso",
@@ -2595,7 +2652,7 @@
         "noTeams": "Esta organización no tiene equipos. Cree uno antes de invitar.",
         "teamRoles": {
           "team_member": "Miembro del equipo",
-          "field_coordinator": "Coordinador de terreno",
+          "analyst": "Analista",
           "emergency_response_manager": "Responsable de respuesta de emergencia",
           "team_admin": "Admin. de equipo"
         },
@@ -2634,6 +2691,42 @@
         "title": "Alcance de ubicación",
         "save": "Guardar ubicaciones",
         "none": "Ninguna ubicación seleccionada"
+      },
+      "webhooks": {
+        "title": "Webhooks",
+        "description": "Envíe una solicitud HTTP POST a sus sistemas cada vez que se cree una alerta de CLEAR para este equipo.",
+        "none": "No hay webhooks configurados",
+        "toggleActive": "Activar o desactivar este webhook",
+        "rotate": "Rotar secreto",
+        "rotateConfirm": "¿Rotar el secreto de este webhook? El secreto actual dejará de funcionar de inmediato.",
+        "deleteConfirm": "¿Eliminar este webhook? Esta acción no se puede deshacer.",
+        "columns": {
+          "name": "Nombre",
+          "targetUrl": "URL de destino",
+          "filters": "Filtros",
+          "active": "Activo"
+        },
+        "filters": {
+          "all": "Todas las alertas",
+          "minSeverity": "Gravedad mín. {level}"
+        },
+        "secret": {
+          "title": "Secreto de firma",
+          "note": "Guarde este secreto ahora — no se volverá a mostrar. Úselo para verificar la firma de las solicitudes de webhook entrantes."
+        },
+        "add": {
+          "title": "Agregar webhook",
+          "nameLabel": "Nombre",
+          "targetUrlLabel": "URL de destino",
+          "filterLabel": "Filtro por tipo de alerta",
+          "filterPlaceholder": "p. ej. CF, FL (separados por comas)",
+          "minSeverityLabel": "Gravedad mín.",
+          "minSeverityPlaceholder": "Cualquiera",
+          "submit": "Agregar webhook"
+        },
+        "loading": "Cargando webhooks…",
+        "loadError": "No se pudieron cargar los webhooks.",
+        "retry": "Reintentar"
       },
       "danger": {
         "title": "Zona de peligro",
@@ -2766,12 +2859,14 @@
     "goToProfile": "Ir al perfil"
   },
   "inbox": {
-    "title": "Bandeja de la línea directa",
+    "title": "Bandeja de entrada",
     "awaiting": "{count, plural, one {# pendiente de revisión} other {# pendientes de revisión}}",
     "filters": {
       "reports": "Reportes de campo",
       "unclassified": "Sin clasificar",
       "chatter": "Charla",
+      "proposals": "Señales propuestas",
+      "requests": "Mis solicitudes",
       "all": "Todo"
     },
     "search": "Buscar texto, ref. de ingreso",
@@ -2867,7 +2962,7 @@
       "addedNoSignal": "Aprobado, pero no se devolvió ningún id de señal. Compruebe la señal en Detección antes de confiar en ella.",
       "retried": "En cola para un nuevo intento"
     },
-    "noAccess": "La bandeja de la línea directa es solo para administradores por ahora.",
+    "noAccess": "La bandeja de entrada es solo para administradores y analistas de equipo.",
     "loadError": "No se pudo cargar la bandeja",
     "translate": {
       "button": "Traducir al {locale}",
@@ -2894,6 +2989,25 @@
       "retry": "Reintentar",
       "retrying": "Reintentando…",
       "partial": "De nuevo en cola: {done} de {total} mensajes. {error}"
+    },
+    "kinds": {
+      "task": "Mi solicitud",
+      "cases": "Señales propuestas"
+    },
+    "event": {
+      "untitled": "Evento sin título",
+      "open": "Abrir el evento",
+      "proposedAt": "Propuesto el {date}"
+    },
+    "requests": {
+      "requestedAt": "Solicitado el {date}",
+      "awaitingReview": "Propuesto, pendiente de revisión",
+      "cancelFailed": "Esta solicitud no se pudo cancelar. Inténtalo de nuevo.",
+      "producedSeeEvent": "Propuesta generada — ver el evento",
+      "proposalLoadFailed": "No se pudo cargar la propuesta. Abra el evento para verla."
+    },
+    "cases": {
+      "preview": "{count, plural, =0 {Todas las señales propuestas decididas} one {# señal propuesta por revisar} other {# señales propuestas por revisar}} · {hazard}"
     }
   },
   "analysis": {
@@ -3276,6 +3390,146 @@
         "eventTypes": "Tipos de evento",
         "sourceNames": "Fuentes"
       }
+    }
+  },
+  "caseReview": {
+    "group": "{count, plural, one {# señal propuesta} other {# señales propuestas}}",
+    "matchesEvent": "Coincide con un evento de CLEAR",
+    "resultEvent": "Abrir el evento resultante",
+    "accept": "Aceptar",
+    "reject": "Rechazar",
+    "confirmReject": "Rechazar caso",
+    "cancel": "Cancelar",
+    "rationaleLabel": "¿Por qué rechazar este caso?",
+    "rationalePlaceholder": "Su motivo, para el registro de auditoría",
+    "rationaleRequired": "Se requiere un motivo para rechazar",
+    "rationaleTooLong": "El motivo debe tener menos de {max} caracteres",
+    "conflict": "Otra persona decidió este caso primero.",
+    "toast": {
+      "accepted": "Caso aceptado",
+      "rejected": "Caso rechazado"
+    },
+    "metric": {
+      "people_affected": "Personas afectadas",
+      "people_displaced_new": "Nuevos desplazados",
+      "people_displaced_cumulative": "Desplazados (acumulado)",
+      "people_in_need": "Personas con necesidades",
+      "people_targeted": "Personas destinatarias",
+      "people_reached": "Personas alcanzadas",
+      "households_affected": "Hogares afectados"
+    }
+  },
+  "computedPrior": {
+    "title": "Según el historial de CLEAR",
+    "figurePeople": "{value} personas",
+    "figureUnit": "{value} {unit}",
+    "range": "(rango {low}–{high})",
+    "fromEvents": "{count, plural, one {de # evento pasado} other {de # eventos pasados}}",
+    "lowConfidence": "Confianza baja",
+    "pastEvent": "Evento pasado {n}",
+    "moreEvents": "+{count} más"
+  },
+  "metrics": {
+    "page": {
+      "title": "Métricas",
+      "breadcrumb": "Métricas"
+    },
+    "loading": "Cargando métricas…",
+    "error": {
+      "title": "No se pudieron cargar las métricas"
+    },
+    "unavailable": {
+      "title": "La API de métricas aún no está desplegada",
+      "body": "La API de CLEAR de este entorno todavía no ofrece el tiempo de detección. La página se completará en cuanto lo haga."
+    },
+    "tiles": {
+      "counted": {
+        "label": "Eventos medidos",
+        "detail": "de {total, number} eventos del periodo"
+      },
+      "byNextDay": {
+        "label": "Detectados a más tardar al día siguiente"
+      },
+      "sameDay": {
+        "label": "Detectados el mismo día"
+      },
+      "withOnset": {
+        "label": "Eventos con fecha de inicio"
+      },
+      "ofCounted": "{n, number} de {counted, number} medidos",
+      "ofInRange": "{n, number} de {total, number} del periodo"
+    },
+    "histogram": {
+      "title": "Días entre el inicio y la primera señal",
+      "subtitle": "Eventos medidos según cuántos días después del inicio recibió CLEAR su primera señal",
+      "series": "Eventos",
+      "tooltip": "{count, plural, one {# evento} other {# eventos}} · {share} de los medidos",
+      "footnote": "De {counted, plural, one {# evento medido} other {# eventos medidos}}. Los días son días naturales completos: mismo día = 0, día siguiente = 1.",
+      "buckets": {
+        "sameDay": "Mismo día",
+        "nextDay": "Día siguiente",
+        "plusDays": "+{days} d",
+        "openEnded": "{days} d o más"
+      }
+    },
+    "weekly": {
+      "title": "Tendencia semanal",
+      "subtitle": "Proporción de los eventos medidos de cada semana ISO",
+      "legend": "Leyenda",
+      "series": {
+        "byNextDay": "A más tardar al día siguiente",
+        "sameDay": "Mismo día"
+      },
+      "partial": "parcial",
+      "tooltip": {
+        "week": "{week} · desde el {start}",
+        "n": "n = {n, plural, one {# evento medido} other {# eventos medidos}}",
+        "partial": "Semana parcial: aún en curso"
+      }
+    },
+    "empty": {
+      "title": "No hay eventos medibles en este periodo",
+      "body": "{inRange, plural, =0 {No hay eventos en este periodo.} one {El único evento del periodo no se puede medir; el motivo está abajo.} other {Ninguno de los # eventos del periodo se puede medir; los motivos están abajo.}}"
+    },
+    "exclusions": {
+      "title": "No medidos",
+      "subtitle": "{total, number} de {inRange, number} eventos del periodo, por motivo",
+      "reasons": {
+        "NO_INGESTED_SIGNAL": {
+          "label": "Sin señal ingerida",
+          "description": "Solo historial: ninguna señal llegó a CLEAR por una fuente automática."
+        },
+        "NO_ONSET": {
+          "label": "Sin fecha de inicio",
+          "description": "El evento no tiene una fecha de inicio desde la que medir."
+        },
+        "DATE_ONLY_FIRST_SIGNAL": {
+          "label": "Primera señal sin hora",
+          "description": "La fuente da una fecha pero no una hora."
+        },
+        "BEFORE_ONSET": {
+          "label": "Primera señal antes del inicio",
+          "description": "La primera señal tiene fecha anterior al inicio: un error de datos."
+        }
+      }
+    },
+    "method": {
+      "title": "Cómo se mide",
+      "intro": "El tiempo de detección es cuánto tardó CLEAR, desde el inicio real de un evento, en recibir su primera señal.",
+      "points": {
+        "counted": "Un evento solo se mide si tiene fecha de inicio, su primera señal lleva una hora real y esa señal es del día de inicio o posterior.",
+        "excluded": "Los demás eventos del periodo quedan fuera por uno de cuatro motivos: sin señal ingerida, sin fecha de inicio, una primera señal con fecha pero sin hora, o una primera señal con fecha anterior al inicio (un error de datos).",
+        "wholeDays": "El inicio se registra por día, así que el tiempo de detección se cuenta en días completos: mismo día = 0, día siguiente = 1.",
+        "definition": "La definición completa es el ADR-0011 de clear-api, «Time to detection»."
+      }
+    },
+    "range": "Del {from} al {to}",
+    "filters": {
+      "from": "Desde",
+      "to": "Hasta",
+      "country": "País",
+      "allCountries": "Todos los países",
+      "hint": "Los días están en UTC. Deje las fechas vacías para las últimas 12 semanas."
     }
   }
 }

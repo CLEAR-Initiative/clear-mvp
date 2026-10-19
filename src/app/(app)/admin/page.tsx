@@ -78,8 +78,7 @@ type PendingAction = { type: "role"; user: GqlUser; newRole: string };
 // used to double as a global role; under the new taxonomy it's org-scoped.
 // labelKey: i18n keys under admin.users.roles.* - resolved via t() at render time.
 const ROLES = [
-  { value: "viewer", labelKey: "viewer" },
-  { value: "analyst", labelKey: "analyst" },
+  { value: "member", labelKey: "member" },
   { value: "admin", labelKey: "admin" },
 ] as const;
 
@@ -90,20 +89,20 @@ const GLOBAL_ROLE_SET: ReadonlySet<string> = new Set(
 /**
  * Map any stored `user.role` value to a role that's actually in the current
  * global taxonomy. Legacy values that used to be treated as global
- * (`org_admin`, `field`, team-role names, etc.) collapse to `"viewer"` so
- * they don't leak through Mantine's Select trigger as unmatched values —
- * which would look like the dropdown "contains" them. The stored DB value
- * is untouched; a separate SQL backfill is the source-of-truth cleanup.
+ * (`org_admin`, `field`, `viewer`, `analyst`, team-role names, etc.) collapse
+ * to `"member"` so they don't leak through Mantine's Select trigger as
+ * unmatched values — which would look like the dropdown "contains" them. The
+ * stored DB value is untouched; a separate SQL backfill is the source-of-truth
+ * cleanup.
  */
 function toGlobalRole(role: string | null | undefined): string {
   if (role && GLOBAL_ROLE_SET.has(role)) return role;
-  return "viewer";
+  return "member";
 }
 
 const roleColor: Record<string, string> = {
   admin: "orange",
-  analyst: "blue",
-  viewer: "gray",
+  member: "gray",
   user: "gray",
 };
 
@@ -422,7 +421,7 @@ function UsersPanel() {
       setLocalUsers((prev) =>
         prev.map((u) =>
           u.id === id
-            ? { ...u, role: result.user.role ?? "viewer", isActive: result.user.isActive ?? true }
+            ? { ...u, role: result.user.role ?? "member", isActive: result.user.isActive ?? true }
             : u,
         ),
       );
@@ -472,7 +471,7 @@ function UsersPanel() {
     const { user, newRole } = pendingAction;
     setPendingAction(null);
     updateUserRole.mutate(
-      { userId: user.id, role: newRole as "viewer" | "analyst" | "admin" },
+      { userId: user.id, role: newRole as "member" | "admin" },
       {
         onError: () => {
           setPendingRoles((prev) => {
@@ -1108,7 +1107,7 @@ function OrganisationsPanel() {
   // Step 3: Invite fields
   const [inviteEmails, setInviteEmails] = useState("");
   const [inviteRole, setInviteRole] = useState("member");
-  const [inviteTeamRole, setInviteTeamRole] = useState("viewer");
+  const [inviteTeamRole, setInviteTeamRole] = useState("team_member");
   const [invitesSent, setInvitesSent] = useState(0);
   const [inviteErrors, setInviteErrors] = useState<string[]>([]);
 
@@ -1144,7 +1143,7 @@ function OrganisationsPanel() {
     setCreatedTeamId(null);
     setInviteEmails("");
     setInviteRole("member");
-    setInviteTeamRole("viewer");
+    setInviteTeamRole("team_member");
     setInvitesSent(0);
     setInviteErrors([]);
     setStepError("");
@@ -1222,7 +1221,7 @@ function OrganisationsPanel() {
           teams: [
             {
               teamId: createdTeamId,
-              teamRole: inviteTeamRole as "team_admin" | "field_coordinator" | "emergency_response_manager" | "team_member",
+              teamRole: inviteTeamRole as "team_admin" | "analyst" | "emergency_response_manager" | "team_member",
             },
           ],
         });
@@ -1706,7 +1705,7 @@ function OrganisationsPanel() {
                   onChange={(v) => v && setInviteTeamRole(v)}
                   data={[
                     { value: "team_member", label: tRoles("teamMember") },
-                    { value: "field_coordinator", label: tRoles("fieldCoordinator") },
+                    { value: "analyst", label: tRoles("analyst") },
                     { value: "team_admin", label: tRoles("teamAdmin") },
                   ]}
                   w={140}
@@ -1828,7 +1827,7 @@ function InvitationsPanel() {
   );
 
   // Invite form state
-  type TeamRole = "team_admin" | "field_coordinator" | "team_member";
+  type TeamRole = "team_admin" | "analyst" | "emergency_response_manager" | "team_member";
   const [inviteOpen, setInviteOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState("member");
@@ -2199,7 +2198,7 @@ function InvitationsPanel() {
                         }}
                         data={[
                           { value: "team_member", label: tRoles("teamMember") },
-                          { value: "field_coordinator", label: tRoles("fieldCoordinator") },
+                          { value: "analyst", label: tRoles("analyst") },
                           { value: "team_admin", label: tRoles("teamAdmin") },
                         ]}
                         disabled={!isSelected}

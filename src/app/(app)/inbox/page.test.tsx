@@ -2,7 +2,7 @@ import React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MantineProvider } from "@mantine/core";
-import type { GqlHotlineInbox } from "~/lib/types/graphql";
+import type { GqlCaseProposal, GqlHotlineInbox, GqlReviewCaseProposal, GqlTask } from "~/lib/types/graphql";
 
 /**
  * Page-level tests for the triage flow: role gate, filter/selection,
@@ -14,23 +14,61 @@ import type { GqlHotlineInbox } from "~/lib/types/graphql";
 vi.mock("next-intl", () => ({
   useTranslations: () => (key: string, vars?: Record<string, unknown>) =>
     vars ? `${key}:${JSON.stringify(vars)}` : key,
-  useFormatter: () => ({ dateTime: () => "15 Sep 2026", relativeTime: () => "1 month ago" }),
+  useFormatter: () => ({ dateTime: () => "15 Sep 2026", relativeTime: () => "1 month ago", number: (n: number) => n.toLocaleString("en") }),
   useLocale: () => "en",
 }));
 vi.mock("next/link", () => ({
   default: ({ children, href }: { children: React.ReactNode; href: string }) => <a href={href}>{children}</a>,
 }));
 
+/** `hotline_inbox` (the page), with per-key overrides for the others.
+ * `event_enrichment` (My requests) is off unless a test turns it on, so the
+ * Review-item cases see the page they always did. */
 let flagEnabled = true;
+let flags: Record<string, boolean> = {};
 vi.mock("~/components/feature-flags-provider", () => ({
-  useFeatureEnabled: () => flagEnabled,
+  useFeatureEnabled: (key: string) => flags[key] ?? (key === "event_enrichment" ? false : flagEnabled),
 }));
 
 let role = "admin";
+/** The session query still in flight (the first render of a cold page). */
+let authLoading = false;
 const reviewMutate = vi.fn();
 const retryMutateAsync = vi.fn();
 const invalidate = vi.fn(async () => undefined);
 let inboxData: GqlHotlineInbox;
+let myTasksData: { tasks: GqlTask[]; eventTitles: Record<string, string | null> } = { tasks: [], eventTitles: {} };
+const myTasksQuery = vi.fn((_input: unknown, opts: { enabled: boolean }) => ({
+  data: opts.enabled ? myTasksData : undefined,
+  isFetching: false,
+  isLoading: false,
+  error: null,
+}));
+let casesData: GqlReviewCaseProposal[] = [];
+const casesQuery = vi.fn((_input: unknown, opts: { enabled: boolean }) => ({
+  data: opts.enabled ? casesData : undefined,
+  isFetching: false,
+  isLoading: false,
+  error: null,
+}));
+const decideCaseMutate = vi.fn();
+/** The case row's mutation state (one hook per row; tests set it for all). */
+let caseMutation: { isPending: boolean; isError: boolean; error: { message: string; data?: { code?: string } } | null } = {
+  isPending: false,
+  isError: false,
+  error: null,
+};
+/** The Event's enrichment, as the Task pane reads it for a produced proposal. */
+let forEventCases: GqlCaseProposal[] = [];
+let forEventError = false;
+const forEventQuery = vi.fn((_input: unknown, opts: { enabled: boolean }) => ({
+  data: opts.enabled && !forEventError ? { tasks: [], caseProposals: forEventCases } : undefined,
+  isSuccess: opts.enabled && !forEventError,
+  isError: opts.enabled && forEventError,
+}));
+const forEventFetch = vi.fn(async () => ({ tasks: [], caseProposals: forEventCases }));
+const cancelMutate = vi.fn();
+let cancelSucceeded = false;
 
 vi.mock("~/trpc/react", () => ({
   api: {
@@ -40,10 +78,42 @@ vi.mock("~/trpc/react", () => ({
         threads: { invalidate },
         messages: { invalidate },
       },
+      tasks: {
+        proposedCaseProposals: { invalidate },
+        reviewCount: { invalidate },
+        forEvent: { invalidate, fetch: forEventFetch },
+        computedPriors: { invalidate },
+        myTasks: { invalidate },
+      },
     }),
-    auth: { me: { useQuery: () => ({ data: { user: { id: "u", role } }, isLoading: false }) } },
+    auth: {
+      me: {
+        useQuery: () =>
+          authLoading ? { data: undefined, isLoading: true } : { data: { user: { id: "u", role: role === "viewer" || role === "analyst" ? "member" : role, teamMemberships: role === "analyst" ? [{ role: "analyst" }] : [] } }, isLoading: false },
+      },
+    },
+    tasks: {
+      myTasks: { useQuery: (input: unknown, opts: { enabled: boolean }) => myTasksQuery(input, opts) },
+      proposedCaseProposals: { useQuery: (input: unknown, opts: { enabled: boolean }) => casesQuery(input, opts) },
+      reviewCount: {
+        useQuery: (_input: unknown, opts: { enabled: boolean }) => ({
+          data: opts.enabled ? { count: 0, capped: false } : undefined,
+        }),
+      },
+      forEvent: { useQuery: (input: unknown, opts: { enabled: boolean }) => forEventQuery(input, opts) },
+      decideCaseProposal: {
+        useMutation: () => ({ mutate: decideCaseMutate, ...caseMutation, data: undefined, variables: undefined }),
+      },
+      cancel: { useMutation: () => ({ mutate: cancelMutate, isPending: false, isError: false, isSuccess: cancelSucceeded }) },
+    },
     ground: {
-      hotlineInbox: { useQuery: () => ({ data: inboxData, isFetching: false, error: null }) },
+      hotlineInbox: {
+        useQuery: (_input: unknown, opts: { enabled: boolean }) => ({
+          data: opts.enabled ? inboxData : undefined,
+          isFetching: false,
+          error: null,
+        }),
+      },
       review: { useMutation: () => ({ mutate: reviewMutate, isPending: false }) },
       retryMessage: { useMutation: () => ({ mutateAsync: retryMutateAsync }) },
       requestTranslation: { useMutation: () => ({ mutate: vi.fn(), data: undefined, isError: false }) },
@@ -119,9 +189,46 @@ function message(id: string, threadId: string, classification: string | null, se
   };
 }
 
+function webCase(id: string, overrides: Partial<GqlReviewCaseProposal> = {}): GqlReviewCaseProposal {
+  return {
+    id,
+    eventId: "evt-1",
+    event: { id: "evt-1", title: "Floods in Kassala", types: ["FL"] },
+    taskId: "task-web",
+    state: "proposed",
+    sourceUrl: `https://example.test/${id}`,
+    quote: `Quote of ${id}`,
+    occurredAt: "2019-08-10T00:00:00Z",
+    locationLabel: "Kassala",
+    locationId: null,
+    hazardType: "FL",
+    geographicScope: "district",
+    figures: [],
+    matchedEventId: null,
+    methodVersion: "web-cases@1",
+    decidedById: null,
+    decidedAt: null,
+    decisionRationale: null,
+    resultSignalId: null,
+    resultEventId: null,
+    createdAt: "2026-09-16T10:00:00Z",
+    ...overrides,
+  };
+}
+
 beforeEach(() => {
   flagEnabled = true;
+  flags = {};
   role = "admin";
+  authLoading = false;
+  myTasksData = { tasks: [], eventTitles: {} };
+  forEventCases = [];
+  forEventError = false;
+  casesData = [];
+  caseMutation = { isPending: false, isError: false, error: null };
+  cancelMutate.mockReset();
+  cancelSucceeded = false;
+  myTasksQuery.mockClear();
   window.localStorage.clear();
   inboxData = {
     sources: [{ id: "hot1", name: "Hotline", kind: "hotline", reviewerRoles: ["analyst"], privacyDefault: "private", isActive: true }],
@@ -137,23 +244,84 @@ afterEach(() => {
   cleanup();
   vi.clearAllMocks();
   retryMutateAsync.mockReset();
+  decideCaseMutate.mockReset();
   invalidate.mockReset();
 });
 
 const renderPage = () => render(<MantineProvider><InboxPage /></MantineProvider>);
 
 describe("InboxPage access", () => {
-  it("blocks non-admin roles", () => {
-    role = "analyst";
+  it("blocks a viewer", () => {
+    role = "viewer";
     renderPage();
     expect(screen.getByTestId("inbox-no-access")).toBeInTheDocument();
     expect(screen.queryByTestId("inbox-page")).not.toBeInTheDocument();
   });
 
-  it("blocks when the feature flag is off", () => {
+  it("blocks an analyst while impact_prior_review is off: the hotline is admins' only", () => {
+    role = "analyst";
+    flags = { impact_prior_review: false };
+    renderPage();
+    expect(screen.getByTestId("inbox-no-access")).toBeInTheDocument();
+  });
+
+  it("blocks when both flags are off", () => {
     flagEnabled = false;
     renderPage();
     expect(screen.getByTestId("inbox-no-access")).toBeInTheDocument();
+  });
+
+  it("admits an analyst to the Review items only: no hotline fetch, no hotline filters, proposed signals first", () => {
+    role = "analyst";
+    casesData = [webCase("cp-1")];
+    renderPage();
+    expect(screen.getByTestId("inbox-page")).toBeInTheDocument();
+    expect(casesQuery).toHaveBeenCalledWith(undefined, expect.objectContaining({ enabled: true }));
+    expect(screen.queryByTestId("inbox-filter-reports")).not.toBeInTheDocument();
+    expect(screen.getByTestId("inbox-filter-proposals")).toHaveAttribute("data-active", "true");
+    // Opened on arrival: the filter number is unread, the awaiting line is the queue.
+    expect(screen.getByTestId("inbox-filter-proposals")).toHaveTextContent("0");
+    expect(screen.getByTestId("inbox-filter-all")).toBeInTheDocument();
+    expect(screen.getAllByTestId("inbox-entry")).toHaveLength(1);
+    expect(screen.getByText('awaiting:{"count":1}')).toBeInTheDocument();
+    // The hotline threads the mock would return are not listed.
+    expect(screen.queryByText("Thread a")).not.toBeInTheDocument();
+  });
+
+  it("lands an analyst on Proposed signals even when the page rendered before the session and the flags arrived", () => {
+    role = "analyst";
+    casesData = [webCase("cp-1")];
+    authLoading = true;
+    const view = renderPage();
+    expect(screen.queryByTestId("inbox-page")).not.toBeInTheDocument();
+    // Session in, flags still at their defaults (the new flag off): only Everything applies.
+    authLoading = false;
+    flags = { impact_prior_review: false };
+    view.rerender(<MantineProvider><InboxPage /></MantineProvider>);
+    expect(screen.queryByTestId("inbox-page")).not.toBeInTheDocument();
+    // The server's flags land.
+    flags = {};
+    view.rerender(<MantineProvider><InboxPage /></MantineProvider>);
+    expect(screen.getByTestId("inbox-filter-proposals")).toHaveAttribute("data-active", "true");
+    expect(screen.getByTestId("inbox-filter-all")).toHaveAttribute("data-active", "false");
+  });
+
+  it("falls back from a chosen filter that stops applying", () => {
+    casesData = [webCase("cp-1")];
+    const view = renderPage();
+    fireEvent.click(screen.getByTestId("inbox-filter-proposals"));
+    expect(screen.getByTestId("inbox-filter-proposals")).toHaveAttribute("data-active", "true");
+    flags = { impact_prior_review: false };
+    view.rerender(<MantineProvider><InboxPage /></MantineProvider>);
+    expect(screen.queryByTestId("inbox-filter-proposals")).not.toBeInTheDocument();
+    expect(screen.getByTestId("inbox-filter-reports")).toHaveAttribute("data-active", "true");
+  });
+
+  it("keeps an admin on the hotline filters when impact_prior_review is off", () => {
+    flags = { impact_prior_review: false };
+    renderPage();
+    expect(screen.getByTestId("inbox-filter-reports")).toHaveAttribute("data-active", "true");
+    expect(screen.queryByTestId("inbox-filter-proposals")).not.toBeInTheDocument();
   });
 });
 
@@ -187,8 +355,20 @@ describe("InboxPage triage", () => {
     );
     expect(screen.getByTestId("inbox-toast")).toHaveTextContent("toast.archived");
     expect(invalidate).toHaveBeenCalled();
-    // Selection moved to the next visible entry.
-    expect(screen.getAllByTestId("inbox-entry")[1]).toHaveAttribute("data-selected", "true");
+    // The reviewed row leaves immediately; selection moves to the next one.
+    const rows = screen.getAllByTestId("inbox-entry");
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toHaveAttribute("data-selected", "true");
+    expect(screen.getByText('awaiting:{"count":2}')).toBeInTheDocument();
+  });
+
+  it("drops the filter number when a row is opened, and keeps it in the queue until it is reviewed", () => {
+    renderPage();
+    expect(screen.getByTestId("inbox-filter-reports")).toHaveTextContent("1");
+    expect(screen.getByText('awaiting:{"count":3}')).toBeInTheDocument();
+    fireEvent.click(screen.getAllByTestId("inbox-entry")[1]!);
+    expect(screen.getByTestId("inbox-filter-reports")).toHaveTextContent("0");
+    expect(screen.getByText('awaiting:{"count":3}')).toBeInTheDocument();
   });
 
   it("rejects with the structured reason, not a note", () => {
@@ -345,7 +525,8 @@ describe("InboxPage pipeline failures", () => {
   it("keeps queued and failed entries under Unclassified but pills them differently", () => {
     const rows = openUnclassified();
     expect(rows).toHaveLength(3);
-    expect(screen.getByTestId("inbox-filter-unclassified")).toHaveTextContent("3");
+    // The filter opens the first row, so the unread number is the other two.
+    expect(screen.getByTestId("inbox-filter-unclassified")).toHaveTextContent("2");
 
     const queued = rowFor("Thread c");
     expect(queued).toHaveAttribute("data-processing", "pending");
@@ -501,5 +682,311 @@ describe("InboxPage pipeline failures", () => {
       'failure.partial:{"done":1,"total":2,"error":"upstream 503"}',
     );
     expect(screen.queryByTestId("inbox-toast")).not.toBeInTheDocument();
+  });
+});
+
+describe("InboxPage proposed signals beside the hotline", () => {
+  it("lists an Event's proposed signals beside the threads under Everything; no hotline action or shortcut acts on them", () => {
+    casesData = [webCase("cp-1")];
+    renderPage();
+    expect(casesQuery).toHaveBeenCalledWith(undefined, expect.objectContaining({ enabled: true }));
+    // Not a field report: it is not under the default filter.
+    expect(screen.queryByTestId("inbox-kind-pill")).not.toBeInTheDocument();
+    expect(screen.getByTestId("inbox-filter-proposals")).toHaveTextContent("1");
+    fireEvent.click(screen.getByTestId("inbox-filter-all"));
+    expect(screen.getByText('awaiting:{"count":4}')).toBeInTheDocument();
+    const row = screen.getAllByTestId("inbox-entry").find((r) => r.getAttribute("data-kind") === "cases")!;
+    expect(row).toHaveTextContent("Floods in Kassala");
+    expect(within(row).getByTestId("inbox-kind-pill")).toBeInTheDocument();
+    // No whole-prior Review item exists any more.
+    expect(screen.getAllByTestId("inbox-entry").map((r) => r.getAttribute("data-kind"))).not.toContain("impact_prior");
+
+    fireEvent.click(row);
+    expect(screen.getByTestId("inbox-pane")).toHaveAttribute("data-kind", "cases");
+    expect(screen.getByRole("link", { name: "event.open" })).toHaveAttribute("href", "/event/evt-1");
+    expect(screen.queryByTestId("inbox-action-bar")).not.toBeInTheDocument();
+    fireEvent.keyDown(window, { key: "e" });
+    expect(reviewMutate).not.toHaveBeenCalled();
+  });
+
+  it("does not ask for Review items while impact_prior_review is off", () => {
+    flags = { impact_prior_review: false };
+    casesData = [webCase("cp-1")];
+    renderPage();
+    expect(casesQuery).toHaveBeenCalledWith(undefined, expect.objectContaining({ enabled: false }));
+    fireEvent.click(screen.getByTestId("inbox-filter-all"));
+    expect(screen.queryByTestId("inbox-kind-pill")).not.toBeInTheDocument();
+  });
+});
+
+function myTask(id: string, overrides: Partial<GqlTask> = {}): GqlTask {
+  return {
+    id,
+    kind: "event.impact_prior.web",
+    requestId: "req-1",
+    subjectType: "event",
+    subjectId: "evt-1",
+    status: "PENDING",
+    origin: "user",
+    requesterId: "u",
+    requester: { id: "u", name: "Ana" },
+    leaseOwner: null,
+    teamId: null,
+    attempts: 0,
+    maxAttempts: 3,
+    lastError: null,
+    cancelRequestedAt: null,
+    outcome: null,
+    model: null,
+    costUsd: null,
+    completedAt: null,
+    createdAt: "2026-10-07T09:00:00Z",
+    updatedAt: "2026-10-07T09:00:00Z",
+    ...overrides,
+  };
+}
+
+describe("InboxPage My requests", () => {
+  it("admits a viewer with event_enrichment on, straight to their requests", () => {
+    role = "viewer";
+    flags = { event_enrichment: true };
+    myTasksData = {
+      // An older kind from before the web search still lists beside it.
+      tasks: [myTask("t-clear", { kind: "event.impact_prior.clear" }), myTask("t-web", { status: "LEASED" })],
+      eventTitles: { "evt-1": "Floods in Kassala" },
+    };
+    renderPage();
+    expect(screen.getByTestId("inbox-page")).toBeInTheDocument();
+    expect(myTasksQuery).toHaveBeenCalledWith(undefined, expect.objectContaining({ enabled: true }));
+    // No hotline, no Review items for a viewer: My requests and Everything only, on My requests.
+    expect(screen.getByTestId("inbox-filter-requests")).toHaveAttribute("data-active", "true");
+    expect(screen.queryByTestId("inbox-filter-proposals")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("inbox-filter-reports")).not.toBeInTheDocument();
+    const rows = screen.getAllByTestId("inbox-entry");
+    expect(rows.map((r) => [r.getAttribute("data-kind"), r.getAttribute("data-source-kind"), r.getAttribute("data-status")])).toEqual([
+      ["task", "event.impact_prior.clear", "PENDING"],
+      ["task", "event.impact_prior.web", "LEASED"],
+    ]);
+    expect(rows[0]).toHaveTextContent("Floods in Kassala");
+    expect(within(rows[0]!).getByTestId("inbox-kind-pill")).toHaveAttribute("data-kind", "task");
+    // Requests are not Review items: nothing is awaiting, Everything is empty.
+    expect(screen.getByText('awaiting:{"count":0}')).toBeInTheDocument();
+    expect(screen.getByTestId("inbox-filter-all")).toHaveTextContent("0");
+  });
+
+  it("keeps requests out of Everything and the awaiting count for a decider, under their own filter", () => {
+    role = "analyst";
+    flags = { impact_prior_review: true, event_enrichment: true };
+    casesData = [webCase("cp-1")];
+    myTasksData = { tasks: [myTask("t-1")], eventTitles: { "evt-1": "Floods in Kassala" } };
+    renderPage();
+    // A decider still lands on their Review items.
+    expect(screen.getByTestId("inbox-filter-proposals")).toHaveAttribute("data-active", "true");
+    expect(screen.getByTestId("inbox-filter-requests")).toHaveTextContent("1");
+    expect(screen.getByText('awaiting:{"count":1}')).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("inbox-filter-all"));
+    expect(screen.getAllByTestId("inbox-entry").map((r) => r.getAttribute("data-kind"))).toEqual(["cases"]);
+    fireEvent.click(screen.getByTestId("inbox-filter-requests"));
+    expect(screen.getAllByTestId("inbox-entry").map((r) => r.getAttribute("data-kind"))).toEqual(["task"]);
+  });
+
+  it("shows an open request read-only with Cancel, and cancels that Task", () => {
+    role = "viewer";
+    flags = { event_enrichment: true };
+    myTasksData = { tasks: [myTask("t-1")], eventTitles: { "evt-1": "Floods in Kassala" } };
+    renderPage();
+    const pane = screen.getByTestId("inbox-pane");
+    expect(pane).toHaveAttribute("data-kind", "task");
+    expect(pane).toHaveAttribute("data-status", "PENDING");
+    expect(within(pane).getByTestId("enrichment-task")).toHaveAttribute("data-kind", "event.impact_prior.web");
+    expect(within(pane).getByRole("link", { name: "event.open" })).toHaveAttribute("href", "/event/evt-1");
+    // No decision controls and no hotline actions on a request.
+    expect(screen.queryByTestId("case-proposal-decision")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("inbox-action-bar")).not.toBeInTheDocument();
+    fireEvent.click(within(pane).getByTestId("inbox-task-cancel"));
+    expect(cancelMutate).toHaveBeenCalledWith({ id: "t-1" });
+  });
+
+  it("offers no Cancel once a request is done, and says a proposal is awaiting review until it is decided", () => {
+    role = "viewer";
+    flags = { event_enrichment: true };
+    myTasksData = {
+      tasks: [myTask("t-1", { status: "COMPLETED", outcome: "produced", completedAt: "2026-10-07T09:10:00Z" })],
+      eventTitles: { "evt-1": "Floods in Kassala" },
+    };
+    // The requester may see their own proposed signals while they are proposed.
+    forEventCases = [webCase("cp-1", { taskId: "t-1" })];
+    const { unmount } = renderPage();
+    expect(screen.queryByTestId("inbox-task-cancel")).not.toBeInTheDocument();
+    expect(screen.getByTestId("inbox-task-awaiting-review")).toBeInTheDocument();
+    expect(screen.getByTestId("case-proposal")).toHaveAttribute("data-state", "proposed");
+    unmount();
+
+    // Once accepted, the row says so and the "awaiting" line is gone.
+    forEventCases = [webCase("cp-1", { taskId: "t-1", state: "accepted" })];
+    renderPage();
+    expect(screen.queryByTestId("inbox-task-awaiting-review")).not.toBeInTheDocument();
+    expect(screen.getByTestId("case-proposal")).toHaveAttribute("data-state", "accepted");
+  });
+
+  it("points to the Event, rather than claim it awaits review, when the proposal is not the reader's to see", () => {
+    role = "viewer";
+    flags = { event_enrichment: true };
+    myTasksData = {
+      tasks: [myTask("t-1", { status: "COMPLETED", outcome: "produced" })],
+      eventTitles: { "evt-1": "Floods in Kassala" },
+    };
+    // Rejected cases are visible to deciders only: nothing comes back for this viewer.
+    forEventCases = [];
+    renderPage();
+    expect(screen.queryByTestId("inbox-task-awaiting-review")).not.toBeInTheDocument();
+    expect(screen.getByTestId("inbox-task-proposal-hidden")).toHaveTextContent("requests.producedSeeEvent");
+  });
+
+  it("keeps Cancel disabled once it succeeded, until the refetch shows the Task cancelled", () => {
+    role = "viewer";
+    flags = { event_enrichment: true };
+    myTasksData = { tasks: [myTask("t-1")], eventTitles: { "evt-1": "Floods in Kassala" } };
+    cancelSucceeded = true;
+    renderPage();
+    expect(screen.getByTestId("inbox-task-cancel")).toBeDisabled();
+  });
+
+  it("shows a web request's cases read-only, polls them while any awaits review, and says when they cannot be read", () => {
+    role = "analyst";
+    flags = { event_enrichment: true };
+    casesData = [];
+    myTasksData = {
+      tasks: [myTask("t-web", { kind: "event.impact_prior.web", status: "COMPLETED", outcome: "produced" })],
+      eventTitles: { "evt-1": "Floods in Kassala" },
+    };
+    forEventCases = [webCase("cp-1", { taskId: "t-web" }), webCase("cp-other", { taskId: "t-else" })];
+    const view = renderPage();
+    fireEvent.click(screen.getByTestId("inbox-filter-requests"));
+    expect(screen.getByTestId("inbox-task-awaiting-review")).toBeInTheDocument();
+    // Only this Task's cases, and no decision on them here: deciders decide in their Review item.
+    expect(screen.getAllByTestId("case-proposal").map((c) => c.getAttribute("data-case-id"))).toEqual(["cp-1"]);
+    expect(screen.queryByTestId("case-proposal-decision")).not.toBeInTheDocument();
+    const opts = forEventQuery.mock.calls.at(-1)![1] as unknown as {
+      refetchInterval: (q: { state: { data: unknown } }) => number | false;
+    };
+    expect(opts.refetchInterval({ state: { data: { caseProposals: forEventCases } } })).toBe(60_000);
+    expect(
+      opts.refetchInterval({ state: { data: { caseProposals: [{ ...forEventCases[0], state: "accepted" }] } } }),
+    ).toBe(false);
+    view.unmount();
+
+    forEventError = true;
+    renderPage();
+    fireEvent.click(screen.getByTestId("inbox-filter-requests"));
+    expect(screen.getByTestId("inbox-task-proposal-error")).toHaveTextContent("requests.proposalLoadFailed");
+    expect(screen.queryByTestId("inbox-task-proposal-hidden")).not.toBeInTheDocument();
+  });
+
+  it("does not ask for requests while event_enrichment is off", () => {
+    role = "admin";
+    renderPage();
+    expect(myTasksQuery).toHaveBeenCalledWith(undefined, expect.objectContaining({ enabled: false }));
+    expect(screen.queryByTestId("inbox-filter-requests")).not.toBeInTheDocument();
+  });
+});
+
+describe("InboxPage web cases", () => {
+  beforeEach(() => {
+    role = "analyst";
+  });
+
+  it("groups the proposed cases under their Event, and counts the undecided cases", () => {
+    casesData = [
+      webCase("cp-1"),
+      webCase("cp-2", { createdAt: "2026-09-16T09:00:00Z" }),
+      webCase("cp-3", { eventId: "evt-2", event: { id: "evt-2", title: "Drought in Kordofan", types: ["DR"] }, createdAt: "2026-09-17T10:00:00Z" }),
+    ];
+    renderPage();
+    expect(casesQuery).toHaveBeenCalledWith(undefined, expect.objectContaining({ enabled: true }));
+    // Three cases wait. The newest group is opened on arrival, so the filter
+    // number is the other group's two undecided cases.
+    expect(screen.getByTestId("inbox-filter-proposals")).toHaveTextContent("2");
+    expect(screen.getByText('awaiting:{"count":3}')).toBeInTheDocument();
+    const groups = screen.getAllByTestId("inbox-entry").filter((r) => r.getAttribute("data-kind") === "cases");
+    expect(groups.map((g) => [g.textContent?.includes("Drought in Kordofan"), g.getAttribute("data-undecided")])).toEqual([
+      [true, "1"],
+      [false, "2"],
+    ]);
+    expect(groups[1]).toHaveAttribute("data-source-kind", "event.impact_prior.web");
+    expect(within(groups[1]!).getByTestId("inbox-kind-pill")).toHaveAttribute("data-kind", "cases");
+
+    fireEvent.click(groups[1]!);
+    const pane = screen.getByTestId("inbox-pane");
+    expect(pane).toHaveAttribute("data-kind", "cases");
+    expect(within(pane).getByRole("link", { name: "event.open" })).toHaveAttribute("href", "/event/evt-1");
+    expect(within(pane).getAllByTestId("case-proposal").map((c) => c.getAttribute("data-case-id"))).toEqual(["cp-1", "cp-2"]);
+    expect(within(pane).getAllByTestId("case-proposal-accept")).toHaveLength(2);
+  });
+
+  it("accepts a case in place: the row turns accepted, links its Event, and stays after the list drops it", () => {
+    casesData = [webCase("cp-1"), webCase("cp-2", { matchedEventId: "evt-2019", createdAt: "2026-09-16T09:00:00Z" })];
+    decideCaseMutate.mockImplementation((_input, opts) =>
+      opts.onSuccess({ ...webCase("cp-1"), state: "accepted", resultEventId: "evt-h", resultSignalId: "sig-1" }),
+    );
+    const view = renderPage();
+    const rows = () => screen.getAllByTestId("case-proposal");
+    // The matched one says which CLEAR Event it is.
+    expect(within(rows()[1]!).getByTestId("case-proposal-matched-event")).toHaveAttribute("href", "/event/evt-2019");
+    fireEvent.click(within(rows()[0]!).getByTestId("case-proposal-accept"));
+    expect(decideCaseMutate).toHaveBeenCalledWith({ id: "cp-1", decision: "accepted", rationale: undefined }, expect.any(Object));
+    expect(rows()[0]).toHaveAttribute("data-state", "accepted");
+    expect(within(rows()[0]!).getByTestId("case-proposal-result-event")).toHaveAttribute("href", "/event/evt-h");
+    expect(within(rows()[0]!).queryByTestId("case-proposal-decision")).not.toBeInTheDocument();
+    expect(screen.getByTestId("inbox-toast").textContent).toBe("toast.accepted");
+    // The count is what is still undecided.
+    expect(screen.getByText('awaiting:{"count":1}')).toBeInTheDocument();
+
+    // The refetched list no longer returns it: the row stays, decided.
+    casesData = [webCase("cp-2", { matchedEventId: "evt-2019", createdAt: "2026-09-16T09:00:00Z" })];
+    view.rerender(<MantineProvider><InboxPage /></MantineProvider>);
+    expect(rows().map((r) => [r.getAttribute("data-case-id"), r.getAttribute("data-state")])).toEqual([
+      ["cp-1", "accepted"],
+      ["cp-2", "proposed"],
+    ]);
+  });
+
+  it("asks for a rationale before rejecting a case", () => {
+    casesData = [webCase("cp-1")];
+    decideCaseMutate.mockImplementation((_input, opts) =>
+      opts.onSuccess({ ...webCase("cp-1"), state: "rejected", decisionRationale: "Another district" }),
+    );
+    renderPage();
+    fireEvent.click(screen.getByTestId("case-proposal-reject"));
+    fireEvent.click(screen.getByTestId("case-proposal-confirm-reject"));
+    expect(screen.getByText("rationaleRequired")).toBeInTheDocument();
+    expect(decideCaseMutate).not.toHaveBeenCalled();
+    fireEvent.change(screen.getByTestId("case-proposal-rationale"), { target: { value: "  Another district  " } });
+    fireEvent.click(screen.getByTestId("case-proposal-confirm-reject"));
+    expect(decideCaseMutate).toHaveBeenCalledWith({ id: "cp-1", decision: "rejected", rationale: "Another district" }, expect.any(Object));
+    expect(screen.getByTestId("case-proposal")).toHaveAttribute("data-state", "rejected");
+    expect(screen.getByTestId("case-proposal-rationale-shown")).toHaveTextContent("Another district");
+    expect(screen.getByText('awaiting:{"count":0}')).toBeInTheDocument();
+  });
+
+  it("shows a CONFLICT and the decision another decider took, rather than swallow it", async () => {
+    casesData = [webCase("cp-1")];
+    forEventCases = [{ ...webCase("cp-1"), state: "accepted", resultEventId: "evt-h" }];
+    caseMutation = { isPending: false, isError: true, error: { message: "CaseProposal is already accepted", data: { code: "CONFLICT" } } };
+    decideCaseMutate.mockImplementation((_input, opts) => opts.onError({ data: { code: "CONFLICT" } }));
+    renderPage();
+    expect(screen.getByTestId("case-proposal-error")).toHaveTextContent("conflict CaseProposal is already accepted");
+    fireEvent.click(screen.getByTestId("case-proposal-accept"));
+    // Disabled: the row is known to be stale.
+    expect(decideCaseMutate).not.toHaveBeenCalled();
+
+    // The per-call path: CONFLICT reads the Event's copy into the row.
+    caseMutation = { isPending: false, isError: false, error: null };
+    cleanup();
+    renderPage();
+    fireEvent.click(screen.getByTestId("case-proposal-accept"));
+    expect(forEventFetch).toHaveBeenCalledWith({ eventId: "evt-1" }, { staleTime: 0 });
+    await waitFor(() => expect(screen.getByTestId("case-proposal")).toHaveAttribute("data-state", "accepted"));
+    expect(screen.getByTestId("case-proposal-result-event")).toHaveAttribute("href", "/event/evt-h");
   });
 });

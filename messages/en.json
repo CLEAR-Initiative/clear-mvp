@@ -383,13 +383,12 @@
       "member": "Member",
       "orgAdmin": "Org Admin",
       "teamMember": "Team Member",
-      "fieldCoordinator": "Field Coordinator",
+      "analyst": "Analyst",
       "teamAdmin": "Team Admin"
     },
     "users": {
       "roles": {
-        "viewer": "Viewer",
-        "analyst": "Analyst",
+        "member": "Member",
         "admin": "Admin"
       },
       "unauthorized": "You need admin privileges to view user management.",
@@ -421,7 +420,7 @@
       "roleUpdatedDetail": "Role is now {role}.",
       "roleUpdateFailed": "Could not update role",
       "approved": "User approved",
-      "approvedDetail": "They now have viewer access.",
+      "approvedDetail": "They now have member access.",
       "approveFailed": "Could not approve user"
     },
     "features": {
@@ -877,7 +876,9 @@
       "edit": "Edit",
       "delete": "Delete",
       "confirm": "Confirm",
-      "retry": "Retry"
+      "retry": "Retry",
+      "copy": "Copy",
+      "copied": "Copied"
     },
     "states": {
       "loading": "Loading...",
@@ -1773,7 +1774,7 @@
         "help": {
           "approvePrivate": {
             "title": "Verified, but stays inside the room.",
-            "body": "The thread is marked as reviewed and believed, but it stays in the ground staging tier: visible only in this Ground Intel tab, only to admins and analysts. No signal is created — nothing appears on the map or in events and alerts, and nothing is exposed through the API. This is the state for content that is true but operationally sensitive — staff movements, or attribution that could endanger the reporter. It can still be promoted to public later if circumstances change."
+            "body": "The thread is marked as reviewed and believed, but it stays in the ground staging tier: visible only in this Ground Intel tab, only to admins and team analysts. No signal is created — nothing appears on the map or in events and alerts, and nothing is exposed through the API. This is the state for content that is true but operationally sensitive — staff movements, or attribution that could endanger the reporter. It can still be promoted to public later if circumstances change."
           },
           "approvePublic": {
             "title": "Verified — release it into CLEAR.",
@@ -1854,7 +1855,7 @@
       "confirmPrompt": "Raise this event as an alert?",
       "failed": "Failed. Try again.",
       "turnIntoAlert": "Turn into Alert",
-      "noPermission": "Only admins and analysts can raise alerts"
+      "noPermission": "Only admins and team analysts can raise alerts"
     },
     "systemData": {
       "title": "System Data",
@@ -1891,6 +1892,55 @@
       "namePlaceholder": "e.g. Khartoum flooding, August 2026",
       "confirmCreate": "Create crisis",
       "cancel": "Cancel"
+    },
+    "enrichment": {
+      "title": "Enrichment",
+      "request": "Request enrichment",
+      "confirmPrompt": "Ask a Worker what has typically happened before for this hazard here? It can take a few minutes.",
+      "requested": "Enrichment requested",
+      "failed": "Request failed. Try again.",
+      "noPermission": "Only admins, team analysts and team members can request enrichment",
+      "capReached": "You have reached today's limit for enrichment requests",
+      "cancel": "Cancel request",
+      "cancelled": "Request cancelled",
+      "empty": "No enrichment requested yet.",
+      "kinds": {
+        "impactPrior": "Impact prior"
+      },
+      "status": {
+        "PENDING": "Pending",
+        "LEASED": "In progress",
+        "COMPLETED": "Completed",
+        "FAILED": "Failed",
+        "CANCELLED": "Cancelled"
+      },
+      "outcome": {
+        "produced": "Prior proposed",
+        "no_prior_found": "No prior found",
+        "no_new_cases": "No new cases"
+      },
+      "requestedBy": "Requested by {name}",
+      "errorLabel": "Error",
+      "prior": {
+        "proposed": "Proposed",
+        "accepted": "Accepted",
+        "rejected": "Rejected"
+      },
+      "scope": {
+        "district": "district",
+        "country": "country"
+      },
+      "horizon": "{years}-year horizon",
+      "tier": {
+        "web": "Web"
+      },
+      "method": "Method {version}",
+      "source": "Source",
+      "loadFailed": "Enrichment could not be loaded.",
+      "worker": "Worker: {name}",
+      "kindStatus": "{source} · {status}",
+      "cancelFailed": "Some requests could not be cancelled. Try again.",
+      "webSearch": "Web search"
     }
   },
   "knowledge": {
@@ -2092,6 +2142,7 @@
       "inbox": "Inbox",
       "map": "Map",
       "insights": "Insights",
+      "metrics": "Metrics",
       "operations": "Operations",
       "cash": "Cash Assistance",
       "knowledge": "Knowledge Hub",
@@ -2103,7 +2154,13 @@
     "feedback": "Feedback",
     "admin": "Admin",
     "settings": "Settings",
-    "signOut": "Sign out"
+    "signOut": "Sign out",
+    "notifications": {
+      "title": "Notifications",
+      "unread": "{count, plural, one {# unread notification} other {# unread notifications}}",
+      "empty": "Nothing new",
+      "loadError": "Notifications could not be loaded"
+    }
   },
   "noAccess": {
     "title": "Waiting for Access",
@@ -2595,7 +2652,7 @@
         "noTeams": "This organisation has no teams. Create one before inviting.",
         "teamRoles": {
           "team_member": "Team member",
-          "field_coordinator": "Field coordinator",
+          "analyst": "Analyst",
           "emergency_response_manager": "Emergency response manager",
           "team_admin": "Team admin"
         },
@@ -2634,6 +2691,42 @@
         "title": "Location Scope",
         "save": "Save Locations",
         "none": "No locations selected"
+      },
+      "webhooks": {
+        "title": "Webhooks",
+        "description": "Send an HTTP POST to your systems whenever a CLEAR alert is created for this team.",
+        "none": "No webhooks configured",
+        "toggleActive": "Enable or disable this webhook",
+        "rotate": "Rotate secret",
+        "rotateConfirm": "Rotate this webhook's secret? The current secret will stop working immediately.",
+        "deleteConfirm": "Delete this webhook? This cannot be undone.",
+        "columns": {
+          "name": "Name",
+          "targetUrl": "Target URL",
+          "filters": "Filters",
+          "active": "Active"
+        },
+        "filters": {
+          "all": "All alerts",
+          "minSeverity": "Min severity {level}"
+        },
+        "secret": {
+          "title": "Signing secret",
+          "note": "Store this secret now — it will not be shown again. Use it to verify the signature on incoming webhook requests."
+        },
+        "add": {
+          "title": "Add webhook",
+          "nameLabel": "Name",
+          "targetUrlLabel": "Target URL",
+          "filterLabel": "Alert type filter",
+          "filterPlaceholder": "e.g. CF, FL (comma separated)",
+          "minSeverityLabel": "Min severity",
+          "minSeverityPlaceholder": "Any",
+          "submit": "Add webhook"
+        },
+        "loading": "Loading webhooks…",
+        "loadError": "Couldn’t load webhooks.",
+        "retry": "Retry"
       },
       "danger": {
         "title": "Danger Zone",
@@ -2766,12 +2859,14 @@
     "goToProfile": "Go to Profile"
   },
   "inbox": {
-    "title": "Hotline Inbox",
+    "title": "Inbox",
     "awaiting": "{count, plural, one {# awaiting review} other {# awaiting review}}",
     "filters": {
       "reports": "Field reports",
       "unclassified": "Unclassified",
       "chatter": "Chatter",
+      "proposals": "Proposed signals",
+      "requests": "My requests",
       "all": "Everything"
     },
     "search": "Search text, intake refs",
@@ -2867,7 +2962,7 @@
       "addedNoSignal": "Approved, but no signal id came back. Check the signal in Detection before relying on it.",
       "retried": "Queued for another attempt"
     },
-    "noAccess": "The hotline inbox is available to admins only for now.",
+    "noAccess": "The Inbox is available to admins and team analysts only.",
     "loadError": "Could not load the inbox",
     "translate": {
       "button": "Translate to {locale}",
@@ -2894,6 +2989,25 @@
       "retry": "Retry",
       "retrying": "Retrying…",
       "partial": "Queued again: {done} of {total} messages. {error}"
+    },
+    "kinds": {
+      "task": "My request",
+      "cases": "Proposed signals"
+    },
+    "event": {
+      "untitled": "Untitled event",
+      "open": "Open the event",
+      "proposedAt": "Proposed {date}"
+    },
+    "requests": {
+      "requestedAt": "Requested {date}",
+      "awaitingReview": "Proposed, awaiting review",
+      "cancelFailed": "This request could not be cancelled. Try again.",
+      "producedSeeEvent": "Proposal produced — see the Event",
+      "proposalLoadFailed": "The proposal could not be loaded. Open the Event to see it."
+    },
+    "cases": {
+      "preview": "{count, plural, =0 {All proposed signals decided} one {# proposed signal to review} other {# proposed signals to review}} · {hazard}"
     }
   },
   "analysis": {
@@ -3276,6 +3390,146 @@
         "eventTypes": "Event types",
         "sourceNames": "Sources"
       }
+    }
+  },
+  "caseReview": {
+    "group": "{count, plural, one {# proposed signal} other {# proposed signals}}",
+    "matchesEvent": "Matches CLEAR Event",
+    "resultEvent": "Open the resulting Event",
+    "accept": "Accept",
+    "reject": "Reject",
+    "confirmReject": "Reject case",
+    "cancel": "Cancel",
+    "rationaleLabel": "Why reject this case?",
+    "rationalePlaceholder": "Your reason, for the audit trail",
+    "rationaleRequired": "A rationale is required to reject",
+    "rationaleTooLong": "Keep the rationale under {max} characters",
+    "conflict": "Another decider got to this case first.",
+    "toast": {
+      "accepted": "Case accepted",
+      "rejected": "Case rejected"
+    },
+    "metric": {
+      "people_affected": "People affected",
+      "people_displaced_new": "Newly displaced",
+      "people_displaced_cumulative": "Displaced (cumulative)",
+      "people_in_need": "People in need",
+      "people_targeted": "People targeted",
+      "people_reached": "People reached",
+      "households_affected": "Households affected"
+    }
+  },
+  "computedPrior": {
+    "title": "From CLEAR's history",
+    "figurePeople": "{value} people",
+    "figureUnit": "{value} {unit}",
+    "range": "(range {low}–{high})",
+    "fromEvents": "{count, plural, one {from # past event} other {from # past events}}",
+    "lowConfidence": "Low confidence",
+    "pastEvent": "Past event {n}",
+    "moreEvents": "+{count} more"
+  },
+  "metrics": {
+    "page": {
+      "title": "Metrics",
+      "breadcrumb": "Metrics"
+    },
+    "loading": "Loading metrics…",
+    "error": {
+      "title": "Couldn't load the metrics"
+    },
+    "unavailable": {
+      "title": "Metrics API not deployed yet",
+      "body": "This environment's CLEAR API doesn't serve time to detection yet. The page fills in once it does."
+    },
+    "tiles": {
+      "counted": {
+        "label": "Events measured",
+        "detail": "of {total, number} events in range"
+      },
+      "byNextDay": {
+        "label": "Detected by next day"
+      },
+      "sameDay": {
+        "label": "Detected same day"
+      },
+      "withOnset": {
+        "label": "Events with an onset"
+      },
+      "ofCounted": "{n, number} of {counted, number} measured",
+      "ofInRange": "{n, number} of {total, number} in range"
+    },
+    "histogram": {
+      "title": "Days from onset to first signal",
+      "subtitle": "Measured events by how many days after onset CLEAR received its first signal",
+      "series": "Events",
+      "tooltip": "{count, plural, one {# event} other {# events}} · {share} of measured",
+      "footnote": "Out of {counted, plural, one {# measured event} other {# measured events}}. Days are whole calendar days: same day = 0, next day = 1.",
+      "buckets": {
+        "sameDay": "Same day",
+        "nextDay": "Next day",
+        "plusDays": "+{days}d",
+        "openEnded": "{days}d+"
+      }
+    },
+    "weekly": {
+      "title": "Weekly trend",
+      "subtitle": "Share of each ISO week's measured events",
+      "legend": "Legend",
+      "series": {
+        "byNextDay": "By next day",
+        "sameDay": "Same day"
+      },
+      "partial": "partial",
+      "tooltip": {
+        "week": "{week} · from {start}",
+        "n": "n = {n, plural, one {# measured event} other {# measured events}}",
+        "partial": "Partial week: still in progress"
+      }
+    },
+    "empty": {
+      "title": "No measurable events in this range",
+      "body": "{inRange, plural, =0 {There are no events in this range.} one {The one event in this range can't be measured; the reason is below.} other {None of the # events in this range can be measured; the reasons are below.}}"
+    },
+    "exclusions": {
+      "title": "Not measured",
+      "subtitle": "{total, number} of {inRange, number} events in range, by reason",
+      "reasons": {
+        "NO_INGESTED_SIGNAL": {
+          "label": "No ingested signal",
+          "description": "Only history: no signal reached CLEAR through an automatic feed."
+        },
+        "NO_ONSET": {
+          "label": "No onset date",
+          "description": "The event has no recorded onset to measure from."
+        },
+        "DATE_ONLY_FIRST_SIGNAL": {
+          "label": "First signal has no time",
+          "description": "The source gives a date but no time of day."
+        },
+        "BEFORE_ONSET": {
+          "label": "First signal before onset",
+          "description": "The first signal is dated before the onset: a data error."
+        }
+      }
+    },
+    "method": {
+      "title": "How this is measured",
+      "intro": "Time to detection is how soon after an event's real-world onset CLEAR received its first signal for it.",
+      "points": {
+        "counted": "An event is measured only when it has an onset date, its first signal carries a real time of day, and that signal is on or after the onset day.",
+        "excluded": "Every other event in the range is left out, under one of four reasons: no ingested signal, no onset date, a first signal with a date but no time, or a first signal dated before onset (a data error).",
+        "wholeDays": "Onset is recorded to the day, so time to detection is counted in whole days: same day = 0, next day = 1.",
+        "definition": "The full definition is clear-api's ADR-0011, \"Time to detection\"."
+      }
+    },
+    "range": "Showing {from} to {to}",
+    "filters": {
+      "from": "From",
+      "to": "To",
+      "country": "Country",
+      "allCountries": "All countries",
+      "hint": "Days are UTC. Leave the dates empty for the last 12 weeks."
     }
   }
 }

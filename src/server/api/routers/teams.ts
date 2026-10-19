@@ -7,6 +7,7 @@ import type {
   Team,
   TeamMember,
   TeamLocation,
+  WebhookSubscription,
 } from "~/lib/types/teams";
 
 // ── Query fragments ────────────────────────────────────────
@@ -166,9 +167,138 @@ const SET_DEFAULT_TEAM = `
   }
 `;
 
+// ── Alert-webhook fragments ────────────────────────────────
+
+// Every selection asks for `secret`; clear-api scrubs it to null on the list
+// query and returns the real value only on create / rotate.
+const WEBHOOK_FIELDS = `
+  id name targetUrl source teamId alertTypeFilter minSeverity active createdAt secret
+`;
+
+const TEAM_ALERT_WEBHOOKS_QUERY = `
+  query TeamAlertWebhooks($teamId: String!) {
+    teamAlertWebhooks(teamId: $teamId) { ${WEBHOOK_FIELDS} }
+  }
+`;
+
+const CREATE_ALERT_WEBHOOK = `
+  mutation CreateAlertWebhook($input: CreateAlertWebhookInput!) {
+    createAlertWebhook(input: $input) { ${WEBHOOK_FIELDS} }
+  }
+`;
+
+const UPDATE_ALERT_WEBHOOK = `
+  mutation UpdateAlertWebhook($id: String!, $input: UpdateAlertWebhookInput!) {
+    updateAlertWebhook(id: $id, input: $input) { ${WEBHOOK_FIELDS} }
+  }
+`;
+
+const DELETE_ALERT_WEBHOOK = `
+  mutation DeleteAlertWebhook($id: String!) {
+    deleteAlertWebhook(id: $id)
+  }
+`;
+
+const ROTATE_ALERT_WEBHOOK_SECRET = `
+  mutation RotateAlertWebhookSecret($id: String!) {
+    rotateAlertWebhookSecret(id: $id) { ${WEBHOOK_FIELDS} }
+  }
+`;
+
+// An https target URL; clear-api is the real gate, this just rejects garbage early.
+const httpsUrl = z
+  .string()
+  .url()
+  .refine((u) => u.startsWith("https://"), { message: "Target URL must use https://" });
+const alertTypeFilter = z.array(z.string().min(1));
+const minSeverity = z.number().int().min(1).max(5);
+
+// ── Alert-webhook router ───────────────────────────────────
+
+// Nested under `teams` so call sites read `api.teams.alertWebhooks.*`. Auth
+// mirrors the other team procedures (session cookie forwarded to clear-api,
+// which enforces the real team-admin gate).
+const alertWebhooksRouter = createTRPCRouter({
+  list: protectedProcedure
+    .input(z.object({ teamId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const data = await graphqlFetch<{ teamAlertWebhooks: WebhookSubscription[] }>(
+        TEAM_ALERT_WEBHOOKS_QUERY,
+        { teamId: input.teamId },
+        cookieHeaders(ctx),
+      );
+      return data.teamAlertWebhooks;
+    }),
+
+  create: protectedProcedure
+    .input(
+      z.object({
+        teamId: z.string(),
+        name: z.string().min(1),
+        targetUrl: httpsUrl,
+        alertTypeFilter: alertTypeFilter.optional(),
+        minSeverity: minSeverity.optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const data = await graphqlFetch<{ createAlertWebhook: WebhookSubscription }>(
+        CREATE_ALERT_WEBHOOK,
+        { input },
+        cookieHeaders(ctx),
+      );
+      return data.createAlertWebhook;
+    }),
+
+  update: protectedProcedure
+    .input(
+      z.object({
+        id: z.string(),
+        name: z.string().min(1).optional(),
+        targetUrl: httpsUrl.optional(),
+        alertTypeFilter: alertTypeFilter.optional(),
+        minSeverity: minSeverity.optional(),
+        active: z.boolean().optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const { id, ...fields } = input;
+      const data = await graphqlFetch<{ updateAlertWebhook: WebhookSubscription }>(
+        UPDATE_ALERT_WEBHOOK,
+        { id, input: fields },
+        cookieHeaders(ctx),
+      );
+      return data.updateAlertWebhook;
+    }),
+
+  delete: protectedProcedure
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const data = await graphqlFetch<{ deleteAlertWebhook: boolean }>(
+        DELETE_ALERT_WEBHOOK,
+        input,
+        cookieHeaders(ctx),
+      );
+      return data.deleteAlertWebhook;
+    }),
+
+  rotateSecret: protectedProcedure
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const data = await graphqlFetch<{ rotateAlertWebhookSecret: WebhookSubscription }>(
+        ROTATE_ALERT_WEBHOOK_SECRET,
+        input,
+        cookieHeaders(ctx),
+      );
+      return data.rotateAlertWebhookSecret;
+    }),
+});
+
 // ── Router ─────────────────────────────────────────────────
 
 export const teamsRouter = createTRPCRouter({
+  // Outbound alert webhooks: api.teams.alertWebhooks.{list,create,update,delete,rotateSecret}
+  alertWebhooks: alertWebhooksRouter,
+
   // ── Queries ──────────────────────────────────────────────
 
   myOrganisations: protectedProcedure.query(async ({ ctx }) => {
@@ -346,7 +476,7 @@ export const teamsRouter = createTRPCRouter({
       teamId: z.string(),
       userId: z.string(),
       role: z
-        .enum(["team_admin", "field_coordinator", "emergency_response_manager", "team_member"])
+        .enum(["team_admin", "analyst", "emergency_response_manager", "team_member"])
         .optional(),
     }))
     .mutation(async ({ ctx, input }) => {
@@ -373,7 +503,7 @@ export const teamsRouter = createTRPCRouter({
     .input(z.object({
       teamId: z.string(),
       userId: z.string(),
-      role: z.enum(["team_admin", "field_coordinator", "emergency_response_manager", "team_member"]),
+      role: z.enum(["team_admin", "analyst", "emergency_response_manager", "team_member"]),
     }))
     .mutation(async ({ ctx, input }) => {
       const data = await graphqlFetch<{ updateTeamMemberRole: TeamMember }>(

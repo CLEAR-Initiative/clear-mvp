@@ -155,7 +155,7 @@ export const invitationsRouter = createTRPCRouter({
               teamId: z.string(),
               teamRole: z.enum([
                 "team_admin",
-                "field_coordinator",
+                "analyst",
                 "emergency_response_manager",
                 "team_member",
               ]),

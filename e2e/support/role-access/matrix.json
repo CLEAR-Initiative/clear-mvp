@@ -1,0 +1,955 @@
+{
+  "schema": "clear-mvp.role-access.v1",
+  "statusLegend": {
+    "allow": {
+      "ui": "enabled",
+      "server": "200"
+    },
+    "block": {
+      "ui": "enabled",
+      "server": "403"
+    },
+    "hidden": {
+      "ui": "hidden",
+      "server": "n/a"
+    },
+    "disabled": {
+      "ui": "disabled",
+      "server": "n/a"
+    },
+    "readonly": {
+      "ui": "read-only",
+      "server": "n/a"
+    },
+    "conditional": {
+      "ui": "conditional",
+      "server": "200|403",
+      "note": "depends on record policy"
+    },
+    "own": {
+      "ui": "enabled",
+      "server": "200-own"
+    },
+    "token": {
+      "ui": "enabled",
+      "server": "public"
+    }
+  },
+  "personas": [
+    "admin",
+    "analyst",
+    "member",
+    "erm",
+    "pending",
+    "team_admin",
+    "org_admin",
+    "team_member"
+  ],
+  "flags": {
+    "hotline_inbox": "OFF",
+    "impact_prior_review": "OFF",
+    "event_enrichment": "OFF",
+    "hotline_translation": "OFF",
+    "ground_intel": "ON"
+  },
+  "cases": [
+    {
+      "id": "nav-admin",
+      "area": "access",
+      "action": "Open /admin + Admin nav link",
+      "route": "/admin",
+      "selectors": [
+        "a[href=\"/admin\"]"
+      ],
+      "flags": [],
+      "source": "middleware.ts:100",
+      "expect": {
+        "admin": "allow",
+        "analyst": "hidden",
+        "member": "hidden",
+        "erm": "hidden",
+        "pending": "hidden"
+      },
+      "onDeny": "redirect /dashboard"
+    },
+    {
+      "id": "nav-ops",
+      "area": "access",
+      "action": "Operations/Cash nav items",
+      "route": "*",
+      "selectors": [
+        "nav:Operations",
+        "nav:Cash Assistance"
+      ],
+      "flags": [],
+      "source": "nav-sidebar.tsx:116",
+      "expect": {
+        "admin": "allow",
+        "analyst": "hidden",
+        "member": "hidden",
+        "erm": "hidden",
+        "pending": "hidden"
+      }
+    },
+    {
+      "id": "nav-ground",
+      "area": "access",
+      "action": "Detection Ground Intel tab",
+      "route": "/detection?tab=ground",
+      "selectors": [
+        "tab:Ground Intel"
+      ],
+      "flags": [
+        "ground_intel"
+      ],
+      "source": "detection/page.tsx:335",
+      "expect": {
+        "admin": "allow",
+        "analyst": "allow",
+        "member": "hidden",
+        "erm": "hidden",
+        "pending": "hidden"
+      },
+      "note": "canSeeGround shows the tab to a team analyst; ground server calls still 403 for analyst (admin + ERM only)"
+    },
+    {
+      "id": "nav-content",
+      "area": "access",
+      "action": "Load content pages",
+      "route": "/overview|/detection|/map|/insights",
+      "selectors": [],
+      "flags": [],
+      "source": "roles.ts:78",
+      "expect": {
+        "admin": "allow",
+        "analyst": "allow",
+        "member": "allow",
+        "erm": "allow",
+        "pending": "block"
+      }
+    },
+    {
+      "id": "nav-agent",
+      "area": "access",
+      "action": "AI Agent / /api/agent",
+      "route": "*",
+      "selectors": [
+        "agent-drawer"
+      ],
+      "flags": [
+        "agent"
+      ],
+      "source": "api/agent/route.ts:54",
+      "expect": {
+        "admin": "allow",
+        "analyst": "allow",
+        "member": "allow",
+        "erm": "allow",
+        "pending": "block"
+      }
+    },
+    {
+      "id": "inbox-see",
+      "area": "inbox",
+      "action": "Reach the Inbox",
+      "route": "/inbox",
+      "selectors": [
+        "inbox-no-access"
+      ],
+      "flags": [
+        "hotline_inbox",
+        "impact_prior_review",
+        "event_enrichment"
+      ],
+      "source": "inbox-access.ts:51",
+      "expect": {
+        "admin": "allow",
+        "analyst": "allow",
+        "member": "allow",
+        "erm": "allow",
+        "pending": "hidden"
+      }
+    },
+    {
+      "id": "inbox-hotline",
+      "area": "inbox",
+      "action": "See hotline threads (Reports)",
+      "route": "/inbox",
+      "selectors": [
+        "inbox-filter-reports"
+      ],
+      "flags": [
+        "hotline_inbox"
+      ],
+      "source": "inbox-access.ts:61",
+      "expect": {
+        "admin": "allow",
+        "analyst": "hidden",
+        "member": "hidden",
+        "erm": "allow",
+        "pending": "hidden"
+      },
+      "note": "ground inbox is admin + ERM only"
+    },
+    {
+      "id": "inbox-triage",
+      "area": "inbox",
+      "action": "Triage: Add to CLEAR / Archive / Reject",
+      "route": "/inbox",
+      "selectors": [
+        "inbox-add",
+        "inbox-archive",
+        "inbox-reject",
+        "inbox-reject-<reason>"
+      ],
+      "flags": [
+        "hotline_inbox"
+      ],
+      "source": "ground.resolver.ts:227",
+      "expect": {
+        "admin": "allow",
+        "analyst": "hidden",
+        "member": "hidden",
+        "erm": "allow",
+        "pending": "hidden"
+      },
+      "note": "requireGroundInboxAccess admits admin + ERM only; analyst has no hotline surface"
+    },
+    {
+      "id": "inbox-retry",
+      "area": "inbox",
+      "action": "Retry failed pipeline stage",
+      "route": "/inbox",
+      "selectors": [
+        "inbox-retry"
+      ],
+      "flags": [],
+      "source": "ground.resolver.ts:1173",
+      "expect": {
+        "admin": "allow",
+        "analyst": "block",
+        "erm": "allow"
+      },
+      "note": "retryGroundMessage → requireGroundInboxAccess (admin + ERM only)"
+    },
+    {
+      "id": "inbox-translate",
+      "area": "inbox",
+      "action": "Translate thread",
+      "route": "/inbox",
+      "selectors": [
+        "inbox-translate",
+        "inbox-translate-retry"
+      ],
+      "flags": [
+        "hotline_translation"
+      ],
+      "source": "reading-pane.tsx:230",
+      "expect": {
+        "admin": "allow",
+        "erm": "allow"
+      }
+    },
+    {
+      "id": "inbox-proposals",
+      "area": "inbox",
+      "action": "See proposed signals + badge",
+      "route": "/inbox",
+      "selectors": [
+        "inbox-filter-proposals"
+      ],
+      "flags": [
+        "impact_prior_review"
+      ],
+      "source": "task.resolver.ts:275",
+      "expect": {
+        "admin": "allow",
+        "analyst": "allow",
+        "member": "hidden",
+        "erm": "hidden",
+        "pending": "hidden"
+      },
+      "note": "requireCaseProposalInboxAccess: admin (unscoped) + team-analyst (team-scoped); ERM excluded"
+    },
+    {
+      "id": "inbox-decide",
+      "area": "inbox",
+      "action": "Decide proposal Accept/Reject",
+      "route": "/inbox",
+      "selectors": [
+        "case-proposal-accept",
+        "case-proposal-reject",
+        "case-proposal-confirm-reject"
+      ],
+      "flags": [
+        "impact_prior_review"
+      ],
+      "source": "task.resolver.ts:299",
+      "expect": {
+        "admin": "allow",
+        "analyst": "allow",
+        "member": "readonly",
+        "erm": "hidden",
+        "pending": "hidden"
+      },
+      "note": "team analyst decides only for the task's own team; ERM no longer decides case proposals"
+    },
+    {
+      "id": "inbox-myreq",
+      "area": "inbox",
+      "action": "My requests + cancel own",
+      "route": "/inbox",
+      "selectors": [
+        "inbox-task-cancel"
+      ],
+      "flags": [
+        "event_enrichment"
+      ],
+      "source": "task.resolver.ts:625",
+      "expect": {
+        "admin": "own",
+        "analyst": "own",
+        "member": "own",
+        "erm": "own",
+        "pending": "hidden"
+      }
+    },
+    {
+      "id": "ev-alert",
+      "area": "event",
+      "action": "Raise alert / promote",
+      "route": "/event/[id]",
+      "selectors": [
+        "btn:Raise alert"
+      ],
+      "flags": [],
+      "source": "alerts.ts:545",
+      "expect": {
+        "admin": "allow",
+        "analyst": "allow",
+        "member": "disabled",
+        "erm": "disabled",
+        "pending": "block"
+      }
+    },
+    {
+      "id": "ev-addcrisis",
+      "area": "event",
+      "action": "Add event to crisis",
+      "route": "/event/[id]",
+      "selectors": [
+        "Add-to-crisis menu"
+      ],
+      "flags": [],
+      "source": "crises.ts:367",
+      "expect": {
+        "admin": "allow",
+        "analyst": "allow",
+        "member": "block",
+        "erm": "block",
+        "pending": "block"
+      }
+    },
+    {
+      "id": "ev-enrich",
+      "area": "event",
+      "action": "Request enrichment",
+      "route": "/event/[id]",
+      "selectors": [
+        "request-enrichment",
+        "enrichment-confirm-button",
+        "enrichment-forbidden",
+        "enrichment-cap-reached",
+        "enrichment-cancel"
+      ],
+      "flags": [
+        "event_enrichment"
+      ],
+      "source": "task.resolver.ts:662",
+      "expect": {
+        "admin": "allow",
+        "analyst": "allow",
+        "member": "disabled",
+        "erm": "allow",
+        "pending": "block"
+      }
+    },
+    {
+      "id": "ev-decide",
+      "area": "event",
+      "action": "Decide proposal (Event page Enrichment)",
+      "route": "/event/[id]",
+      "selectors": [
+        "enrichment-section case rows"
+      ],
+      "flags": [
+        "event_enrichment",
+        "impact_prior_review"
+      ],
+      "source": "enrichment-section.tsx:42",
+      "expect": {
+        "admin": "allow",
+        "analyst": "allow",
+        "member": "readonly",
+        "erm": "readonly",
+        "pending": "block"
+      },
+      "note": "team analyst decides (their team); ERM is not a decider → read-only, consistent with the Inbox"
+    },
+    {
+      "id": "ev-comment",
+      "area": "event",
+      "action": "Comment + feedback",
+      "route": "/event/[id]",
+      "selectors": [
+        "comment composer",
+        "feedback thumbs"
+      ],
+      "flags": [],
+      "source": "comments.ts:89",
+      "expect": {
+        "admin": "allow",
+        "analyst": "allow",
+        "member": "allow",
+        "erm": "allow",
+        "pending": "block"
+      }
+    },
+    {
+      "id": "cr-title",
+      "area": "crisis",
+      "action": "Rename crisis title",
+      "route": "/crisis/[id]",
+      "selectors": [
+        "title pencil"
+      ],
+      "flags": [],
+      "source": "crises.ts:467",
+      "expect": {
+        "admin": "allow",
+        "analyst": "allow",
+        "member": "allow",
+        "erm": "allow",
+        "pending": "block"
+      },
+      "note": "GOTCHA: any authenticated user"
+    },
+    {
+      "id": "cr-summary",
+      "area": "crisis",
+      "action": "Edit summary/population",
+      "route": "/crisis/[id]",
+      "selectors": [
+        "summary pencil"
+      ],
+      "flags": [],
+      "source": "crises.ts:482",
+      "expect": {
+        "admin": "allow",
+        "analyst": "hidden",
+        "member": "hidden",
+        "erm": "hidden",
+        "pending": "hidden"
+      }
+    },
+    {
+      "id": "cr-delete",
+      "area": "crisis",
+      "action": "Delete crisis",
+      "route": "/crisis/[id]",
+      "selectors": [
+        "kebab delete"
+      ],
+      "flags": [],
+      "source": "crises.ts:455",
+      "expect": {
+        "admin": "allow",
+        "analyst": "hidden",
+        "member": "hidden",
+        "erm": "hidden",
+        "pending": "hidden"
+      }
+    },
+    {
+      "id": "cr-addev",
+      "area": "crisis",
+      "action": "Add events to crisis",
+      "route": "/crisis/[id]",
+      "selectors": [
+        "crisis-add-event-<id>"
+      ],
+      "flags": [],
+      "source": "add-events-to-crisis-modal.tsx:263",
+      "expect": {
+        "admin": "allow",
+        "analyst": "allow",
+        "member": "hidden",
+        "erm": "hidden",
+        "pending": "hidden"
+      }
+    },
+    {
+      "id": "cr-rmev",
+      "area": "crisis",
+      "action": "Remove event from crisis",
+      "route": "/crisis/[id]",
+      "selectors": [
+        "event row remove"
+      ],
+      "flags": [],
+      "source": "crises.ts:444",
+      "expect": {
+        "admin": "allow",
+        "analyst": "hidden",
+        "member": "hidden",
+        "erm": "hidden",
+        "pending": "hidden"
+      }
+    },
+    {
+      "id": "cr-doc",
+      "area": "crisis",
+      "action": "Upload/remove crisis document",
+      "route": "/crisis/[id]",
+      "selectors": [
+        "upload btn",
+        "doc trash"
+      ],
+      "flags": [],
+      "source": "crises.ts:345",
+      "expect": {
+        "admin": "allow",
+        "analyst": "allow",
+        "member": "block",
+        "erm": "block",
+        "pending": "block"
+      }
+    },
+    {
+      "id": "det-signal",
+      "area": "detection",
+      "action": "Create signal (manual)",
+      "route": "/detection",
+      "selectors": [
+        "Create signal modal"
+      ],
+      "flags": [],
+      "source": "signal.resolver.ts:501",
+      "expect": {
+        "admin": "allow",
+        "analyst": "allow",
+        "member": "block",
+        "erm": "block",
+        "pending": "block"
+      },
+      "note": "team analyst writes via location-scoped gate (wide-open team → succeeds); plain member has no team → 403"
+    },
+    {
+      "id": "det-bulk",
+      "area": "detection",
+      "action": "Bulk Raise alert / Add to crisis",
+      "route": "/detection",
+      "selectors": [
+        "bulk-raise-alert"
+      ],
+      "flags": [],
+      "source": "event-bulk-bar.tsx:33",
+      "expect": {
+        "admin": "allow",
+        "analyst": "allow",
+        "member": "hidden",
+        "erm": "hidden",
+        "pending": "hidden"
+      }
+    },
+    {
+      "id": "det-sev",
+      "area": "detection",
+      "action": "Update signal severity",
+      "route": "/inbox|/signal/[id]",
+      "selectors": [
+        "severity control"
+      ],
+      "flags": [],
+      "source": "signal.resolver.ts:600",
+      "expect": {
+        "admin": "allow",
+        "analyst": "allow",
+        "member": "block",
+        "erm": "block"
+      },
+      "note": "requireAdminOrTeamAnalystForLocations: location-scoped; wide-open team analyst succeeds"
+    },
+    {
+      "id": "det-loc",
+      "area": "detection",
+      "action": "Update signal location",
+      "route": "/signal/[id]",
+      "selectors": [
+        "location control"
+      ],
+      "flags": [],
+      "source": "signal.resolver.ts:671",
+      "expect": {
+        "admin": "allow",
+        "analyst": "block",
+        "member": "block",
+        "erm": "block"
+      },
+      "note": "GOTCHA: updateSignalLocation is still admin-only (requireRole['admin']) — NOT location-scoped like severity"
+    },
+    {
+      "id": "det-ground",
+      "area": "detection",
+      "action": "Review ground thread (drawer)",
+      "route": "/detection?tab=ground",
+      "selectors": [
+        "ground-approve-private",
+        "ground-approve-public",
+        "ground-confirm-publish",
+        "ground-reject"
+      ],
+      "flags": [
+        "ground_intel"
+      ],
+      "source": "ground.resolver.ts:619",
+      "expect": {
+        "admin": "allow",
+        "analyst": "block",
+        "member": "hidden",
+        "erm": "hidden"
+      },
+      "note": "tab/drawer render for a team analyst but reviewGroundThread → requireGroundInboxAccess (admin + ERM only) → 403"
+    },
+    {
+      "id": "an-new",
+      "area": "analysis",
+      "action": "Create analysis automation",
+      "route": "/insights",
+      "selectors": [
+        "analysis-new"
+      ],
+      "flags": [
+        "analysis_v2"
+      ],
+      "source": "analysis.resolver.ts:453",
+      "expect": {
+        "admin": "allow",
+        "analyst": "allow",
+        "member": "hidden",
+        "erm": "hidden",
+        "pending": "hidden"
+      },
+      "note": "team analyst on the owning team; null team → admin-only"
+    },
+    {
+      "id": "an-manage",
+      "area": "analysis",
+      "action": "Refresh/cadence/remove analysis",
+      "route": "/insights",
+      "selectors": [
+        "refresh",
+        "cadence",
+        "remove"
+      ],
+      "flags": [],
+      "source": "analysis.resolver.ts:499",
+      "expect": {
+        "admin": "allow",
+        "analyst": "allow",
+        "member": "hidden",
+        "erm": "hidden"
+      }
+    },
+    {
+      "id": "subs",
+      "area": "subscriptions",
+      "action": "Manage own alert subscriptions",
+      "route": "settings",
+      "selectors": [
+        "subscription form"
+      ],
+      "flags": [],
+      "source": "subscriptions.ts:111",
+      "expect": {
+        "admin": "own",
+        "analyst": "own",
+        "member": "own",
+        "erm": "own",
+        "pending": "own"
+      }
+    },
+    {
+      "id": "bell",
+      "area": "notifications",
+      "action": "Notification bell + mark read",
+      "route": "*",
+      "selectors": [
+        "notifications bell"
+      ],
+      "flags": [],
+      "source": "notifications.ts:53",
+      "expect": {
+        "admin": "own",
+        "analyst": "own",
+        "member": "own",
+        "erm": "own",
+        "pending": "hidden"
+      }
+    },
+    {
+      "id": "adm-approve",
+      "area": "admin",
+      "action": "Approve pending user",
+      "route": "/admin",
+      "selectors": [
+        "activate btn"
+      ],
+      "flags": [],
+      "source": "auth.ts:306",
+      "expect": {
+        "admin": "allow",
+        "analyst": "hidden",
+        "member": "hidden",
+        "erm": "hidden",
+        "pending": "hidden"
+      }
+    },
+    {
+      "id": "adm-role",
+      "area": "admin",
+      "action": "Change user global role",
+      "route": "/admin",
+      "selectors": [
+        "role dropdown"
+      ],
+      "flags": [],
+      "source": "auth.ts:292",
+      "expect": {
+        "admin": "allow",
+        "analyst": "hidden",
+        "member": "hidden",
+        "erm": "hidden",
+        "pending": "hidden"
+      },
+      "note": "pending rows' dropdown disabled — approve first"
+    },
+    {
+      "id": "adm-flag",
+      "area": "admin",
+      "action": "Toggle feature flag",
+      "route": "/admin",
+      "selectors": [
+        "feature Switch"
+      ],
+      "flags": [],
+      "source": "featureFlags.ts:55",
+      "expect": {
+        "admin": "allow",
+        "analyst": "block",
+        "member": "block",
+        "erm": "block",
+        "pending": "block"
+      },
+      "note": "hard local FORBIDDEN; tier-1 flags locked for all"
+    },
+    {
+      "id": "adm-users",
+      "area": "admin",
+      "action": "View user list with PII",
+      "route": "/admin",
+      "selectors": [
+        "users table"
+      ],
+      "flags": [],
+      "source": "auth.ts:253",
+      "expect": {
+        "admin": "allow",
+        "analyst": "hidden",
+        "member": "hidden",
+        "erm": "hidden",
+        "pending": "hidden"
+      },
+      "note": "non-admin gets empty list, not hard error"
+    }
+  ],
+  "roleCases": [
+    {
+      "id": "to-createorg",
+      "action": "Create an organisation",
+      "route": "/settings/org|/admin",
+      "source": "trpc.ts:103; teams.ts:227",
+      "roles": {
+        "org_admin": "block",
+        "team_admin": "block",
+        "team_member": "block"
+      },
+      "note": "platform admin only"
+    },
+    {
+      "id": "to-orgmembers",
+      "action": "Edit org / add-remove org member / change role",
+      "route": "/settings/org",
+      "source": "settings/org/page.tsx:239",
+      "roles": {
+        "org_admin": "allow",
+        "team_admin": "block",
+        "team_member": "block"
+      },
+      "note": "org page member-match bug: trust server"
+    },
+    {
+      "id": "to-createteam",
+      "action": "Create / delete a team",
+      "route": "/settings/org",
+      "source": "teams.ts:300",
+      "roles": {
+        "org_admin": "allow",
+        "team_admin": "block",
+        "team_member": "block"
+      }
+    },
+    {
+      "id": "to-teammanage",
+      "action": "Edit team / add-remove members / set locations",
+      "route": "/settings/team/[id]",
+      "source": "settings/team/[id]/page.tsx:93",
+      "roles": {
+        "org_admin": "allow",
+        "team_admin": "allow",
+        "team_member": "hidden"
+      }
+    },
+    {
+      "id": "to-mintERM",
+      "action": "Assign emergency_response_manager",
+      "route": "/settings/team/[id]|org invite",
+      "source": "team/[id]/page.tsx:376; org/page.tsx:627",
+      "roles": {
+        "org_admin": "allow",
+        "team_admin": "allow",
+        "team_member": "hidden"
+      }
+    },
+    {
+      "id": "to-deleteteam",
+      "action": "Delete a team (Danger Zone)",
+      "route": "/settings/team/[id]",
+      "source": "team/[id]/page.tsx:384",
+      "roles": {
+        "org_admin": "allow",
+        "team_admin": "hidden",
+        "team_member": "hidden"
+      }
+    },
+    {
+      "id": "to-invite",
+      "action": "Invite member (org role + >=1 team role)",
+      "route": "/settings/org",
+      "source": "invitations.ts:146",
+      "roles": {
+        "org_admin": "allow",
+        "team_admin": "block",
+        "team_member": "block"
+      }
+    },
+    {
+      "id": "to-write",
+      "action": "Create signal/event/crisis/enrichment via teamId hint",
+      "route": "/detection|/event/[id]",
+      "source": "auth-guard.ts:39 (TEAM_CONTENT_WRITER_ROLES); signals.ts:353; events.ts:366; crises.ts:331",
+      "roles": {
+        "org_admin": "block",
+        "team_admin": "allow",
+        "team_member": "allow"
+      },
+      "note": "TEAM_CONTENT_WRITER_ROLES now includes team_member; org_admin has no team membership → block"
+    }
+  ],
+  "sharedFlows": [
+    {
+      "id": "sh-login",
+      "action": "Sign in (valid creds)",
+      "route": "/auth/login",
+      "server": "public",
+      "source": "auth/login/page.tsx:78"
+    },
+    {
+      "id": "sh-accept",
+      "action": "Accept invite (name + password >=8)",
+      "route": "/accept-invite",
+      "server": "public",
+      "source": "invitations.ts:177"
+    },
+    {
+      "id": "sh-verify",
+      "action": "Verify email",
+      "route": "/verify-email/[token]",
+      "server": "public",
+      "source": "auth.ts:188"
+    },
+    {
+      "id": "sh-reset",
+      "action": "Request + complete password reset",
+      "route": "/auth/forgot-password|/auth/reset-password",
+      "server": "public",
+      "source": "invitations.ts:218"
+    },
+    {
+      "id": "sh-noaccess",
+      "action": "No org + no team -> /no-access",
+      "route": "/no-access",
+      "server": "n/a",
+      "source": "onboarding-guard.tsx:27"
+    },
+    {
+      "id": "sh-pending",
+      "action": "Pending refused content until approved",
+      "route": "*",
+      "server": "403",
+      "source": "roles.ts:78"
+    }
+  ],
+  "gotchas": [
+    {
+      "id": "g-title",
+      "check": "Member renames crisis title but cannot edit summary",
+      "source": "crises.ts:467 vs :482"
+    },
+    {
+      "id": "g-loc",
+      "check": "Team analyst sets severity (location-scoped) but NOT location (updateSignalLocation still admin-only)",
+      "source": "signal.resolver.ts:600 vs :671"
+    },
+    {
+      "id": "g-ground",
+      "check": "Detection Ground tab renders for a team analyst (canSeeGround) but every ground call 403s (requireGroundInboxAccess admits admin + ERM only)",
+      "source": "detection/page.tsx:335 vs ground.resolver.ts:619"
+    },
+    {
+      "id": "g-orgbug",
+      "check": "Org-settings edit controls use find(()=>true)",
+      "source": "settings/org/page.tsx:240"
+    },
+    {
+      "id": "g-shown",
+      "check": "Shown-but-server-gated controls 403 gracefully",
+      "source": "multiple"
+    },
+    {
+      "id": "g-listusers",
+      "check": "Non-admin listUsers returns empty, no PII",
+      "source": "auth.ts:253"
+    },
+    {
+      "id": "g-cap",
+      "check": "Enrichment DAILY_CAP -> TOO_MANY_REQUESTS",
+      "source": "tasks.ts:218"
+    },
+    {
+      "id": "g-flags",
+      "check": "Surfaces absent when flags OFF",
+      "source": "constants/feature-flags.ts"
+    }
+  ]
+}

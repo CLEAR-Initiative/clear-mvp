@@ -6,10 +6,13 @@ export type TeamGate =
 
 /**
  * Global roles that `createManualSignal` admits without a team hint.
- * Matches clear-api `requireTeamContentWriter`: admin/analyst may file
- * for any location; team_admin / field_coordinator must send `teamId`.
+ * Matches clear-api `requireTeamContentWriter`: a platform admin may file for
+ * any location; every team role (team_admin / analyst / team_member) is
+ * location-scoped and must send `teamId`. `analyst` used to be a global role
+ * here; after the taxonomy split it is a team role, so it no longer writes
+ * platform-wide without a team.
  */
-const PLATFORM_CONTENT_WRITER_ROLES = new Set(["admin", "analyst"]);
+const PLATFORM_CONTENT_WRITER_ROLES = new Set(["admin"]);
 
 export function isObservePlatformWriter(role: string | null | undefined): boolean {
   return !!role && PLATFORM_CONTENT_WRITER_ROLES.has(role);
@@ -66,15 +69,15 @@ export function resolveTeamIdForSubmit(input: {
   if (input.meStatus === "error") return { ok: false, reason: "session" };
   const teamId = input.defaultTeamId?.trim() || undefined;
   if (teamId) return { ok: true, teamId };
-  // Analysts/admins do not need a default team — the API ignores teamId
-  // for platform callers. Field coordinators still need a team hint.
+  // Platform admins do not need a default team — the API ignores teamId
+  // for platform callers. Every team role still needs a team hint.
   if (isObservePlatformWriter(input.role)) return { ok: true, teamId: undefined };
   return { ok: false, reason: "noTeam" };
 }
 
 /**
- * Preview / `next dev` only. Production ignores `?noTeam=1` so a field
- * coordinator cannot lock themselves out of submit.
+ * Preview / `next dev` only. Production ignores `?noTeam=1` so a team
+ * member cannot lock themselves out of submit.
  */
 export function isObserveQaOverrideAllowed(env: {
   nodeEnv?: string;
@@ -237,7 +240,7 @@ export function locationFieldsForPayload(input: {
 /**
  * Payload persisted in IndexedDB while `/observe` is offline.
  * `teamId` is stored at queue time so drain uses the same team auth
- * as submit — without it a field coordinator can get FORBIDDEN hours later.
+ * as submit — without it a team member can get FORBIDDEN hours later.
  */
 export type QueuedFieldSignal = {
   sourceId: string;

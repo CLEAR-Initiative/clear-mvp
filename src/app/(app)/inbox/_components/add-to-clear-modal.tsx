@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { Modal, Select } from "@mantine/core";
 import { IconLayoutGrid, IconSparkles, IconX } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
-import { attachmentKey, entryDescription, type InboxEntry } from "~/lib/hotline-inbox";
+import { attachmentKey, entryDescription, type HotlineEntry } from "~/lib/hotline-inbox";
 import { severityColors } from "~/lib/constants/severity";
 import { useDisasterTypes } from "~/hooks/use-disaster-types";
 import { VoiceNote } from "./voice-note";
@@ -51,7 +51,7 @@ export interface SignalDraft {
 }
 
 interface AddToClearModalProps {
-  entry: InboxEntry;
+  entry: HotlineEntry;
   busy: boolean;
   error: string | null;
   onCancel: () => void;

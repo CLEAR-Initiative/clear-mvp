@@ -1,0 +1,66 @@
+name: Release / prod
+# Mirrors release-dev.yml: a merge to `prod` tags a new MAJOR version,
+# builds the prod image and pushes it to GHCR. Deployment happens outside this repo.
+# A prod deploy is a MAJOR release (X.0.0); dev deploys that follow are MINOR
+# releases within it (X.1.0, X.2.0, …). `prod` merges are human-gated
+# (no-automerge), so the merge itself is the deploy gate.
+on:
+  push:
+    branches: [prod]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  tag:
+    name: Create version tag
+    # workflow_dispatch's branch filter is NOT restricted by `push.branches`, and
+    # build hardcodes environment=prod — so without this guard a manual run from
+    # another branch would publish that branch's code as :prod. build needs
+    # this job, so guarding it here gates the whole run to the prod branch.
+    if: github.ref == 'refs/heads/prod'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compute version
+        id: version
+        run: |
+          # prod deploys bump the MAJOR; dev deploys bump the MINOR
+          # (release-dev.yml). The two never pick the same next version,
+          # so they can't contend for a tag.
+          LATEST=$(git ls-remote --tags --refs origin | sed 's#.*refs/tags/##' | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1)
+          IFS=. read -r MAJOR MINOR PATCH <<< "${LATEST:-0.0.0}"
+          echo "version=$((MAJOR + 1)).0.0" >> "$GITHUB_OUTPUT"
+
+      - name: Create git tag
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          git tag "$VERSION" "$GITHUB_SHA"
+          git push origin "refs/tags/$VERSION"
+
+  build:
+    name: Build & push image
+    needs: tag
+    runs-on: ubuntu-latest
+    environment: prod
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./.github/actions/build-image
+        with:
+          environment: prod
+          version: ${{ needs.tag.outputs.version }}
+          registry-token: ${{ secrets.GITHUB_TOKEN }}
+          mapbox-token: ${{ secrets.NEXT_PUBLIC_MAPBOX_TOKEN }}
+          sentry-dsn: ${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}

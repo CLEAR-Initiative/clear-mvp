@@ -1,8 +1,8 @@
 import React from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { MantineProvider } from "@mantine/core";
-import type { GroundTranslationState, InboxEntry } from "~/lib/hotline-inbox";
+import type { CaseGroupEntry, GroundTranslationState, HotlineEntry } from "~/lib/hotline-inbox";
 import { EntryList } from "./entry-list";
 import { ReadingPane, TranslationBlock } from "./reading-pane";
 import { AddToClearModal } from "./add-to-clear-modal";
@@ -33,6 +33,8 @@ const getLocationById = vi.fn((_input: { id: string }, opts: { enabled: boolean 
   data: opts.enabled ? locationById : undefined,
   isFetching: false,
 }));
+const decideMutate = vi.fn();
+const invalidateTasks = vi.fn(async () => undefined);
 vi.mock("~/trpc/react", () => ({
   api: {
     useUtils: () => ({
@@ -40,7 +42,18 @@ vi.mock("~/trpc/react", () => ({
         hotlineInbox: { invalidate: vi.fn(async () => undefined) },
         translation: { reset: resetTranslation },
       },
+      tasks: {
+        proposedCaseProposals: { invalidate: invalidateTasks },
+        reviewCount: { invalidate: invalidateTasks },
+        forEvent: { invalidate: invalidateTasks },
+        computedPriors: { invalidate: invalidateTasks },
+      },
     }),
+    tasks: {
+      decideCaseProposal: {
+        useMutation: () => ({ mutate: decideMutate, isPending: false, isError: false, error: null, variables: undefined }),
+      },
+    },
     ground: {
       requestTranslation: { useMutation: () => ({ mutate: requestTranslation, ...requested }) },
       translation: {
@@ -73,9 +86,10 @@ vi.mock("~/trpc/react", () => ({
   },
 }));
 
-function entry(overrides: Partial<InboxEntry> = {}): InboxEntry {
+function entry(overrides: Partial<HotlineEntry> = {}): HotlineEntry {
   return {
     id: "t1",
+    kind: "hotline_thread",
     thread: {
       id: "t1",
       groundSourceId: "src",
@@ -116,7 +130,45 @@ function entry(overrides: Partial<InboxEntry> = {}): InboxEntry {
   };
 }
 
-function message(id: string): InboxEntry["messages"][number] {
+function caseGroupEntry(overrides: Partial<CaseGroupEntry> = {}): CaseGroupEntry {
+  const proposal: CaseGroupEntry["cases"][number] = {
+    id: "cp-1",
+    eventId: "evt-1",
+    event: { id: "evt-1", title: "Floods in Kassala", types: ["fl"] },
+    taskId: "task-1",
+    state: "proposed",
+    sourceUrl: "https://example.test/floods",
+    quote: "Floods displaced thousands.",
+    occurredAt: "2019-08-10T00:00:00Z",
+    locationLabel: "Kassala",
+    locationId: null,
+    hazardType: "fl",
+    geographicScope: "country",
+    figures: [],
+    matchedEventId: null,
+    methodVersion: "web-cases@1",
+    decidedById: null,
+    decidedAt: null,
+    decisionRationale: null,
+    resultSignalId: null,
+    resultEventId: null,
+    createdAt: "2026-09-16T10:00:00Z",
+  };
+  return {
+    id: "cases:evt-1",
+    kind: "cases",
+    eventId: "evt-1",
+    eventTitle: "Floods in Kassala",
+    cases: [proposal],
+    undecided: 1,
+    title: "Floods in Kassala",
+    text: "web fl Flood Kassala",
+    sentAt: "2026-09-16T10:00:00Z",
+    ...overrides,
+  };
+}
+
+function message(id: string): HotlineEntry["messages"][number] {
   return {
     id,
     groundSourceId: "src",
@@ -211,6 +263,28 @@ describe("EntryList", () => {
   it("shows the empty footer when nothing is visible", () => {
     wrap(<EntryList {...baseProps} entries={[]} />);
     expect(screen.getByText("list.empty")).toBeInTheDocument();
+  });
+
+  it("says it is loading, not empty, before the first load lands", () => {
+    wrap(<EntryList {...baseProps} entries={[]} loading />);
+    expect(screen.queryByText("list.empty")).not.toBeInTheDocument();
+    expect(screen.getByTestId("inbox-list-footer")).toHaveAttribute("data-loading", "true");
+    expect(screen.getByTestId("inbox-list-footer")).toHaveTextContent("loading");
+  });
+
+  it("renders an Event's proposed signals as their own kind of row", () => {
+    wrap(<EntryList {...baseProps} entries={[caseGroupEntry(), caseGroupEntry({ id: "cases:evt-2", eventId: "evt-2", eventTitle: null })]} />);
+    const rows = screen.getAllByTestId("inbox-entry");
+    expect(rows[0]).toHaveAttribute("data-kind", "cases");
+    expect(rows[0]).toHaveAttribute("data-source-kind", "event.impact_prior.web");
+    expect(rows[0]).toHaveAttribute("data-undecided", "1");
+    expect(rows[0]).not.toHaveAttribute("data-processing");
+    expect(rows[0]).toHaveTextContent("Floods in Kassala");
+    expect(rows[0]).toHaveTextContent('cases.preview:{"count":1,"hazard":"Flood"}');
+    expect(within(rows[0]!).getByTestId("inbox-kind-pill")).toHaveAttribute("data-kind", "cases");
+    expect(rows[1]).toHaveTextContent("event.untitled");
+    fireEvent.click(rows[0]!);
+    expect(baseProps.onSelect).toHaveBeenCalledWith("cases:evt-1");
   });
 });
 
@@ -334,6 +408,32 @@ describe("ReadingPane", () => {
     expect(screen.getByTestId("inbox-translate")).toBeInTheDocument();
   });
 
+  it("dispatches an Event's proposed signals to their pane, each case decided on its own row", () => {
+    const onCaseDecided = vi.fn();
+    const entry = caseGroupEntry();
+    wrap(<ReadingPane {...baseProps} entry={entry} canDecide onCaseDecided={onCaseDecided} />);
+    expect(screen.getByTestId("inbox-pane")).toHaveAttribute("data-kind", "cases");
+    expect(screen.queryByTestId("inbox-action-bar")).not.toBeInTheDocument();
+    expect(screen.getByTestId("inbox-cases-event-link")).toHaveAttribute("href", "/event/evt-1");
+    expect(screen.getByTestId("case-proposal")).toHaveAttribute("data-state", "proposed");
+    expect(screen.getByTestId("case-proposal-source")).toHaveAttribute("href", "https://example.test/floods");
+
+    decideMutate.mockImplementationOnce((_input, opts) => opts.onSuccess({ ...entry.cases[0]!, state: "accepted" }));
+    fireEvent.click(screen.getByTestId("case-proposal-accept"));
+    expect(decideMutate).toHaveBeenCalledWith({ id: "cp-1", decision: "accepted", rationale: undefined }, expect.any(Object));
+    expect(onCaseDecided).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "cp-1" }),
+      expect.objectContaining({ state: "accepted" }),
+      "accepted",
+    );
+  });
+
+  it("shows proposed signals without decision controls to a non-decider", () => {
+    wrap(<ReadingPane {...baseProps} entry={caseGroupEntry()} canDecide={false} />);
+    expect(screen.getByTestId("case-proposal")).toBeInTheDocument();
+    expect(screen.queryByTestId("case-proposal-decision")).not.toBeInTheDocument();
+  });
+
   it("marks media-only entries as having no text", () => {
     wrap(<ReadingPane {...baseProps} entry={entry({ text: "" })} />);
     expect(screen.getAllByText("pane.noText").length).toBeGreaterThan(0);
@@ -438,7 +538,7 @@ describe("AddToClearModal", () => {
     expect(screen.queryByTestId("inbox-draft-disaster-type")).not.toBeInTheDocument();
   });
 
-  const drafted = (drafts: Partial<InboxEntry["thread"]>) =>
+  const drafted = (drafts: Partial<HotlineEntry["thread"]>) =>
     entry({ thread: { ...entry().thread, ...drafts } });
 
   it("shows a drafted glide code by its taxonomy name, not the raw code", () => {

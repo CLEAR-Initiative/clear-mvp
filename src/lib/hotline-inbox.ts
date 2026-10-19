@@ -1,17 +1,35 @@
+import { getHazardName } from "./disaster-types";
+import { sourceSearchTerm } from "./impact-prior-source";
 import type {
+  GqlCaseProposal,
   GqlGroundInboxMessage,
   GqlGroundInboxThread,
   GqlHotlineInbox,
+  GqlReviewCaseProposal,
+  GqlTask,
 } from "~/lib/types/graphql";
 
 /**
- * Hotline inbox view model (/inbox).
+ * Inbox view model (/inbox).
  *
- * Pure helpers that turn the hotline staging payload (open threads +
- * staged messages) into standalone, triageable entries. One entry = one
- * unverified thread. The hotline is free text (no guided form yet), so an
- * entry carries the reporter's narrative and attachments only; the intake
- * answers block from the design lands once something produces answers.
+ * Pure helpers that turn what the Inbox lists into standalone, reviewable
+ * entries of three kinds (`InboxEntry.kind`):
+ *
+ *   hotline_thread — one unverified thread from the hotline staging payload
+ *                    (open threads + staged messages). The hotline is free
+ *                    text (no guided form yet), so an entry carries the
+ *                    reporter's narrative and attachments only; the intake
+ *                    answers block from the design lands once something
+ *                    produces answers.
+ *   cases          — the proposed web cases (clear-api V4, CaseProposal;
+ *                    "proposed signals" in product copy) of one Event,
+ *                    grouped under it; each case has its own
+ *                    Accept / Reject. It counts as one Review item per
+ *                    undecided case, not one per group.
+ *   task           — one enrichment Task the reader requested ("My
+ *                    requests"): its status, never a decision. Not a Review
+ *                    item, so it is listed only under its own filter and
+ *                    never counts toward "awaiting" or the nav badge.
  *
  * PRIVACY: hotline messages carry no sender identity. `senderRef` is a
  * per-conversation HMAC pseudonym minted by clear-api; `intakeRef` below
@@ -25,8 +43,19 @@ export interface GroundTranslationState {
   text: string | null;
 }
 
-export const INBOX_FILTERS = ["reports", "unclassified", "chatter", "all"] as const;
+/** The three hotline classifications, the proposed signals (web cases),
+ * the reader's own requests, and everything (every Review item — not the
+ * requests). The page shows only the filters whose kind the reader may
+ * see. */
+export const INBOX_FILTERS = ["reports", "unclassified", "chatter", "proposals", "requests", "all"] as const;
 export type InboxFilter = (typeof INBOX_FILTERS)[number];
+
+/** Which filters apply to a reader who sees these kinds; "all" always. */
+export function filtersFor(access: { hotline: boolean; proposals: boolean; requests?: boolean }): InboxFilter[] {
+  return INBOX_FILTERS.filter((f) =>
+    f === "all" ? true : f === "proposals" ? access.proposals : f === "requests" ? !!access.requests : access.hotline,
+  );
+}
 
 export const INBOX_SORTS = ["reportsFirst", "newest"] as const;
 export type InboxSort = (typeof INBOX_SORTS)[number];
@@ -96,7 +125,23 @@ export interface InboxAttachment {
   transcript?: VoiceTranscript;
 }
 
-export interface InboxEntry {
+/** What an Inbox entry is about; each kind has its own row and pane. */
+export type InboxEntryKind = "hotline_thread" | "cases" | "task";
+
+/** What every kind of entry carries: enough to list, select, search and
+ * sort it. */
+interface InboxEntryBase {
+  id: string;
+  kind: InboxEntryKind;
+  title: string;
+  /** Searchable plain text; the row's preview is its first paragraph. */
+  text: string;
+  /** When the entry happened (ISO): sorting and the row's timestamp. */
+  sentAt: string;
+}
+
+export interface HotlineEntry extends InboxEntryBase {
+  kind: "hotline_thread";
   /** Thread id (the review unit). */
   id: string;
   /** Carries the enrichment drafts the Add to CLEAR modal pre-fills from. */
@@ -128,6 +173,134 @@ export interface InboxEntry {
   uncertainty: string | null;
   /** Other open entries from the same pseudonymous reporter. */
   priorEntries: number;
+}
+
+/** The web cases one Event's enrichment produced, as one Review item per
+ * undecided case under the Event. The id is `cases:<eventId>`. */
+export interface CaseGroupEntry extends InboxEntryBase {
+  kind: "cases";
+  eventId: string;
+  /** The Event's title; null when it has none (the row says so). */
+  eventTitle: string | null;
+  /** Newest first: the proposed ones, and any decided in this session
+   * (they stay, showing their decision, until the Inbox is reloaded). */
+  cases: GqlReviewCaseProposal[];
+  /** How many are still undecided: what the group counts for. */
+  undecided: number;
+}
+
+/** One enrichment Task the reader requested. The id is the Task's. */
+export interface TaskEntry extends InboxEntryBase {
+  kind: "task";
+  task: GqlTask;
+  eventId: string;
+  /** The Event's title; null when it has none or the reader cannot see it. */
+  eventTitle: string | null;
+}
+
+export type InboxEntry = HotlineEntry | CaseGroupEntry | TaskEntry;
+
+export function isHotlineEntry(entry: InboxEntry): entry is HotlineEntry {
+  return entry.kind === "hotline_thread";
+}
+
+export function isCaseGroupEntry(entry: InboxEntry): entry is CaseGroupEntry {
+  return entry.kind === "cases";
+}
+
+export function isTaskEntry(entry: InboxEntry): entry is TaskEntry {
+  return entry.kind === "task";
+}
+
+/** A Review item: something waiting for this reader's decision. The
+ * reader's own requests are not — they are status, not work. */
+export function isReviewItem(entry: InboxEntry): boolean {
+  return !isTaskEntry(entry);
+}
+
+/**
+ * One entry per Task the reader requested (clear-api `myTasks`, newest
+ * first). `eventTitles` maps an Event id to its title as the reader may
+ * see it; the row titles itself after the Event. `text` carries the
+ * source word, the status and the outcome so search finds "failed" or
+ * "web".
+ */
+export function buildTaskEntries(tasks: GqlTask[], eventTitles: Record<string, string | null>): TaskEntry[] {
+  // Every kind today is about an Event; a Task about anything else has no
+  // Event page to link to, so it is not listed here.
+  return tasks.filter((task) => task.subjectType === "event").map((task) => {
+    const eventTitle = eventTitles[task.subjectId] ?? null;
+    return {
+      id: task.id,
+      kind: "task",
+      task,
+      eventId: task.subjectId,
+      eventTitle,
+      title: eventTitle ?? "",
+      text: [sourceSearchTerm(task.kind), task.status, task.outcome ?? ""].join(" "),
+      sentAt: task.createdAt,
+    };
+  });
+}
+
+/** The id of an Event's case group. */
+export function caseGroupId(eventId: string): string {
+  return `cases:${eventId}`;
+}
+
+/**
+ * Web cases grouped under the Event whose enrichment produced them, one
+ * Review item per Event. `proposed` is clear-api's list (newest first);
+ * `decided` holds the cases decided in this session, by id, as their
+ * decision returned them: they replace their proposed copy, and stay in
+ * their group after the list stops returning them, so a row turns to its
+ * decision in place instead of vanishing. `text` carries the source word,
+ * hazard, places and quotes so search finds a case.
+ */
+export function buildCaseGroupEntries(
+  proposed: GqlReviewCaseProposal[],
+  decided: Record<string, GqlReviewCaseProposal> = {},
+): CaseGroupEntry[] {
+  const seen = new Set<string>();
+  const all: GqlReviewCaseProposal[] = [];
+  for (const c of proposed) {
+    seen.add(c.id);
+    all.push(decided[c.id] ?? c);
+  }
+  for (const c of Object.values(decided)) if (!seen.has(c.id)) all.push(c);
+  all.sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt) || (a.id < b.id ? 1 : a.id > b.id ? -1 : 0));
+
+  const byEvent = new Map<string, GqlReviewCaseProposal[]>();
+  for (const c of all) {
+    const list = byEvent.get(c.eventId);
+    if (list) list.push(c);
+    else byEvent.set(c.eventId, [c]);
+  }
+  return [...byEvent.entries()].map(([eventId, cases]) => {
+    const eventTitle = cases.find((c) => c.event?.title)?.event.title ?? null;
+    return {
+      id: caseGroupId(eventId),
+      kind: "cases",
+      eventId,
+      eventTitle,
+      cases,
+      undecided: cases.filter((c) => c.state === "proposed").length,
+      title: eventTitle ?? "",
+      text: [
+        "web",
+        ...new Set(cases.flatMap((c) => [c.hazardType, getHazardName(c.hazardType)])),
+        ...new Set(cases.map((c) => c.locationLabel)),
+        ...cases.map((c) => c.quote),
+      ].join(" "),
+      sentAt: cases[0]!.createdAt,
+    };
+  });
+}
+
+/** A decided case as the group keeps it: the decision's answer over the
+ * proposed copy (which carries the Event the answer does not). */
+export function withDecision(proposal: GqlReviewCaseProposal, decided: GqlCaseProposal): GqlReviewCaseProposal {
+  return { ...proposal, ...decided, event: proposal.event };
 }
 
 /** Attachments that are recognisably not audio: images, plus the video and
@@ -226,7 +399,7 @@ function entryClassification(messages: GqlGroundInboxMessage[]): InboxClassifica
 
 /** Join open threads with their messages into standalone entries. Threads
  * without messages (should not happen) are dropped rather than rendered empty. */
-export function buildInboxEntries(data: GqlHotlineInbox): InboxEntry[] {
+export function buildInboxEntries(data: GqlHotlineInbox): HotlineEntry[] {
   const byThread = new Map<string, GqlGroundInboxMessage[]>();
   for (const m of data.messages) {
     if (!m.threadId) continue;
@@ -235,7 +408,7 @@ export function buildInboxEntries(data: GqlHotlineInbox): InboxEntry[] {
     else byThread.set(m.threadId, [m]);
   }
 
-  const entries: InboxEntry[] = [];
+  const entries: HotlineEntry[] = [];
   for (const thread of data.threads) {
     const messages = byThread.get(thread.id);
     if (!messages || messages.length === 0) continue;
@@ -250,6 +423,7 @@ export function buildInboxEntries(data: GqlHotlineInbox): InboxEntry[] {
     const failures = messages.flatMap(messageFailures);
     entries.push({
       id: thread.id,
+      kind: "hotline_thread",
       thread,
       messages,
       senderRef: first.senderRef,
@@ -284,7 +458,7 @@ export function buildInboxEntries(data: GqlHotlineInbox): InboxEntry[] {
  * caller's localized `transcriptLabel` (e.g. "[Machine transcript] …"), so
  * voice-only reports are not promoted with an empty description.
  */
-export function entryDescription(entry: InboxEntry, transcriptLabel: (text: string) => string): string {
+export function entryDescription(entry: HotlineEntry, transcriptLabel: (text: string) => string): string {
   return entry.messages
     .flatMap((m) => {
       const parts = [m.text.trim()];
@@ -296,60 +470,143 @@ export function entryDescription(entry: InboxEntry, transcriptLabel: (text: stri
     .join("\n\n");
 }
 
-/** "unclassified" covers both pending and failed entries: neither has a
+/** The classification filters are the hotline's, "proposals" the web
+ * cases' (proposed signals), "requests" the reader's own Tasks, "all" every
+ * Review item (so the reader's requests never inflate "awaiting").
+ * "unclassified" covers both pending and failed entries: neither has a
  * label yet. The row pill tells them apart. */
 export function matchesFilter(entry: InboxEntry, filter: InboxFilter): boolean {
   switch (filter) {
     case "reports":
-      return entry.classification === "field_report";
+      return isHotlineEntry(entry) && entry.classification === "field_report";
     case "unclassified":
-      return entry.classification === "unclassified";
+      return isHotlineEntry(entry) && entry.classification === "unclassified";
     case "chatter":
-      return entry.classification === "chatter";
+      return isHotlineEntry(entry) && entry.classification === "chatter";
+    case "proposals":
+      return isCaseGroupEntry(entry);
+    case "requests":
+      return isTaskEntry(entry);
     case "all":
-      return true;
+      return isReviewItem(entry);
   }
 }
 
 export function matchesSearch(entry: InboxEntry, query: string): boolean {
   const q = query.trim().toLowerCase();
   if (q.length === 0) return true;
+  if (entry.title.toLowerCase().includes(q) || entry.text.toLowerCase().includes(q)) return true;
+  if (!isHotlineEntry(entry)) return false;
   return (
-    entry.title.toLowerCase().includes(q) ||
-    entry.text.toLowerCase().includes(q) ||
     entry.transcripts.some((tr) => tr.toLowerCase().includes(q)) ||
     entry.intakeRef.toLowerCase().includes(q)
   );
 }
 
-export function sortEntries(entries: InboxEntry[], sort: InboxSort): InboxEntry[] {
+/** Triage order for "reports first": a Review item waiting for a decision
+ * ranks with the field reports; the hotline's own order follows. */
+function entryRank(entry: InboxEntry): number {
+  return isHotlineEntry(entry) ? CLASSIFICATION_RANK[entry.classification] : 0;
+}
+
+export function sortEntries<T extends InboxEntry>(entries: T[], sort: InboxSort): T[] {
   const byTime = (a: InboxEntry, b: InboxEntry) => Date.parse(b.sentAt) - Date.parse(a.sentAt);
   const sorted = [...entries];
   if (sort === "newest") return sorted.sort(byTime);
-  return sorted.sort(
-    (a, b) =>
-      CLASSIFICATION_RANK[a.classification] - CLASSIFICATION_RANK[b.classification] || byTime(a, b),
-  );
+  return sorted.sort((a, b) => entryRank(a) - entryRank(b) || byTime(a, b));
 }
 
-export function visibleEntries(
-  entries: InboxEntry[],
+export function visibleEntries<T extends InboxEntry>(
+  entries: T[],
   filter: InboxFilter,
   query: string,
   sort: InboxSort,
-): InboxEntry[] {
+): T[] {
   return sortEntries(
     entries.filter((e) => matchesFilter(e, filter) && matchesSearch(e, query)),
     sort,
   );
 }
 
+/** What an entry adds to a count: a case group, its undecided cases (so the
+ * Inbox counts decisions waiting, not Events); anything else, one. */
+export function entryWeight(entry: InboxEntry): number {
+  return isCaseGroupEntry(entry) ? entry.undecided : 1;
+}
+
 export function countByFilter(entries: InboxEntry[]): Record<InboxFilter, number> {
-  const counts: Record<InboxFilter, number> = { reports: 0, unclassified: 0, chatter: 0, all: 0 };
+  const counts: Record<InboxFilter, number> = { reports: 0, unclassified: 0, chatter: 0, proposals: 0, requests: 0, all: 0 };
   for (const e of entries) {
-    for (const f of INBOX_FILTERS) if (matchesFilter(e, f)) counts[f] += 1;
+    for (const f of INBOX_FILTERS) if (matchesFilter(e, f)) counts[f] += entryWeight(e);
   }
   return counts;
+}
+
+/**
+ * The small number on each Inbox filter: Review items the reader has not
+ * opened yet. Opening a row drops it; a decision drops it too, because the
+ * row has left the queue. My requests are status, not unread work, so they
+ * keep counting. The "awaiting review" line stays on `countByFilter` — work
+ * still waiting after it has been opened.
+ */
+export function countUnreadByFilter(entries: InboxEntry[], readIds: ReadonlySet<string>): Record<InboxFilter, number> {
+  const counts: Record<InboxFilter, number> = { reports: 0, unclassified: 0, chatter: 0, proposals: 0, requests: 0, all: 0 };
+  for (const e of entries) {
+    const weight = unreadWeight(e, readIds);
+    for (const f of INBOX_FILTERS) if (matchesFilter(e, f)) counts[f] += weight;
+  }
+  return counts;
+}
+
+/** Mark written the first time a case group is opened under per-case read
+ * tracking. Older browsers stored only the group id; those groups stay
+ * fully read until opened again. */
+export function caseGroupSeenMark(eventId: string): string {
+  return `cases:${eventId}:seen`;
+}
+
+/** Undecided cases in a group the reader has not opened. A group opened
+ * before per-case marks existed counts as fully read. A case proposed
+ * after the reader opened the group does not. */
+export function caseGroupUnread(entry: CaseGroupEntry, readIds: ReadonlySet<string>): number {
+  const proposed = entry.cases.filter((c) => c.state === "proposed");
+  if (readIds.has(caseGroupSeenMark(entry.eventId))) {
+    return proposed.filter((c) => !readIds.has(c.id)).length;
+  }
+  if (readIds.has(entry.id)) return 0;
+  return proposed.length;
+}
+
+function unreadWeight(entry: InboxEntry, readIds: ReadonlySet<string>): number {
+  if (!isReviewItem(entry)) return entryWeight(entry);
+  if (isCaseGroupEntry(entry)) return caseGroupUnread(entry, readIds);
+  return readIds.has(entry.id) ? 0 : entryWeight(entry);
+}
+
+/** The row's unread dot. My requests are not a queue, but opening one
+ * still clears its dot; a case group stays unread while any of its
+ * undecided cases arrived after the reader opened it. */
+export function isUnreadEntry(entry: InboxEntry, readIds: ReadonlySet<string>): boolean {
+  if (isCaseGroupEntry(entry)) return caseGroupUnread(entry, readIds) > 0;
+  return !readIds.has(entry.id);
+}
+
+/** Ids stored when the reader opens a row. A case group also records each
+ * undecided case, so a later proposal on that Event counts again. */
+export function readMarks(entry: InboxEntry): string[] {
+  if (!isCaseGroupEntry(entry)) return [entry.id];
+  return [
+    entry.id,
+    caseGroupSeenMark(entry.eventId),
+    ...entry.cases.filter((c) => c.state === "proposed").map((c) => c.id),
+  ];
+}
+
+/** Whether deciding this case would subtract a proposal the unread count
+ * has already left out. */
+export function proposalUnreadAlreadyExcluded(eventId: string, caseId: string, readIds: ReadonlySet<string>): boolean {
+  if (readIds.has(caseGroupSeenMark(eventId))) return readIds.has(caseId);
+  return readIds.has(caseGroupId(eventId));
 }
 
 /**
@@ -357,7 +614,7 @@ export function countByFilter(entries: InboxEntry[]): Record<InboxFilter, number
  * one down, else the previous, else nothing. `visible` is the list BEFORE
  * removal.
  */
-export function nextSelection(visible: InboxEntry[], actedId: string): string | null {
+export function nextSelection(visible: readonly Pick<InboxEntry, "id">[], actedId: string): string | null {
   const i = visible.findIndex((e) => e.id === actedId);
   if (i === -1) return visible[0]?.id ?? null;
   return visible[i + 1]?.id ?? visible[i - 1]?.id ?? null;
@@ -365,7 +622,7 @@ export function nextSelection(visible: InboxEntry[], actedId: string): string | 
 
 /** J/K movement: clamp within the visible list; null selection starts at the top. */
 export function moveSelection(
-  visible: InboxEntry[],
+  visible: readonly Pick<InboxEntry, "id">[],
   selectedId: string | null,
   delta: 1 | -1,
 ): string | null {
@@ -411,7 +668,7 @@ export function textMessages<T extends { text: string }>(messages: T[]): T[] {
  * least one text message isn't already in `locale` by clear-api's intake
  * detection (an unknown language counts as not).
  */
-export function needsTranslation(entry: InboxEntry, locale: string): boolean {
+export function needsTranslation(entry: HotlineEntry, locale: string): boolean {
   return textMessages(entry.messages).some((m) => m.language !== locale);
 }
 
