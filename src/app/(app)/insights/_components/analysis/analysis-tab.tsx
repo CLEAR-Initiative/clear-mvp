@@ -16,7 +16,7 @@ import { Notice } from "./notice";
 /**
  * Insights -> Analysis (clear-api ADR-0007). Lands on the list of analyses for
  * the selected country: the country default plus the team's created ones over
- * districts. Gated by `analysis_v2` in the Insights page.
+ * districts. Always shown on the Insights page.
  */
 export function AnalysisTab() {
   const t = useTranslations("analysis");

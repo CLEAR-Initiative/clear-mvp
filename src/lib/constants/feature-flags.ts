@@ -139,14 +139,6 @@ export const FEATURE_FLAGS: FeatureFlagDefinition[] = [
     defaultEnabled: true,
   },
   {
-    key: "analysis_v2",
-    label: "Analysis",
-    description:
-      "Analysis tab in the Insights page: the unified scoped analysis (PRD Situation analysis (neo)), country scope first, read from clear-api's frame-scoped `analysis` (ADR-0007). UI-only gate. Remove once it replaces the Crisis and Situation Analysis tabs.",
-    tier: 3,
-    defaultEnabled: false,
-  },
-  {
     key: "event_enrichment",
     label: "Event enrichment",
     description:

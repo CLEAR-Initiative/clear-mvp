@@ -3221,6 +3221,31 @@
         }
       }
     },
+    "layout": {
+      "changes": "ما الذي تغيّر",
+      "dismissChanges": "تعليم كمقروء",
+      "updated": "محدّث",
+      "summary": "ملخص الوضع",
+      "expandSummary": "قراءة الملخص والسياق",
+      "collapseSummary": "عرض أقل",
+      "copySummary": "نسخ الملخص",
+      "copied": "تم النسخ",
+      "highlights": "أبرز النقاط",
+      "howToRead": "كيفية القراءة",
+      "vulnerabilitiesMeta": "{count, plural, zero {لا شروط قبل الأزمة} one {شرط واحد قبل الأزمة} two {شرطان قبل الأزمة} few {# شروط قبل الأزمة} many {# شرطًا قبل الأزمة} other {# شرط قبل الأزمة}}",
+      "legend": "مفتاح الخريطة",
+      "legendArea": "نطاق التحليل",
+      "legendEvents": "تُظهر العلامات أماكن تسجيل الأحداث",
+      "sections": {
+        "summary": "الملخص",
+        "figures": "الأرقام الرئيسية",
+        "contexts": "مخاطر السياق",
+        "hazards": "الأخطار",
+        "vulnerabilities": "نقاط الضعف",
+        "displacement": "النزوح",
+        "forecast": "التوقعات"
+      }
+    },
     "refresh": {
       "button": "تحديث الآن",
       "requested": "تم طلب التحديث. تستغرق النسخة الجديدة عادةً بضع دقائق وستظهر هنا تلقائيًا.",

@@ -281,25 +281,29 @@ describe("Insights > Analysis tab", () => {
     expect(screen.getByText(/largest displacement crisis/)).toBeInTheDocument();
     // Displaced = inside + abroad, split in the legend.
     expect(screen.getByText("11.4M")).toBeInTheDocument();
-    expect(screen.getByText('analysis.kpis.inside:{"scope":"Sudan"}')).toBeInTheDocument();
-    expect(screen.getByText("2.8M")).toBeInTheDocument();
+    expect(screen.getByText(/analysis\.kpis\.inside:\{"scope":"Sudan"\}/)).toBeInTheDocument();
+    expect(screen.getByText(/2\.8M/)).toBeInTheDocument();
     // In need: headline, range and sectors.
-    expect(screen.getByText("19M – 33.7M")).toBeInTheDocument();
+    expect(screen.getByText(/19M – 33\.7M/)).toBeInTheDocument();
     expect(screen.getByText("analysis.kpis.sectors.wash")).toBeInTheDocument();
     expect(screen.getByText("25.5M")).toBeInTheDocument();
     // Funding from the analysis window.
-    expect(screen.getAllByText("$1.2B").length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/\$1\.2B/).length).toBeGreaterThan(0);
     expect(screen.getByTestId("minimap")).toHaveTextContent("1 markers");
     expect(screen.getByText("North Darfur")).toBeInTheDocument();
     // Country scope: no event timeline.
     expect(screen.queryByTestId("analysis-section-timeline")).not.toBeInTheDocument();
+    fireEvent.click(within(screen.getByTestId("analysis-section-hazards")).getAllByRole("button")[0]!);
     expect(screen.getByText("Cholera outbreak.")).toBeInTheDocument();
     expect(screen.getByText("Fighting continues.")).toBeInTheDocument();
   });
 
-  it("collapses Contexts, Hazards & Vulnerabilities, Displacement and Forecast by default", () => {
+  it("opens context and forecast, and keeps hazards and displacement collapsed", () => {
     renderPage();
-    for (const id of ["contexts", "hazards", "displacement", "forecast"]) {
+    for (const id of ["contexts", "forecast"]) {
+      expect(within(screen.getByTestId(`analysis-section-${id}`)).getAllByRole("button")[0]).toHaveAttribute("aria-expanded", "true");
+    }
+    for (const id of ["hazards", "displacement"]) {
       const toggle = within(screen.getByTestId(`analysis-section-${id}`)).getAllByRole("button")[0]!;
       expect(toggle).toHaveAttribute("aria-expanded", "false");
       fireEvent.click(toggle);
@@ -558,8 +562,9 @@ describe("Insights > Analysis tab", () => {
       isError: false,
     };
     renderPage();
-    const findings = screen.getByTestId("analysis-key-findings");
-    expect(within(findings).getByText("Security:").tagName).toBe("SPAN");
+    const findings = screen.getByTestId("analysis-highlights");
+    expect(within(findings).getByText("Security").tagName).toBe("SPAN");
+    fireEvent.click(screen.getByTestId("summary-toggle"));
     expect(findings).toHaveTextContent("Drone strikes hit El Obeid on 25 Sep.");
   });
 

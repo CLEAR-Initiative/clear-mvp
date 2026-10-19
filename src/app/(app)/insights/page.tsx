@@ -53,22 +53,20 @@ export default function InsightsPage() {
     ? shortCountryName(crisisPickedCountry) ?? crisisPickedCountry
     : t("reports.allCountries");
 
-  // Each Insights tab is gated by its own feature flag (admin Features tab):
-  // Crisis Overview (`crisis_overview`), Situation Analysis (`situation_analysis`)
-  // and Analysis (`analysis_v2`). `enabledTabs` is the display-ordered list of
-  // currently-enabled tabs; it drives both the default tab and the fallback when
-  // the active tab is turned off (a deep link, or an admin toggling it) so the
-  // page never strands on a hidden panel.
+  // Crisis Overview and Situation Analysis stay behind their flags until they
+  // are retired. Analysis is always shown: it is the page being replaced onto,
+  // and a stored `analysis_v2` row must not hide it. `enabledTabs` is the
+  // display-ordered list; it drives the default tab and the fallback when an
+  // admin turns a flagged tab off, so the page never strands on a hidden panel.
   const crisisEnabled = useFeatureEnabled("crisis_overview");
   const situationEnabled = useFeatureEnabled("situation_analysis");
-  const analysisEnabled = useFeatureEnabled("analysis_v2");
   const enabledTabs = useMemo(() => {
     const tabs: string[] = [];
     if (crisisEnabled) tabs.push("crisis");
     if (situationEnabled) tabs.push("situation");
-    if (analysisEnabled) tabs.push("analysis");
+    tabs.push("analysis");
     return tabs;
-  }, [crisisEnabled, situationEnabled, analysisEnabled]);
+  }, [crisisEnabled, situationEnabled]);
   useEffect(() => {
     if (activeTab && enabledTabs.includes(activeTab)) return;
     setActiveTab(enabledTabs[0] ?? null);
@@ -96,9 +94,7 @@ export default function InsightsPage() {
             {situationEnabled && (
               <Tabs.Tab value="situation">{t("page.tabs.situation")}</Tabs.Tab>
             )}
-            {analysisEnabled && (
-              <Tabs.Tab value="analysis">{t("page.tabs.analysis")}</Tabs.Tab>
-            )}
+            <Tabs.Tab value="analysis">{t("page.tabs.analysis")}</Tabs.Tab>
           </Tabs.List>
         </Tabs>
 
@@ -132,7 +128,7 @@ export default function InsightsPage() {
         )}
 
         {activeTab === "situation" && situationEnabled && <SituationTab />}
-        {activeTab === "analysis" && analysisEnabled && <AnalysisTab />}
+        {activeTab === "analysis" && <AnalysisTab />}
       </Box>
     </Box>
   );

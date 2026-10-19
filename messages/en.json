@@ -3221,6 +3221,31 @@
         }
       }
     },
+    "layout": {
+      "changes": "What changed",
+      "dismissChanges": "Mark as seen",
+      "updated": "Updated",
+      "summary": "AI situation summary",
+      "expandSummary": "Read full summary and context",
+      "collapseSummary": "Show less",
+      "copySummary": "Copy summary",
+      "copied": "Copied",
+      "highlights": "Highlights",
+      "howToRead": "How to read",
+      "vulnerabilitiesMeta": "{count, plural, one {# pre-crisis condition} other {# pre-crisis conditions}}",
+      "legend": "Legend",
+      "legendArea": "Analysis area",
+      "legendEvents": "Event markers show where events were recorded",
+      "sections": {
+        "summary": "AI summary",
+        "figures": "Key figures",
+        "contexts": "Context risks",
+        "hazards": "Hazards",
+        "vulnerabilities": "Vulnerabilities",
+        "displacement": "Displacement",
+        "forecast": "Forecast"
+      }
+    },
     "refresh": {
       "button": "Update now",
       "requested": "Update requested. The new version usually takes a few minutes and appears here by itself.",

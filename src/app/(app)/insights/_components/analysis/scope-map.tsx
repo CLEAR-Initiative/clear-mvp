@@ -1,8 +1,7 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useFormatter, useTranslations } from "next-intl";
-import { Box, Grid, Stack, Text } from "@mantine/core";
 import { api } from "~/trpc/react";
 import { MinimapCard } from "~/components/map/minimap-card";
 import type { MapMarker } from "~/components/map/crisis-map";
@@ -10,6 +9,7 @@ import { mapSeverity } from "~/lib/types/graphql";
 import { resolveCountryConfig } from "~/lib/constants/country-config";
 import { eventsByArea } from "~/lib/analysis-view";
 import type { AnalysisEvents } from "~/server/api/mappers/analysis";
+import styles from "./dark/analysis-dark.module.css";
 
 const MAX_AREAS = 8;
 
@@ -33,6 +33,7 @@ export function ScopeMap({
   since: string;
   events: AnalysisEvents | undefined;
 }) {
+  const [legendOpen, setLegendOpen] = useState(false);
   const t = useTranslations("analysis");
   const format = useFormatter();
   const country = api.locations.getById.useQuery(
@@ -81,69 +82,70 @@ export function ScopeMap({
   const sinceLabel = format.dateTime(new Date(since), { day: "numeric", month: "short", year: "numeric" });
   const total = events?.totalCount ?? 0;
 
+  const max = Math.max(1, ...areas.map((a) => a.count));
   return (
-    <Grid gutter={16} mb={24}>
-      <Grid.Col span={{ base: 12, md: 8 }} data-testid="analysis-map">
-        <MinimapCard
-          markers={markers}
-          center={center}
-          countryGeometry={country.data?.geometry ?? undefined}
-          countryId={countryId}
-          countryName={countryName}
-          countryPCode={config?.pCode}
-          location={null}
-          locationName={scopeName}
-          scopeAreas={scopeAreas}
-        />
-      </Grid.Col>
-
-      <Grid.Col span={{ base: 12, md: 4 }}>
-      <Stack gap={16}>
-        <Box p={16} style={{ border: "1px solid var(--color-border)", background: "var(--color-bg-white)" }}>
-          <Text fw={700} tt="uppercase" c="var(--color-text-secondary)" style={{ fontSize: 11, letterSpacing: "0.08em" }}>
-            {t("map.title")}
-          </Text>
-          <Text fw={700} c="var(--color-text-primary)" mt={6} style={{ fontSize: 18 }}>
-            {scopeName}
-          </Text>
-          <Text c="var(--color-text-secondary)" style={{ fontSize: 13 }}>
-            {areaIds.length > 0 ? t("scope.areas", { count: areaIds.length }) : t("scope.wholeCountry")}
-          </Text>
-          <Text c="var(--color-text-primary)" mt={10} style={{ fontSize: 13 }}>
-            {t("map.events", { count: total, date: sinceLabel })}
-          </Text>
-          {total > items.length && (
-            <Text c="var(--color-text-muted)" style={{ fontSize: 12 }}>
-              {t("map.sample", { count: items.length })}
-            </Text>
+      <section className={styles.mapRow} aria-label={t("map.title")}>
+        <div className={styles.mapCard}>
+          <div className={styles.mapHead}>
+            <span>{scopeName}</span>
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 10, fontWeight: 400 }}>
+              <span style={{ fontSize: 12.5, color: "var(--sa-muted)" }}>
+                {areaIds.length > 0 ? t("scope.areas", { count: areaIds.length }) : t("scope.wholeCountry")}
+                {total > items.length ? ` · ${t("map.sample", { count: items.length })}` : null}
+              </span>
+              <button
+                type="button"
+                className={styles.chip}
+                aria-expanded={legendOpen}
+                onClick={() => setLegendOpen((open) => !open)}
+              >
+                {t("layout.legend")}
+              </button>
+            </span>
+          </div>
+          <div data-testid="analysis-map">
+            <MinimapCard
+              markers={markers}
+              center={center}
+              countryGeometry={country.data?.geometry ?? undefined}
+              countryId={countryId}
+              countryName={countryName}
+              countryPCode={config?.pCode}
+              location={null}
+              locationName={scopeName}
+              scopeAreas={scopeAreas}
+            />
+          </div>
+          {legendOpen && (
+            <div className={styles.legendPop}>
+              <div className={styles.railLabel}>{t("layout.legend")}</div>
+              <div>{t("layout.legendArea")}</div>
+              <div>{t("layout.legendEvents")}</div>
+            </div>
           )}
-        </Box>
-
-        <Box p={16} style={{ border: "1px solid var(--color-border)", background: "var(--color-bg-white)" }}>
-          <Text fw={700} tt="uppercase" c="var(--color-text-secondary)" mb={10} style={{ fontSize: 11, letterSpacing: "0.08em" }}>
-            {t("map.areas")}
-          </Text>
+        </div>
+        <div className={styles.sideCard}>
+          <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
+            <span className={styles.count}>{total.toLocaleString()}</span>
+            <span style={{ fontSize: 12.5, color: "var(--sa-muted)" }}>{t("map.events", { count: total, date: sinceLabel })}</span>
+          </div>
+          <div className={styles.railLabel}>{t("map.areas")}</div>
           {areas.length === 0 ? (
-            <Text c="var(--color-text-muted)" style={{ fontSize: 13 }}>
-              {t("map.noEvents", { date: sinceLabel })}
-            </Text>
+            <span style={{ fontSize: 13, color: "var(--sa-muted)" }}>{t("map.noEvents", { date: sinceLabel })}</span>
           ) : (
-            <Stack gap={8}>
-              {areas.map((a) => (
-                <Box key={a.id} style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
-                  <Text c="var(--color-text-primary)" style={{ fontSize: 13 }}>
-                    {a.name}
-                  </Text>
-                  <Text c="var(--color-text-secondary)" style={{ fontSize: 12, whiteSpace: "nowrap" }}>
-                    {t("map.areaEvents", { count: a.count })}
-                  </Text>
-                </Box>
-              ))}
-            </Stack>
+            areas.map((a) => (
+              <div key={a.id} className={styles.barRow}>
+                <span>{a.name}</span>
+                <div className={styles.track}>
+                  <div className={styles.bar} style={{ width: `${(a.count / max) * 100}%` }} />
+                </div>
+                <span style={{ color: "var(--sa-muted)", fontVariantNumeric: "tabular-nums" }}>
+                  {t("map.areaEvents", { count: a.count })}
+                </span>
+              </div>
+            ))
           )}
-        </Box>
-      </Stack>
-      </Grid.Col>
-    </Grid>
+        </div>
+      </section>
   );
 }

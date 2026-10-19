@@ -3221,6 +3221,31 @@
         }
       }
     },
+    "layout": {
+      "changes": "Qué cambió",
+      "dismissChanges": "Marcar como visto",
+      "updated": "Actualizado",
+      "summary": "Resumen de situación",
+      "expandSummary": "Leer el resumen y el contexto",
+      "collapseSummary": "Ver menos",
+      "copySummary": "Copiar resumen",
+      "copied": "Copiado",
+      "highlights": "Destacados",
+      "howToRead": "Cómo leer",
+      "vulnerabilitiesMeta": "{count, plural, one {# condición previa a la crisis} other {# condiciones previas a la crisis}}",
+      "legend": "Leyenda",
+      "legendArea": "Zona de análisis",
+      "legendEvents": "Los marcadores muestran dónde se registraron eventos",
+      "sections": {
+        "summary": "Resumen",
+        "figures": "Cifras clave",
+        "contexts": "Riesgos de contexto",
+        "hazards": "Amenazas",
+        "vulnerabilities": "Vulnerabilidades",
+        "displacement": "Desplazamiento",
+        "forecast": "Pronóstico"
+      }
+    },
     "refresh": {
       "button": "Actualizar ahora",
       "requested": "Actualización solicitada. La nueva versión suele tardar unos minutos y aparecerá aquí sola.",

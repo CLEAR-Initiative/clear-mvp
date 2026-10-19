@@ -154,6 +154,7 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
+  sessionStorage.clear();
 });
 
 describe("AnalysisDetail header", () => {
@@ -338,5 +339,39 @@ describe("AnalysisDetail map", () => {
     renderDetail(COUNTRY);
     expect(screen.getByTestId("minimap")).toBeEmptyDOMElement();
     expect(screen.getByTestId("analysis-map").parentElement).toHaveTextContent("analysis.scope.wholeCountry");
+  });
+});
+
+describe("Analysis detail layout", () => {
+  it("paints the redesign and dismisses change notes", () => {
+    const row = analysis();
+    row.changes = { comparedTo: "2026-09-01T00:00:00Z", notes: { summary: "Cholera line revised.", hazards: "Storm added." } };
+    row.hazards = {
+      hazards: [{ text: "Cholera outbreak.", refs: [] }],
+      vulnerabilities: [{ text: "Climate: already fragile.", refs: [] }],
+    };
+    row.keyFindings = [{ text: "Security: Drone strikes hit El Obeid.", refs: [] }];
+    analysisResult.data = row;
+    renderDetail(COUNTRY);
+
+    expect(screen.getByTestId("analysis-page")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: "Sudan" })).toBeInTheDocument();
+    expect(screen.getByTestId("analysis-changes")).toHaveTextContent("analysis.layout.sections.summary");
+    expect(screen.getByTestId("analysis-changes")).toHaveTextContent("analysis.layout.sections.hazards");
+    expect(screen.getByTestId("analysis-highlights")).toBeInTheDocument();
+    expect(screen.getByTestId("analysis-section-hazards")).toBeInTheDocument();
+    expect(screen.getByTestId("analysis-section-vulnerabilities")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "analysis.layout.dismissChanges" }));
+    expect(screen.queryByTestId("analysis-changes")).not.toBeInTheDocument();
+
+    cleanup();
+    renderDetail(COUNTRY);
+    expect(screen.queryByTestId("analysis-changes")).not.toBeInTheDocument();
+
+    row.changes = { comparedTo: "2026-09-01T00:00:00Z", notes: { summary: "A later revision." } };
+    cleanup();
+    renderDetail(COUNTRY);
+    expect(screen.getByTestId("analysis-changes")).toHaveTextContent("analysis.layout.sections.summary");
   });
 });

@@ -1,3 +1,5 @@
+import path from "path";
+import { fileURLToPath } from "url";
 import withPWA from "@ducanh2912/next-pwa";
 import createNextIntlPlugin from "next-intl/plugin";
 
@@ -5,6 +7,11 @@ const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // A lockfile in the home directory otherwise makes Turbopack treat ~ as the app root.
+  // The root has to include this app and the sibling checkout its node_modules link points at.
+  turbopack: {
+    root: path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".."),
+  },
   devIndicators: false,
   output: "standalone",
   // Force @sentry/nextjs and the instrumentation config files into the
