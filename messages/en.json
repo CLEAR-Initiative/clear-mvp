@@ -383,13 +383,12 @@
       "member": "Member",
       "orgAdmin": "Org Admin",
       "teamMember": "Team Member",
-      "fieldCoordinator": "Field Coordinator",
+      "analyst": "Analyst",
       "teamAdmin": "Team Admin"
     },
     "users": {
       "roles": {
-        "viewer": "Viewer",
-        "analyst": "Analyst",
+        "member": "Member",
         "admin": "Admin"
       },
       "unauthorized": "You need admin privileges to view user management.",
@@ -421,7 +420,7 @@
       "roleUpdatedDetail": "Role is now {role}.",
       "roleUpdateFailed": "Could not update role",
       "approved": "User approved",
-      "approvedDetail": "They now have viewer access.",
+      "approvedDetail": "They now have member access.",
       "approveFailed": "Could not approve user"
     },
     "features": {
@@ -1773,7 +1772,7 @@
         "help": {
           "approvePrivate": {
             "title": "Verified, but stays inside the room.",
-            "body": "The thread is marked as reviewed and believed, but it stays in the ground staging tier: visible only in this Ground Intel tab, only to admins and analysts. No signal is created — nothing appears on the map or in events and alerts, and nothing is exposed through the API. This is the state for content that is true but operationally sensitive — staff movements, or attribution that could endanger the reporter. It can still be promoted to public later if circumstances change."
+            "body": "The thread is marked as reviewed and believed, but it stays in the ground staging tier: visible only in this Ground Intel tab, only to admins and team analysts. No signal is created — nothing appears on the map or in events and alerts, and nothing is exposed through the API. This is the state for content that is true but operationally sensitive — staff movements, or attribution that could endanger the reporter. It can still be promoted to public later if circumstances change."
           },
           "approvePublic": {
             "title": "Verified — release it into CLEAR.",
@@ -1854,7 +1853,7 @@
       "confirmPrompt": "Raise this event as an alert?",
       "failed": "Failed. Try again.",
       "turnIntoAlert": "Turn into Alert",
-      "noPermission": "Only admins and analysts can raise alerts"
+      "noPermission": "Only admins and team analysts can raise alerts"
     },
     "systemData": {
       "title": "System Data",
@@ -1898,7 +1897,7 @@
       "confirmPrompt": "Ask a Worker what has typically happened before for this hazard here? It can take a few minutes.",
       "requested": "Enrichment requested",
       "failed": "Request failed. Try again.",
-      "noPermission": "Only admins, analysts and team coordinators can request enrichment",
+      "noPermission": "Only admins, team analysts and team members can request enrichment",
       "capReached": "You have reached today's limit for enrichment requests",
       "cancel": "Cancel request",
       "cancelled": "Request cancelled",
@@ -2651,7 +2650,7 @@
         "noTeams": "This organisation has no teams. Create one before inviting.",
         "teamRoles": {
           "team_member": "Team member",
-          "field_coordinator": "Field coordinator",
+          "analyst": "Analyst",
           "emergency_response_manager": "Emergency response manager",
           "team_admin": "Team admin"
         },
@@ -2925,7 +2924,7 @@
       "addedNoSignal": "Approved, but no signal id came back. Check the signal in Detection before relying on it.",
       "retried": "Queued for another attempt"
     },
-    "noAccess": "The Inbox is available to admins and analysts only.",
+    "noAccess": "The Inbox is available to admins and team analysts only.",
     "loadError": "Could not load the inbox",
     "translate": {
       "button": "Translate to {locale}",

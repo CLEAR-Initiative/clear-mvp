@@ -383,13 +383,12 @@
       "member": "Miembro",
       "orgAdmin": "Admin. de organización",
       "teamMember": "Miembro del equipo",
-      "fieldCoordinator": "Coordinador de terreno",
+      "analyst": "Analista",
       "teamAdmin": "Admin. de equipo"
     },
     "users": {
       "roles": {
-        "viewer": "Observador",
-        "analyst": "Analista",
+        "member": "Miembro",
         "admin": "Admin"
       },
       "unauthorized": "Se requieren privilegios de administrador para ver la gestión de usuarios.",
@@ -421,7 +420,7 @@
       "roleUpdatedDetail": "El rol ahora es {role}.",
       "roleUpdateFailed": "No se pudo actualizar el rol",
       "approved": "Usuario aprobado",
-      "approvedDetail": "Ahora tiene acceso de visor.",
+      "approvedDetail": "Ahora tiene acceso de miembro.",
       "approveFailed": "No se pudo aprobar al usuario"
     },
     "features": {
@@ -1854,7 +1853,7 @@
       "confirmPrompt": "¿Elevar este evento a alerta?",
       "failed": "Error. Inténtelo de nuevo.",
       "turnIntoAlert": "Convertir en alerta",
-      "noPermission": "Solo admins y analistas pueden elevar alertas"
+      "noPermission": "Solo admins y analistas de equipo pueden elevar alertas"
     },
     "systemData": {
       "title": "Datos del sistema",
@@ -1898,7 +1897,7 @@
       "confirmPrompt": "¿Pedir a un Worker qué ha ocurrido normalmente antes con esta amenaza aquí? Puede tardar unos minutos.",
       "requested": "Enriquecimiento solicitado",
       "failed": "La solicitud falló. Inténtelo de nuevo.",
-      "noPermission": "Solo admins, analistas y coordinadores de equipo pueden solicitar enriquecimiento",
+      "noPermission": "Solo admins, analistas de equipo y miembros de equipo pueden solicitar enriquecimiento",
       "capReached": "Ha alcanzado el límite de solicitudes de enriquecimiento de hoy",
       "cancel": "Cancelar solicitud",
       "cancelled": "Solicitud cancelada",
@@ -2651,7 +2650,7 @@
         "noTeams": "Esta organización no tiene equipos. Cree uno antes de invitar.",
         "teamRoles": {
           "team_member": "Miembro del equipo",
-          "field_coordinator": "Coordinador de terreno",
+          "analyst": "Analista",
           "emergency_response_manager": "Responsable de respuesta de emergencia",
           "team_admin": "Admin. de equipo"
         },
@@ -2925,7 +2924,7 @@
       "addedNoSignal": "Aprobado, pero no se devolvió ningún id de señal. Compruebe la señal en Detección antes de confiar en ella.",
       "retried": "En cola para un nuevo intento"
     },
-    "noAccess": "La bandeja de entrada es solo para administradores y analistas.",
+    "noAccess": "La bandeja de entrada es solo para administradores y analistas de equipo.",
     "loadError": "No se pudo cargar la bandeja",
     "translate": {
       "button": "Traducir al {locale}",

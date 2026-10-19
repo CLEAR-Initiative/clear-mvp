@@ -29,21 +29,26 @@ bunx playwright test e2e/tests/20-role-access-matrix.spec.ts --list   # enumerat
 
 **All personas are seeded in the hermetic stack** — no env wiring needed:
 
-- `admin` / `analyst` / `viewer` — clear-api `prisma/seed.ts` (all `password123`).
-- `erm`, `pending`, `team_admin`, `org_admin`, `field_coordinator`, `team_member` —
+- `admin` / `member` — clear-api `prisma/seed.ts` (all `password123`). `member` is
+  the `viewer@…` account (global role is now `member`, formerly `viewer`).
+- `analyst` — the seeded `analyst@…` account (global role `member`), which
+  `roles-seed.ts` joins to the E2E team with the **team** `analyst` role.
+- `erm`, `pending`, `team_admin`, `org_admin`, `team_member` —
   `e2e/support/roles-seed.ts` (the `seed-roles` compose step). All `password123`
   except ERM, which reuses `emr.user`'s strong password from the main seed.
 
 Constants live in `e2e/support/data.ts`; `roles-seed.ts` creates a team under the
 seeded "CLEAR Platform" org, assigns `emr.user` the `emergency_response_manager`
-role (completing the ERM — the main seed left this as a TODO), and mints the
-remaining accounts.
+role and `analyst@…` the team `analyst` role (completing both — the main seed
+left them as TODOs), and mints the remaining accounts. `analyst` is now a TEAM
+role with elevated, location-scoped powers; `field_coordinator` has been removed
+(merged into `team_member`).
 
 To point the suite at a **non-hermetic** environment that seeds different accounts,
 override any persona with `E2E_<PERSONA>_EMAIL` / `_PASSWORD`
 (e.g. `E2E_ERM_EMAIL`, `E2E_TEAM_ADMIN_PASSWORD`).
 
-> **ERM** = a global **viewer** who also holds the `emergency_response_manager`
+> **ERM** = a global **member** who also holds the `emergency_response_manager`
 > team role. That is exactly what `roles-seed.ts` provisions for `emr.user`.
 
 ## What runs vs what's scaffolded

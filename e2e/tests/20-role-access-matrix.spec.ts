@@ -16,7 +16,7 @@
  *     and selectors the matrix only describes in prose. Each fixme title carries
  *     the id, expected status, selector and source so an agent can implement it.
  *
- * Personas beyond the seeded admin/analyst/viewer (ERM, pending, team/org roles)
+ * Personas beyond the seeded admin/analyst/member (ERM, pending, team/org roles)
  * need credentials via env (see personas.ts); without them those tests SKIP with
  * a reason — never a false pass.
  */
@@ -44,7 +44,7 @@ const matrix = JSON.parse(
   readFileSync(join(process.cwd(), "e2e/support/role-access/matrix.json"), "utf8"),
 ) as Matrix;
 
-const CORE: Persona[] = ["admin", "analyst", "viewer", "erm", "pending"];
+const CORE: Persona[] = ["admin", "analyst", "member", "erm", "pending"];
 
 /** First concrete, static route for a case ("*" → /dashboard; "a|b" → a). */
 function routeOf(route: string): { path: string; dynamic: boolean } {

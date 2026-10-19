@@ -353,9 +353,9 @@ export const signalsRouter = createTRPCRouter({
         lng: z.number().optional(),
         /**
          * Team the signal is being filed under. Purely an authorisation
-         * hint — the backend uses it to admit team_admin / field_coordinator
-         * callers without a global admin/analyst role. Ignored (harmlessly)
-         * for platform callers, so the UI can always send it.
+         * hint — the backend uses it to admit team writers (team_admin /
+         * analyst / team_member) without a global admin role. Ignored
+         * (harmlessly) for platform admins, so the UI can always send it.
          */
         teamId: z.string().optional(),
       }),

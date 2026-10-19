@@ -11,7 +11,7 @@ import { AgentDrawer } from "~/components/agent/agent-drawer";
 import { publishCurrentView, resetCurrentViews } from "~/lib/agent-current-view";
 
 let flagOn = true;
-let role: string | undefined = "viewer";
+let role: string | undefined = "member";
 let userId = "u-alice";
 let pathname = "/map";
 
@@ -85,7 +85,7 @@ const launcher = () => screen.queryByRole("button", { name: "Open the Agent draw
 beforeEach(() => {
   flagOn = true;
   clearDataOn = true;
-  role = "viewer";
+  role = "member";
   userId = "u-alice";
   pathname = "/map";
   agent = undefined;

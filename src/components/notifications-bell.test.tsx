@@ -31,7 +31,7 @@ vi.mock("~/components/feature-flags-provider", () => ({
 
 let rows: GqlNotification[] = [];
 let listError = false;
-let role: string | undefined = "analyst";
+let role: string | undefined = "member";
 /** The router's cut (notifications.bell), applied to the raw rows. */
 const listQuery = vi.fn((_input: unknown, opts: { enabled: boolean }) => ({
   data: opts.enabled && !listError ? { rows: bellRows(rows), unread: bellUnreadCount(rows) } : undefined,
@@ -78,7 +78,7 @@ describe("NotificationsBell", () => {
   afterEach(() => {
     cleanup();
     flagEnabled = true;
-    role = "analyst";
+    role = "member";
     rows = [];
     listError = false;
     push.mockReset();
@@ -103,8 +103,8 @@ describe("NotificationsBell", () => {
     expect(listQuery).toHaveBeenCalledWith(undefined, expect.objectContaining({ enabled: false }));
   });
 
-  it("shows for a viewer, who may request enrichment as a team writer", () => {
-    role = "viewer";
+  it("shows for a member, who may request enrichment as a team writer", () => {
+    role = "member";
     renderBell();
     expect(screen.getByTestId("notifications-bell")).toBeInTheDocument();
   });

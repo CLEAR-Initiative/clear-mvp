@@ -6,16 +6,22 @@
  * Role-persona E2E fixture seed.
  *
  * Runs INSIDE the clear-api seed image (docker-compose.e2e.yml service
- * `seed-roles`), AFTER the main `seed` (which creates admin/analyst/viewer,
- * the `emr.user` ERM account, and the "CLEAR Platform" org). It provisions the
- * personas the role-access matrix needs beyond the seeded three, all with the
- * shared `password123` (ERM keeps its own strong password from the main seed):
+ * `seed-roles`), AFTER the main `seed` (which creates admin/analyst/member,
+ * the `emr.user` ERM account, and the "CLEAR Platform" org). After the
+ * role-taxonomy split the main seed's `analyst@…` is a GLOBAL `member`; this
+ * script gives it the elevated `analyst` membership on the E2E team so it acts
+ * as a TEAM analyst. It provisions the personas the role-access matrix needs
+ * beyond the seeded accounts, all with the shared `password123` (ERM keeps its
+ * own strong password from the main seed):
  *
  *   • completes the ERM — assigns emr.user the `emergency_response_manager`
  *     team role on a seeded team (the main seed left this as a TODO)
+ *   • completes the ANALYST — assigns analyst@… the team `analyst` membership
+ *     on the E2E team (the team has NO teamLocations, i.e. "wide-open" location
+ *     scope, so the team analyst can act on any event/alert/crisis/signal —
+ *     intended, it keeps the matrix deterministic)
  *   • e2e-pending@…            global role `pending` (unapproved)
  *   • e2e-team-admin@…         team `team_admin`
- *   • e2e-field-coordinator@…  team `field_coordinator`
  *   • e2e-team-member@…        team `team_member`
  *   • e2e-org-admin@…          org `org_admin`
  *
@@ -74,30 +80,36 @@ async function main() {
       create: { teamId: team.id, userId, role },
     });
 
-  // ERM: emr.user already exists (global viewer). Give it the team role that
+  // ERM: emr.user already exists (global `member`). Give it the team role that
   // actually unlocks the hotline inbox — the piece the main seed deferred.
   const emr = await prisma.user.findUnique({ where: { email: "emr.user@clearinitiative.io" } });
   if (!emr) throw new Error("[roles-seed] expected emr.user from the main seed");
   await addToOrg(emr.id, "member");
   await addToTeam(emr.id, "emergency_response_manager");
 
+  // ANALYST: analyst@… already exists (global `member` after the taxonomy
+  // split). Give it the elevated `analyst` team membership on the E2E team.
+  // The team has NO teamLocations ("wide-open" scope), so the team analyst's
+  // location-scoped powers succeed on any event/alert/crisis/signal — intended,
+  // to keep the matrix deterministic.
+  const analyst = await prisma.user.findUnique({ where: { email: "analyst@clearinitiative.io" } });
+  if (!analyst) throw new Error("[roles-seed] expected analyst@clearinitiative.io from the main seed");
+  await addToOrg(analyst.id, "member");
+  await addToTeam(analyst.id, "analyst");
+
   // Pending: created but NOT approved — keep the global `pending` role.
   await getOrCreateUser("E2E Pending", "e2e-pending@clearinitiative.io", PW, "pending");
 
-  // Team/org personas: global viewer; privilege comes from the team/org role.
-  const teamAdmin = await getOrCreateUser("E2E Team Admin", "e2e-team-admin@clearinitiative.io", PW, "viewer");
+  // Team/org personas: global `member`; privilege comes from the team/org role.
+  const teamAdmin = await getOrCreateUser("E2E Team Admin", "e2e-team-admin@clearinitiative.io", PW, "member");
   await addToOrg(teamAdmin.id, "member");
   await addToTeam(teamAdmin.id, "team_admin");
 
-  const fieldCoord = await getOrCreateUser("E2E Field Coordinator", "e2e-field-coordinator@clearinitiative.io", PW, "viewer");
-  await addToOrg(fieldCoord.id, "member");
-  await addToTeam(fieldCoord.id, "field_coordinator");
-
-  const teamMember = await getOrCreateUser("E2E Team Member", "e2e-team-member@clearinitiative.io", PW, "viewer");
+  const teamMember = await getOrCreateUser("E2E Team Member", "e2e-team-member@clearinitiative.io", PW, "member");
   await addToOrg(teamMember.id, "member");
   await addToTeam(teamMember.id, "team_member");
 
-  const orgAdmin = await getOrCreateUser("E2E Org Admin", "e2e-org-admin@clearinitiative.io", PW, "viewer");
+  const orgAdmin = await getOrCreateUser("E2E Org Admin", "e2e-org-admin@clearinitiative.io", PW, "member");
   await addToOrg(orgAdmin.id, "org_admin");
 
   const counts = {

@@ -33,7 +33,7 @@ export interface Team {
 export interface TeamMember {
   id: string;
   user: { id: string; name: string; email: string };
-  role: string; // "team_admin" | "field_coordinator" | "team_member"
+  role: string; // "team_admin" | "analyst" | "emergency_response_manager" | "team_member"
   createdAt: string;
 }
 

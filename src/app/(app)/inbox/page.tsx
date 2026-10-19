@@ -117,10 +117,11 @@ export default function InboxPage() {
   const role = authData?.user?.role;
   // An emergency_response_manager (global viewer + ERM team membership) reaches
   // the hotline inbox even though their global role is only viewer.
-  const isErm = isEmergencyResponseManager(authData?.user?.teamMemberships);
+  const teamMemberships = authData?.user?.teamMemberships;
+  const isErm = isEmergencyResponseManager(teamMemberships);
   // One rule with the nav entry (src/lib/inbox-access.ts): the page shows
   // for whichever kinds the reader may see, and lists only those.
-  const access = inboxAccess({ role, isErm, hotlineInbox, impactPriorReview, eventEnrichment });
+  const access = inboxAccess({ role, teamMemberships, isErm, hotlineInbox, impactPriorReview, eventEnrichment });
   const canSee = access.any;
   /** Deciders see the proposed signals beside the hotline threads. */
   const canDecide = access.proposals;
