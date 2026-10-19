@@ -876,7 +876,9 @@
       "edit": "Edit",
       "delete": "Delete",
       "confirm": "Confirm",
-      "retry": "Retry"
+      "retry": "Retry",
+      "copy": "Copy",
+      "copied": "Copied"
     },
     "states": {
       "loading": "Loading...",
@@ -2689,6 +2691,42 @@
         "title": "Location Scope",
         "save": "Save Locations",
         "none": "No locations selected"
+      },
+      "webhooks": {
+        "title": "Webhooks",
+        "description": "Send an HTTP POST to your systems whenever a CLEAR alert is created for this team.",
+        "none": "No webhooks configured",
+        "toggleActive": "Enable or disable this webhook",
+        "rotate": "Rotate secret",
+        "rotateConfirm": "Rotate this webhook's secret? The current secret will stop working immediately.",
+        "deleteConfirm": "Delete this webhook? This cannot be undone.",
+        "columns": {
+          "name": "Name",
+          "targetUrl": "Target URL",
+          "filters": "Filters",
+          "active": "Active"
+        },
+        "filters": {
+          "all": "All alerts",
+          "minSeverity": "Min severity {level}"
+        },
+        "secret": {
+          "title": "Signing secret",
+          "note": "Store this secret now — it will not be shown again. Use it to verify the signature on incoming webhook requests."
+        },
+        "add": {
+          "title": "Add webhook",
+          "nameLabel": "Name",
+          "targetUrlLabel": "Target URL",
+          "filterLabel": "Alert type filter",
+          "filterPlaceholder": "e.g. CF, FL (comma separated)",
+          "minSeverityLabel": "Min severity",
+          "minSeverityPlaceholder": "Any",
+          "submit": "Add webhook"
+        },
+        "loading": "Loading webhooks…",
+        "loadError": "Couldn’t load webhooks.",
+        "retry": "Retry"
       },
       "danger": {
         "title": "Danger Zone",

@@ -23,6 +23,7 @@ import { IconPlus, IconTrash } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
 import type { TeamLocation } from "~/lib/types/teams";
 import { isPlatformAdmin } from "~/lib/roles";
+import { WebhooksSection } from "./_components/webhooks-section";
 
 const TEAM_ROLE_OPTIONS = [
   "team_admin",
@@ -379,6 +380,9 @@ export default function TeamSettingsPage() {
             </Group>
           )}
         </Box>
+
+        {/* ── Webhooks ────────────────────────── */}
+        <WebhooksSection teamId={id} canManage={canManageRoles} />
 
         {/* ── Danger Zone ─────────────────────── */}
         {isOrgAdmin && (
