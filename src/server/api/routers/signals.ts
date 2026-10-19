@@ -304,6 +304,20 @@ export const signalsRouter = createTRPCRouter({
     return data.dataSources.filter((s) => MANUAL_SOURCE_NAMES.has(s.name));
   }),
 
+  /** Names of every active data source, sorted — feeds source filter chips
+   *  that must offer sources not yet present in the loaded page of rows. */
+  sourceNames: protectedProcedure.query(async ({ ctx }) => {
+    const data = await graphqlFetch<{ dataSources: { id: string; name: string; type: string; isActive: boolean }[] }>(
+      DATA_SOURCES_QUERY,
+      undefined,
+      cookieHeaders(ctx),
+    );
+    return data.dataSources
+      .filter((s) => s.isActive)
+      .map((s) => s.name)
+      .sort();
+  }),
+
   /** Pipeline-facing signal creation (used internally, not from UI) */
   create: protectedProcedure
     .input(

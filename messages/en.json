@@ -1497,6 +1497,9 @@
         "medium": "Medium",
         "low": "Low"
       },
+      "last1day": "Last 24 hours",
+      "last2days": "Last 2 days",
+      "last3days": "Last 3 days",
       "last7days": "Last 7 days",
       "last30days": "Last 30 days",
       "last90days": "Last 90 days"
@@ -1541,6 +1544,7 @@
       "empty": "No history available.",
       "noMatch": "No items match your search.",
       "loadMore": "Load more",
+      "sortByTime": "Sort by time",
       "untitled": "Untitled",
       "columns": {
         "title": "Title",
@@ -1549,6 +1553,7 @@
         "severity": "Severity",
         "source": "Source",
         "date": "Date",
+        "age": "Age",
         "location": "Location"
       },
       "classes": {
