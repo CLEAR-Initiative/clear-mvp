@@ -3406,8 +3406,7 @@
     },
     "tiles": {
       "counted": {
-        "label": "Événements mesurés",
-        "detail": "sur {total, number} événements de la période"
+        "label": "Couverture mesurée"
       },
       "byNextDay": {
         "label": "Détectés au plus tard le lendemain"
@@ -3419,7 +3418,12 @@
         "label": "Événements avec une date de début"
       },
       "ofCounted": "{n, number} sur {counted, number} mesurés",
-      "ofInRange": "{n, number} sur {total, number} de la période"
+      "ofInRange": "{n, number} sur {total, number} de la période",
+      "delta": {
+        "points": "{points} pts",
+        "vs": "contre {previous} avant",
+        "none": "Pas de chiffre antérieur"
+      }
     },
     "histogram": {
       "title": "Jours entre le début et le premier signal",
@@ -3435,19 +3439,36 @@
       }
     },
     "weekly": {
-      "title": "Tendance hebdomadaire",
-      "subtitle": "Part des événements mesurés de chaque semaine ISO",
+      "title": "Délai de détection dans le temps",
+      "subtitle": {
+        "rolling": "Part des événements mesurés sur les {weeks} semaines jusqu'à chaque semaine",
+        "weekly": "Part des événements mesurés de chaque semaine ISO"
+      },
       "legend": "Légende",
       "series": {
         "byNextDay": "Au plus tard le lendemain",
-        "sameDay": "Même jour"
+        "sameDay": "Même jour",
+        "measured": "Couverture mesurée"
       },
       "partial": "partielle",
       "tooltip": {
         "week": "{week} · à partir du {start}",
         "n": "n = {n, plural, one {# événement mesuré} other {# événements mesurés}}",
-        "partial": "Semaine partielle : encore en cours"
-      }
+        "partial": "Semaine partielle : encore en cours",
+        "window": "{weeks, plural, one {Semaine} other {# semaines}} jusqu'à {week} (semaine du {start})",
+        "nOfRange": "n = {n, plural, one {# événement mesuré} other {# événements mesurés}} sur {total, number} de la période"
+      },
+      "mode": {
+        "label": "Vue de la tendance",
+        "rolling": "Glissant sur {weeks} semaines",
+        "weekly": "Hebdomadaire"
+      },
+      "loading": "Chargement de la tendance…",
+      "error": "Impossible de charger la tendance : {message}",
+      "empty": "Aucun événement mesuré pour l'instant dans les semaines de la tendance.",
+      "footnote": "Toujours au moins {weeks} semaines, jusqu'à la date de fin choisie. Le filtre pays s'applique.",
+      "coverageNote": "La couverture est la part des événements de la période qui ont pu être mesurés : lisez les courbes du délai de détection à sa lumière, car une meilleure semaine avec une couverture plus faible n'a peut-être mesuré que des événements plus faciles.",
+      "coverageUnavailable": "Une courbe de couverture apparaîtra quand l'API CLEAR de cet environnement indiquera les événements de chaque semaine."
     },
     "empty": {
       "title": "Aucun événement mesurable sur cette période",
@@ -3482,6 +3503,7 @@
         "counted": "Un événement n'est mesuré que s'il a une date de début, que son premier signal porte une heure réelle et que ce signal date du jour du début ou après.",
         "excluded": "Tous les autres événements de la période sont exclus, pour l'une de quatre raisons : aucun signal ingéré, pas de date de début, un premier signal daté sans heure, ou un premier signal daté d'avant le début (une erreur de données).",
         "wholeDays": "Le début est enregistré au jour près : le délai se compte donc en jours entiers (même jour = 0, lendemain = 1).",
+        "trend": "La tendance classe chaque événement dans la semaine où CLEAR a reçu son premier signal. Une part glissante regroupe les événements de la fenêtre au lieu de faire la moyenne des parts hebdomadaires : une semaine calme ne pèse que ce qu'elle contient.",
         "definition": "La définition complète est l'ADR-0011 de clear-api, « Time to detection »."
       }
     },
@@ -3492,6 +3514,7 @@
       "country": "Pays",
       "allCountries": "Tous les pays",
       "hint": "Les jours sont en UTC. Laissez les dates vides pour les 12 dernières semaines."
-    }
+    },
+    "rangeVs": "Du {from} au {to}, comparé au {prevFrom} – {prevTo}"
   }
 }
