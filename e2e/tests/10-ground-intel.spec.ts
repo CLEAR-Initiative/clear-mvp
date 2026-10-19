@@ -69,7 +69,7 @@ test.describe("Ground Intel tab (case 10)", () => {
     await expect(drawer.getByTestId("ground-uncertainty-badge")).toHaveText("unconfirmed");
   });
 
-  test("analyst can reject a thread via the role-gated review actions", async ({ page }) => {
+  test("a reviewer can reject a thread via the role-gated review actions", async ({ page }) => {
     await gotoGroundTab(page);
 
     // Open thread B (the retracted misreporting case).
@@ -77,8 +77,10 @@ test.describe("Ground Intel tab (case 10)", () => {
     const drawer = page.getByTestId("ground-thread-view");
     await expect(drawer).toBeVisible();
 
-    // The seeded analyst passes the source's reviewerRoles policy, so the
-    // review controls are visible, and the thread starts unverified.
+    // The admin session is a platform admin, so it bypasses the source's
+    // reviewerRoles policy; the review controls are visible and the thread
+    // starts unverified. (Ground review is now admin + ERM only — a team
+    // analyst does NOT review ground; see the role-access matrix spec.)
     await expect(drawer.getByTestId("ground-review-state-badge")).toHaveText("Unverified");
     const actions = drawer.getByTestId("ground-review-actions");
     await expect(actions).toBeVisible();
