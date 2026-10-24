@@ -28,7 +28,7 @@ beforeEach(() => {
   vi.resetModules();
   vi.stubEnv("NRC_FIND_API_URL", FIND_URL);
   vi.stubEnv("NRC_FIND_API_TOKEN", "find-secret");
-  role = "viewer";
+  role = "member";
   agentOn = true;
   file = () =>
     new Response("docx-bytes", {

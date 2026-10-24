@@ -383,13 +383,12 @@
       "member": "Membre",
       "orgAdmin": "Admin d'organisation",
       "teamMember": "Membre de l'équipe",
-      "fieldCoordinator": "Coordinateur de terrain",
+      "analyst": "Analyste",
       "teamAdmin": "Administrateur d'équipe"
     },
     "users": {
       "roles": {
-        "viewer": "Lecteur",
-        "analyst": "Analyste",
+        "member": "Membre",
         "admin": "Admin"
       },
       "unauthorized": "Vous devez disposer de privilèges administrateur pour accéder à la gestion des utilisateurs.",
@@ -421,7 +420,7 @@
       "roleUpdatedDetail": "Le rôle est maintenant {role}.",
       "roleUpdateFailed": "Impossible de mettre à jour le rôle",
       "approved": "Utilisateur approuvé",
-      "approvedDetail": "Il a désormais un accès lecteur.",
+      "approvedDetail": "Il a désormais un accès membre.",
       "approveFailed": "Impossible d'approuver l'utilisateur"
     },
     "features": {
@@ -877,7 +876,9 @@
       "edit": "Modifier",
       "delete": "Supprimer",
       "confirm": "Confirmer",
-      "retry": "Réessayer"
+      "retry": "Réessayer",
+      "copy": "Copier",
+      "copied": "Copié"
     },
     "states": {
       "loading": "Chargement...",
@@ -1496,6 +1497,9 @@
         "medium": "Moyenne",
         "low": "Faible"
       },
+      "last1day": "Dernières 24 heures",
+      "last2days": "2 derniers jours",
+      "last3days": "3 derniers jours",
       "last7days": "7 derniers jours",
       "last30days": "30 derniers jours",
       "last90days": "90 derniers jours"
@@ -1540,6 +1544,7 @@
       "empty": "Aucun historique disponible.",
       "noMatch": "Aucun élément ne correspond à votre recherche.",
       "loadMore": "Charger plus",
+      "sortByTime": "Trier par date",
       "untitled": "Sans titre",
       "columns": {
         "title": "Titre",
@@ -1548,6 +1553,7 @@
         "severity": "Sévérité",
         "source": "Source",
         "date": "Date",
+        "age": "Ancienneté",
         "location": "Localisation"
       },
       "classes": {
@@ -1849,7 +1855,7 @@
       "confirmPrompt": "Faire remonter cet événement en alerte ?",
       "failed": "Échec. Veuillez réessayer.",
       "turnIntoAlert": "Transformer en alerte",
-      "noPermission": "Seuls les administrateurs et les analystes peuvent émettre des alertes"
+      "noPermission": "Seuls les administrateurs et les analystes d'équipe peuvent émettre des alertes"
     },
     "systemData": {
       "title": "Données système",
@@ -1898,7 +1904,7 @@
       "confirmPrompt": "Demander à un Worker ce qui s'est généralement passé auparavant pour cet aléa ici ? Cela peut prendre quelques minutes.",
       "requested": "Enrichissement demandé",
       "failed": "La demande a échoué. Veuillez réessayer.",
-      "noPermission": "Seuls les administrateurs, les analystes et les coordinateurs d'équipe peuvent demander un enrichissement",
+      "noPermission": "Seuls les administrateurs, les analystes d'équipe et les membres d'équipe peuvent demander un enrichissement",
       "capReached": "Vous avez atteint la limite de demandes d'enrichissement pour aujourd'hui",
       "cancel": "Annuler la demande",
       "cancelled": "Demande annulée",
@@ -2141,6 +2147,7 @@
       "inbox": "Boîte de réception",
       "map": "Carte",
       "insights": "Constats",
+      "metrics": "Indicateurs",
       "operations": "Opérations",
       "cash": "Assistance monétaire",
       "knowledge": "Centre de connaissances",
@@ -2650,7 +2657,7 @@
         "noTeams": "Cette organisation n'a aucune équipe. Créez-en une avant d'envoyer des invitations.",
         "teamRoles": {
           "team_member": "Membre de l'équipe",
-          "field_coordinator": "Coordinateur de terrain",
+          "analyst": "Analyste",
           "emergency_response_manager": "Responsable des interventions d'urgence",
           "team_admin": "Administrateur d'équipe"
         },
@@ -2689,6 +2696,42 @@
         "title": "Périmètre géographique",
         "save": "Enregistrer les localisations",
         "none": "Aucune localisation sélectionnée"
+      },
+      "webhooks": {
+        "title": "Webhooks",
+        "description": "Envoyez une requête HTTP POST à vos systèmes chaque fois qu'une alerte CLEAR est créée pour cette équipe.",
+        "none": "Aucun webhook configuré",
+        "toggleActive": "Activer ou désactiver ce webhook",
+        "rotate": "Renouveler le secret",
+        "rotateConfirm": "Renouveler le secret de ce webhook ? Le secret actuel cessera immédiatement de fonctionner.",
+        "deleteConfirm": "Supprimer ce webhook ? Cette action est irréversible.",
+        "columns": {
+          "name": "Nom",
+          "targetUrl": "URL cible",
+          "filters": "Filtres",
+          "active": "Actif"
+        },
+        "filters": {
+          "all": "Toutes les alertes",
+          "minSeverity": "Gravité min. {level}"
+        },
+        "secret": {
+          "title": "Secret de signature",
+          "note": "Enregistrez ce secret maintenant — il ne sera plus affiché. Utilisez-le pour vérifier la signature des requêtes webhook entrantes."
+        },
+        "add": {
+          "title": "Ajouter un webhook",
+          "nameLabel": "Nom",
+          "targetUrlLabel": "URL cible",
+          "filterLabel": "Filtre par type d'alerte",
+          "filterPlaceholder": "ex. CF, FL (séparés par des virgules)",
+          "minSeverityLabel": "Gravité min.",
+          "minSeverityPlaceholder": "Toutes",
+          "submit": "Ajouter le webhook"
+        },
+        "loading": "Chargement des webhooks…",
+        "loadError": "Impossible de charger les webhooks.",
+        "retry": "Réessayer"
       },
       "danger": {
         "title": "Zone de danger",
@@ -2924,7 +2967,7 @@
       "addedNoSignal": "Approuvé, mais aucun identifiant de signal n'a été renvoyé. Vérifiez le signal dans Détection avant de vous y fier.",
       "retried": "Remis en file pour une nouvelle tentative"
     },
-    "noAccess": "La boîte de réception est réservée aux administrateurs et aux analystes.",
+    "noAccess": "La boîte de réception est réservée aux administrateurs et aux analystes d'équipe.",
     "loadError": "Impossible de charger la boîte de réception",
     "translate": {
       "button": "Traduire en {locale}",
@@ -3415,5 +3458,108 @@
     "lowConfidence": "Faible confiance",
     "pastEvent": "Événement passé {n}",
     "moreEvents": "+{count} de plus"
+  },
+  "metrics": {
+    "page": {
+      "title": "Indicateurs",
+      "breadcrumb": "Indicateurs"
+    },
+    "loading": "Chargement des indicateurs…",
+    "error": {
+      "title": "Impossible de charger les indicateurs"
+    },
+    "unavailable": {
+      "title": "L'API des indicateurs n'est pas encore déployée",
+      "body": "L'API CLEAR de cet environnement ne fournit pas encore le délai de détection. La page se remplira dès qu'elle le fera."
+    },
+    "tiles": {
+      "counted": {
+        "label": "Événements mesurés",
+        "detail": "sur {total, number} événements de la période"
+      },
+      "byNextDay": {
+        "label": "Détectés au plus tard le lendemain"
+      },
+      "sameDay": {
+        "label": "Détectés le jour même"
+      },
+      "withOnset": {
+        "label": "Événements avec une date de début"
+      },
+      "ofCounted": "{n, number} sur {counted, number} mesurés",
+      "ofInRange": "{n, number} sur {total, number} de la période"
+    },
+    "histogram": {
+      "title": "Jours entre le début et le premier signal",
+      "subtitle": "Événements mesurés selon le nombre de jours après leur début où CLEAR a reçu le premier signal",
+      "series": "Événements",
+      "tooltip": "{count, plural, one {# événement} other {# événements}} · {share} des mesurés",
+      "footnote": "Sur {counted, plural, one {# événement mesuré} other {# événements mesurés}}. Les jours sont des jours calendaires entiers : même jour = 0, lendemain = 1.",
+      "buckets": {
+        "sameDay": "Même jour",
+        "nextDay": "Lendemain",
+        "plusDays": "+{days} j",
+        "openEnded": "{days} j et +"
+      }
+    },
+    "weekly": {
+      "title": "Tendance hebdomadaire",
+      "subtitle": "Part des événements mesurés de chaque semaine ISO",
+      "legend": "Légende",
+      "series": {
+        "byNextDay": "Au plus tard le lendemain",
+        "sameDay": "Même jour"
+      },
+      "partial": "partielle",
+      "tooltip": {
+        "week": "{week} · à partir du {start}",
+        "n": "n = {n, plural, one {# événement mesuré} other {# événements mesurés}}",
+        "partial": "Semaine partielle : encore en cours"
+      }
+    },
+    "empty": {
+      "title": "Aucun événement mesurable sur cette période",
+      "body": "{inRange, plural, =0 {Il n'y a aucun événement sur cette période.} one {Le seul événement de la période ne peut pas être mesuré ; la raison figure ci-dessous.} other {Aucun des # événements de la période ne peut être mesuré ; les raisons figurent ci-dessous.}}"
+    },
+    "exclusions": {
+      "title": "Non mesurés",
+      "subtitle": "{total, number} des {inRange, number} événements de la période, par raison",
+      "reasons": {
+        "NO_INGESTED_SIGNAL": {
+          "label": "Aucun signal ingéré",
+          "description": "Historique uniquement : aucun signal n'est arrivé dans CLEAR par un flux automatique."
+        },
+        "NO_ONSET": {
+          "label": "Pas de date de début",
+          "description": "L'événement n'a pas de date de début à partir de laquelle mesurer."
+        },
+        "DATE_ONLY_FIRST_SIGNAL": {
+          "label": "Premier signal sans heure",
+          "description": "La source donne une date mais pas d'heure."
+        },
+        "BEFORE_ONSET": {
+          "label": "Premier signal avant le début",
+          "description": "Le premier signal est daté d'avant le début : une erreur de données."
+        }
+      }
+    },
+    "method": {
+      "title": "Méthode de mesure",
+      "intro": "Le délai de détection est le temps écoulé entre le début réel d'un événement et la réception par CLEAR de son premier signal.",
+      "points": {
+        "counted": "Un événement n'est mesuré que s'il a une date de début, que son premier signal porte une heure réelle et que ce signal date du jour du début ou après.",
+        "excluded": "Tous les autres événements de la période sont exclus, pour l'une de quatre raisons : aucun signal ingéré, pas de date de début, un premier signal daté sans heure, ou un premier signal daté d'avant le début (une erreur de données).",
+        "wholeDays": "Le début est enregistré au jour près : le délai se compte donc en jours entiers (même jour = 0, lendemain = 1).",
+        "definition": "La définition complète est l'ADR-0011 de clear-api, « Time to detection »."
+      }
+    },
+    "range": "Du {from} au {to}",
+    "filters": {
+      "from": "Du",
+      "to": "Au",
+      "country": "Pays",
+      "allCountries": "Tous les pays",
+      "hint": "Les jours sont en UTC. Laissez les dates vides pour les 12 dernières semaines."
+    }
   }
 }

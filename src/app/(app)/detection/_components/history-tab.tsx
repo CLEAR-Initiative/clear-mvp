@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { useFormatter, useTranslations } from "next-intl";
+import { useFormatter, useNow, useTranslations } from "next-intl";
 import Link from "next/link";
 import {
   Box,
@@ -14,8 +14,9 @@ import {
   Badge,
   Button,
   Divider,
+  UnstyledButton,
 } from "@mantine/core";
-import { IconFilter, IconX } from "@tabler/icons-react";
+import { IconArrowDown, IconArrowUp, IconArrowsSort, IconFilter, IconX } from "@tabler/icons-react";
 import { mapSeverity } from "~/lib/types/graphql";
 import type { GqlAlert, GqlEvent, GqlSignal } from "~/lib/types/graphql";
 import { DataTable, Table, SeverityBadge, FeedToolbar } from "~/components/ui";
@@ -112,6 +113,12 @@ interface HistoryTabProps {
   onLoadMore?: () => void;
   sortOrder: HistorySortOrder;
   onSortChange: (order: HistorySortOrder) => void;
+  /** Source filter — owned by the page so it can narrow the signals query
+   *  server-side. null = all sources. */
+  activeSources: Set<string> | null;
+  onActiveSourcesChange: (sources: Set<string> | null) => void;
+  /** Push-feed sources to offer even when none of their rows are loaded. */
+  sourceOptions?: string[];
 }
 
 const CLASS_STYLES: Record<string, { bg: string; color: string }> = {
@@ -121,15 +128,19 @@ const CLASS_STYLES: Record<string, { bg: string; color: string }> = {
 };
 
 // i18n keys under detection.history.columns.* - resolved via t() at render time.
-const COLUMN_KEYS = ["title", "class", "type", "severity", "source", "date", "location"] as const;
+const COLUMN_KEYS = ["title", "class", "type", "severity", "source", "date", "age", "location"] as const;
+// Columns whose header toggles newest/oldest.
+const TIME_COLUMNS = new Set<(typeof COLUMN_KEYS)[number]>(["date", "age"]);
 
 // Class filter is multi-select over the three discriminated row kinds.
 type HistoryClass = HistoryRow["kind"];
 const ALL_CLASSES: readonly HistoryClass[] = ["alert", "event", "signal"];
 
-export function HistoryTab({ alerts, events, signals, loading, hasMore, isFetchingMore, totalCount, onLoadMore, sortOrder, onSortChange }: HistoryTabProps) {
+export function HistoryTab({ alerts, events, signals, loading, hasMore, isFetchingMore, totalCount, onLoadMore, sortOrder, onSortChange, activeSources, onActiveSourcesChange, sourceOptions }: HistoryTabProps) {
   const t = useTranslations("detection");
   const format = useFormatter();
+  // Re-render each minute so the Age column stays current.
+  const now = useNow({ updateInterval: 60_000 });
   const [search, setSearch] = useState("");
 
   // Tab-local filters. These narrow the rows further on top of whatever the
@@ -138,9 +149,9 @@ export function HistoryTab({ alerts, events, signals, loading, hasMore, isFetchi
   // their global severity/region/date filters.
   //
   // Class/source/type are all opt-in toggles: null = show all (nothing
-  // selected); an explicit Set narrows to those values.
+  // selected); an explicit Set narrows to those values. Source is held by
+  // the page (see props) so the signals query can filter server-side.
   const [activeClasses, setActiveClasses] = useState<Set<HistoryClass> | null>(null);
-  const [activeSources, setActiveSources] = useState<Set<string> | null>(null);
   // Stored as L1 disaster *labels* (e.g. "Conflict", "Flood") — same string
   // the table cell renders via getDisasterPills.
   const [activeEventTypes, setActiveEventTypes] = useState<Set<string> | null>(null);
@@ -174,14 +185,19 @@ export function HistoryTab({ alerts, events, signals, loading, hasMore, isFetchi
     return [];
   };
 
-  // Derived option lists for the filter chips, taken from whatever data is
-  // currently loaded. New sources/types appear as soon as a row that
-  // mentions them lands in the merged feed.
+  // Derived option lists for the filter chips. Sources are whatever is
+  // loaded (and selected), plus push feeds from `sourceOptions` so a feed
+  // with no rows on the current page can still be picked. Types come from
+  // the loaded rows only.
   const allDataSources = useMemo(() => {
-    const set = new Set<string>();
+    const set = new Set<string>(sourceOptions ?? []);
     for (const row of allRows) for (const s of rowSources(row)) set.add(s);
+    for (const s of activeSources ?? []) set.add(s);
     return [...set].sort();
-  }, [allRows]);
+  }, [allRows, sourceOptions, activeSources]);
+
+  const toggleSource = (src: string) =>
+    onActiveSourcesChange(toggleInclusionFilter(activeSources, src, allDataSources));
 
   // L1 disaster labels for each row. Mirrors the cell renderer below
   // (getDisasterPills(types).map(p => p.label)) so the filter dedupes the
@@ -279,7 +295,7 @@ export function HistoryTab({ alerts, events, signals, loading, hasMore, isFetchi
 
   const resetFilters = () => {
     setActiveClasses(null);
-    setActiveSources(null);
+    onActiveSourcesChange(null);
     setActiveEventTypes(null);
   };
 
@@ -357,11 +373,7 @@ export function HistoryTab({ alerts, events, signals, loading, hasMore, isFetchi
                         size="sm"
                         variant="outline"
                         style={{ cursor: "pointer", textTransform: "none", ...filterChipStyle(visual) }}
-                        onClick={() =>
-                          setActiveSources((prev) =>
-                            toggleInclusionFilter(prev, src, allDataSources),
-                          )
-                        }
+                        onClick={() => toggleSource(src)}
                       >
                         {src}
                       </Badge>
@@ -422,9 +434,7 @@ export function HistoryTab({ alerts, events, signals, loading, hasMore, isFetchi
           <ActiveFilterChip
             key={`summary-source-${src}`}
             label={src}
-            onDismiss={() =>
-              setActiveSources((prev) => toggleInclusionFilter(prev, src, allDataSources))
-            }
+            onDismiss={() => toggleSource(src)}
           />
         ))}
       {activeEventTypes !== null &&
@@ -470,7 +480,27 @@ export function HistoryTab({ alerts, events, signals, loading, hasMore, isFetchi
             <Box style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
               <Box style={{ minWidth: 760 }}>
                 <DataTable
-                  columns={COLUMN_KEYS.map((k) => ({ label: t(`history.columns.${k}`) }))}
+                  columns={COLUMN_KEYS.map((k) => {
+                    const label = t(`history.columns.${k}`);
+                    if (!TIME_COLUMNS.has(k)) return { label };
+                    const isTimeSort = sortOrder === "newest" || sortOrder === "oldest";
+                    // Age runs opposite to date: newest first = smallest age.
+                    const ascending = k === "date" ? sortOrder === "oldest" : sortOrder === "newest";
+                    const SortIcon = !isTimeSort ? IconArrowsSort : ascending ? IconArrowUp : IconArrowDown;
+                    return {
+                      label,
+                      header: (
+                        <UnstyledButton
+                          onClick={() => onSortChange(sortOrder === "newest" ? "oldest" : "newest")}
+                          title={t("history.sortByTime")}
+                          style={{ display: "inline-flex", alignItems: "center", gap: 4, font: "inherit", color: "inherit", textTransform: "inherit", letterSpacing: "inherit" }}
+                        >
+                          {label}
+                          <SortIcon size={12} color={isTimeSort ? "var(--color-accent)" : "var(--color-text-muted)"} />
+                        </UnstyledButton>
+                      ),
+                    };
+                  })}
                   data={filtered}
                   loading={false}
                   emptyMessage={loadedCount === 0 ? t("history.empty") : t("history.noMatch")}
@@ -568,6 +598,11 @@ export function HistoryTab({ alerts, events, signals, loading, hasMore, isFetchi
                 <Table.Td style={{ whiteSpace: "nowrap" }}>
                   <Text c="var(--color-text-secondary)" style={{ fontSize: 13 }}>
                     {format.dateTime(new Date(date), "short")}
+                  </Text>
+                </Table.Td>
+                <Table.Td style={{ whiteSpace: "nowrap" }}>
+                  <Text c="var(--color-text-secondary)" style={{ fontSize: 13 }}>
+                    {format.relativeTime(new Date(date), { now, style: "narrow" })}
                   </Text>
                 </Table.Td>
                 <Table.Td style={{ minWidth: 100 }}>

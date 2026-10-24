@@ -101,6 +101,11 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
+  // Platform metrics are admin-only; clear-api's FORBIDDEN is the real gate.
+  if (pathname.startsWith("/metrics") && !isPlatformAdmin(result.role)) {
+    return NextResponse.redirect(new URL("/no-access", request.url));
+  }
+
   const response = nextWithPathname(request, pathname);
 
   // Seed the locale cookie from the user's persisted language preference
@@ -171,7 +176,7 @@ async function verifySession(cookieHeader: string): Promise<SessionResult> {
 
       return {
         ok: true,
-        role: data.user.role?.toLowerCase() ?? "viewer",
+        role: data.user.role?.toLowerCase() ?? "member",
         language: data.user.language ?? "en",
       };
     } catch (err) {

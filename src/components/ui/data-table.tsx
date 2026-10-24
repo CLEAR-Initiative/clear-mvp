@@ -13,6 +13,8 @@ const TH_STYLE: React.CSSProperties = {
 interface DataTableColumn {
   label: string;
   width?: number | string;
+  /** Custom header content (e.g. a sort toggle); defaults to `label`. */
+  header?: ReactNode;
 }
 
 interface DataTableProps<T> {
@@ -46,7 +48,7 @@ export function DataTable<T>({
         <Table.Tr style={{ background: "var(--color-bg-muted)" }}>
           {columns.map((col) => (
             <Table.Th key={col.label} style={{ ...TH_STYLE, width: col.width }}>
-              {col.label}
+              {col.header ?? col.label}
             </Table.Th>
           ))}
         </Table.Tr>

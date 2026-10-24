@@ -1,0 +1,59 @@
+name: Release / dev
+on:
+  push:
+    branches: [dev]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  tag:
+    name: Create version tag
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compute version
+        id: version
+        run: |
+          LATEST=$(git ls-remote --tags --refs origin | sed 's#.*refs/tags/##' | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1)
+          IFS=. read -r MAJOR MINOR PATCH <<< "${LATEST:-0.0.0}"
+          # dev deploys bump the MINOR within the current prod MAJOR; a prod
+          # deploy bumps the MAJOR (release-prod.yml). The two never
+          # pick the same next version, so they can't contend for a tag.
+          echo "version=${MAJOR}.$((MINOR + 1)).0" >> "$GITHUB_OUTPUT"
+
+      - name: Create git tag
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          git tag "$VERSION" "$GITHUB_SHA"
+          git push origin "refs/tags/$VERSION"
+
+  build:
+    name: Build & push image
+    needs: tag
+    runs-on: ubuntu-latest
+    environment: ${{ github.ref_name }}
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./.github/actions/build-image
+        with:
+          environment: ${{ github.ref_name }}
+          version: ${{ needs.tag.outputs.version }}
+          registry-token: ${{ secrets.GITHUB_TOKEN }}
+          mapbox-token: ${{ secrets.NEXT_PUBLIC_MAPBOX_TOKEN }}
+          sentry-dsn: ${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}
+          # Final-stage-only cache export: the builder-stage upload was ~1-2 min
+          # of the 3.85-min image build and is invalidated by every merge anyway.
+          cache-mode: min

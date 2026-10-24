@@ -3,6 +3,12 @@
  * update these in lockstep.
  */
 
+/**
+ * Seeded analyst persona. After the role-taxonomy split `analyst` is a TEAM
+ * role, not a global one: this user's GLOBAL role is now `member`, and it holds
+ * the elevated `analyst` membership on its team (location-scoped server-side).
+ * The account (email/password) is unchanged.
+ */
 export const ANALYST = {
   email: "analyst@clearinitiative.io",
   password: "password123",
@@ -14,11 +20,33 @@ export const ADMIN = {
   password: "password123",
 } as const;
 
-/** Seeded viewer — must NOT see the private ground-intel staging tier. */
-export const VIEWER = {
+/**
+ * Seeded plain member (global role `member`, formerly `viewer`) with no
+ * elevated team membership — the plain reader. Must NOT see the private
+ * ground-intel staging tier, and every content write blocks/disables/hides.
+ * The account email keeps its historical `viewer@…` address.
+ */
+export const MEMBER = {
   email: "viewer@clearinitiative.io",
   password: "password123",
 } as const;
+
+/**
+ * Role personas for the role-access matrix spec (case 20), seeded by
+ * e2e/support/roles-seed.ts. Keep in lockstep with that script.
+ *
+ * ERM = emr.user from clear-api's seed (global `member`) once roles-seed
+ * assigns it the `emergency_response_manager` team membership; it keeps its own
+ * strong password from the main seed. The rest share `password123`.
+ */
+export const ERM = {
+  email: "emr.user@clearinitiative.io",
+  password: "Emr#09bc64391b2c5cd30802a3f7372907a2",
+} as const;
+export const PENDING = { email: "e2e-pending@clearinitiative.io", password: "password123" } as const;
+export const TEAM_ADMIN = { email: "e2e-team-admin@clearinitiative.io", password: "password123" } as const;
+export const ORG_ADMIN = { email: "e2e-org-admin@clearinitiative.io", password: "password123" } as const;
+export const TEAM_MEMBER = { email: "e2e-team-member@clearinitiative.io", password: "password123" } as const;
 
 export const BASE_URL = process.env.E2E_BASE_URL ?? "http://localhost:3000";
 

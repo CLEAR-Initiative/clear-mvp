@@ -109,7 +109,7 @@ function buildDateOptions(): string[] {
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
     months.push(`${monthNames[d.getMonth()]} ${d.getFullYear()}`);
   }
-  return [...months, "Last 7 days", "Last 30 days", "Last 90 days"];
+  return [...months, "Last 1 day", "Last 2 days", "Last 3 days", "Last 7 days", "Last 30 days", "Last 90 days"];
 }
 
 export const dateOptions = buildDateOptions();
@@ -118,8 +118,8 @@ export const dateOptions = buildDateOptions();
 export function parseDateFilter(option: string): { start: Date; end: Date } {
   const now = new Date();
 
-  // "Last N days" patterns
-  const lastDays = option.match(/^Last (\d+) days$/i);
+  // "Last N days" patterns (singular "Last 1 day" too)
+  const lastDays = option.match(/^Last (\d+) days?$/i);
   if (lastDays) {
     const days = parseInt(lastDays[1]!, 10);
     return { start: new Date(now.getTime() - days * 24 * 60 * 60 * 1000), end: now };

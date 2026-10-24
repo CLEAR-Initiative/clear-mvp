@@ -22,6 +22,7 @@ import { useReportStaleCountryPick } from "~/lib/report-stale-country-pick";
 import type { MapMarker } from "~/components/map/crisis-map";
 import { parseDateFilter, resolveCountryConfig, staticCountryBounds } from "~/lib/constants/country-config";
 import { isoForCountryName } from "~/lib/constants/countries";
+import { isPlatformAdmin, isTeamAnalyst } from "~/lib/roles";
 import { scopeIsosMissingPaintableBoundaries } from "~/lib/geo/country-mask";
 import { useLocations } from "~/hooks/use-locations";
 import { useLastFocusedCountry } from "~/hooks/use-last-focused-country";
@@ -231,6 +232,9 @@ function DetectionPageContent() {
       result.push({ value: `${englishMonths[d.getMonth()]} ${d.getFullYear()}`, label: fmt.format(d) });
     }
     result.push(
+      { value: "Last 1 day",   label: t("filters.last1day") },
+      { value: "Last 2 days",  label: t("filters.last2days") },
+      { value: "Last 3 days",  label: t("filters.last3days") },
       { value: "Last 7 days",  label: t("filters.last7days") },
       { value: "Last 30 days", label: t("filters.last30days") },
       { value: "Last 90 days", label: t("filters.last90days") },
@@ -323,16 +327,18 @@ function DetectionPageContent() {
   );
 
   // Ground intel is a PRIVATE staging tier (sender names, unvetted claims):
-  // clear-api rejects every ground query for roles other than admin/analyst,
-  // so the tab is hidden for everyone else rather than rendering a surface
-  // that can only error. Mirrors event-detail's promote gating pattern.
-  // Additionally gated behind the `ground_intel` feature flag (admin Features
-  // tab) so the whole tab can be switched off for everyone, independent of role.
+  // clear-api rejects every ground query for roles other than admin or a team
+  // analyst (location-scoped server-side), so the tab is hidden for everyone
+  // else rather than rendering a surface that can only error. Mirrors
+  // event-detail's promote gating pattern. Additionally gated behind the
+  // `ground_intel` feature flag (admin Features tab) so the whole tab can be
+  // switched off for everyone, independent of role.
   const groundIntelEnabled = useFeatureEnabled("ground_intel");
   const { data: authData } = api.auth.me.useQuery(undefined, { staleTime: 60_000 });
   const canSeeGround =
     groundIntelEnabled &&
-    (authData?.user?.role === "admin" || authData?.user?.role === "analyst");
+    (isPlatformAdmin(authData?.user?.role) ||
+      isTeamAnalyst(authData?.user?.teamMemberships));
 
   // Tab order drives the sliding indicator geometry - 4 or 5 equal slots
   // depending on whether the ground tab is visible for this role.
@@ -556,7 +562,7 @@ function DetectionPageContent() {
   // the window to include new events. Fixed-range presets ("Mon YYYY") keep
   // their explicit upper bound - snapshotTime is irrelevant there because
   // the range is in the past and no new events can fall into it.
-  const isRollingPreset = /^Last \d+ days$/i.test(selectedDate);
+  const isRollingPreset = /^Last \d+ days?$/i.test(selectedDate);
   const effectiveTo = isRollingPreset ? snapshotTime : toIso;
 
   const SEV_NUM: Record<string, number> = { low: 2, medium: 3, high: 4, critical: 5 };
@@ -575,6 +581,10 @@ function DetectionPageContent() {
   const [alertsSort, setAlertsSort] = useState<AlertSortOrder>("newest");
   const [signalsSort, setSignalsSort] = useState<SignalSortOrder>("newest");
   const [historySortOrder, setHistorySortOrder] = useState<HistorySortOrder>("newest");
+  // History's source filter lives here (not in HistoryTab) so it can narrow
+  // the paginated signals query server-side — otherwise a source with no
+  // rows on the first page could never be filtered to. null = all sources.
+  const [historySources, setHistorySources] = useState<Set<string> | null>(null);
 
   // Write detection nav context for event/signal page prev/next navigation.
   // Wait until locationId is resolved - writing null would make detail arrow
@@ -924,9 +934,13 @@ function DetectionPageContent() {
     { enabled: locationsReady && activeTab === "history", staleTime: Infinity },
   );
   const historySignalsQuery = api.signals.signalsPage.useQuery(
-    { teamId: activeTeamId, locationId: selectedLocationId ?? undefined, from: fromIso, to: effectiveTo, severityMin, severityMax, orderBy: SIGNAL_ORDER_MAP[historySortOrder], limit: HISTORY_PAGE_SIZE, offset: historyOffset, _v: historyVersion },
+    { teamId: activeTeamId, locationId: selectedLocationId ?? undefined, from: fromIso, to: effectiveTo, severityMin, severityMax, sourceNames: historySources ? [...historySources] : undefined, orderBy: SIGNAL_ORDER_MAP[historySortOrder], limit: HISTORY_PAGE_SIZE, offset: historyOffset, _v: historyVersion },
     { enabled: locationsReady && activeTab === "history", staleTime: Infinity },
   );
+  const historySourceNamesQuery = api.signals.pushFeedSourceNames.useQuery(undefined, {
+    enabled: activeTab === "history",
+    staleTime: Infinity,
+  });
 
   // ── History accumulation effects ───────────────────────────────────────────
   useEffect(() => {
@@ -977,7 +991,7 @@ function DetectionPageContent() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [...FILTER_DEPS]);
 
-  // Reset history on sort change
+  // Reset history on sort or source-filter change
   useEffect(() => {
     historyAppending.current = false;
     setHistoryOffset(0);
@@ -986,7 +1000,7 @@ function DetectionPageContent() {
     setHistorySignalsItems([]);
     setHistoryVersion((v) => v + 1);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [historySortOrder]);
+  }, [historySortOrder, historySources]);
 
   const historyHasMore = historyAlertsHasMore || historyEventsHasMore || historySignalsHasMore;
   const historyTotalCount = historyAlertsTotalCount + historyEventsTotalCount + historySignalsTotalCount;
@@ -1368,6 +1382,9 @@ function DetectionPageContent() {
                 onLoadMore={loadMoreHistory}
                 sortOrder={historySortOrder}
                 onSortChange={setHistorySortOrder}
+                activeSources={historySources}
+                onActiveSourcesChange={setHistorySources}
+                sourceOptions={historySourceNamesQuery.data}
               />
             )}
           </>

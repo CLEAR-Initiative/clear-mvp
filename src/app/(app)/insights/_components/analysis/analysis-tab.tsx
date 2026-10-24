@@ -23,7 +23,8 @@ export function AnalysisTab() {
   const { countries: teamCountries, countryId: workingId, isLoading: teamLoading } = useTeamCountry();
   const { activeTeamId } = useTeam();
   const me = api.auth.me.useQuery(undefined, { staleTime: 60_000 });
-  const canManage = canManageAnalyses(me.data?.user?.role) && !!activeTeamId;
+  const canManage =
+    canManageAnalyses(me.data?.user?.role, me.data?.user?.teamMemberships) && !!activeTeamId;
 
   const [picked, setPicked] = useState<string | null>(null);
   const [openKey, setOpenKey] = useState<string | null>(null);

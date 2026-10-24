@@ -304,6 +304,23 @@ export const signalsRouter = createTRPCRouter({
     return data.dataSources.filter((s) => MANUAL_SOURCE_NAMES.has(s.name));
   }),
 
+  /** Names of active push-feed sources (type "webhook", e.g. sudan-war-x),
+   *  sorted. Source filter chips otherwise only list sources in the loaded
+   *  rows; push feeds are added so they can be picked before any of their
+   *  signals are on screen. Organisation sources are deliberately left out —
+   *  there are 150+ of them, which makes the chip list unusable. */
+  pushFeedSourceNames: protectedProcedure.query(async ({ ctx }) => {
+    const data = await graphqlFetch<{ dataSources: { id: string; name: string; type: string; isActive: boolean }[] }>(
+      DATA_SOURCES_QUERY,
+      undefined,
+      cookieHeaders(ctx),
+    );
+    return data.dataSources
+      .filter((s) => s.isActive && s.type === "webhook")
+      .map((s) => s.name)
+      .sort();
+  }),
+
   /** Pipeline-facing signal creation (used internally, not from UI) */
   create: protectedProcedure
     .input(
@@ -353,9 +370,9 @@ export const signalsRouter = createTRPCRouter({
         lng: z.number().optional(),
         /**
          * Team the signal is being filed under. Purely an authorisation
-         * hint — the backend uses it to admit team_admin / field_coordinator
-         * callers without a global admin/analyst role. Ignored (harmlessly)
-         * for platform callers, so the UI can always send it.
+         * hint — the backend uses it to admit team writers (team_admin /
+         * analyst / team_member) without a global admin role. Ignored
+         * (harmlessly) for platform admins, so the UI can always send it.
          */
         teamId: z.string().optional(),
       }),

@@ -38,7 +38,14 @@ export const DETECTION_SEVERITIES = ["critical", "high", "medium", "low"] as con
 export type DetectionSeverity = (typeof DETECTION_SEVERITIES)[number];
 
 /** Detection's rolling windows; a calendar month is "Mon YYYY" (English). */
-export const DETECTION_ROLLING_DATES = ["Last 7 days", "Last 30 days", "Last 90 days"] as const;
+export const DETECTION_ROLLING_DATES = [
+  "Last 1 day",
+  "Last 2 days",
+  "Last 3 days",
+  "Last 7 days",
+  "Last 30 days",
+  "Last 90 days",
+] as const;
 const MONTH_DATE = /^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) \d{4}$/;
 
 export interface DetectionDeepLink {

@@ -38,7 +38,7 @@ export function RefreshButton({
     onError: () => notifications.show({ color: "red", message: t("error") }),
   });
 
-  if (!canManageAnalyses(me.data?.user?.role)) return null;
+  if (!canManageAnalyses(me.data?.user?.role, me.data?.user?.teamMemberships)) return null;
 
   return (
     <Button

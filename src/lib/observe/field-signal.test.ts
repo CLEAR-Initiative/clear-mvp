@@ -14,10 +14,10 @@ import {
 } from "./field-signal";
 
 describe("isObservePlatformWriter", () => {
-  it("admits admin and analyst, not viewer or empty", () => {
+  it("admits only the platform admin (analyst is now a location-scoped team role)", () => {
     expect(isObservePlatformWriter("admin")).toBe(true);
-    expect(isObservePlatformWriter("analyst")).toBe(true);
-    expect(isObservePlatformWriter("viewer")).toBe(false);
+    expect(isObservePlatformWriter("analyst")).toBe(false);
+    expect(isObservePlatformWriter("member")).toBe(false);
     expect(isObservePlatformWriter(undefined)).toBe(false);
   });
 });
@@ -67,17 +67,14 @@ describe("resolveTeamIdForSubmit", () => {
       reason: "noTeam",
     });
     expect(
-      resolveTeamIdForSubmit({ meStatus: "success", defaultTeamId: "  ", role: "viewer" }),
+      resolveTeamIdForSubmit({ meStatus: "success", defaultTeamId: "  ", role: "member" }),
     ).toEqual({
       ok: false,
       reason: "noTeam",
     });
   });
 
-  it("lets admin/analyst submit without a default team (API ignores teamId for them)", () => {
-    expect(
-      resolveTeamIdForSubmit({ meStatus: "success", defaultTeamId: null, role: "analyst" }),
-    ).toEqual({ ok: true, teamId: undefined });
+  it("lets a platform admin submit without a default team (API ignores teamId for them)", () => {
     expect(
       resolveTeamIdForSubmit({ meStatus: "success", defaultTeamId: undefined, role: "admin" }),
     ).toEqual({ ok: true, teamId: undefined });
@@ -95,19 +92,19 @@ describe("resolveTeamIdForSubmit", () => {
       resolveTeamIdForSubmit({
         meStatus: "success",
         defaultTeamId: null,
-        role: "viewer",
+        role: "member",
       }),
     ).toEqual({ ok: false, reason: "noTeam" });
   });
 
-  it("lets a platform analyst file without a default team", () => {
+  it("requires a team for an analyst (now a location-scoped team role)", () => {
     expect(
       resolveTeamIdForSubmit({
         meStatus: "success",
         defaultTeamId: null,
         role: "analyst",
       }),
-    ).toEqual({ ok: true, teamId: undefined });
+    ).toEqual({ ok: false, reason: "noTeam" });
   });
 });
 

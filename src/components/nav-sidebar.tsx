@@ -12,6 +12,7 @@ import {
   IconTarget,
   IconInbox,
   IconChartPie,
+  IconChartBar,
   IconUser,
   IconCurrencyDollar,
   IconBook,
@@ -114,6 +115,7 @@ const navSections: NavSection[] = [
       },
       { labelKey: "map", href: NAV_ROUTES.map, icon: IconMapPin, featureKey: "crisis_map" },
       { labelKey: "insights", href: NAV_ROUTES.insights, icon: IconChartPie, featureKey: "insights" },
+      { labelKey: "metrics", href: NAV_ROUTES.metrics, icon: IconChartBar, adminOnly: true },
       { labelKey: "operations", href: NAV_ROUTES.operations, icon: IconUser, featureKey: "operations", adminOnly: true },
       { labelKey: "cash", href: NAV_ROUTES.cash, icon: IconCurrencyDollar, featureKey: "cash_assistance", adminOnly: true },
     ],
@@ -175,10 +177,12 @@ export function NavSidebar({
   const { data: authData } = api.auth.me.useQuery(undefined, { staleTime: 60_000 });
   const role = authData?.user?.role;
   const isAdmin = isPlatformAdmin(role);
-  const isErm = isEmergencyResponseManager(authData?.user?.teamMemberships);
+  const teamMemberships = authData?.user?.teamMemberships;
+  const isErm = isEmergencyResponseManager(teamMemberships);
   const { flags } = useFeatureFlags();
   const reviewAccess = inboxAccess({
     role,
+    teamMemberships,
     isErm,
     hotlineInbox: flags.hotline_inbox ?? true,
     impactPriorReview: flags.impact_prior_review ?? true,
