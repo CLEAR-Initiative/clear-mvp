@@ -21,8 +21,8 @@ const CrisisMap = dynamic(() => import("~/components/map/crisis-map").then((m) =
 const COUNTRY_CADENCE = "weekly";
 
 /**
- * Insights -> Analysis landing: pick which analysis to open (the country's, or
- * one the team created over districts) or create a new one.
+ * Analysis landing: pick which analysis to open (the country's, or one the
+ * team created over districts) or create a new one.
  */
 export function AnalysisHome({
   countryId,

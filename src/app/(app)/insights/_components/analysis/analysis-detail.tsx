@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useFormatter, useNow, useTranslations } from "next-intl";
-import { Alert, Box, Center, Group, Loader, SimpleGrid, Stack, Tabs, Text, UnstyledButton } from "@mantine/core";
-import { IconArrowLeft } from "@tabler/icons-react";
+import { Alert, Box, Center, Loader, SimpleGrid, Stack, Tabs, Text } from "@mantine/core";
 import { api } from "~/trpc/react";
 import { useTeam } from "~/providers/team-provider";
 import { generationOverdue, isStale } from "~/lib/analysis-view";
@@ -14,7 +13,7 @@ import { EventsList } from "./events-list";
 import { Notice } from "./notice";
 import { CreateReportButton } from "./create-report-button";
 import { RefreshButton, type RefreshFrame } from "./refresh-button";
-import { AnalysisHeader, AnalysisOverview } from "./dark/dark-analysis";
+import { AnalysisCrumbs, AnalysisHeader, AnalysisOverview } from "./dark/dark-analysis";
 import { CHANGE_ANCHOR, changeChips, changeSessionKey, looseChangeNotes, type ChangeSection } from "./dark/change-notes";
 import styles from "./dark/analysis-dark.module.css";
 
@@ -146,8 +145,13 @@ export function AnalysisDetail({
     { enabled: locationIds.length === 1, staleTime: 5 * 60_000 },
   );
   const since = data?.scope.windowStart;
+  const eventTypes = isCountry ? [] : scope.created.eventTypes;
   const events = api.analysis.events.useQuery(
-    { locationIds, from: since ?? "" },
+    {
+      locationIds,
+      from: since ?? "1970-01-01T00:00:00.000Z",
+      ...(eventTypes.length > 0 ? { eventTypes } : {}),
+    },
     { enabled: !!since, staleTime: 5 * 60_000 },
   );
 
@@ -203,6 +207,7 @@ export function AnalysisDetail({
             data={data}
             figures={figures.data}
             events={events.data}
+            eventsPending={events.isLoading}
             scopeName={name}
             countryId={scope.countryId}
             countryName={scope.countryName}
@@ -216,10 +221,10 @@ export function AnalysisDetail({
         {tab === "sources" && (
           <SimpleGrid cols={{ base: 1, lg: 2 }} spacing={16}>
             <Box>
-              <Text fw={600} c="var(--color-text-primary)" mb={12} style={{ fontSize: 14 }}>
-                {t("sources.title")}
-              </Text>
-              <SituationSources sources={data.sources} />
+            <Text fw={600} c="var(--sa-text)" mb={12} style={{ fontSize: 14 }}>
+              {t("sources.title")}
+            </Text>
+            <SituationSources sources={data.sources} className={styles.sourcesCard} />
             </Box>
             <EventsList events={events.data} />
           </SimpleGrid>
@@ -256,7 +261,7 @@ export function AnalysisDetail({
     });
   };
   const actions = data && refreshFrame && (
-    <Group gap={8} wrap="nowrap">
+    <>
       <RefreshButton
         frame={refreshFrame}
         waiting={waiting}
@@ -271,7 +276,7 @@ export function AnalysisDetail({
         areaIds={isCountry ? [] : locationIds}
         isCountry={isCountry}
       />
-    </Group>
+    </>
   );
 
   const period = data
@@ -287,15 +292,6 @@ export function AnalysisDetail({
 
   return (
     <Box className={styles.page} data-testid="analysis-page">
-      <UnstyledButton onClick={onBack} mb={12} data-testid="analysis-back" className={styles.back}>
-        <Group gap={6}>
-          <IconArrowLeft size={14} color="var(--sa-muted)" />
-          <Text c="var(--sa-muted)" style={{ fontSize: 13 }}>
-            {t("home.back")}
-          </Text>
-        </Group>
-      </UnstyledButton>
-
       {data ? (
         <AnalysisHeader
           eyebrow={isCountry ? t("scope.country") : t("scope.created")}
@@ -304,24 +300,26 @@ export function AnalysisDetail({
           stale={stale}
           staleLabel={t("meta.stale")}
           period={period}
-          asOf={
-            data.crisis.freshestSourceAt
-              ? t("meta.asOf", {
-                  date: format.dateTime(new Date(data.crisis.freshestSourceAt), { day: "numeric", month: "short", year: "numeric" }),
-                })
-              : null
-          }
           builtFrom={t("meta.builtFrom", { reports: reportCitations, events: eventCitations })}
           chips={chips}
           loose={loose}
+          changesStamp={
+            data.changes.comparedTo
+              ? t("layout.changesStamp", {
+                  date: format.dateTime(new Date(data.changes.comparedTo), { day: "numeric", month: "short" }),
+                })
+              : undefined
+          }
           seen={changesSeen}
           onDismiss={dismissChanges}
           onJump={jumpTo}
           onOpenSources={openSources}
+          onHome={onBack}
           actions={actions}
         />
       ) : (
         <header className={styles.header}>
+          <AnalysisCrumbs name={name} onHome={onBack} />
           <div className={styles.eyebrowRow}>
             <span className={styles.eyebrow}>{isCountry ? t("scope.country") : t("scope.created")}</span>
             {actions}

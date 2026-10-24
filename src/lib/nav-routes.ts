@@ -8,7 +8,7 @@ export const NAV_ROUTES = {
   detection: "/detection",
   inbox: "/inbox",
   map: "/map",
-  insights: "/insights",
+  analysis: "/analysis",
   metrics: "/metrics",
   operations: "/operations",
   cash: "/cash",

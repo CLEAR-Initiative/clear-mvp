@@ -1,6 +1,6 @@
 import React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { MantineProvider } from "@mantine/core";
 import type { Analysis } from "~/server/api/mappers/analysis";
 import type { AnalysisEvents, AnalysisFigures, AnalysisScopes, CreatedAnalysis } from "~/server/api/mappers/analysis";
@@ -339,6 +339,7 @@ describe("Insights > Analysis tab", () => {
     const health = screen.getByText("crisisDetail.needs.sectors.health");
     expect(screen.getAllByText(/crisisDetail\.needs\.sectors\./)[0]).toBe(health);
     expect(screen.getByText("common.severities.critical")).toBeInTheDocument();
+    expect(screen.getByTestId("analysis-sectors-card")).toHaveAttribute("data-surface", "context-card");
     fireEvent.click(health);
     expect(screen.getByText("Hospitals struck.")).toBeInTheDocument();
   });
@@ -347,6 +348,8 @@ describe("Insights > Analysis tab", () => {
     renderPage();
     fireEvent.click(screen.getByRole("tab", { name: "analysis.tabs.sources" }));
     expect(screen.getByText("OCHA update")).toBeInTheDocument();
+    expect(screen.getByTestId("analysis-sources")).toHaveAttribute("data-surface", "card");
+    expect(screen.getByTestId("analysis-events")).toHaveAttribute("data-surface", "page");
     const row = screen.getByTestId("analysis-event-row");
     expect(row).toHaveAttribute("href", "/event/e1");
     expect(within(row).getByText("Shelling in El Fasher")).toBeInTheDocument();
@@ -433,6 +436,8 @@ describe("Insights > Analysis tab", () => {
     expect(screen.getByText("analysis.scope.created")).toBeInTheDocument();
     expect(eventsQuery).toHaveBeenLastCalledWith({ locationIds: ["sheikan", "umrawaba"], from: "2026-07-01T00:00:00.000Z" });
     expect(screen.getByTestId("analysis-section-timeline")).toBeInTheDocument();
+    expect(screen.getByText("Shelling in El Fasher")).toBeInTheDocument();
+    expect(screen.queryByText(/Treason proceedings/)).not.toBeInTheDocument();
     fireEvent.click(screen.getByTestId("analysis-back"));
     expect(screen.getByText("analysis.home.title")).toBeInTheDocument();
   });
@@ -513,13 +518,23 @@ describe("Insights > Analysis tab", () => {
   });
 
   it("tells the user when the team already had the analysis and opens that one", async () => {
+    scopesResult.created = [created()];
+    frameResult = {
+      data: analysis({ summary: "The existing Sheikan analysis." }),
+      isLoading: false,
+      isError: false,
+    };
     await openCreate();
-    await createOpts.onSuccess?.(
-      { id: "auto-1", firstVersionRequested: false, existing: true, cadence: "weekly" },
-      { teamId: "team-1", locationIds: ["sheikan"], cadence: "weekly" },
-    );
+    await act(async () => {
+      await createOpts.onSuccess?.(
+        { id: "auto-1", firstVersionRequested: false, existing: true, cadence: "weekly" },
+        { teamId: "team-1", locationIds: ["sheikan"], cadence: "weekly" },
+      );
+    });
     expect(showNotification).toHaveBeenCalledWith({ message: "analysis.create.existing" });
     expect(showNotification).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole("heading", { name: "Sheikan, North Kordofan, Sudan" })).toBeInTheDocument();
+    expect(screen.getByText(/The existing Sheikan analysis/)).toBeInTheDocument();
   });
 
   it("warns when an on-request analysis fell back to weekly because its first version could not be requested", async () => {
@@ -603,5 +618,54 @@ describe("Insights > Analysis tab", () => {
     expect(sections.slice(0, 3)).toEqual(["keyDevelopments", "currentStatus", "map"]);
     await vi.waitFor(() => expect(click).toHaveBeenCalled());
     click.mockRestore();
+  });
+
+  it("opens a new analysis on its own frame and paints that version when it lands", async () => {
+    frameResult = {
+      data: analysis({
+        summary: "Sheikan clinics are closed.",
+        scope: {
+          locationIds: ["sheikan"],
+          name: "Sheikan, North Kordofan, Sudan",
+          windowStart: "2026-07-01T00:00:00.000Z",
+          windowEnd: null,
+        },
+      }),
+      isLoading: false,
+      isError: false,
+    };
+    const search = await openCreate();
+    fireEvent.click(await screen.findByText("Sheikan", option));
+    fireEvent.click(screen.getByTestId("analysis-create-submit"));
+    await act(async () => {
+      await createOpts.onSuccess?.(
+        { id: "auto-9", firstVersionRequested: true, existing: false, cadence: "weekly" },
+        { teamId: "team-1", locationIds: ["sheikan"], cadence: "weekly" },
+      );
+    });
+    expect(screen.getByRole("heading", { name: "Sheikan, North Kordofan, Sudan" })).toBeInTheDocument();
+    expect(screen.getByText(/Sheikan clinics are closed/)).toBeInTheDocument();
+    expect(screen.queryByTestId("analysis-preview-page")).not.toBeInTheDocument();
+    expect(frameQuery).toHaveBeenLastCalledWith(
+      expect.objectContaining({ locationIds: ["sheikan"], name: "Sheikan, North Kordofan, Sudan" }),
+      expect.objectContaining({ enabled: true }),
+    );
+  });
+
+  it("shows generating for a new analysis until its first version exists, not the sample", async () => {
+    frameResult = { data: null, isLoading: false, isError: false };
+    await openCreate();
+    fireEvent.click(await screen.findByText("Sheikan", option));
+    fireEvent.click(screen.getByTestId("analysis-create-submit"));
+    await act(async () => {
+      await createOpts.onSuccess?.(
+        { id: "auto-9", firstVersionRequested: true, existing: false, cadence: "weekly" },
+        { teamId: "team-1", locationIds: ["sheikan"], cadence: "weekly" },
+      );
+    });
+    expect(screen.getByTestId("analysis-generating")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Sheikan, North Kordofan, Sudan" })).toBeInTheDocument();
+    expect(screen.queryByTestId("analysis-preview-page")).not.toBeInTheDocument();
+    expect(screen.queryByText("12.6M")).not.toBeInTheDocument();
   });
 });

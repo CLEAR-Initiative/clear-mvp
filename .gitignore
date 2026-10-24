@@ -38,3 +38,6 @@ scripts/logie/out/
 
 # Local-only compose override (points builds at a worktree)
 docker-compose.e2e.override.yml
+
+# Design-preview PDFs for local evidence clicks. A generated report is built from analysis data.
+/public/analysis-samples/

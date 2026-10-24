@@ -2,9 +2,10 @@
 
 import { useMemo, useState } from "react";
 import { useFormatter, useLocale, useTranslations } from "next-intl";
-import { Button, Tooltip } from "@mantine/core";
+import { Tooltip } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
-import { IconFileDownload } from "@tabler/icons-react";
+import { IconFileText } from "@tabler/icons-react";
+import styles from "./dark/analysis-dark.module.css";
 import { api } from "~/trpc/react";
 import type { Analysis } from "~/server/api/mappers/analysis";
 import type { AnalysisEvents, AnalysisFigures } from "~/server/api/mappers/analysis";
@@ -44,6 +45,7 @@ export function CreateReportButton({
   isCountry: boolean;
 }) {
   const t = useTranslations("analysis.report");
+  const tFindings = useTranslations("analysis.findings");
   const tSeverity = useTranslations("common.severities");
   const locale = useLocale();
   const format = useFormatter();
@@ -65,8 +67,16 @@ export function CreateReportButton({
   async function create(chosen: ReportSectionChoice[]) {
     setBusy(true);
     try {
-      const fetchGeometry = (id: string) =>
-        utils.locations.getById.fetch({ id }, { staleTime: Infinity }).then((l) => l?.geometry ?? null);
+      const fetchGeometry = async (id: string) => {
+        // The design sample is not a location. A missing polygon still leaves the report.
+        if (id.startsWith("preview-")) return null;
+        try {
+          const location = await utils.locations.getById.fetch({ id }, { staleTime: Infinity });
+          return location?.geometry ?? null;
+        } catch {
+          return null;
+        }
+      };
       const [country, ...areas] = await Promise.all([countryId, ...areaIds].map(fetchGeometry));
       const items = events?.items ?? [];
       const map = projectReportMap({ country, areas, events: items, width: MAP_WIDTH, height: MAP_HEIGHT });
@@ -75,6 +85,9 @@ export function CreateReportButton({
       const author = me.data?.user?.name || me.data?.user?.email || t("unknownAuthor");
       const labels: ReportLabels = {
         eyebrow: t("eyebrow"),
+        org: t("org"),
+        classification: t("classification"),
+        disclaimer: t("disclaimer"),
         scopeKind: isCountry ? t("scopeCountry") : t("scopeCreated"),
         period: t("period", { start: date(data.scope.windowStart) }),
         versionOf: t("versionOf", { date: date(data.crisis.generatedAt, true) }),
@@ -97,6 +110,9 @@ export function CreateReportButton({
         responseActivities: t("responseActivities"),
         noResponse: t("noResponse"),
         outlook: t("outlook"),
+        mostLikely: tFindings("mostLikely"),
+        bestCase: tFindings("bestCase"),
+        worstCase: tFindings("worstCase"),
         sources: t("sources"),
         provenance: t("provenance"),
         footer: t("footer", { scope: scopeName }),
@@ -136,16 +152,16 @@ export function CreateReportButton({
   }
 
   const button = (
-    <Button
-      size="xs"
-      color="dark"
-      leftSection={<IconFileDownload size={14} />}
-      disabled={unsupported}
+    <button
+      type="button"
+      className={styles.cta}
+      disabled={unsupported || busy}
       onClick={() => setBuilding(true)}
       data-testid="analysis-create-report"
     >
+      <IconFileText size={15} stroke={2} />
       {t("button")}
-    </Button>
+    </button>
   );
   if (unsupported) return <Tooltip label={t("unsupportedLocale")}>{<span>{button}</span>}</Tooltip>;
   return (

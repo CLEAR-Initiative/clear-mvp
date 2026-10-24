@@ -39,12 +39,15 @@ const data = {
 } as unknown as Analysis;
 
 const labels: ReportLabels = {
-  eyebrow: "Situation report", scopeKind: "Created analysis", period: "Covers 1 Jul 2026 to date", versionOf: "Analysis version of 29 Sep 2026, 21:52",
+  eyebrow: "Situation report", org: "Norwegian Refugee Council", classification: "Internal use and private sharing only",
+  disclaimer: "For planning. Figures come from the sources listed and are not a field assessment.",
+  scopeKind: "Created analysis", period: "Covers 1 Jul 2026 to date", versionOf: "Analysis version of 29 Sep 2026, 21:52",
   keyDevelopments: "Key developments", currentStatus: "Current status", displaced: "Displaced", displacedSub: "people displaced",
   inNeed: "In need", inNeedSub: "people in need", funding: "Funding", fundingSub: "received / required", notReported: "Not reported",
   map: "Scope map", mapScope: "Shaded: analysis area", mapEvents: "Dots: 2 events since 1 Jul 2026", contexts: "Context", hazards: "Hazards",
   displacement: "What is forcing people out", priorityNeeds: "Priority needs", responseActivities: "Response activities",
-  noResponse: "None reported.", outlook: "Outlook", sources: "Sources", provenance: "Provenance", footer: "CLEAR · Bara",
+  noResponse: "None reported.", outlook: "Outlook", mostLikely: "Most likely", bestCase: "Best case", worstCase: "Worst case",
+  sources: "Sources", provenance: "Provenance", footer: "CLEAR · Bara",
   page: (n, t) => `Page ${n} of ${t}`, severity: (k) => k,
 };
 

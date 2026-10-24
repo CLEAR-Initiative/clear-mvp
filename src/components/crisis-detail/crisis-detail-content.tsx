@@ -287,7 +287,7 @@ export function CrisisDetailContent({
   const deleteCrisis = api.crises.deleteCrisis.useMutation({
     onSuccess: () => {
       void utils.crises.list.invalidate();
-      router.push("/insights");
+      router.push("/analysis");
     },
   });
 
@@ -404,7 +404,7 @@ export function CrisisDetailContent({
         </Text>
         {mode === "page" && (
           <Link
-            href={referrer === "map" ? mapReturnHref() : "/insights"}
+            href={referrer === "map" ? mapReturnHref() : "/analysis"}
             style={{
               display: "inline-block",
               marginTop: 16,
@@ -485,7 +485,7 @@ export function CrisisDetailContent({
         >
           <Group justify="space-between">
             <Link
-              href={referrer === "map" ? mapReturnHref() : "/insights"}
+              href={referrer === "map" ? mapReturnHref() : "/analysis"}
               style={{ textDecoration: "none" }}
             >
               <Group gap={6} className="hover:opacity-70" style={{ cursor: "pointer" }}>
@@ -1940,7 +1940,7 @@ function EventsTimeline({ events, isAdmin, crisisId, totalEventCount }: { events
       void utils.crises.list.invalidate();
       if (totalEventCount <= 1) {
         // Last event removed - crisis was deleted by the backend
-        router.push("/insights");
+        router.push("/analysis");
       } else {
         void utils.crises.get.invalidate({ id: crisisId });
       }

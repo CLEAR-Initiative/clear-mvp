@@ -69,7 +69,8 @@ export function projectReportMap({
 }): ReportMap | null {
   const countryRings = rings(country);
   const areaRings = areas.map(rings);
-  const focus = bounds(areaRings.flat()) ?? bounds(countryRings);
+  const eventPoints = events.flatMap((event) => (event.point ? [event.point] : []));
+  const focus = bounds(areaRings.flat()) ?? bounds(countryRings) ?? bounds(eventPoints.length > 0 ? [eventPoints] : []);
   if (!focus) return null;
 
   const pad = areaRings.flat().length > 0 ? 0.35 : 0.05;
@@ -186,7 +187,12 @@ interface ReportContent {
   hazards: { hazards: unknown[] };
   displacement: { push: unknown[] };
   sectors: { severity: string | null; needs: unknown[]; interventions: unknown[] }[];
-  scenarios: { mostLikely: string | null } | null;
+  scenarios: {
+    description?: string | null;
+    mostLikely: string | null;
+    bestCase?: string | null;
+    worstCase?: string | null;
+  } | null;
   sources: unknown[];
 }
 
@@ -213,7 +219,10 @@ export function defaultReportSections(data: ReportContent, eventCount: number): 
     displacement: counts.displacement! > 0,
     priorityNeeds: counts.priorityNeeds! > 0,
     responseActivities: counts.responseActivities! > 0,
-    outlook: !!data.scenarios?.mostLikely,
+    outlook: !!(
+      data.scenarios &&
+      (data.scenarios.description || data.scenarios.mostLikely || data.scenarios.bestCase || data.scenarios.worstCase)
+    ),
     sources: counts.sources! > 0,
   };
   return REPORT_SECTIONS.map((key) => ({ key, included: available[key], available: available[key], count: counts[key] }));
