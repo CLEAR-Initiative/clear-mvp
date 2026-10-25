@@ -14,7 +14,7 @@ import type { SaSource } from "~/server/api/mappers/situation-analysis";
  * chips elsewhere (the mapper builds one index off this ordered list), so a
  * reader following a citation lands on the matching reference.
  */
-export function SituationSources({ sources }: { sources: SaSource[] }) {
+export function SituationSources({ sources, className }: { sources: SaSource[]; className?: string }) {
   const t = useTranslations("insights.situation");
   const format = useFormatter();
 
@@ -29,7 +29,7 @@ export function SituationSources({ sources }: { sources: SaSource[] }) {
   return (
     <Box>
       <Text
-        c="var(--color-text-muted)"
+        c={className ? "var(--sa-muted)" : "var(--color-text-muted)"}
         fw={700}
         tt="uppercase"
         mb={12}
@@ -40,14 +40,21 @@ export function SituationSources({ sources }: { sources: SaSource[] }) {
 
       <Box
         component="ol"
-        style={{
-          listStyle: "none",
-          margin: 0,
-          padding: 0,
-          border: "1px solid var(--color-border)",
-          borderRadius: 10,
-          overflow: "hidden",
-        }}
+        className={className}
+        data-testid={className ? "analysis-sources" : undefined}
+        data-surface={className ? "card" : undefined}
+        style={
+          className
+            ? { listStyle: "none", margin: 0, padding: 0 }
+            : {
+                listStyle: "none",
+                margin: 0,
+                padding: 0,
+                border: "1px solid var(--color-border)",
+                borderRadius: 10,
+                overflow: "hidden",
+              }
+        }
       >
         {sources.map((s, i) => (
           <Reference
@@ -97,7 +104,7 @@ function Reference({
         display: "flex",
         gap: 12,
         padding: "11px 16px",
-        borderTop: first ? undefined : "1px solid var(--color-border)",
+        borderTop: first ? undefined : "1px solid var(--src-line, var(--color-border))",
       }}
     >
       <Text
@@ -106,7 +113,7 @@ function Reference({
           fontFamily: "var(--mantine-font-family-monospace, monospace)",
           fontSize: 12,
           fontWeight: 700,
-          color: "var(--color-text-muted)",
+          color: "var(--src-muted, var(--color-text-muted))",
           minWidth: 28,
           textAlign: "right",
           lineHeight: 1.5,
@@ -123,14 +130,14 @@ function Reference({
             href={source.url}
             target="_blank"
             rel="noopener noreferrer"
-            c="var(--color-text-primary)"
+            c="var(--src-text, var(--color-text-primary))"
             fw={600}
             style={{ fontSize: 13.5, lineHeight: 1.4 }}
           >
             {source.title}
           </Anchor>
         ) : (
-          <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 13.5, lineHeight: 1.4 }}>
+          <Text fw={600} c="var(--src-text, var(--color-text-primary))" style={{ fontSize: 13.5, lineHeight: 1.4 }}>
             {/* Cited by the narrative but absent from the pipeline's sources
                 list, so no title was resolved - show the report id. */}
             {source.title || `ReliefWeb report ${source.id}`}
@@ -139,30 +146,30 @@ function Reference({
 
         <Group gap={7} mt={3} align="center" wrap="wrap">
           {publisher && (
-            <Text c="var(--color-text-secondary)" style={{ fontSize: 11.5 }}>
+            <Text c="var(--src-secondary, var(--color-text-secondary))" style={{ fontSize: 11.5 }}>
               {publisher}
             </Text>
           )}
           {publisher && publishedLabel && (
-            <Text c="var(--color-text-muted)" style={{ fontSize: 11 }}>
+            <Text c="var(--src-muted, var(--color-text-muted))" style={{ fontSize: 11 }}>
               &middot;
             </Text>
           )}
           {publishedLabel && (
-            <Text c="var(--color-text-secondary)" style={{ fontSize: 11.5 }}>
+            <Text c="var(--src-secondary, var(--color-text-secondary))" style={{ fontSize: 11.5 }}>
               {publishedLabel}
             </Text>
           )}
           {source.url && (
             <>
-              <Text c="var(--color-text-muted)" style={{ fontSize: 11 }}>
+              <Text c="var(--src-muted, var(--color-text-muted))" style={{ fontSize: 11 }}>
                 &middot;
               </Text>
               <Anchor
                 href={source.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                c="var(--color-accent)"
+                c="var(--src-accent, var(--color-accent))"
                 style={{ fontSize: 11.5 }}
               >
                 <Group gap={3} align="center" wrap="nowrap" component="span">

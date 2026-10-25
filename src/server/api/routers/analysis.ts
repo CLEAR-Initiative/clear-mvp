@@ -677,14 +677,29 @@ export const analysisRouter = createTRPCRouter({
    * scope is fetched per district and merged.
    */
   events: protectedProcedure
-    .input(z.object({ locationIds: z.array(z.string().min(1)).min(1).max(MAX_CREATED_LOCATIONS), from: z.string().datetime() }))
+    .input(
+      z.object({
+        locationIds: z.array(z.string().min(1)).min(1).max(MAX_CREATED_LOCATIONS),
+        from: z.string().datetime(),
+        eventTypes: z.array(z.string()).optional(),
+      }),
+    )
     .query(async ({ ctx, input }): Promise<AnalysisEvents> => {
       const headers = cookieHeaders(ctx);
+      const types = input.eventTypes?.filter(Boolean) ?? [];
       const pages = await Promise.all(
         input.locationIds.map((locationId) =>
           graphqlFetch<{ eventsPage: { totalCount: number; items: GqlAnalysisEvent[] } }>(
             EVENTS_PAGE_QUERY,
-            { input: { locationId, from: input.from, orderBy: "CREATED_DESC", limit: EVENTS_LIMIT } },
+            {
+              input: {
+                locationId,
+                from: input.from,
+                orderBy: "CREATED_DESC",
+                limit: EVENTS_LIMIT,
+                ...(types.length > 0 ? { eventTypes: types } : {}),
+              },
+            },
             headers,
           ),
         ),

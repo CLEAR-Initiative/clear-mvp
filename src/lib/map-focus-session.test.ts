@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
   clearMapFocusSession,
-  insightsNavHrefFromFocusSession,
   mapNavHrefFromFocusSession,
   parseMapFocusSession,
   readMapFocusSession,
@@ -78,13 +77,4 @@ describe("nav hrefs from focus session", () => {
     expect(mapNavHrefFromFocusSession(null)).toBe("/map");
   });
 
-  it("routes Insights to crisis detail when crisis focus is active", () => {
-    expect(insightsNavHrefFromFocusSession({ kind: "crisis", id: "c1" })).toBe(
-      "/crisis/c1",
-    );
-    expect(insightsNavHrefFromFocusSession({ kind: "event", id: "e1" })).toBe(
-      "/insights",
-    );
-    expect(insightsNavHrefFromFocusSession(null)).toBe("/insights");
-  });
 });

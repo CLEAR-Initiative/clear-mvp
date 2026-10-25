@@ -2147,6 +2147,7 @@
       "inbox": "Inbox",
       "map": "Map",
       "insights": "Insights",
+      "analysis": "Analysis",
       "metrics": "Metrics",
       "operations": "Operations",
       "cash": "Cash Assistance",
@@ -3025,9 +3026,9 @@
     "meta": {
       "updated": "Updated {relative}",
       "asOf": "as of {date}",
-      "builtFrom": "Built from {reports, plural, one {# report} other {# reports}} and {events, plural, one {# event} other {# events}}",
-      "covers": "Covers {start} to date",
-      "period": "Covers {start} to {end}",
+      "builtFrom": "{reports, plural, one {# report} other {# reports}}, {events, plural, one {# event} other {# events}}",
+      "covers": "{start} – today",
+      "period": "{start} – {end}",
       "stale": "Out of date"
     },
     "tabs": {
@@ -3052,6 +3053,7 @@
       "funding": "Funding",
       "fundingOf": "of {required}",
       "fundingSub": "received against the requirement",
+      "fundingHow": "Received is what has already been given. The striped part is the gap still required.",
       "received": "Received",
       "gap": "Gap",
       "notReported": "Not reported in the current sources",
@@ -3078,16 +3080,25 @@
     "map": {
       "title": "Analysis area",
       "events": "{count, plural, one {# event} other {# events}} since {date}",
+      "eventsSince": "{count, plural, one {event} other {events}} since {date}",
       "areas": "Where events happened",
       "areaEvents": "{count, plural, one {# event} other {# events}}",
       "noEvents": "No events recorded in this area since {date}.",
-      "sample": "Map shows the {count} most recent"
+      "sample": "Map shows the {count} most recent",
+      "hotspots": "{scope} · event hotspots",
+      "recent": "{count, plural, one {# most recent event} other {# most recent events}}",
+      "zoomIn": "Zoom in",
+      "zoomOut": "Zoom out",
+      "fullScreen": "Full screen"
     },
     "timeline": {
       "title": "Events timeline",
       "today": "Today",
       "empty": "No events recorded in this period.",
-      "sample": "The {count} most recent events"
+      "sample": "The {count} most recent events",
+      "span": "{start} → today · {count, plural, one {# key event} other {# key events}}",
+      "live": "{start} → today · {count, plural, one {# event} other {# events}}",
+      "loading": "Loading events…"
     },
     "findings": {
       "hazards": "Hazards",
@@ -3101,7 +3112,7 @@
       "showAll": "Show all {count}",
       "showLess": "Show less",
       "forecast": "Forecast",
-      "forecastTag": "projections, not observed",
+      "forecastTag": "Projections, not observed",
       "forecastNote": "What sources expect next. Kept apart from the facts above.",
       "mostLikely": "Most likely",
       "bestCase": "Best case",
@@ -3126,7 +3137,7 @@
       "title": "Sources cited"
     },
     "contexts": {
-      "title": "Contexts",
+      "title": "Context risks",
       "meta": "{categories, plural, one {# category} other {# categories}} · {findings, plural, one {# finding} other {# findings}}",
       "findings": "{count, plural, one {# finding} other {# findings}}"
     },
@@ -3144,6 +3155,8 @@
     },
     "home": {
       "title": "Analyses",
+      "preview": "Design preview",
+      "previewHint": "Sample Sudan analysis for reviewing the layout.",
       "subtitle": "Current analyses for {country}. Open one, or create your own over specific states or districts.",
       "new": "New analysis",
       "countryGroup": "Country",
@@ -3178,6 +3191,7 @@
       "firstRun": "The first version usually takes a few minutes. You can leave this page meanwhile.",
       "duplicate": "Your team already has an analysis for these districts: {name}.",
       "openExisting": "Open it",
+      "needTeam": "Join a team to create an analysis. An administrator can add you.",
       "error": "The analysis could not be created. Please try again.",
       "cancel": "Cancel",
       "submit": "Create analysis",
@@ -3196,6 +3210,9 @@
     "report": {
       "button": "Create report",
       "eyebrow": "Situation report",
+      "org": "Norwegian Refugee Council",
+      "classification": "Internal use and private sharing only",
+      "disclaimer": "For planning. Figures come from the sources listed and are not a field assessment.",
       "scopeCountry": "Country analysis",
       "scopeCreated": "Created analysis",
       "period": "Covers {start} to date",
@@ -3218,7 +3235,7 @@
       "priorityNeeds": "Priority needs",
       "responseActivities": "Response activities",
       "noResponse": "No response activities reported in the current sources.",
-      "outlook": "Outlook (most likely scenario)",
+      "outlook": "Outlook",
       "sources": "Sources",
       "provenance": "Provenance",
       "generated": "Report created {date} by {author} in CLEAR. Numbers in brackets refer to the sources list.",
@@ -3260,13 +3277,73 @@
         },
         "hints": {
           "currentStatus": "Displaced, in need and funding",
-          "outlook": "Most likely scenario"
+          "outlook": "Most likely, best case and worst case"
         }
       }
     },
+    "layout": {
+      "changes": "What changed",
+      "changesStamp": "{date} update",
+      "newCount": "{count, plural, one {# new} other {# new}}",
+      "newMark": "New",
+      "updatedCount": "{count, plural, one {# updated} other {# updated}}",
+      "nrcEvidence": "NRC evidence",
+      "breadcrumb": "Breadcrumb",
+      "addEvidence": "Add evidence",
+      "evidenceFiles": "{count, plural, one {# file} other {# files}}",
+      "evidenceDrop": "Drop files to add evidence",
+      "evidencePreview": "Preview of {name}",
+      "evidenceClose": "Close preview",
+      "evidenceNew": "NEW",
+      "evidenceProcessed": "PROCESSED",
+      "evidenceStale": "STALE",
+      "evidenceInternal": "NRC INTERNAL",
+      "evidenceIncidentKind": "Incident report · West Kordofan · info dated 7 Sep 2026",
+      "evidenceIncidentNote": "6 facts added to this page · 1 report not yet linked to a crisis",
+      "evidenceSitrepKind": "Sitrep · all area offices · info dated Aug 2025",
+      "evidenceSitrepNote": "Older than 30 days: kept on file, not used in figures or summary",
+      "evidenceUploadedKind": "Uploaded just now",
+      "evidenceUploadedNote": "On file. Not read into this page yet.",
+      "discussionTitle": "Discussion",
+      "discussionComments": "{count, plural, one {# comment} other {# comments}}",
+      "discussionEmpty": "No comments yet. Start the discussion.",
+      "discussionPlaceholder": "Add a comment...",
+      "discussionPost": "Post",
+      "dismissChanges": "Mark as seen",
+      "updated": "Updated",
+      "summary": "AI situation summary",
+      "expandSummary": "Read full summary and context",
+      "collapseSummary": "Show less",
+      "copySummary": "Copy summary",
+      "editSummary": "Edit summary",
+      "saveSummary": "Save",
+      "cancelEdit": "Cancel",
+      "summaryEdited": "Edited",
+      "copied": "Copied",
+      "highlights": "Highlights",
+      "howToRead": "How to read",
+      "vulnerabilitiesMeta": "{count, plural, one {# pre-crisis condition} other {# pre-crisis conditions}}",
+      "legend": "Legend",
+      "legendArea": "Analysis area",
+      "legendAreaCountry": "Analysis area (whole country)",
+      "legendEvents": "Event markers show where events were recorded",
+      "legendHow": "How to read this map",
+      "legendHotspot": "Event hotspot — size shows the number of events",
+      "legendBoundary": "State boundary",
+      "sections": {
+        "summary": "AI summary",
+        "figures": "Key figures",
+        "contexts": "Context risks",
+        "hazards": "Hazards",
+        "vulnerabilities": "Vulnerabilities",
+        "displacement": "Displacement",
+        "forecast": "Forecast"
+      }
+    },
     "refresh": {
-      "button": "Update now",
+      "button": "Update",
       "requested": "Update requested. The new version usually takes a few minutes and appears here by itself.",
+      "preview": "This is the design sample, so Update does not ask the pipeline for a new version.",
       "error": "The update could not be requested. Please try again."
     }
   },

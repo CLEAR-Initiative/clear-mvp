@@ -1,11 +1,11 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { Button } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import { IconRefresh } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
 import { canManageAnalyses } from "~/lib/roles";
+import styles from "./dark/analysis-dark.module.css";
 
 /** The frame whose next version is requested, as clear-api `requestAnalysis` takes it. */
 export interface RefreshFrame {
@@ -41,16 +41,17 @@ export function RefreshButton({
   if (!canManageAnalyses(me.data?.user?.role, me.data?.user?.teamMemberships)) return null;
 
   return (
-    <Button
-      size="xs"
-      variant="default"
-      leftSection={<IconRefresh size={14} />}
+    <button
+      type="button"
+      className={styles.ghost}
       onClick={() => refresh.mutate(frame)}
-      loading={refresh.isPending}
-      disabled={waiting}
+      disabled={waiting || refresh.isPending}
       data-testid="analysis-refresh"
     >
+      <span className={waiting || refresh.isPending ? styles.spin : undefined} data-testid={waiting || refresh.isPending ? "analysis-refresh-spin" : undefined}>
+        <IconRefresh size={15} stroke={1.8} />
+      </span>
       {t("button")}
-    </Button>
+    </button>
   );
 }

@@ -4,7 +4,7 @@ import { WORLD_VIEW } from "../../src/lib/constants/country-config";
 /**
  * Case 11 — smoke for features landed this week / morning merges:
  *   - map "All Countries" → global WORLD_VIEW (not Sahel crop)
- *   - Insights → Situation tab shell
+ *   - Analysis list (the retired Insights page redirects here)
  *   - Detection → Ground Intel + History tabs reachable
  *   - Map layers / satellite A/B chrome still mounts
  *
@@ -59,20 +59,13 @@ test.describe("Recent features smoke (case 11)", () => {
     }
   });
 
-  test("Insights Situation tab loads (empty or analysis shell)", async ({
+  test("Analysis list loads, and the retired Insights URL lands there", async ({
     page,
   }) => {
     await page.goto("/insights", { waitUntil: "domcontentloaded" });
-    const situationTab = page.getByRole("tab", { name: /Situation/i });
-    await expect(situationTab).toBeVisible({ timeout: 20_000 });
-    await situationTab.click();
-    // Seeded stack has a single country → name text, not a multi-country Select.
-    // Assert the Situation shell: empty state or overview sub-tabs.
-    await expect(
-      page
-        .getByText(/No situation analysis|Overview|Sectors|Sources|Sudan/i)
-        .first(),
-    ).toBeVisible({ timeout: 20_000 });
+    await expect(page).toHaveURL(/\/analysis/, { timeout: 20_000 });
+    await expect(page.getByRole("heading", { name: "Analyses" })).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByRole("tab", { name: /Situation|Crisis Overview/i })).toHaveCount(0);
   });
 
   test("Detection Ground Intel and History tabs are reachable", async ({

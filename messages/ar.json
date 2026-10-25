@@ -2147,6 +2147,7 @@
       "inbox": "الوارد",
       "map": "الخريطة",
       "insights": "الرؤى",
+      "analysis": "التحليل",
       "metrics": "المؤشرات",
       "operations": "العمليات",
       "cash": "المساعدة النقدية",
@@ -3025,9 +3026,9 @@
     "meta": {
       "updated": "تم التحديث {relative}",
       "asOf": "حتى {date}",
-      "builtFrom": "مبني على {reports, plural, one {تقرير واحد} other {# تقارير}} و{events, plural, one {حدث واحد} other {# أحداث}}",
-      "covers": "يغطي من {start} حتى اليوم",
-      "period": "يغطي من {start} إلى {end}",
+      "builtFrom": "{reports, plural, one {تقرير واحد} other {# تقارير}}، {events, plural, one {حدث واحد} other {# أحداث}}",
+      "covers": "{start} – اليوم",
+      "period": "{start} – {end}",
       "stale": "غير محدَّث"
     },
     "tabs": {
@@ -3052,6 +3053,7 @@
       "funding": "التمويل",
       "fundingOf": "من أصل {required}",
       "fundingSub": "تم استلامها مقابل المتطلبات",
+      "fundingHow": "المبلغ المستلم هو ما تم تقديمه. الجزء المخطط هو الفجوة التي ما زالت مطلوبة.",
       "received": "المستلم",
       "gap": "الفجوة",
       "notReported": "غير مذكور في المصادر الحالية",
@@ -3078,16 +3080,25 @@
     "map": {
       "title": "منطقة التحليل",
       "events": "{count, plural, one {حدث واحد} other {# أحداث}} منذ {date}",
+      "eventsSince": "{count, plural, one {حدث} two {حدثان} few {أحداث} many {حدثًا} other {حدث}} منذ {date}",
       "areas": "أين وقعت الأحداث",
       "areaEvents": "{count, plural, one {حدث واحد} other {# أحداث}}",
       "noEvents": "لم تُسجَّل أي أحداث في هذه المنطقة منذ {date}.",
-      "sample": "تعرض الخريطة أحدث {count}"
+      "sample": "تعرض الخريطة أحدث {count}",
+      "hotspots": "{scope} · بؤر الأحداث",
+      "recent": "{count, plural, one {أحدث حدث} two {أحدث حدثين} few {أحدث # أحداث} many {أحدث # حدثًا} other {أحدث # حدث}}",
+      "zoomIn": "تكبير",
+      "zoomOut": "تصغير",
+      "fullScreen": "ملء الشاشة"
     },
     "timeline": {
       "title": "الجدول الزمني للأحداث",
       "today": "اليوم",
       "empty": "لم تُسجَّل أي أحداث في هذه الفترة.",
-      "sample": "أحدث {count} حدثًا"
+      "sample": "أحدث {count} حدثًا",
+      "span": "{start} → اليوم · {count, plural, one {حدث رئيسي واحد} other {# أحداث رئيسية}}",
+      "live": "{start} → اليوم · {count, plural, one {حدث واحد} other {# أحداث}}",
+      "loading": "جارٍ تحميل الأحداث…"
     },
     "findings": {
       "hazards": "المخاطر",
@@ -3126,7 +3137,7 @@
       "title": "المصادر المستشهد بها"
     },
     "contexts": {
-      "title": "السياقات",
+      "title": "المخاطر السياقية",
       "meta": "{categories, plural, one {فئة واحدة} other {# فئات}} · {findings, plural, one {نتيجة واحدة} other {# نتائج}}",
       "findings": "{count, plural, one {نتيجة واحدة} other {# نتائج}}"
     },
@@ -3144,6 +3155,8 @@
     },
     "home": {
       "title": "التحليلات",
+      "preview": "معاينة التصميم",
+      "previewHint": "تحليل تجريبي للسودان لمراجعة التصميم.",
       "subtitle": "التحليلات الحالية لـ {country}. افتح أحدها أو أنشئ تحليلك الخاص لولايات أو محليات محددة.",
       "new": "تحليل جديد",
       "countryGroup": "الدولة",
@@ -3178,6 +3191,7 @@
       "firstRun": "تستغرق النسخة الأولى عادةً بضع دقائق. يمكنك مغادرة هذه الصفحة في الأثناء.",
       "duplicate": "لدى فريقك تحليل لهذه المحليات بالفعل: {name}.",
       "openExisting": "فتحه",
+      "needTeam": "انضم إلى فريق لإنشاء تحليل. يمكن للمسؤول إضافتك.",
       "error": "تعذّر إنشاء التحليل. يُرجى المحاولة مرة أخرى.",
       "cancel": "إلغاء",
       "submit": "إنشاء التحليل",
@@ -3196,6 +3210,9 @@
     "report": {
       "button": "إنشاء تقرير",
       "eyebrow": "تقرير الوضع",
+      "org": "المجلس النرويجي للاجئين",
+      "classification": "للاستخدام الداخلي والمشاركة الخاصة",
+      "disclaimer": "للتخطيط. الأرقام مأخوذة من المصادر المذكورة وليست تقييمًا ميدانيًا.",
       "scopeCountry": "تحليل الدولة",
       "scopeCreated": "تحليل مُنشأ",
       "period": "يغطي من {start} حتى اليوم",
@@ -3218,7 +3235,7 @@
       "priorityNeeds": "الاحتياجات ذات الأولوية",
       "responseActivities": "أنشطة الاستجابة",
       "noResponse": "لا توجد أنشطة استجابة مذكورة في المصادر الحالية.",
-      "outlook": "التوقعات (السيناريو الأرجح)",
+      "outlook": "التوقعات",
       "sources": "المصادر",
       "provenance": "المصدر",
       "generated": "أُنشئ التقرير في {date} بواسطة {author} في CLEAR. تشير الأرقام بين الأقواس إلى قائمة المصادر.",
@@ -3260,13 +3277,73 @@
         },
         "hints": {
           "currentStatus": "النازحون والمحتاجون والتمويل",
-          "outlook": "السيناريو الأرجح"
+          "outlook": "الأرجح، وأفضل الاحتمالات، وأسوأها"
         }
       }
     },
+    "layout": {
+      "changes": "ما الذي تغيّر",
+      "changesStamp": "تحديث {date}",
+      "newCount": "{count, plural, one {جديد} two {جديدان} few {# جدد} many {# جديدًا} other {# جديد}}",
+      "newMark": "جديد",
+      "updatedCount": "{count, plural, one {محدّث} two {محدّثان} few {# محدّثة} many {# محدّثًا} other {# محدّث}}",
+      "nrcEvidence": "أدلة NRC",
+      "breadcrumb": "مسار التنقل",
+      "addEvidence": "إضافة دليل",
+      "evidenceFiles": "{count, plural, one {ملف واحد} other {# ملفات}}",
+      "evidenceDrop": "أفلت الملفات لإضافة دليل",
+      "evidencePreview": "معاينة {name}",
+      "evidenceClose": "إغلاق المعاينة",
+      "evidenceNew": "جديد",
+      "evidenceProcessed": "معالج",
+      "evidenceStale": "قديم",
+      "evidenceInternal": "NRC INTERNAL",
+      "evidenceIncidentKind": "تقرير حادث · غرب كردفان · معلومات بتاريخ 7 أيلول 2026",
+      "evidenceIncidentNote": "أُضيفت 6 وقائع إلى هذه الصفحة · تقرير واحد لم يُربط بأزمة بعد",
+      "evidenceSitrepKind": "تقرير حالة · جميع المكاتب الميدانية · معلومات بتاريخ آب 2025",
+      "evidenceSitrepNote": "أقدم من 30 يومًا: يُحفظ في الملف ولا يُستخدم في الأرقام أو الملخص",
+      "evidenceUploadedKind": "تم الرفع الآن",
+      "evidenceUploadedNote": "محفوظ في الملف. لم يُقرأ في هذه الصفحة بعد.",
+      "discussionTitle": "النقاش",
+      "discussionComments": "{count, plural, one {تعليق واحد} other {# تعليقات}}",
+      "discussionEmpty": "لا تعليقات بعد. ابدأ النقاش.",
+      "discussionPlaceholder": "أضف تعليقًا...",
+      "discussionPost": "نشر",
+      "dismissChanges": "تعليم كمقروء",
+      "updated": "محدّث",
+      "summary": "ملخص الوضع",
+      "expandSummary": "قراءة الملخص والسياق",
+      "collapseSummary": "عرض أقل",
+      "copySummary": "نسخ الملخص",
+      "editSummary": "تعديل الملخص",
+      "saveSummary": "حفظ",
+      "cancelEdit": "إلغاء",
+      "summaryEdited": "تم التعديل",
+      "copied": "تم النسخ",
+      "highlights": "أبرز النقاط",
+      "howToRead": "كيفية القراءة",
+      "vulnerabilitiesMeta": "{count, plural, zero {لا شروط قبل الأزمة} one {شرط واحد قبل الأزمة} two {شرطان قبل الأزمة} few {# شروط قبل الأزمة} many {# شرطًا قبل الأزمة} other {# شرط قبل الأزمة}}",
+      "legend": "مفتاح الخريطة",
+      "legendArea": "نطاق التحليل",
+      "legendAreaCountry": "نطاق التحليل (البلد كله)",
+      "legendEvents": "تُظهر العلامات أماكن تسجيل الأحداث",
+      "legendHow": "كيفية قراءة هذه الخريطة",
+      "legendHotspot": "بؤرة الأحداث — الحجم يبيّن عدد الأحداث",
+      "legendBoundary": "حدود الولاية",
+      "sections": {
+        "summary": "الملخص",
+        "figures": "الأرقام الرئيسية",
+        "contexts": "مخاطر السياق",
+        "hazards": "الأخطار",
+        "vulnerabilities": "نقاط الضعف",
+        "displacement": "النزوح",
+        "forecast": "التوقعات"
+      }
+    },
     "refresh": {
-      "button": "تحديث الآن",
+      "button": "تحديث",
       "requested": "تم طلب التحديث. تستغرق النسخة الجديدة عادةً بضع دقائق وستظهر هنا تلقائيًا.",
+      "preview": "هذه عينة التصميم، لذا لا يطلب زر التحديث نسخة جديدة من خط المعالجة.",
       "error": "تعذّر طلب التحديث. يُرجى المحاولة مرة أخرى."
     }
   },

@@ -35,6 +35,21 @@ describe("analysis report helpers", () => {
     expect(projectReportMap({ country: null, areas: [], events: [], width: 500, height: 250 })).toBeNull();
   });
 
+  it("frames event dots when the scope has no polygon", () => {
+    const map = projectReportMap({
+      country: null,
+      areas: [],
+      events: [
+        { point: [30.2, 13.6], severity: 5 },
+        { point: [32.5, 15.6], severity: 1 },
+      ],
+      width: 500,
+      height: 250,
+    });
+    expect(map?.country).toBe("");
+    expect(map?.dots).toHaveLength(2);
+  });
+
   it("folds text the PDF's built-in font lacks", () => {
     expect(pdfSafe("El Fāshir – Café “quoted”")).toBe("El Fashir – Café “quoted”");
     expect(pdfSafe("Sudan السودان")).toBe("Sudan ");

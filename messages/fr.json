@@ -2147,6 +2147,7 @@
       "inbox": "Boîte de réception",
       "map": "Carte",
       "insights": "Constats",
+      "analysis": "Analyse",
       "metrics": "Indicateurs",
       "operations": "Opérations",
       "cash": "Assistance monétaire",
@@ -3025,9 +3026,9 @@
     "meta": {
       "updated": "Mis à jour {relative}",
       "asOf": "au {date}",
-      "builtFrom": "Établie à partir de {reports, plural, one {# rapport} other {# rapports}} et {events, plural, one {# événement} other {# événements}}",
-      "covers": "Couvre la période du {start} à ce jour",
-      "period": "Couvre la période du {start} au {end}",
+      "builtFrom": "{reports, plural, one {# rapport} other {# rapports}}, {events, plural, one {# événement} other {# événements}}",
+      "covers": "{start} – aujourd'hui",
+      "period": "{start} – {end}",
       "stale": "Pas à jour"
     },
     "tabs": {
@@ -3052,6 +3053,7 @@
       "funding": "Financement",
       "fundingOf": "sur {required}",
       "fundingSub": "reçus par rapport aux besoins",
+      "fundingHow": "Le reçu est ce qui a déjà été versé. La partie hachurée est l'écart encore requis.",
       "received": "Reçu",
       "gap": "Déficit",
       "notReported": "Non rapporté dans les sources actuelles",
@@ -3078,16 +3080,25 @@
     "map": {
       "title": "Zone d'analyse",
       "events": "{count, plural, one {# événement} other {# événements}} depuis le {date}",
+      "eventsSince": "{count, plural, one {événement} other {événements}} depuis le {date}",
       "areas": "Où les événements ont eu lieu",
       "areaEvents": "{count, plural, one {# événement} other {# événements}}",
       "noEvents": "Aucun événement enregistré dans cette zone depuis le {date}.",
-      "sample": "La carte montre les {count} plus récents"
+      "sample": "La carte montre les {count} plus récents",
+      "hotspots": "{scope} · foyers d'événements",
+      "recent": "{count, plural, one {# événement le plus récent} other {# événements les plus récents}}",
+      "zoomIn": "Zoom avant",
+      "zoomOut": "Zoom arrière",
+      "fullScreen": "Plein écran"
     },
     "timeline": {
       "title": "Chronologie des événements",
       "today": "Aujourd'hui",
       "empty": "Aucun événement enregistré sur cette période.",
-      "sample": "Les {count} événements les plus récents"
+      "sample": "Les {count} événements les plus récents",
+      "span": "{start} → aujourd'hui · {count, plural, one {# événement clé} other {# événements clés}}",
+      "live": "{start} → aujourd'hui · {count, plural, one {# événement} other {# événements}}",
+      "loading": "Chargement des événements…"
     },
     "findings": {
       "hazards": "Aléas",
@@ -3101,7 +3112,7 @@
       "showAll": "Tout afficher ({count})",
       "showLess": "Afficher moins",
       "forecast": "Prévisions",
-      "forecastTag": "projections, non observées",
+      "forecastTag": "Projections, non observées",
       "forecastNote": "Ce que les sources prévoient. Séparé des faits ci-dessus.",
       "mostLikely": "Le plus probable",
       "bestCase": "Meilleur scénario",
@@ -3126,7 +3137,7 @@
       "title": "Sources citées"
     },
     "contexts": {
-      "title": "Contextes",
+      "title": "Risques contextuels",
       "meta": "{categories, plural, one {# catégorie} other {# catégories}} · {findings, plural, one {# constat} other {# constats}}",
       "findings": "{count, plural, one {# constat} other {# constats}}"
     },
@@ -3144,6 +3155,8 @@
     },
     "home": {
       "title": "Analyses",
+      "preview": "Aperçu du design",
+      "previewHint": "Analyse Soudan d'exemple pour revoir la mise en page.",
       "subtitle": "Analyses actuelles pour {country}. Ouvrez-en une ou créez la vôtre sur des États ou districts précis.",
       "new": "Nouvelle analyse",
       "countryGroup": "Pays",
@@ -3178,6 +3191,7 @@
       "firstRun": "La première version prend généralement quelques minutes. Vous pouvez quitter cette page en attendant.",
       "duplicate": "Votre équipe a déjà une analyse pour ces districts : {name}.",
       "openExisting": "L'ouvrir",
+      "needTeam": "Rejoignez une équipe pour créer une analyse. Un administrateur peut vous y ajouter.",
       "error": "L'analyse n'a pas pu être créée. Veuillez réessayer.",
       "cancel": "Annuler",
       "submit": "Créer l'analyse",
@@ -3196,6 +3210,9 @@
     "report": {
       "button": "Créer un rapport",
       "eyebrow": "Rapport de situation",
+      "org": "Conseil norvégien pour les réfugiés",
+      "classification": "Usage interne et partage privé",
+      "disclaimer": "À des fins de planification. Les chiffres proviennent des sources citées et ne constituent pas une évaluation de terrain.",
       "scopeCountry": "Analyse pays",
       "scopeCreated": "Analyse créée",
       "period": "Couvre la période du {start} à ce jour",
@@ -3218,7 +3235,7 @@
       "priorityNeeds": "Besoins prioritaires",
       "responseActivities": "Activités de réponse",
       "noResponse": "Aucune activité de réponse signalée dans les sources actuelles.",
-      "outlook": "Perspectives (scénario le plus probable)",
+      "outlook": "Perspectives",
       "sources": "Sources",
       "provenance": "Provenance",
       "generated": "Rapport créé le {date} par {author} dans CLEAR. Les nombres entre crochets renvoient à la liste des sources.",
@@ -3260,13 +3277,73 @@
         },
         "hints": {
           "currentStatus": "Déplacés, besoins et financement",
-          "outlook": "Scénario le plus probable"
+          "outlook": "Le plus probable, le meilleur et le pire scénario"
         }
+      }
+    },
+    "layout": {
+      "changes": "Ce qui a changé",
+      "changesStamp": "mise à jour du {date}",
+      "newCount": "{count, plural, one {# nouveau} other {# nouveaux}}",
+      "newMark": "Nouveau",
+      "updatedCount": "{count, plural, one {# mis à jour} other {# mis à jour}}",
+      "nrcEvidence": "Preuves du NRC",
+      "breadcrumb": "Fil d'Ariane",
+      "addEvidence": "Ajouter des éléments",
+      "evidenceFiles": "{count, plural, one {# fichier} other {# fichiers}}",
+      "evidenceDrop": "Déposez des fichiers pour ajouter une preuve",
+      "evidencePreview": "Aperçu de {name}",
+      "evidenceClose": "Fermer l'aperçu",
+      "evidenceNew": "NOUVEAU",
+      "evidenceProcessed": "TRAITÉ",
+      "evidenceStale": "PÉRIMÉ",
+      "evidenceInternal": "NRC INTERNAL",
+      "evidenceIncidentKind": "Rapport d'incident · Kordofan-Ouest · information datée du 7 sep 2026",
+      "evidenceIncidentNote": "6 faits ajoutés à cette page · 1 rapport pas encore lié à une crise",
+      "evidenceSitrepKind": "Sitrep · tous les bureaux de zone · information datée d'août 2025",
+      "evidenceSitrepNote": "Plus de 30 jours : conservé, non utilisé dans les chiffres ni le résumé",
+      "evidenceUploadedKind": "Ajouté à l'instant",
+      "evidenceUploadedNote": "Conservé. Pas encore lu dans cette page.",
+      "discussionTitle": "Discussion",
+      "discussionComments": "{count, plural, one {# commentaire} other {# commentaires}}",
+      "discussionEmpty": "Pas encore de commentaires. Lancez la discussion.",
+      "discussionPlaceholder": "Ajouter un commentaire...",
+      "discussionPost": "Publier",
+      "dismissChanges": "Marquer comme vu",
+      "updated": "Mis à jour",
+      "summary": "Résumé de situation",
+      "expandSummary": "Lire le résumé et le contexte",
+      "collapseSummary": "Réduire",
+      "copySummary": "Copier le résumé",
+      "editSummary": "Modifier le résumé",
+      "saveSummary": "Enregistrer",
+      "cancelEdit": "Annuler",
+      "summaryEdited": "Modifié",
+      "copied": "Copié",
+      "highlights": "Points clés",
+      "howToRead": "Comment lire",
+      "vulnerabilitiesMeta": "{count, plural, one {# condition préexistante} other {# conditions préexistantes}}",
+      "legend": "Légende",
+      "legendArea": "Zone d'analyse",
+      "legendAreaCountry": "Zone d'analyse (tout le pays)",
+      "legendEvents": "Les marqueurs indiquent où les événements ont été enregistrés",
+      "legendHow": "Comment lire cette carte",
+      "legendHotspot": "Foyer d'événements — la taille indique le nombre",
+      "legendBoundary": "Limite d'État",
+      "sections": {
+        "summary": "Résumé",
+        "figures": "Chiffres clés",
+        "contexts": "Risques de contexte",
+        "hazards": "Aléas",
+        "vulnerabilities": "Vulnérabilités",
+        "displacement": "Déplacement",
+        "forecast": "Prévision"
       }
     },
     "refresh": {
       "button": "Mettre à jour",
       "requested": "Mise à jour demandée. La nouvelle version prend généralement quelques minutes et s'affiche ici d'elle-même.",
+      "preview": "Ceci est l'échantillon de conception : Mettre à jour ne demande pas de nouvelle version au pipeline.",
       "error": "La mise à jour n'a pas pu être demandée. Veuillez réessayer."
     }
   },

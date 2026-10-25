@@ -41,11 +41,7 @@ import { useSlidingNavIndicator } from "~/hooks/use-sliding-nav-indicator";
 import { SlidingNavIndicator } from "~/components/ui/sliding-nav-indicator";
 import { usePageTransition } from "~/components/page-transition";
 import { isModifiedNavClick } from "~/components/page-transition-intent";
-import {
-  insightsNavHrefFromFocusSession,
-  mapNavHrefFromFocusSession,
-  readMapFocusSession,
-} from "~/lib/map-focus-session";
+import { mapNavHrefFromFocusSession, readMapFocusSession } from "~/lib/map-focus-session";
 import { NAV_COLLAPSED_W_PX, NAV_EXPANDED_W_PX } from "~/lib/is-map-path";
 import { setNavCollapsedCookie } from "~/lib/nav-collapsed-cookie";
 import { useInboxUnread } from "~/lib/inbox-badge";
@@ -83,12 +79,10 @@ function isItemVisible(item: NavItem, ctx: NavVisibility): boolean {
   return item.featureKey ? (ctx.flags[item.featureKey] ?? true) : true;
 }
 
-/** Map / Insights hrefs follow in-session focus chips (#582). */
+/** The Map href keeps an in-session focus chip (#582). */
 function resolveNavHref(item: NavItem): string {
-  if (item.labelKey !== "map" && item.labelKey !== "insights") return item.href;
-  const session = readMapFocusSession();
-  if (item.labelKey === "map") return mapNavHrefFromFocusSession(session);
-  return insightsNavHrefFromFocusSession(session);
+  if (item.labelKey !== "map") return item.href;
+  return mapNavHrefFromFocusSession(readMapFocusSession());
 }
 
 interface NavSection {
@@ -114,7 +108,7 @@ const navSections: NavSection[] = [
         visibleWhen: ({ inbox }) => inbox.any,
       },
       { labelKey: "map", href: NAV_ROUTES.map, icon: IconMapPin, featureKey: "crisis_map" },
-      { labelKey: "insights", href: NAV_ROUTES.insights, icon: IconChartPie, featureKey: "insights" },
+      { labelKey: "analysis", href: NAV_ROUTES.analysis, icon: IconChartPie },
       { labelKey: "metrics", href: NAV_ROUTES.metrics, icon: IconChartBar, adminOnly: true },
       { labelKey: "operations", href: NAV_ROUTES.operations, icon: IconUser, featureKey: "operations", adminOnly: true },
       { labelKey: "cash", href: NAV_ROUTES.cash, icon: IconCurrencyDollar, featureKey: "cash_assistance", adminOnly: true },

@@ -1,33 +1,40 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
-import { Center, Loader, Select } from "@mantine/core";
+import { Center, Loader, Select, Stack } from "@mantine/core";
 import { api } from "~/trpc/react";
 import { useTeamCountry } from "~/hooks/use-team-country";
 import { useTeam } from "~/providers/team-provider";
 import { pickCountry } from "~/lib/analysis-view";
 import { canManageAnalyses } from "~/lib/roles";
+import type { CreatedAnalysis } from "~/server/api/mappers/analysis";
 import { AnalysisDetail, scopeKey, type AnalysisScopeRef } from "./analysis-detail";
 import { AnalysisHome } from "./analysis-home";
 import { NewAnalysisModal } from "./new-analysis-modal";
 import { Notice } from "./notice";
 
+/** What the page is showing. */
+type Opened = { kind: "country" } | { kind: "created"; created: CreatedAnalysis };
+
 /**
- * Insights -> Analysis (clear-api ADR-0007). Lands on the list of analyses for
- * the selected country: the country default plus the team's created ones over
- * districts. Gated by `analysis_v2` in the Insights page.
+ * Analysis (clear-api ADR-0007), the nav item at /analysis. Lands on the list
+ * of analyses for the selected country: the country default plus the team's
+ * created ones over districts.
  */
 export function AnalysisTab() {
   const t = useTranslations("analysis");
   const { countries: teamCountries, countryId: workingId, isLoading: teamLoading } = useTeamCountry();
-  const { activeTeamId } = useTeam();
+  const { activeTeamId, teams } = useTeam();
+  const teamId = activeTeamId ?? teams?.find((t) => t.id)?.id ?? null;
   const me = api.auth.me.useQuery(undefined, { staleTime: 60_000 });
+  // Create is part of the flow for every signed-in role. Removing one, and
+  // changing how often it updates, stays with an admin or a team analyst.
   const canManage =
-    canManageAnalyses(me.data?.user?.role, me.data?.user?.teamMemberships) && !!activeTeamId;
+    canManageAnalyses(me.data?.user?.role, me.data?.user?.teamMemberships) && !!teamId;
 
   const [picked, setPicked] = useState<string | null>(null);
-  const [openKey, setOpenKey] = useState<string | null>(null);
+  const [opened, setOpened] = useState<Opened | null>(null);
   const [creating, setCreating] = useState(false);
 
   // An unscoped team monitors globally: offer every country.
@@ -47,8 +54,11 @@ export function AnalysisTab() {
     {
       enabled: !!country,
       staleTime: 60_000,
-      // Keep polling while a created analysis waits for its first run.
-      refetchInterval: (q) => (q.state.data?.created.some((c) => !c.generatedAt) ? 30_000 : false),
+      refetchInterval: (q) => {
+        const rows = q.state.data?.created ?? [];
+        const pendingMissing = opened?.kind === "created" && !rows.some((c) => c.id === opened.created.id);
+        return pendingMissing || rows.some((c) => !c.generatedAt) ? 30_000 : false;
+      },
     },
   );
   const created = useMemo(
@@ -65,13 +75,23 @@ export function AnalysisTab() {
       </Center>
     );
   }
-  if (!country) return <Notice text={t("noCountry")} />;
+  if (!country) {
+    return <Notice text={t("noCountry")} />;
+  }
 
-  const refs: AnalysisScopeRef[] = [
-    { kind: "country", countryId: country.id, countryName: country.name },
-    ...created.map((c) => ({ kind: "created" as const, countryId: country.id, countryName: country.name, created: c })),
-  ];
-  const open = openKey ? refs.find((r) => scopeKey(r) === openKey) : undefined;
+  // A just-created analysis is opened from the form. Once the list refetch
+  // includes it, that row wins so the window and cadence match the server.
+  const openedScope: AnalysisScopeRef | null =
+    opened?.kind === "country"
+      ? { kind: "country", countryId: country.id, countryName: country.name }
+      : opened?.kind === "created"
+        ? {
+            kind: "created",
+            countryId: country.id,
+            countryName: country.name,
+            created: created.find((c) => c.id === opened.created.id) ?? opened.created,
+          }
+        : null;
 
   const selector =
     options.length > 1 ? (
@@ -85,69 +105,62 @@ export function AnalysisTab() {
         onChange={(id) => {
           if (!id) return;
           setPicked(id);
-          setOpenKey(null);
+          setOpened(null);
         }}
         data={options.map((c) => ({ value: c.id, label: c.name }))}
         data-testid="analysis-country"
       />
     ) : null;
 
-  let view: React.ReactNode;
-  if (open) {
+  let view: ReactNode;
+  if (openedScope) {
     view = (
       <AnalysisDetail
-        key={openKey}
-        scope={open}
-        onBack={() => setOpenKey(null)}
+        key={scopeKey(openedScope)}
+        scope={openedScope}
+        onBack={() => setOpened(null)}
       />
-    );
-  } else if (openKey && scopes.isFetching) {
-    // A just-created analysis, before the refreshed list includes it.
-    view = (
-      <Center mih="40vh">
-        <Loader size="sm" />
-      </Center>
     );
   } else {
     view = (
-      <AnalysisHome
-        countryId={country.id}
-        countryName={country.name}
-        country={scopes.data?.countries[0] ?? null}
-        created={created}
-        loading={scopes.isLoading}
-        canCreate={canManage}
-        canRemove={canManage}
-        teamId={activeTeamId}
-        selector={selector}
-        onOpenCountry={() => setOpenKey(`country:${country.id}`)}
-        onOpenCreated={(c) => setOpenKey(`created:${c.id}`)}
-        onNew={() => setCreating(true)}
-      />
+      <Stack gap={16}>
+        <AnalysisHome
+          countryId={country.id}
+          countryName={country.name}
+          country={scopes.data?.countries[0] ?? null}
+          created={created}
+          loading={scopes.isLoading}
+          canCreate
+          canRemove={canManage}
+          teamId={teamId}
+          selector={selector}
+          onOpenCountry={() => setOpened({ kind: "country" })}
+          onOpenCreated={(c) => setOpened({ kind: "created", created: c })}
+          onNew={() => setCreating(true)}
+        />
+      </Stack>
     );
   }
 
   return (
     <>
       {view}
-      {canManage && activeTeamId && (
-        <NewAnalysisModal
-          opened={creating}
-          onClose={() => setCreating(false)}
-          teamId={activeTeamId}
-          countryId={country.id}
-          countryName={country.name}
-          existing={created}
-          onCreated={(id) => {
-            setCreating(false);
-            setOpenKey(`created:${id}`);
-          }}
-          onOpenExisting={(c) => {
-            setCreating(false);
-            setOpenKey(`created:${c.id}`);
-          }}
-        />
-      )}
+      <NewAnalysisModal
+        opened={creating}
+        onClose={() => setCreating(false)}
+        teamId={teamId}
+        countryId={country.id}
+        countryName={country.name}
+        existing={created}
+        onCreated={(createdAnalysis) => {
+          setCreating(false);
+          setOpened({ kind: "created", created: createdAnalysis });
+        }}
+        onOpenExisting={(c) => {
+          setCreating(false);
+          setOpened({ kind: "created", created: c });
+        }}
+      />
     </>
   );
 }

@@ -293,6 +293,7 @@ function SectorRow({
   assessmentLevel,
   precision,
   isLast,
+  analysis = false,
 }: {
   label: string;
   Icon: SectorIcon;
@@ -307,25 +308,33 @@ function SectorRow({
   assessmentLevel: AssessmentLevel;
   precision: Precision | null;
   isLast: boolean;
+  /** Analysis page: the new card palette. Crisis detail keeps the app tokens. */
+  analysis?: boolean;
 }) {
   const t = useTranslations("crisisDetail");
   const tCommon = useTranslations("common");
   const [open, setOpen] = useState(false);
   const Chevron = open ? IconChevronDown : IconChevronRight;
+  const line = analysis ? "var(--sa-line)" : "var(--color-border)";
+  const raised = analysis ? "var(--sa-raised)" : "var(--color-bg-muted)";
+  const text = analysis ? "var(--sa-text)" : "var(--color-text-primary)";
+  const secondary = analysis ? "var(--sa-secondary)" : "var(--color-text-secondary)";
+  const muted = analysis ? "var(--sa-muted)" : "var(--color-text-muted)";
 
   return (
     <Box>
       {/* Row */}
       <Box
+        data-sector-row=""
         onClick={() => setOpen((o) => !o)}
-        className="hover:bg-[var(--color-bg-muted)]"
+        className={analysis ? undefined : "hover:bg-[var(--color-bg-muted)]"}
         style={{
           display: "grid",
           gridTemplateColumns: "180px 110px 100px 150px 120px 70px 24px",
           alignItems: "center",
           columnGap: 16,
           padding: "12px 16px",
-          borderBottom: open || !isLast ? "1px solid var(--color-border)" : undefined,
+          borderBottom: open || !isLast ? `1px solid ${line}` : undefined,
           cursor: "pointer",
           transition: "background 100ms",
         }}
@@ -335,14 +344,14 @@ function SectorRow({
           <Box
             style={{
               width: 32, height: 32, borderRadius: 6,
-              background: "var(--color-bg-muted)",
+              background: raised,
               display: "flex", alignItems: "center", justifyContent: "center",
               flexShrink: 0,
             }}
           >
-            <Icon size={16} color="var(--color-text-secondary)" />
+            <Icon size={16} color={secondary} />
           </Box>
-          <Text fw={600} size="sm" c="var(--color-text-primary)">{label}</Text>
+          <Text fw={600} size="sm" c={text}>{label}</Text>
         </Group>
 
         {/* Severity */}
@@ -368,17 +377,17 @@ function SectorRow({
         <Box>
           {pin != null ? (
             <Box>
-              <Text style={{ fontSize: 13, fontWeight: 700, color: "var(--color-text-primary)", lineHeight: 1 }}>
+              <Text style={{ fontSize: 13, fontWeight: 700, color: text, lineHeight: 1 }}>
                 {formatPin(pin)}
               </Text>
               {pinIsApprox && (
-                <Text style={{ fontSize: 9, color: "var(--color-text-muted)", lineHeight: 1, marginTop: 2 }}>
+                <Text style={{ fontSize: 9, color: muted, lineHeight: 1, marginTop: 2 }}>
                   {t("needs.estChildShare")}
                 </Text>
               )}
             </Box>
           ) : (
-            <Text size="xs" c="var(--color-text-muted)">-</Text>
+            <Text size="xs" c={muted}>-</Text>
           )}
         </Box>
 
@@ -387,7 +396,7 @@ function SectorRow({
           {ochaData ? (
             <OrgPresence byType={ochaData.by_type} total={ochaData.org_count} />
           ) : (
-            <Text size="xs" c="var(--color-text-muted)">-</Text>
+            <Text size="xs" c={muted}>-</Text>
           )}
         </Box>
 
@@ -399,24 +408,24 @@ function SectorRow({
         {/* Precision */}
         <Box>
           {precision ? (
-            <Text style={{ fontSize: 11, fontWeight: 500, color: "var(--color-text-muted)" }}>
+            <Text style={{ fontSize: 11, fontWeight: 500, color: muted }}>
               {t(`needs.precision.${precision === "District" ? "district" : "locality"}`)}
             </Text>
           ) : (
-            <Text size="xs" c="var(--color-text-muted)">-</Text>
+            <Text size="xs" c={muted}>-</Text>
           )}
         </Box>
 
         {/* Chevron */}
-        <Chevron size={14} color="var(--color-text-muted)" />
+        <Chevron size={14} color={muted} />
       </Box>
 
       {/* Expanded detail */}
       {open && (
         <Box
           style={{
-            background: "var(--color-bg-muted)",
-            borderBottom: isLast ? undefined : "1px solid var(--color-border)",
+            background: raised,
+            borderBottom: isLast ? undefined : `1px solid ${line}`,
             paddingTop: 14,
             paddingBottom: 14,
             paddingInlineEnd: 16,
@@ -428,7 +437,7 @@ function SectorRow({
             {detail ?? (
             <Box>
               <Group gap={6} mb={6} align="center">
-                <Text size="xs" fw={700} c="var(--color-text-secondary)" tt="uppercase" style={{ letterSpacing: "0.04em", fontSize: 10 }}>
+                <Text size="xs" fw={700} c={secondary} tt="uppercase" style={{ letterSpacing: "0.04em", fontSize: 10 }}>
                   {t("needs.summaryTitle")}
                 </Text>
                 <Badge size="xs" style={{ background: "var(--color-ai-light)", color: "var(--color-ai)", border: "1px solid var(--color-ai-border)", fontWeight: 600 }}>
@@ -436,11 +445,11 @@ function SectorRow({
                 </Badge>
               </Group>
               {description ? (
-                <Text size="xs" c="var(--color-text-secondary)" style={{ lineHeight: 1.6 }}>
+                <Text size="xs" c={secondary} style={{ lineHeight: 1.6 }}>
                   {description}
                 </Text>
               ) : (
-                <Text size="xs" c="var(--color-text-muted)" style={{ fontStyle: "italic" }}>
+                <Text size="xs" c={muted} style={{ fontStyle: "italic" }}>
                   {t("needs.aiSummaryComingSoon")}
                 </Text>
               )}
@@ -466,20 +475,20 @@ function SectorRow({
             {/* 3W organisations */}
             {ochaData?.organizations && ochaData.organizations.length > 0 && (
               <Stack gap={4}>
-                <Text size="xs" fw={700} c="var(--color-text-secondary)" tt="uppercase" style={{ letterSpacing: "0.04em", fontSize: 10 }} mb={4}>
+                <Text size="xs" fw={700} c={secondary} tt="uppercase" style={{ letterSpacing: "0.04em", fontSize: 10 }} mb={4}>
                   {t("needs.orgsActive")}
                 </Text>
                 {ochaData.organizations.slice(0, 10).map((org) => (
                   <Group key={org.acronym} gap={8} wrap="nowrap">
-                    <Text size="xs" fw={600} c="var(--color-text-primary)" style={{ minWidth: 60 }}>{org.acronym}</Text>
-                    <Text size="xs" c="var(--color-text-secondary)" truncate>{org.name}</Text>
-                    <Badge size="xs" style={{ background: "var(--color-bg-white)", color: "var(--color-text-muted)", border: "1px solid var(--color-border)", flexShrink: 0 }}>
+                    <Text size="xs" fw={600} c={text} style={{ minWidth: 60 }}>{org.acronym}</Text>
+                    <Text size="xs" c={secondary} truncate>{org.name}</Text>
+                    <Badge size="xs" style={{ background: analysis ? "var(--sa-card)" : "var(--color-bg-white)", color: muted, border: `1px solid ${line}`, flexShrink: 0 }}>
                       {org.type}
                     </Badge>
                   </Group>
                 ))}
                 {ochaData.organizations.length > 10 && (
-                  <Text size="xs" c="var(--color-text-muted)" mt={4}>{t("needs.moreOrgs", { count: ochaData.organizations.length - 10 })}</Text>
+                  <Text size="xs" c={muted} mt={4}>{t("needs.moreOrgs", { count: ochaData.organizations.length - 10 })}</Text>
                 )}
               </Stack>
             )}
@@ -812,10 +821,15 @@ interface NeedsAssessmentViewProps {
   scopeBadge?: string | null;
   /** Body of the severity-column info modal; the adapter owns the scale. */
   severityLegend: ReactNode;
+  /**
+   * Analysis page card. Sets the rounded surface and paints the table in the
+   * analysis palette. Crisis detail leaves this unset.
+   */
+  panelClassName?: string;
 }
 
 /** Sector needs table shared by every scope: rows arrive fully resolved. */
-export function NeedsAssessmentView({ rows: unsorted, summary, scopeBadge, severityLegend }: NeedsAssessmentViewProps) {
+export function NeedsAssessmentView({ rows: unsorted, summary, scopeBadge, severityLegend, panelClassName }: NeedsAssessmentViewProps) {
   const t = useTranslations("crisisDetail");
   const [severityInfoOpen, setSeverityInfoOpen] = useState(false);
   const [presenceInfoOpen, setPresenceInfoOpen] = useState(false);
@@ -823,18 +837,26 @@ export function NeedsAssessmentView({ rows: unsorted, summary, scopeBadge, sever
   const [assessmentInfoOpen, setAssessmentInfoOpen] = useState(false);
   const [precisionInfoOpen, setPrecisionInfoOpen] = useState(false);
   const rows = useMemo(() => [...unsorted].sort((a, b) => a.severityRank - b.severityRank), [unsorted]);
+  const analysis = panelClassName != null;
+  const line = analysis ? "var(--sa-line)" : "var(--color-border)";
+  const text = analysis ? "var(--sa-text)" : "var(--color-text-primary)";
 
   return (
-    <Box p={24}>
+    <Box p={analysis ? 0 : 24}>
       {summary}
 
       {/* Panel card */}
-      <Box style={{ border: "1px solid var(--color-border)", background: "var(--color-bg-white)" }}>
+      <Box
+        className={panelClassName}
+        data-testid={analysis ? "analysis-sectors-card" : undefined}
+        data-surface={analysis ? "context-card" : undefined}
+        style={analysis ? undefined : { border: "1px solid var(--color-border)", background: "var(--color-bg-white)" }}
+      >
         {/* Header */}
-        <Box px={16} py={12} style={{ borderBottom: "1px solid var(--color-border)" }}>
+        <Box px={16} py={12} style={{ borderBottom: `1px solid ${line}` }}>
           <Group justify="space-between" align="center" wrap="nowrap">
             <Group gap={8} align="center">
-              <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 14 }}>
+              <Text fw={600} c={text} style={{ fontSize: 14 }}>
                 {t("needs.sectorsTitle")}
               </Text>
               {scopeBadge && (
@@ -854,8 +876,8 @@ export function NeedsAssessmentView({ rows: unsorted, summary, scopeBadge, sever
             gridTemplateColumns: "180px 110px 100px 150px 120px 70px 24px",
             columnGap: 16,
             padding: "8px 16px",
-            borderBottom: "1px solid var(--color-border)",
-            background: "var(--color-bg-muted)",
+            borderBottom: `1px solid ${line}`,
+            background: analysis ? "var(--sa-raised)" : "var(--color-bg-muted)",
           }}
         >
           <ColHeader>{t("needs.columns.sector")}</ColHeader>
@@ -899,6 +921,7 @@ export function NeedsAssessmentView({ rows: unsorted, summary, scopeBadge, sever
             assessmentLevel={row.assessmentLevel}
             precision={row.precision}
             isLast={idx === rows.length - 1}
+            analysis={analysis}
           />
         ))}
       </Box>

@@ -66,11 +66,13 @@ export function NewAnalysisModal({
 }: {
   opened: boolean;
   onClose: () => void;
-  teamId: string;
+  /** The active team the analysis is filed under. Absent until one is selected. */
+  teamId: string | null;
   countryId: string;
   countryName: string;
   existing: CreatedAnalysis[];
-  onCreated: (automationId: string) => void;
+  /** Opens the new analysis immediately, before the list refetch includes it. */
+  onCreated: (created: CreatedAnalysis) => void;
   onOpenExisting: (created: CreatedAnalysis) => void;
 }) {
   const t = useTranslations("analysis.create");
@@ -159,13 +161,42 @@ export function NewAnalysisModal({
     onSuccess: async (res, input) => {
       await utils.analysis.scopes.invalidate();
       // The team already had these areas (e.g. another member created them).
-      if (res.existing) notifications.show({ message: t("existing") });
+      if (res.existing) {
+        notifications.show({ message: t("existing") });
+        const row = existing.find((c) => c.id === res.id);
+        reset();
+        if (row) onOpenExisting(row);
+        else onClose();
+        return;
+      }
       // "On request" could not be set up (first version not requested, or the
       // switch-off failed): the server leaves it weekly, so say so.
-      else if (input.cadence === "manual" && res.cadence === "weekly")
+      if (input.cadence === "manual" && res.cadence === "weekly")
         notifications.show({ color: "yellow", message: t("manualFallback") });
+      const locationIds = selected.length > 0 ? selected : input.locationIds;
+      if (locationIds.length === 0) {
+        reset();
+        onClose();
+        return;
+      }
+      const pending: CreatedAnalysis = {
+        id: res.id,
+        name: name || locationIds.join(", "),
+        locationIds,
+        eventTypes: [],
+        needSectors: [],
+        countryId,
+        // Same UTC midnight the server stores. The list refetch replaces this
+        // with the automation row if the two clocks disagree.
+        windowStart: createdWindowStart(),
+        cadence: res.cadence,
+        enabled: res.cadence !== "manual",
+        createdAt: new Date().toISOString(),
+        analysisId: null,
+        generatedAt: null,
+      };
       reset();
-      onCreated(res.id);
+      onCreated(pending);
     },
   });
 
@@ -340,6 +371,12 @@ export function NewAnalysisModal({
           )
         )}
 
+        {!teamId && (
+          <Alert color="yellow" data-testid="analysis-create-need-team">
+            {t("needTeam")}
+          </Alert>
+        )}
+
         {create.isError && (
           <Alert color="red" data-testid="analysis-create-error">
             {t("error")}
@@ -352,9 +389,12 @@ export function NewAnalysisModal({
           </Button>
           <Button
             color="dark"
-            disabled={picked.length === 0 || !!duplicate}
+            disabled={!teamId || picked.length === 0 || !!duplicate}
             loading={create.isPending}
-            onClick={() => create.mutate({ teamId, locationIds: selected, cadence })}
+            onClick={() => {
+              if (!teamId) return;
+              create.mutate({ teamId, locationIds: selected, cadence });
+            }}
             data-testid="analysis-create-submit"
           >
             {t("submit")}

@@ -3,8 +3,7 @@
  *
  * Most entries gate a top-level nav item (they carry a `route`). Entries
  * without a `route` gate a sub-tab within a page (e.g. the Ground Intel tab in
- * Detection, the Situation Analysis tab in Insights) — the component reads the
- * flag via `useFeatureEnabled(key)`.
+ * Detection) — the component reads the flag via `useFeatureEnabled(key)`.
  *
  * Tier 1 = Core (always on, non-toggleable)
  * Tier 2 = High priority
@@ -51,14 +50,6 @@ export const FEATURE_FLAGS: FeatureFlagDefinition[] = [
   },
 
   // Tier 3 - Medium Priority
-  {
-    key: "insights",
-    label: "Insights",
-    description: "Situation reports, scenario planning, and impact assessment",
-    tier: 3,
-    defaultEnabled: true,
-    route: "/insights",
-  },
   {
     key: "operations",
     label: "Operations",
@@ -122,29 +113,6 @@ export const FEATURE_FLAGS: FeatureFlagDefinition[] = [
       "Ground Intel review tab in the Detection page (also admin/analyst only)",
     tier: 2,
     defaultEnabled: true,
-  },
-  {
-    key: "crisis_overview",
-    label: "Crisis Overview",
-    description:
-      "Crisis Overview tab in the Insights page (the crises list). UI-only gate; when off the page falls back to the next enabled Insights tab.",
-    tier: 3,
-    defaultEnabled: true,
-  },
-  {
-    key: "situation_analysis",
-    label: "Situation Analysis",
-    description: "Situation Analysis tab in the Insights page",
-    tier: 3,
-    defaultEnabled: true,
-  },
-  {
-    key: "analysis_v2",
-    label: "Analysis",
-    description:
-      "Analysis tab in the Insights page: the unified scoped analysis (PRD Situation analysis (neo)), country scope first, read from clear-api's frame-scoped `analysis` (ADR-0007). UI-only gate. Remove once it replaces the Crisis and Situation Analysis tabs.",
-    tier: 3,
-    defaultEnabled: false,
   },
   {
     key: "event_enrichment",

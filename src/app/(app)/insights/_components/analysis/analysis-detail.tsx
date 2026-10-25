@@ -2,25 +2,20 @@
 
 import { useEffect, useState } from "react";
 import { useFormatter, useNow, useTranslations } from "next-intl";
-import { Alert, Badge, Box, Center, Group, Loader, SimpleGrid, Stack, Tabs, Text, Title, UnstyledButton } from "@mantine/core";
-import { IconArrowLeft } from "@tabler/icons-react";
+import { Alert, Box, Center, Loader, SimpleGrid, Stack, Tabs, Text } from "@mantine/core";
 import { api } from "~/trpc/react";
 import { useTeam } from "~/providers/team-provider";
 import { generationOverdue, isStale } from "~/lib/analysis-view";
 import type { CreatedAnalysis } from "~/server/api/mappers/analysis";
-import { AiSummaryCard } from "../situation/ai-summary-card";
 import { SituationSources } from "../situation/situation-sources";
-import { AnalysisKpis } from "./analysis-kpis";
-import { ScopeMap } from "./scope-map";
-import { ContextRisks } from "./context-risks";
-import { EventsTimeline } from "./events-timeline";
-import { DisplacementSection, ForecastSection, HazardsSection } from "./findings-panel";
 import { AnalysisNeeds } from "./analysis-needs";
 import { EventsList } from "./events-list";
-import { KeyFindings } from "./key-findings";
 import { Notice } from "./notice";
 import { CreateReportButton } from "./create-report-button";
 import { RefreshButton, type RefreshFrame } from "./refresh-button";
+import { AnalysisCrumbs, AnalysisHeader, AnalysisOverview } from "./dark/dark-analysis";
+import { CHANGE_ANCHOR, changeChips, changeSessionKey, looseChangeNotes, type ChangeSection } from "./dark/change-notes";
+import styles from "./dark/analysis-dark.module.css";
 
 type Tab = "overview" | "needs" | "sources";
 
@@ -57,6 +52,7 @@ export function AnalysisDetail({
   const format = useFormatter();
   const now = useNow({ updateInterval: 60_000 });
   const [tab, setTab] = useState<Tab>("overview");
+  const [changesSeen, setChangesSeen] = useState(false);
   const { activeTeamId } = useTeam();
   // The version on screen when an update was requested (none yet for an overdue
   // first version), and when; polling runs until it changes or the wait times out.
@@ -149,8 +145,13 @@ export function AnalysisDetail({
     { enabled: locationIds.length === 1, staleTime: 5 * 60_000 },
   );
   const since = data?.scope.windowStart;
+  const eventTypes = isCountry ? [] : scope.created.eventTypes;
   const events = api.analysis.events.useQuery(
-    { locationIds, from: since ?? "" },
+    {
+      locationIds,
+      from: since ?? "1970-01-01T00:00:00.000Z",
+      ...(eventTypes.length > 0 ? { eventTypes } : {}),
+    },
     { enabled: !!since, staleTime: 5 * 60_000 },
   );
 
@@ -187,7 +188,13 @@ export function AnalysisDetail({
   } else {
     body = (
       <>
-        <Tabs value={tab} onChange={(v) => setTab((v as Tab) ?? "overview")} mb={24} styles={{ tab: { fontSize: 14 } }}>
+        <Tabs
+          value={tab}
+          onChange={(v) => setTab((v as Tab) ?? "overview")}
+          mb={24}
+          className={styles.tabs}
+          styles={{ tab: { fontSize: 14 } }}
+        >
           <Tabs.List>
             <Tabs.Tab value="overview">{t("tabs.overview")}</Tabs.Tab>
             <Tabs.Tab value="needs">{t("tabs.needs")}</Tabs.Tab>
@@ -196,42 +203,28 @@ export function AnalysisDetail({
         </Tabs>
 
         {tab === "overview" && (
-          <>
-            <Box mb={24}>
-              <AiSummaryCard data={data} onOpenSources={openSources} previewSentences={2} />
-              <KeyFindings items={data.keyFindings} sources={data.sources} onOpenSources={openSources} />
-            </Box>
-            <AnalysisKpis data={data} figures={figures.data} scopeName={name} />
-            <ScopeMap
-              countryId={scope.countryId}
-              countryName={scope.countryName}
-              scopeName={name}
-              areaIds={isCountry ? [] : locationIds}
-              since={data.scope.windowStart}
-              events={events.data}
-            />
-            <ContextRisks risks={data.contextRisks} sources={data.sources} onOpenSources={openSources} />
-            {/* A country has too many events for the timeline to read. */}
-            {!isCountry && (
-              <EventsTimeline
-                events={events.data?.items ?? []}
-                totalCount={events.data?.totalCount ?? 0}
-                start={data.scope.windowStart}
-              />
-            )}
-            <HazardsSection data={data} onOpenSources={openSources} />
-            <DisplacementSection data={data} onOpenSources={openSources} />
-            <ForecastSection data={data} onOpenSources={openSources} />
-          </>
+          <AnalysisOverview
+            data={data}
+            figures={figures.data}
+            events={events.data}
+            eventsPending={events.isLoading}
+            scopeName={name}
+            countryId={scope.countryId}
+            countryName={scope.countryName}
+            areaIds={isCountry ? [] : locationIds}
+            isCountry={isCountry}
+            onOpenSources={openSources}
+            noteFor={(section) => changeChips(data.changes.notes).find((chip) => chip.section === section)?.note}
+          />
         )}
         {tab === "needs" && <AnalysisNeeds sectors={data.sectors} sources={data.sources} scopeName={name} />}
         {tab === "sources" && (
           <SimpleGrid cols={{ base: 1, lg: 2 }} spacing={16}>
             <Box>
-              <Text fw={600} c="var(--color-text-primary)" mb={12} style={{ fontSize: 14 }}>
-                {t("sources.title")}
-              </Text>
-              <SituationSources sources={data.sources} />
+            <Text fw={600} c="var(--sa-text)" mb={12} style={{ fontSize: 14 }}>
+              {t("sources.title")}
+            </Text>
+            <SituationSources sources={data.sources} className={styles.sourcesCard} />
             </Box>
             <EventsList events={events.data} />
           </SimpleGrid>
@@ -240,90 +233,99 @@ export function AnalysisDetail({
     );
   }
 
+  const chips = data ? changeChips(data.changes.notes) : [];
+  const loose = data ? looseChangeNotes(data.changes.notes) : [];
+  const changesKey = data ? changeSessionKey(scopeKey(scope), data.changes.notes) : null;
+  useEffect(() => {
+    if (!changesKey) return;
+    try {
+      setChangesSeen(sessionStorage.getItem(changesKey) === "1");
+    } catch {
+      setChangesSeen(false);
+    }
+  }, [changesKey]);
+  const dismissChanges = () => {
+    setChangesSeen(true);
+    if (!changesKey) return;
+    try {
+      sessionStorage.setItem(changesKey, "1");
+    } catch {
+      // Private mode: the band stays dismissed until this view unmounts.
+    }
+  };
+
+  const jumpTo = (section: ChangeSection) => {
+    setTab("overview");
+    requestAnimationFrame(() => {
+      document.getElementById(CHANGE_ANCHOR[section])?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  };
+  const actions = data && refreshFrame && (
+    <>
+      <RefreshButton
+        frame={refreshFrame}
+        waiting={waiting}
+        onRequested={() => setRequested({ from: data.crisis.generatedAt, at: Date.now() })}
+      />
+      <CreateReportButton
+        data={data}
+        figures={figures.data}
+        events={events.data}
+        scopeName={name}
+        countryId={scope.countryId}
+        areaIds={isCountry ? [] : locationIds}
+        isCountry={isCountry}
+      />
+    </>
+  );
+
+  const period = data
+    ? data.scope.windowEnd && Date.parse(data.scope.windowEnd) < now.getTime()
+      ? t("meta.period", {
+          start: format.dateTime(new Date(data.scope.windowStart), { day: "numeric", month: "short", year: "numeric" }),
+          end: format.dateTime(new Date(data.scope.windowEnd), { day: "numeric", month: "short", year: "numeric" }),
+        })
+      : t("meta.covers", {
+          start: format.dateTime(new Date(data.scope.windowStart), { day: "numeric", month: "short", year: "numeric" }),
+        })
+    : "";
+
   return (
-    <Box>
-      <UnstyledButton onClick={onBack} mb={12} data-testid="analysis-back">
-        <Group gap={6}>
-          <IconArrowLeft size={14} color="var(--color-text-secondary)" />
-          <Text c="var(--color-text-secondary)" style={{ fontSize: 13 }}>
-            {t("home.back")}
-          </Text>
-        </Group>
-      </UnstyledButton>
-
-      <Group justify="space-between" align="flex-start" mb={data ? 8 : 24} wrap="nowrap">
-        <Box style={{ minWidth: 0 }}>
-          <Badge size="sm" radius="sm" mb={8} style={{ background: "var(--color-bg-muted)", color: "var(--color-text-secondary)" }}>
-            {isCountry ? t("scope.country") : t("scope.created")}
-          </Badge>
-          <Title order={2} c="var(--color-text-primary)" style={{ fontSize: 26, lineHeight: 1.15 }}>
-            {name}
-          </Title>
-        </Box>
-        {data && refreshFrame && (
-          <Group gap={8} wrap="nowrap">
-            <RefreshButton
-              frame={refreshFrame}
-              waiting={waiting}
-              onRequested={() => setRequested({ from: data.crisis.generatedAt, at: Date.now() })}
-            />
-            <CreateReportButton
-              data={data}
-              figures={figures.data}
-              events={events.data}
-              scopeName={name}
-              countryId={scope.countryId}
-              areaIds={isCountry ? [] : locationIds}
-              isCountry={isCountry}
-            />
-          </Group>
-        )}
-      </Group>
-
-      {data && (
-        <Group gap={12} mb={24} data-testid="analysis-meta">
-          <Badge
-            size="md"
-            radius="xl"
-            leftSection={<Box style={{ width: 7, height: 7, borderRadius: "50%", background: stale ? "var(--color-warning)" : "var(--color-success)" }} />}
-            style={{ background: "var(--color-bg-muted)", color: "var(--color-text-primary)", textTransform: "none", fontWeight: 500 }}
-          >
-            {t("meta.updated", { relative: format.relativeTime(new Date(data.crisis.generatedAt), now) })}
-          </Badge>
-          {stale && (
-            <Badge
-              size="md"
-              radius="xl"
-              data-testid="analysis-stale"
-              style={{ background: "var(--color-warning-light)", color: "var(--color-warning)", textTransform: "none", fontWeight: 500 }}
-            >
-              {t("meta.stale")}
-            </Badge>
-          )}
-          <Text c="var(--color-text-secondary)" style={{ fontSize: 13 }}>
-            {/* A closed frame (e.g. last year's country analysis) states its end date. */}
-            {data.scope.windowEnd && Date.parse(data.scope.windowEnd) < now.getTime()
-              ? t("meta.period", {
-                  start: format.dateTime(new Date(data.scope.windowStart), { day: "numeric", month: "short", year: "numeric" }),
-                  end: format.dateTime(new Date(data.scope.windowEnd), { day: "numeric", month: "short", year: "numeric" }),
+    <Box className={styles.page} data-testid="analysis-page">
+      {data ? (
+        <AnalysisHeader
+          eyebrow={isCountry ? t("scope.country") : t("scope.created")}
+          name={name}
+          updated={t("meta.updated", { relative: format.relativeTime(new Date(data.crisis.generatedAt), now) })}
+          stale={stale}
+          staleLabel={t("meta.stale")}
+          period={period}
+          builtFrom={t("meta.builtFrom", { reports: reportCitations, events: eventCitations })}
+          chips={chips}
+          loose={loose}
+          changesStamp={
+            data.changes.comparedTo
+              ? t("layout.changesStamp", {
+                  date: format.dateTime(new Date(data.changes.comparedTo), { day: "numeric", month: "short" }),
                 })
-              : t("meta.covers", {
-                  start: format.dateTime(new Date(data.scope.windowStart), { day: "numeric", month: "short", year: "numeric" }),
-                })}
-          </Text>
-          {data.crisis.freshestSourceAt && (
-            <Text c="var(--color-text-secondary)" style={{ fontSize: 13 }}>
-              {t("meta.asOf", {
-                date: format.dateTime(new Date(data.crisis.freshestSourceAt), { day: "numeric", month: "short", year: "numeric" }),
-              })}
-            </Text>
-          )}
-          <UnstyledButton onClick={openSources}>
-            <Text c="var(--color-text-secondary)" style={{ fontSize: 13, textDecoration: "underline" }}>
-              {t("meta.builtFrom", { reports: reportCitations, events: eventCitations })}
-            </Text>
-          </UnstyledButton>
-        </Group>
+              : undefined
+          }
+          seen={changesSeen}
+          onDismiss={dismissChanges}
+          onJump={jumpTo}
+          onOpenSources={openSources}
+          onHome={onBack}
+          actions={actions}
+        />
+      ) : (
+        <header className={styles.header}>
+          <AnalysisCrumbs name={name} onHome={onBack} />
+          <div className={styles.eyebrowRow}>
+            <span className={styles.eyebrow}>{isCountry ? t("scope.country") : t("scope.created")}</span>
+            {actions}
+          </div>
+          <h1 className={styles.title}>{name}</h1>
+        </header>
       )}
 
       {waiting && (

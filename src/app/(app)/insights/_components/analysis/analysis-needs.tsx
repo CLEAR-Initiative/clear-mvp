@@ -12,6 +12,7 @@ import {
 } from "~/components/crisis-detail/needs-assessment-panel";
 import type { SaSector, SaSeverity, SaSource } from "~/server/api/mappers/situation-analysis";
 import { PillarList } from "../situation/situation-sectors";
+import styles from "./dark/analysis-dark.module.css";
 
 /** Analysis sector ids (pipeline SAF taxonomy) per needs-table row. */
 const SECTOR_ID: Record<NeedsSectorKey, string> = {
@@ -119,5 +120,12 @@ export function AnalysisNeeds({ sectors, sources, scopeName }: { sectors: SaSect
     [sectors, sources, tSev, tA],
   );
 
-  return <NeedsAssessmentView rows={rows} scopeBadge={scopeName} severityLegend={<AnalysisSeverityLegend />} />;
+  return (
+    <NeedsAssessmentView
+      rows={rows}
+      scopeBadge={scopeName}
+      severityLegend={<AnalysisSeverityLegend />}
+      panelClassName={styles.sectorsCard}
+    />
+  );
 }

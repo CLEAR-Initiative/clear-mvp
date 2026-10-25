@@ -1,10 +1,22 @@
+import path from "path";
+import { fileURLToPath } from "url";
 import withPWA from "@ducanh2912/next-pwa";
 import createNextIntlPlugin from "next-intl/plugin";
 
 const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 
+const appDir = path.dirname(fileURLToPath(import.meta.url));
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // The image starts `node server.js` from the standalone directory, so the
+  // tracing root has to be this app. A parent root nests that file and the
+  // container exits before it listens. Dev still uses the parent: Turbopack
+  // has to see the symlinked node_modules, and a lockfile in the home
+  // directory would otherwise become the root.
+  ...(process.env.NODE_ENV === "development"
+    ? { turbopack: { root: path.resolve(appDir, "..") } }
+    : { outputFileTracingRoot: appDir }),
   devIndicators: false,
   output: "standalone",
   // Force @sentry/nextjs and the instrumentation config files into the
