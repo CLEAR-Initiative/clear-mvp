@@ -25,10 +25,13 @@ type Opened = { kind: "country" } | { kind: "created"; created: CreatedAnalysis 
 export function AnalysisTab() {
   const t = useTranslations("analysis");
   const { countries: teamCountries, countryId: workingId, isLoading: teamLoading } = useTeamCountry();
-  const { activeTeamId } = useTeam();
+  const { activeTeamId, teams } = useTeam();
+  const teamId = activeTeamId ?? teams?.find((t) => t.id)?.id ?? null;
   const me = api.auth.me.useQuery(undefined, { staleTime: 60_000 });
+  // Create is part of the flow for every signed-in role. Removing one, and
+  // changing how often it updates, stays with an admin or a team analyst.
   const canManage =
-    canManageAnalyses(me.data?.user?.role, me.data?.user?.teamMemberships) && !!activeTeamId;
+    canManageAnalyses(me.data?.user?.role, me.data?.user?.teamMemberships) && !!teamId;
 
   const [picked, setPicked] = useState<string | null>(null);
   const [opened, setOpened] = useState<Opened | null>(null);
@@ -127,9 +130,9 @@ export function AnalysisTab() {
           country={scopes.data?.countries[0] ?? null}
           created={created}
           loading={scopes.isLoading}
-          canCreate={canManage}
+          canCreate
           canRemove={canManage}
-          teamId={activeTeamId}
+          teamId={teamId}
           selector={selector}
           onOpenCountry={() => setOpened({ kind: "country" })}
           onOpenCreated={(c) => setOpened({ kind: "created", created: c })}
@@ -142,24 +145,22 @@ export function AnalysisTab() {
   return (
     <>
       {view}
-      {canManage && activeTeamId && (
-        <NewAnalysisModal
-          opened={creating}
-          onClose={() => setCreating(false)}
-          teamId={activeTeamId}
-          countryId={country.id}
-          countryName={country.name}
-          existing={created}
-          onCreated={(createdAnalysis) => {
-            setCreating(false);
-            setOpened({ kind: "created", created: createdAnalysis });
-          }}
-          onOpenExisting={(c) => {
-            setCreating(false);
-            setOpened({ kind: "created", created: c });
-          }}
-        />
-      )}
+      <NewAnalysisModal
+        opened={creating}
+        onClose={() => setCreating(false)}
+        teamId={teamId}
+        countryId={country.id}
+        countryName={country.name}
+        existing={created}
+        onCreated={(createdAnalysis) => {
+          setCreating(false);
+          setOpened({ kind: "created", created: createdAnalysis });
+        }}
+        onOpenExisting={(c) => {
+          setCreating(false);
+          setOpened({ kind: "created", created: c });
+        }}
+      />
     </>
   );
 }

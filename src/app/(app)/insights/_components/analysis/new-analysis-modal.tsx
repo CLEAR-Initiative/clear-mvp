@@ -66,7 +66,8 @@ export function NewAnalysisModal({
 }: {
   opened: boolean;
   onClose: () => void;
-  teamId: string;
+  /** The active team the analysis is filed under. Absent until one is selected. */
+  teamId: string | null;
   countryId: string;
   countryName: string;
   existing: CreatedAnalysis[];
@@ -370,6 +371,12 @@ export function NewAnalysisModal({
           )
         )}
 
+        {!teamId && (
+          <Alert color="yellow" data-testid="analysis-create-need-team">
+            {t("needTeam")}
+          </Alert>
+        )}
+
         {create.isError && (
           <Alert color="red" data-testid="analysis-create-error">
             {t("error")}
@@ -382,9 +389,12 @@ export function NewAnalysisModal({
           </Button>
           <Button
             color="dark"
-            disabled={picked.length === 0 || !!duplicate}
+            disabled={!teamId || picked.length === 0 || !!duplicate}
             loading={create.isPending}
-            onClick={() => create.mutate({ teamId, locationIds: selected, cadence })}
+            onClick={() => {
+              if (!teamId) return;
+              create.mutate({ teamId, locationIds: selected, cadence });
+            }}
             data-testid="analysis-create-submit"
           >
             {t("submit")}

@@ -3191,6 +3191,7 @@
       "firstRun": "La première version prend généralement quelques minutes. Vous pouvez quitter cette page en attendant.",
       "duplicate": "Votre équipe a déjà une analyse pour ces districts : {name}.",
       "openExisting": "L'ouvrir",
+      "needTeam": "Rejoignez une équipe pour créer une analyse. Un administrateur peut vous y ajouter.",
       "error": "L'analyse n'a pas pu être créée. Veuillez réessayer.",
       "cancel": "Annuler",
       "submit": "Créer l'analyse",

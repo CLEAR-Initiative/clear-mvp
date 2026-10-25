@@ -3191,6 +3191,7 @@
       "firstRun": "The first version usually takes a few minutes. You can leave this page meanwhile.",
       "duplicate": "Your team already has an analysis for these districts: {name}.",
       "openExisting": "Open it",
+      "needTeam": "Join a team to create an analysis. An administrator can add you.",
       "error": "The analysis could not be created. Please try again.",
       "cancel": "Cancel",
       "submit": "Create analysis",

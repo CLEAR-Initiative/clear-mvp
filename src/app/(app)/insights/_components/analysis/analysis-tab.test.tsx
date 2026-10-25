@@ -450,12 +450,16 @@ describe("Insights > Analysis tab", () => {
     expect(screen.getByTestId("analysis-generating")).toHaveTextContent("analysis.generating.title");
   });
 
-  it("hides create and remove from viewers", () => {
+  it("offers New analysis to every role, and hides remove from viewers", async () => {
     role = "viewer";
+    activeTeamId = null;
     scopesResult.created = [created()];
     renderHome();
-    expect(screen.queryByTestId("analysis-new")).not.toBeInTheDocument();
+    expect(screen.getByTestId("analysis-new")).toBeInTheDocument();
     expect(screen.queryByTestId("analysis-remove")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("analysis-new"));
+    expect(await screen.findByTestId("analysis-create-submit")).toBeDisabled();
+    expect(screen.getByTestId("analysis-create-need-team")).toBeInTheDocument();
   });
 
   it("removes a created analysis only after confirming", () => {
