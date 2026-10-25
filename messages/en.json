@@ -3526,8 +3526,7 @@
     },
     "tiles": {
       "counted": {
-        "label": "Events measured",
-        "detail": "of {total, number} events in range"
+        "label": "Measured coverage"
       },
       "byNextDay": {
         "label": "Detected by next day"
@@ -3539,7 +3538,12 @@
         "label": "Events with an onset"
       },
       "ofCounted": "{n, number} of {counted, number} measured",
-      "ofInRange": "{n, number} of {total, number} in range"
+      "ofInRange": "{n, number} of {total, number} in range",
+      "delta": {
+        "points": "{points} pts",
+        "vs": "vs {previous} before",
+        "none": "No earlier figure"
+      }
     },
     "histogram": {
       "title": "Days from onset to first signal",
@@ -3555,19 +3559,36 @@
       }
     },
     "weekly": {
-      "title": "Weekly trend",
-      "subtitle": "Share of each ISO week's measured events",
+      "title": "Time to detection over time",
+      "subtitle": {
+        "rolling": "Share of measured events over the {weeks} weeks to each week",
+        "weekly": "Share of each ISO week's measured events"
+      },
       "legend": "Legend",
       "series": {
         "byNextDay": "By next day",
-        "sameDay": "Same day"
+        "sameDay": "Same day",
+        "measured": "Measured coverage"
       },
       "partial": "partial",
       "tooltip": {
         "week": "{week} · from {start}",
         "n": "n = {n, plural, one {# measured event} other {# measured events}}",
-        "partial": "Partial week: still in progress"
-      }
+        "partial": "Partial week: still in progress",
+        "window": "{weeks, plural, one {Week} other {# weeks}} to {week} (week of {start})",
+        "nOfRange": "n = {n, plural, one {# measured event} other {# measured events}} of {total, number} in range"
+      },
+      "mode": {
+        "label": "Trend view",
+        "rolling": "{weeks}-week rolling",
+        "weekly": "Weekly"
+      },
+      "loading": "Loading the trend…",
+      "error": "Couldn't load the trend: {message}",
+      "empty": "No measured events in the trend's weeks yet.",
+      "footnote": "Always at least {weeks} weeks, ending at the picked To date. The country filter applies.",
+      "coverageNote": "Coverage is the share of events in range that could be measured: read the time-to-detection lines against it, since a better week with lower coverage may only have measured easier events.",
+      "coverageUnavailable": "A coverage line appears once this environment's CLEAR API reports each week's events in range."
     },
     "empty": {
       "title": "No measurable events in this range",
@@ -3602,6 +3623,7 @@
         "counted": "An event is measured only when it has an onset date, its first signal carries a real time of day, and that signal is on or after the onset day.",
         "excluded": "Every other event in the range is left out, under one of four reasons: no ingested signal, no onset date, a first signal with a date but no time, or a first signal dated before onset (a data error).",
         "wholeDays": "Onset is recorded to the day, so time to detection is counted in whole days: same day = 0, next day = 1.",
+        "trend": "The trend files each event under the week CLEAR first received a signal for it. A rolling share pools the window's events rather than averaging weekly shares, so a quiet week weighs only what it holds.",
         "definition": "The full definition is clear-api's ADR-0011, \"Time to detection\"."
       }
     },
@@ -3612,6 +3634,7 @@
       "country": "Country",
       "allCountries": "All countries",
       "hint": "Days are UTC. Leave the dates empty for the last 12 weeks."
-    }
+    },
+    "rangeVs": "Showing {from} to {to}, compared with {prevFrom} to {prevTo}"
   }
 }

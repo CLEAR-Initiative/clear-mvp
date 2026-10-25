@@ -3526,8 +3526,7 @@
     },
     "tiles": {
       "counted": {
-        "label": "Eventos medidos",
-        "detail": "de {total, number} eventos del periodo"
+        "label": "Cobertura medida"
       },
       "byNextDay": {
         "label": "Detectados a más tardar al día siguiente"
@@ -3539,7 +3538,12 @@
         "label": "Eventos con fecha de inicio"
       },
       "ofCounted": "{n, number} de {counted, number} medidos",
-      "ofInRange": "{n, number} de {total, number} del periodo"
+      "ofInRange": "{n, number} de {total, number} del periodo",
+      "delta": {
+        "points": "{points} pts",
+        "vs": "frente a {previous} antes",
+        "none": "Sin cifra anterior"
+      }
     },
     "histogram": {
       "title": "Días entre el inicio y la primera señal",
@@ -3555,19 +3559,36 @@
       }
     },
     "weekly": {
-      "title": "Tendencia semanal",
-      "subtitle": "Proporción de los eventos medidos de cada semana ISO",
+      "title": "Tiempo de detección a lo largo del tiempo",
+      "subtitle": {
+        "rolling": "Proporción de eventos medidos en las {weeks} semanas hasta cada semana",
+        "weekly": "Proporción de los eventos medidos de cada semana ISO"
+      },
       "legend": "Leyenda",
       "series": {
         "byNextDay": "A más tardar al día siguiente",
-        "sameDay": "Mismo día"
+        "sameDay": "Mismo día",
+        "measured": "Cobertura medida"
       },
       "partial": "parcial",
       "tooltip": {
         "week": "{week} · desde el {start}",
         "n": "n = {n, plural, one {# evento medido} other {# eventos medidos}}",
-        "partial": "Semana parcial: aún en curso"
-      }
+        "partial": "Semana parcial: aún en curso",
+        "window": "{weeks, plural, one {Semana} other {# semanas}} hasta {week} (semana del {start})",
+        "nOfRange": "n = {n, plural, one {# evento medido} other {# eventos medidos}} de {total, number} del periodo"
+      },
+      "mode": {
+        "label": "Vista de la tendencia",
+        "rolling": "Móvil de {weeks} semanas",
+        "weekly": "Semanal"
+      },
+      "loading": "Cargando la tendencia…",
+      "error": "No se pudo cargar la tendencia: {message}",
+      "empty": "Aún no hay eventos medidos en las semanas de la tendencia.",
+      "footnote": "Siempre al menos {weeks} semanas, hasta la fecha final elegida. Se aplica el filtro de país.",
+      "coverageNote": "La cobertura es la proporción de eventos del periodo que se pudieron medir: lea las líneas del tiempo de detección junto a ella, porque una semana mejor con menos cobertura quizá solo midió eventos más fáciles.",
+      "coverageUnavailable": "Aparecerá una línea de cobertura cuando la API de CLEAR de este entorno informe los eventos de cada semana."
     },
     "empty": {
       "title": "No hay eventos medibles en este periodo",
@@ -3602,6 +3623,7 @@
         "counted": "Un evento solo se mide si tiene fecha de inicio, su primera señal lleva una hora real y esa señal es del día de inicio o posterior.",
         "excluded": "Los demás eventos del periodo quedan fuera por uno de cuatro motivos: sin señal ingerida, sin fecha de inicio, una primera señal con fecha pero sin hora, o una primera señal con fecha anterior al inicio (un error de datos).",
         "wholeDays": "El inicio se registra por día, así que el tiempo de detección se cuenta en días completos: mismo día = 0, día siguiente = 1.",
+        "trend": "La tendencia asigna cada evento a la semana en que CLEAR recibió su primera señal. Una proporción móvil agrupa los eventos de la ventana en lugar de promediar las proporciones semanales, así que una semana tranquila solo pesa lo que contiene.",
         "definition": "La definición completa es el ADR-0011 de clear-api, «Time to detection»."
       }
     },
@@ -3612,6 +3634,7 @@
       "country": "País",
       "allCountries": "Todos los países",
       "hint": "Los días están en UTC. Deje las fechas vacías para las últimas 12 semanas."
-    }
+    },
+    "rangeVs": "Del {from} al {to}, frente al {prevFrom} – {prevTo}"
   }
 }

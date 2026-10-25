@@ -6,6 +6,9 @@ export interface StatItem {
   color?: string;
   sub?: string;
   subColor?: string;
+  /** A change against an earlier value, under the value: `text` (e.g.
+   * "+4 pts") in `color`, then `note` (e.g. "vs 57% before") muted. */
+  delta?: { text: string; color: string; note?: string };
 }
 
 interface StatsGridProps {
@@ -63,6 +66,14 @@ export function StatsGrid({ stats, cols = 4, mobileCols = Math.min(stats.length,
           >
             {stat.value}
           </Text>
+          {stat.delta && (
+            <Text mt={8} style={{ fontSize: 11, fontVariantNumeric: "tabular-nums" }}>
+              <span style={{ color: stat.delta.color, fontWeight: 600 }}>{stat.delta.text}</span>
+              {stat.delta.note && (
+                <span style={{ color: stat.subColor ?? "#737373" }}> {stat.delta.note}</span>
+              )}
+            </Text>
+          )}
           {stat.sub && (
             <Text mt={8} style={{ fontSize: 11, color: stat.subColor ?? "#737373" }}>
               {stat.sub}

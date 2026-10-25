@@ -19,7 +19,7 @@ import {
  * clear-api's FORBIDDEN is the real gate.
  */
 
-export const DETECTION_METRICS_QUERY = `
+const detectionMetricsQuery = (weekFields: string) => `
   query DetectionMetrics($input: DetectionMetricsInput) {
     detectionMetrics(input: $input) {
       from
@@ -30,11 +30,21 @@ export const DETECTION_METRICS_QUERY = `
       sameDay
       byNextDay
       histogram { daysAfterOnset isOpenEnded count }
-      weekly { isoWeek weekStart counted sameDay byNextDay isPartial }
+      weekly { ${weekFields} }
       exclusions { reason count }
     }
   }
 `;
+
+/** With each week's events in range, for the trend's coverage line. */
+export const DETECTION_METRICS_QUERY = detectionMetricsQuery(
+  "isoWeek weekStart eventsInRange counted sameDay byNextDay isPartial",
+);
+/** Without it: for a clear-api that predates `DetectionWeek.eventsInRange`.
+ * The page then draws no coverage line. Drop once every environment has it. */
+export const DETECTION_METRICS_QUERY_V1 = detectionMetricsQuery(
+  "isoWeek weekStart counted sameDay byNextDay isPartial",
+);
 
 export const metricsRouter = createTRPCRouter({
   /** Time to detection over a range (clear-api's default: the last 12 ISO
@@ -58,12 +68,16 @@ export const metricsRouter = createTRPCRouter({
       if (input?.from) variables.from = input.from;
       if (input?.to) variables.to = input.to;
       if (input?.locationId) variables.locationId = input.locationId;
+      const fetchWith = (query: string) =>
+        graphqlFetch<{ detectionMetrics: GqlDetectionMetrics }>(query, { input: variables }, cookieHeaders(ctx));
       try {
-        const data = await graphqlFetch<{ detectionMetrics: GqlDetectionMetrics }>(
-          DETECTION_METRICS_QUERY,
-          { input: variables },
-          cookieHeaders(ctx),
-        );
+        let data: { detectionMetrics: GqlDetectionMetrics };
+        try {
+          data = await fetchWith(DETECTION_METRICS_QUERY);
+        } catch (err) {
+          if (!isGraphqlSchemaUnavailable(err)) throw err;
+          data = await fetchWith(DETECTION_METRICS_QUERY_V1);
+        }
         return { status: "ok", metrics: withShares(data.detectionMetrics) };
       } catch (err) {
         if (isGraphqlSchemaUnavailable(err)) return { status: "unavailable" };

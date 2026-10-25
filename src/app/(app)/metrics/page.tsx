@@ -14,6 +14,7 @@ import { WeeklyTrend } from "./_components/weekly-trend";
 import { ExclusionsCard } from "./_components/exclusions-card";
 import { MethodNote } from "./_components/method-note";
 import { MetricsFilters, metricsQueryInput, type MetricsFilterValues } from "./_components/metrics-filters";
+import { previousRange, trendRange } from "~/lib/detection-metrics";
 
 /** An Alert in theme tokens: the semantic colour marks the edge and icon,
  * the text stays in text tokens so it reads in light and dark. */
@@ -31,26 +32,50 @@ function noticeStyles(tone: "critical" | "warning" | "info") {
 
 const NO_RETRY = new Set(["BAD_REQUEST", "FORBIDDEN", "UNAUTHORIZED"]);
 
+const QUERY_OPTIONS = {
+  refetchOnWindowFocus: false,
+  placeholderData: keepPreviousData,
+  // A refused range or a non-admin will not change on retry.
+  retry: (count: number, err: { data?: { code?: string } | null }) => !NO_RETRY.has(err.data?.code ?? "") && count < 2,
+};
+
 /**
  * Admin-only platform metrics. Today: time to detection (clear-api
  * ADR-0011) — how soon after an event's onset CLEAR received its first
  * signal. clear-api decides what counts; this page only formats it.
+ *
+ * Three reads of the same query: the picked range (tiles, histogram,
+ * exclusions), the same-length range just before it (the tiles' change),
+ * and the trend, which always spans at least 26 weeks ending at the picked
+ * end so a change over time has room to show whatever the range.
  */
 export default function MetricsPage() {
   const t = useTranslations("metrics");
   const format = useFormatter();
   const utcDay = (iso: string) => format.dateTime(new Date(iso), { dateStyle: "medium", timeZone: "UTC" });
   const [filters, setFilters] = useState<MetricsFilterValues>({ from: "", to: "", locationId: null });
-  const query = api.metrics.detection.useQuery(metricsQueryInput(filters), {
-    refetchOnWindowFocus: false,
-    placeholderData: keepPreviousData,
-    // A refused range or a non-admin will not change on retry.
-    retry: (count, err) => !NO_RETRY.has(err.data?.code ?? "") && count < 2,
-  });
+  // Fixed for the page's life, so the trend's range (and query key) holds still.
+  const [now] = useState(() => new Date());
+  const input = metricsQueryInput(filters);
+  const query = api.metrics.detection.useQuery(input, QUERY_OPTIONS);
   // clear-api refuses an inverted range or one over 364 days with its own
   // message; show it by the dates rather than as a page error.
   const rangeError = query.error?.data?.code === "BAD_REQUEST" ? query.error.message : null;
   const result = query.data;
+  const current = result?.status === "ok" ? result.metrics : undefined;
+
+  const trend = trendRange(input, now);
+  const trendQuery = api.metrics.detection.useQuery(trend.input, { ...QUERY_OPTIONS, enabled: !rangeError });
+  const trendMetrics = trendQuery.data?.status === "ok" ? trendQuery.data.metrics : undefined;
+
+  // The previous period follows the range clear-api resolved, so it works
+  // for its default range too.
+  const previousInput = current
+    ? { ...previousRange(current), ...(input.locationId ? { locationId: input.locationId } : {}) }
+    : {};
+  const previousQuery = api.metrics.detection.useQuery(previousInput, { ...QUERY_OPTIONS, enabled: !!current });
+  const previous =
+    previousQuery.data?.status === "ok" && !previousQuery.isPlaceholderData ? previousQuery.data.metrics : undefined;
 
   return (
     <Box>
@@ -71,25 +96,42 @@ export default function MetricsPage() {
         ) : result?.status === "ok" ? (
           <Stack gap={16}>
             <Text size="xs" c="var(--color-text-muted)">
-              {t("range", { from: utcDay(result.metrics.from), to: utcDay(result.metrics.to) })}
+              {previous
+                ? t("rangeVs", {
+                    from: utcDay(result.metrics.from),
+                    to: utcDay(result.metrics.to),
+                    prevFrom: utcDay(previous.from),
+                    prevTo: utcDay(previous.to),
+                  })
+                : t("range", { from: utcDay(result.metrics.from), to: utcDay(result.metrics.to) })}
             </Text>
             {result.metrics.counted === 0 ? (
               <Alert styles={noticeStyles("info")} icon={<IconInfoCircle size={16} />} title={t("empty.title")}>
                 {t("empty.body", { inRange: result.metrics.eventsInRange })}
               </Alert>
             ) : (
+              <StatTiles metrics={result.metrics} previous={previous} />
+            )}
+            <WeeklyTrend
+              metrics={trendMetrics}
+              showFrom={trend.showFrom}
+              loading={trendQuery.isLoading}
+              error={trendQuery.error?.message ?? (trendQuery.data?.status === "unavailable" ? t("unavailable.title") : null)}
+            />
+            {result.metrics.counted === 0 ? (
+              <SimpleGrid cols={{ base: 1, lg: 2 }} spacing={16}>
+                <ExclusionsCard metrics={result.metrics} />
+                <MethodNote />
+              </SimpleGrid>
+            ) : (
               <>
-                <StatTiles metrics={result.metrics} />
                 <SimpleGrid cols={{ base: 1, lg: 2 }} spacing={16}>
                   <TtdHistogram metrics={result.metrics} />
-                  <WeeklyTrend metrics={result.metrics} />
+                  <ExclusionsCard metrics={result.metrics} />
                 </SimpleGrid>
+                <MethodNote />
               </>
             )}
-            <SimpleGrid cols={{ base: 1, lg: 2 }} spacing={16}>
-              <ExclusionsCard metrics={result.metrics} />
-              <MethodNote />
-            </SimpleGrid>
           </Stack>
         ) : (
           <Box aria-busy aria-label={t("loading")}>
