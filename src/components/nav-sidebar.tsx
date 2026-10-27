@@ -48,6 +48,7 @@ import { setNavCollapsedCookie } from "~/lib/nav-collapsed-cookie";
 import { useInboxUnread } from "~/lib/inbox-badge";
 import { ANALYSIS_NAV_LABEL, NAV_ROUTES, type NavItemKey } from "~/lib/nav-routes";
 import { NotificationsBell } from "~/components/notifications-bell";
+import { SidebarCountryPicker } from "~/components/sidebar-country-picker";
 
 interface NavVisibility {
   isAdmin: boolean;
@@ -343,10 +344,11 @@ export function NavSidebar({
           }}
         >
           <NrcLogoMark size={32} />
-          <Text fw={700} style={{ fontSize: fontSizesPx.xl, color: colors.textPrimary, fontFamily: "Calibri, 'Trebuchet MS', sans-serif" }}>CLEAR</Text>
+          <Box style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
+            <Text fw={700} style={{ fontSize: fontSizesPx.xl, color: colors.textPrimary, fontFamily: "Calibri, 'Trebuchet MS', sans-serif" }}>CLEAR</Text>
+            <SidebarCountryPicker />
+          </Box>
         </Box>
-
-        {/* Mobile team switcher */}
 
         {/* Mobile drawer nav */}
         <Box
@@ -615,7 +617,7 @@ export function NavSidebar({
         {/* ── Logo + toggle ─────────────────────────────────────── */}
         <Box
         style={{
-          height: 64,
+          minHeight: 64,
           borderBottom: `1px solid ${isMapRoute ? "var(--map-frost-border)" : colors.border}`,
             display: "flex",
             alignItems: "flex-start",
@@ -625,7 +627,8 @@ export function NavSidebar({
             background: isMapRoute ? "transparent" : colors.bgWhite,
           }}
         >
-          <Box style={{ display: "flex", alignItems: "center", gap: spacingPx[5], overflow: "hidden", width: collapsed ? 32 : 150, flexShrink: 0, transition: `width ${TRANSITION}` }}>
+          <Box style={{ display: "flex", flexDirection: "column", overflow: "hidden", width: collapsed ? 32 : 150, flexShrink: 0, transition: `width ${TRANSITION}` }}>
+          <Box style={{ display: "flex", alignItems: "center", gap: spacingPx[5] }}>
             {/* Logo stays visible in both states */}
             <NrcLogoMark size={32} />
             <Text
@@ -642,6 +645,11 @@ export function NavSidebar({
             >
               CLEAR
             </Text>
+          </Box>
+            {/* Country picker: under the wordmark, or under the logo when collapsed */}
+            <Box style={{ paddingInlineStart: collapsed ? 0 : 32 + spacingPx[5], transition: `padding ${TRANSITION}` }}>
+              <SidebarCountryPicker collapsed={collapsed} />
+            </Box>
           </Box>
 
           <Tooltip label={collapsed ? t("expand") : t("collapse")} position="right" withArrow>
@@ -670,8 +678,6 @@ export function NavSidebar({
             </UnstyledButton>
           </Tooltip>
         </Box>
-
-        {/* ── Team switcher ──────────────────────────────────────── */}
 
         {/* ── Navigation ────────────────────────────────────────── */}
         <Box
