@@ -75,8 +75,16 @@ export function AnalysisTab() {
       </Center>
     );
   }
+  // A failed country list is not "no country assigned". Stay on the error
+  // until the request succeeds; an empty list still uses the empty copy.
+  if (teamCountries.length === 0 && allCountries.isError) {
+    return <Notice text={t("error")} />;
+  }
   if (!country) {
     return <Notice text={t("noCountry")} />;
+  }
+  if (scopes.isError) {
+    return <Notice text={t("error")} />;
   }
 
   // A just-created analysis is opened from the form. Once the list refetch
