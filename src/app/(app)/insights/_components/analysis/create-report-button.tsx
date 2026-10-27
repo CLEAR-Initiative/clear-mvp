@@ -121,6 +121,8 @@ export function CreateReportButton({
         bestCase: tFindings("bestCase"),
         worstCase: tFindings("worstCase"),
         sources: t("sources"),
+        eventLabel: t("eventLabel"),
+        hapiFigure: t("hapiFigure"),
         provenance: t("provenance"),
         footer: t("footer", { scope: scopeName }),
         page: (n, total) => t("page", { n, total }),

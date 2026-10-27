@@ -47,7 +47,7 @@ const labels: ReportLabels = {
   map: "Scope map", mapScope: "Shaded: analysis area", mapEvents: "Dots: 2 events since 1 Jul 2026", contexts: "Context", hazards: "Hazards",
   displacement: "What is forcing people out", priorityNeeds: "Priority needs", responseActivities: "Response activities",
   noResponse: "None reported.", outlook: "Outlook", mostLikely: "Most likely", bestCase: "Best case", worstCase: "Worst case",
-  sources: "Sources", provenance: "Provenance", footer: "CLEAR · Bara",
+  sources: "Sources", eventLabel: "Event", hapiFigure: "HAPI figure", provenance: "Provenance", footer: "CLEAR · Bara",
   page: (n, t) => `Page ${n} of ${t}`, severity: (k) => k,
 };
 

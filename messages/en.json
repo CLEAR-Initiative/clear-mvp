@@ -281,7 +281,9 @@
         "visit": "Visit source",
         "published": "Published {date}",
         "empty": "No sources recorded for this snapshot.",
-        "count": "{count} references"
+        "count": "{count} references",
+        "eventLabel": "Event",
+        "hapiFigure": "HAPI figure"
       },
       "kpi": {
         "informSeverity": "INFORM Severity",
@@ -3237,6 +3239,8 @@
       "noResponse": "No response activities reported in the current sources.",
       "outlook": "Outlook",
       "sources": "Sources",
+      "eventLabel": "Event",
+      "hapiFigure": "HAPI figure",
       "provenance": "Provenance",
       "generated": "Report created {date} by {author} in CLEAR. Numbers in brackets refer to the sources list.",
       "footer": "CLEAR · {scope}",
