@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Center, Loader, Select, Stack } from "@mantine/core";
 import { api } from "~/trpc/react";
@@ -36,6 +37,50 @@ export function AnalysisTab() {
   const [picked, setPicked] = useState<string | null>(null);
   const [opened, setOpened] = useState<Opened | null>(null);
   const [creating, setCreating] = useState(false);
+  // The query the reader just left, so Back wins before the URL updates.
+  const [dismissedKey, setDismissedKey] = useState<string | null>(null);
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  // Two keys, on purpose. `automation` is an automation id from the scopes list.
+  // `country` is a country location id. Neither is a generated analysis id.
+  const automationParam = searchParams.get("automation");
+  const countryParam = searchParams.get("country");
+  const automationKey = automationParam ? `automation:${automationParam}` : null;
+  const countryKey = countryParam ? `country:${countryParam}` : null;
+  const activeKey = automationKey ?? countryKey;
+
+  const writeQuery = (next: { automation?: string; country?: string } | null) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("automation");
+    params.delete("country");
+    if (next?.automation) params.set("automation", next.automation);
+    if (next?.country) params.set("country", next.country);
+    const qs = params.toString();
+    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+  };
+
+  const openCreated = (createdAnalysis: CreatedAnalysis) => {
+    setDismissedKey(null);
+    setOpened({ kind: "created", created: createdAnalysis });
+    writeQuery({ automation: createdAnalysis.id });
+  };
+
+  const closeOpened = () => {
+    setOpened(null);
+    if (activeKey) setDismissedKey(activeKey);
+    writeQuery(null);
+  };
+
+  // Browser Back drops the query without going through the on-screen Back button.
+  useEffect(() => {
+    if (automationParam) return;
+    setOpened((current) => (current?.kind === "created" ? null : current));
+  }, [automationParam]);
+  useEffect(() => {
+    if (countryParam) return;
+    setOpened((current) => (current?.kind === "country" ? null : current));
+  }, [countryParam]);
 
   // An unscoped team monitors globally: offer every country.
   const allCountries = api.situationAnalysis.countries.useQuery(undefined, {
@@ -46,7 +91,12 @@ export function AnalysisTab() {
     () => (teamCountries.length > 0 ? teamCountries : (allCountries.data ?? [])),
     [teamCountries, allCountries.data],
   );
-  const country = pickCountry(options, picked, workingId);
+  // A country query selects that country. An automation query does not.
+  const countryFromUrl =
+    !automationParam && countryParam && dismissedKey !== countryKey && options.some((o) => o.id === countryParam)
+      ? countryParam
+      : null;
+  const country = pickCountry(options, countryFromUrl ?? picked, workingId);
   const scopeLoading = teamLoading || (teamCountries.length === 0 && allCountries.isLoading);
 
   const scopes = api.analysis.scopes.useQuery(
@@ -86,20 +136,41 @@ export function AnalysisTab() {
   if (scopes.isError) {
     return <Notice text={t("error")} />;
   }
+  // The id is only unknown once the scopes list has arrived. Until then a reload
+  // stays on the loader, not a flash of the list.
+  const followAutomation = !!automationKey && dismissedKey !== automationKey;
+  const linked = followAutomation ? (scopes.data?.created.find((c) => c.id === automationParam) ?? null) : null;
+  // The scopes list already names the analysis's country. Select it so the map
+  // and the list behind Back match that analysis, not the working country.
+  const linkedCountry = linked?.countryId ? options.find((o) => o.id === linked.countryId) : undefined;
+  if (linkedCountry && linkedCountry.id !== country.id) {
+    setPicked(linkedCountry.id);
+  }
+  if (automationParam && !scopes.data) {
+    return (
+      <Center mih="40vh">
+        <Loader size="sm" />
+      </Center>
+    );
+  }
 
   // A just-created analysis is opened from the form. Once the list refetch
   // includes it, that row wins so the window and cadence match the server.
-  const openedScope: AnalysisScopeRef | null =
-    opened?.kind === "country"
+  // An automation query uses that same list row; it does not keep a second id.
+  const localCreated = opened?.kind === "created" ? opened.created : null;
+  const automationUnknown = followAutomation && !!scopes.data && !linked && localCreated?.id !== automationParam;
+  const openedCreated = automationUnknown ? null : (linked ?? localCreated);
+  const showCountry = !followAutomation && (!!countryFromUrl || opened?.kind === "country");
+  const openedScope: AnalysisScopeRef | null = openedCreated
+    ? {
+        kind: "created",
+        countryId: country.id,
+        countryName: country.name,
+        created: created.find((c) => c.id === openedCreated.id) ?? openedCreated,
+      }
+    : showCountry
       ? { kind: "country", countryId: country.id, countryName: country.name }
-      : opened?.kind === "created"
-        ? {
-            kind: "created",
-            countryId: country.id,
-            countryName: country.name,
-            created: created.find((c) => c.id === opened.created.id) ?? opened.created,
-          }
-        : null;
+      : null;
 
   const selector =
     options.length > 1 ? (
@@ -113,7 +184,7 @@ export function AnalysisTab() {
         onChange={(id) => {
           if (!id) return;
           setPicked(id);
-          setOpened(null);
+          closeOpened();
         }}
         data={options.map((c) => ({ value: c.id, label: c.name }))}
         data-testid="analysis-country"
@@ -126,7 +197,7 @@ export function AnalysisTab() {
       <AnalysisDetail
         key={scopeKey(openedScope)}
         scope={openedScope}
-        onBack={() => setOpened(null)}
+        onBack={closeOpened}
       />
     );
   } else {
@@ -142,8 +213,12 @@ export function AnalysisTab() {
           canRemove={canManage}
           teamId={teamId}
           selector={selector}
-          onOpenCountry={() => setOpened({ kind: "country" })}
-          onOpenCreated={(c) => setOpened({ kind: "created", created: c })}
+          onOpenCountry={() => {
+            setDismissedKey(null);
+            setOpened({ kind: "country" });
+            writeQuery({ country: country.id });
+          }}
+          onOpenCreated={openCreated}
           onNew={() => setCreating(true)}
         />
       </Stack>
@@ -162,11 +237,11 @@ export function AnalysisTab() {
         existing={created}
         onCreated={(createdAnalysis) => {
           setCreating(false);
-          setOpened({ kind: "created", created: createdAnalysis });
+          openCreated(createdAnalysis);
         }}
         onOpenExisting={(c) => {
           setCreating(false);
-          setOpened({ kind: "created", created: c });
+          openCreated(c);
         }}
       />
     </>
