@@ -10,7 +10,14 @@ import { api } from "~/trpc/react";
 import type { Analysis } from "~/server/api/mappers/analysis";
 import type { AnalysisEvents, AnalysisFigures } from "~/server/api/mappers/analysis";
 import { kpiValues } from "~/lib/analysis-view";
-import { defaultReportSections, projectReportMap, reportFileName, type ReportSectionChoice } from "~/lib/analysis-report";
+import {
+  defaultReportSections,
+  projectReportMap,
+  REPORT_BUILD_TIMEOUT_MS,
+  reportFileName,
+  withDeadline,
+  type ReportSectionChoice,
+} from "~/lib/analysis-report";
 import type { ReportLabels } from "./report/report-document";
 import { ReportBuilderModal } from "./report-builder-modal";
 
@@ -124,17 +131,20 @@ export function CreateReportButton({
         import("@react-pdf/renderer"),
         import("./report/report-document"),
       ]);
-      const blob = await pdf(
-        <ReportDocument
-          sections={chosen.filter((x) => x.included).map((x) => x.key)}
-          data={data}
-          kpis={kpiValues(data, figures)}
-          map={map}
-          labels={labels}
-          scopeName={scopeName}
-          generatedLabel={t("generated", { date: date(now.toISOString(), true), author })}
-        />,
-      ).toBlob();
+      const blob = await withDeadline(
+        pdf(
+          <ReportDocument
+            sections={chosen.filter((x) => x.included).map((x) => x.key)}
+            data={data}
+            kpis={kpiValues(data, figures)}
+            map={map}
+            labels={labels}
+            scopeName={scopeName}
+            generatedLabel={t("generated", { date: date(now.toISOString(), true), author })}
+          />,
+        ).toBlob(),
+        REPORT_BUILD_TIMEOUT_MS,
+      );
 
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");

@@ -62,7 +62,9 @@ const s = StyleSheet.create({
   gapGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   gapCard: { width: "48%", borderWidth: 1, borderColor: C.border, padding: 8 },
   gapTag: { fontSize: 7, fontFamily: "Helvetica-Bold", letterSpacing: 0.5, marginBottom: 3 },
-  footer: { position: "absolute", bottom: 20, left: 40, right: 40, flexDirection: "row", justifyContent: "space-between", fontSize: 7, color: C.muted },
+  // An explicit height keeps a long report's fixed footer from growing without
+  // bound (each extra page was multiplying its box until PDFKit rejected it).
+  footer: { position: "absolute", bottom: 20, left: 40, right: 40, height: 12, flexDirection: "row", justifyContent: "space-between", fontSize: 7, color: C.muted },
 });
 
 export interface ReportLabels {
