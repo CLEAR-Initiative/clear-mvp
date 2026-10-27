@@ -217,7 +217,9 @@ export function AnalysisDetail({
             noteFor={(section) => changeChips(data.changes.notes).find((chip) => chip.section === section)?.note}
           />
         )}
-        {tab === "needs" && <AnalysisNeeds sectors={data.sectors} sources={data.sources} scopeName={name} />}
+        {tab === "needs" && (
+          <AnalysisNeeds sectors={data.sectors} sources={data.sources} scopeName={name} figures={figures.data} />
+        )}
         {tab === "sources" && (
           <SimpleGrid cols={{ base: 1, lg: 2 }} spacing={16}>
             <Box>

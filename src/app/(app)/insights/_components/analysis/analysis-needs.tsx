@@ -3,26 +3,18 @@
 import { useMemo } from "react";
 import { useTranslations } from "next-intl";
 import { Box, Stack, Text } from "@mantine/core";
+import { IconCircle } from "@tabler/icons-react";
 import {
   NEEDS_SECTORS,
   NeedsAssessmentView,
-  type NeedsSectorKey,
   type NeedsSectorRow,
   type NeedsSeverity,
 } from "~/components/crisis-detail/needs-assessment-panel";
+import type { AnalysisFigures } from "~/server/api/mappers/analysis";
 import type { SaSector, SaSeverity, SaSource } from "~/server/api/mappers/situation-analysis";
 import { PillarList } from "../situation/situation-sectors";
+import { analysisNeedsRows } from "./analysis-needs-rows";
 import styles from "./dark/analysis-dark.module.css";
-
-/** Analysis sector ids (pipeline SAF taxonomy) per needs-table row. */
-const SECTOR_ID: Record<NeedsSectorKey, string> = {
-  shelter: "shelter",
-  wash: "wash",
-  protection: "protection",
-  health: "health",
-  food: "food_security",
-  education: "education",
-};
 
 const SEVERITY_STYLE: Record<NonNullable<SaSeverity> | "none", { color: string; bg: string; rank: number }> = {
   critical: { color: "var(--color-critical)", bg: "var(--color-critical-light)", rank: 0 },
@@ -85,24 +77,35 @@ function AnalysisSeverityLegend() {
 }
 
 /** Analysis adapter for the shared needs table: severity and findings come from the analysis sectors. */
-export function AnalysisNeeds({ sectors, sources, scopeName }: { sectors: SaSector[]; sources: SaSource[]; scopeName: string }) {
+export function AnalysisNeeds({
+  sectors,
+  sources,
+  scopeName,
+  figures,
+}: {
+  sectors: SaSector[];
+  sources: SaSource[];
+  scopeName: string;
+  figures: AnalysisFigures | undefined;
+}) {
   const tSev = useTranslations("common.severities");
   const tA = useTranslations("analysis.needs");
 
   const rows = useMemo<NeedsSectorRow[]>(
     () =>
-      NEEDS_SECTORS.map((def) => {
-        const sector = sectors.find((s) => s.id === SECTOR_ID[def.key]) ?? null;
-        const style = SEVERITY_STYLE[sector?.severity ?? "none"];
+      analysisNeedsRows(sectors, figures).map((model) => {
+        const def = NEEDS_SECTORS.find((item) => item.key === model.key);
+        const sector = sectors.find((item) => item.id === model.sectorId) ?? null;
+        const style = SEVERITY_STYLE[model.severity ?? "none"];
         const severity: NeedsSeverity = {
           color: style.color,
           bg: style.bg,
-          label: sector?.severity ? tSev(sector.severity) : tA("notAssessed"),
+          label: model.severity ? tSev(model.severity) : tA("notAssessed"),
         };
         return {
-          key: def.key,
-          label: def.label,
-          icon: def.icon,
+          key: model.key,
+          label: model.label,
+          icon: def?.icon ?? IconCircle,
           severity,
           severityRank: style.rank,
           description: null,
@@ -110,14 +113,14 @@ export function AnalysisNeeds({ sectors, sources, scopeName }: { sectors: SaSect
           responseGap: null,
           nrcRelevant: null,
           ochaMatch: null,
-          pin: null,
+          pin: model.pin,
           pinIsApprox: false,
           // Graded by the analysis from reporting: the "AI review" level.
           assessmentLevel: 2,
           precision: null,
         };
       }),
-    [sectors, sources, tSev, tA],
+    [sectors, figures, sources, tSev, tA],
   );
 
   return (
