@@ -26,6 +26,18 @@ vi.mock("next/link", () => ({
   ),
 }));
 
+/** The Analysis page URL. Empty is the list. `replace` applies it, as the router would. */
+let search = "";
+const replace = vi.fn((href: string) => {
+  const q = href.indexOf("?");
+  search = q === -1 ? "" : href.slice(q + 1);
+});
+vi.mock("next/navigation", () => ({
+  usePathname: () => "/analysis",
+  useRouter: () => ({ replace }),
+  useSearchParams: () => new URLSearchParams(search),
+}));
+
 
 const SUDAN = { id: "sdn", name: "Sudan", level: 0 };
 const AFG = { id: "afg", name: "Afghanistan", level: 0 };
@@ -259,6 +271,8 @@ const renderPage = () => {
 };
 
 beforeEach(() => {
+  search = "";
+  replace.mockClear();
   locale = "en";
   role = "analyst";
   activeTeamId = "team-1";
@@ -455,6 +469,191 @@ describe("Insights > Analysis tab", () => {
     expect(screen.queryByTestId("analysis-scope-auto-4")).not.toBeInTheDocument();
     // No payload loads until one is opened.
     expect(currentQuery).not.toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ enabled: true }));
+  });
+
+  it("opens the created analysis named by the automation query, and a reload stays on it", () => {
+    scopesResult.created = [created()];
+    frameResult = {
+      data: analysis({
+        scope: { locationIds: ["sheikan"], name: "x", windowStart: "2026-07-01T00:00:00.000Z", windowEnd: null },
+      }),
+      isLoading: false,
+      isError: false,
+    };
+    search = "automation=auto-1";
+    renderHome();
+    expect(frameQuery).toHaveBeenLastCalledWith(
+      {
+        locationIds: ["sheikan"],
+        eventTypes: [],
+        needSectors: [],
+        windowStart: "2026-07-01T00:00:00.000Z",
+        name: "Sheikan, North Kordofan, Sudan",
+      },
+      expect.objectContaining({ enabled: true }),
+    );
+    expect(screen.getByRole("heading", { name: "Sheikan, North Kordofan, Sudan" })).toBeInTheDocument();
+    expect(screen.queryByText("analysis.home.title")).not.toBeInTheDocument();
+
+    cleanup();
+    renderHome();
+    expect(screen.getByRole("heading", { name: "Sheikan, North Kordofan, Sudan" })).toBeInTheDocument();
+  });
+
+  it("records the automation id when a created analysis is opened, and back returns to the list", () => {
+    scopesResult.created = [created()];
+    frameResult = {
+      data: analysis({
+        summary: "The Sheikan analysis.",
+        scope: { locationIds: ["sheikan"], name: "x", windowStart: "2026-07-01T00:00:00.000Z", windowEnd: null },
+      }),
+      isLoading: false,
+      isError: false,
+    };
+    renderHome();
+    fireEvent.click(within(screen.getByTestId("analysis-scope-auto-1")).getAllByRole("button")[0]!);
+    expect(replace).toHaveBeenCalledWith("/analysis?automation=auto-1", { scroll: false });
+    expect(screen.getByRole("heading", { name: "Sheikan, North Kordofan, Sudan" })).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("analysis-back"));
+    expect(replace).toHaveBeenLastCalledWith("/analysis", { scroll: false });
+    expect(screen.getByText("analysis.home.title")).toBeInTheDocument();
+  });
+
+  it("opens the country named by the country query, including when another country is the working one", () => {
+    team = { countries: [AFG, SUDAN], countryId: "sdn" };
+    search = "country=afg";
+    renderHome();
+    expect(currentQuery).toHaveBeenLastCalledWith(
+      { countryLocationId: "afg", countryName: "Afghanistan" },
+      expect.objectContaining({ enabled: true }),
+    );
+    expect(screen.getByRole("heading", { name: "Afghanistan" })).toBeInTheDocument();
+    expect(screen.queryByText("analysis.home.title")).not.toBeInTheDocument();
+
+    cleanup();
+    renderHome();
+    expect(screen.getByRole("heading", { name: "Afghanistan" })).toBeInTheDocument();
+  });
+
+  it("records the country location id when the country analysis is opened, and back returns to the list", () => {
+    renderHome();
+    fireEvent.click(within(screen.getByTestId("analysis-scope-country")).getAllByRole("button")[0]!);
+    expect(replace).toHaveBeenCalledWith("/analysis?country=sdn", { scroll: false });
+    expect(screen.getByRole("heading", { name: "Sudan" })).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("analysis-back"));
+    expect(replace).toHaveBeenLastCalledWith("/analysis", { scroll: false });
+    expect(screen.getByText("analysis.home.title")).toBeInTheDocument();
+  });
+
+  it("opens a created analysis from the automation query on that analysis's country", () => {
+    team = { countries: [AFG, SUDAN], countryId: "sdn" };
+    scopesResult.created = [
+      created({ id: "auto-4", name: "Kabul, Afghanistan", countryId: "afg", locationIds: ["kabul"] }),
+    ];
+    frameResult = {
+      data: analysis({ summary: "Kabul holds." }),
+      isLoading: false,
+      isError: false,
+    };
+    search = "automation=auto-4";
+    renderHome();
+    expect(scopesQuery).toHaveBeenLastCalledWith(
+      { teamId: "team-1", countries: [{ id: "afg", name: "Afghanistan" }] },
+      expect.objectContaining({ enabled: true }),
+    );
+    expect(frameQuery).toHaveBeenLastCalledWith(
+      expect.objectContaining({ locationIds: ["kabul"], name: "Kabul, Afghanistan" }),
+      expect.objectContaining({ enabled: true }),
+    );
+    expect(screen.getByRole("heading", { name: "Kabul, Afghanistan" })).toBeInTheDocument();
+  });
+
+  it("opens the generating state from an automation whose first version has not landed", () => {
+    scopesResult.created = [created({ generatedAt: null, analysisId: null, createdAt: "2026-09-29T11:50:00.000Z" })];
+    frameResult = { data: null, isLoading: false, isError: false };
+    search = "automation=auto-1";
+    renderHome();
+    expect(screen.getByTestId("analysis-generating")).toHaveTextContent("analysis.generating.title");
+    expect(screen.queryByText("analysis.error")).not.toBeInTheDocument();
+  });
+
+  it("shows the list for an automation id that is not in the scopes list", () => {
+    scopesResult.created = [created()];
+    search = "automation=missing";
+    renderHome();
+    expect(screen.getByText("analysis.home.title")).toBeInTheDocument();
+    expect(screen.queryByText("analysis.error")).not.toBeInTheDocument();
+    expect(frameQuery).not.toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ enabled: true }));
+  });
+
+  it("shows the list for a country id this team cannot open", () => {
+    search = "country=xyz";
+    renderHome();
+    expect(screen.getByText("analysis.home.title")).toBeInTheDocument();
+    expect(screen.queryByText("analysis.error")).not.toBeInTheDocument();
+    expect(currentQuery).not.toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ enabled: true }));
+  });
+
+  it("follows query changes on the same page, from a created analysis to a country and back to the list", () => {
+    team = { countries: [AFG, SUDAN], countryId: "sdn" };
+    scopesResult.created = [created()];
+    frameResult = {
+      data: analysis({ summary: "The Sheikan analysis." }),
+      isLoading: false,
+      isError: false,
+    };
+    const view = renderHome();
+
+    fireEvent.click(within(screen.getByTestId("analysis-scope-auto-1")).getAllByRole("button")[0]!);
+    expect(search).toBe("automation=auto-1");
+    expect(screen.getByRole("heading", { name: "Sheikan, North Kordofan, Sudan" })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId("analysis-back"));
+    expect(search).toBe("");
+    expect(screen.getByText("analysis.home.title")).toBeInTheDocument();
+
+    fireEvent.click(within(screen.getByTestId("analysis-scope-country")).getAllByRole("button")[0]!);
+    expect(search).toBe("country=sdn");
+    expect(screen.getByRole("heading", { name: "Sudan" })).toBeInTheDocument();
+
+    search = "country=afg";
+    view.rerender(<MantineProvider><AnalysisTab /></MantineProvider>);
+    expect(screen.getByRole("heading", { name: "Afghanistan" })).toBeInTheDocument();
+
+    search = "automation=missing";
+    view.rerender(<MantineProvider><AnalysisTab /></MantineProvider>);
+    expect(screen.getByText("analysis.home.title")).toBeInTheDocument();
+    expect(screen.queryByText("analysis.error")).not.toBeInTheDocument();
+  });
+
+  it("keeps the automation and country keys apart", () => {
+    team = { countries: [AFG, SUDAN], countryId: "sdn" };
+    scopesResult.created = [created()];
+    frameResult = {
+      data: analysis({ summary: "The Sheikan analysis." }),
+      isLoading: false,
+      isError: false,
+    };
+
+    search = "automation=sdn";
+    renderHome();
+    expect(screen.getByText("analysis.home.title")).toBeInTheDocument();
+    expect(currentQuery).not.toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ enabled: true }));
+
+    cleanup();
+    search = "country=auto-1";
+    renderHome();
+    expect(screen.getByText("analysis.home.title")).toBeInTheDocument();
+    expect(frameQuery).not.toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ enabled: true }));
+
+    cleanup();
+    search = "automation=auto-1&country=afg";
+    renderHome();
+    expect(screen.getByRole("heading", { name: "Sheikan, North Kordofan, Sudan" })).toBeInTheDocument();
+    expect(currentQuery).not.toHaveBeenCalledWith(
+      { countryLocationId: "afg", countryName: "Afghanistan" },
+      expect.anything(),
+    );
   });
 
   it("opens a created analysis by its rolling frame, shows its timeline, and goes back to the list", () => {

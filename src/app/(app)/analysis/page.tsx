@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { AnalysisTab } from "../insights/_components/analysis/analysis-tab";
 import styles from "../insights/_components/analysis/dark/analysis-dark.module.css";
 
@@ -6,7 +7,10 @@ export default function AnalysisPage() {
   return (
     <div className={styles.shell}>
       <div className={styles.frame}>
-        <AnalysisTab />
+        {/* useSearchParams() suspends until the automation or country query is known. */}
+        <Suspense fallback={null}>
+          <AnalysisTab />
+        </Suspense>
       </div>
     </div>
   );
