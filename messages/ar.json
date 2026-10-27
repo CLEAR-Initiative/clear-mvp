@@ -2168,6 +2168,10 @@
       "unread": "{count, plural, one {إشعار واحد غير مقروء} other {# إشعارات غير مقروءة}}",
       "empty": "لا جديد",
       "loadError": "تعذّر تحميل الإشعارات"
+    },
+    "country": {
+      "label": "البلد",
+      "placeholder": "اختر بلدًا"
     }
   },
   "noAccess": {

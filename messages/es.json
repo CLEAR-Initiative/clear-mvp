@@ -2168,6 +2168,10 @@
       "unread": "{count, plural, one {# notificación sin leer} other {# notificaciones sin leer}}",
       "empty": "Nada nuevo",
       "loadError": "No se pudieron cargar las notificaciones"
+    },
+    "country": {
+      "label": "País",
+      "placeholder": "Elige un país"
     }
   },
   "noAccess": {
