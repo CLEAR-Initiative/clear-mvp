@@ -27,6 +27,7 @@ import {
 import { compactNumber, type SaBullet, type SaSource } from "~/server/api/mappers/situation-analysis";
 import type { Analysis, AnalysisEvents, AnalysisFigures } from "~/server/api/mappers/analysis";
 import { fundingSplit, kpiValues, splitSubject, timelineLayout } from "~/lib/analysis-view";
+import { leadingFigure } from "./leading-figure";
 import { Citations } from "../../situation/citations";
 import { planSentenceSegments, planSummaryParagraphs, leadSentences } from "../../situation/summary-citations";
 import { ScopeMap } from "../scope-map";
@@ -113,16 +114,6 @@ const CATEGORY_ICON: Record<string, Icon> = {
 
 function categoryIcon(key: string): Icon {
   return CATEGORY_ICON[key] ?? IconWorld;
-}
-
-/** A leading stat such as "8.58M" or "55%". Bare small numbers stay in the sentence. */
-function leadingFigure(text: string): { figure: string; rest: string } | null {
-  const match = text.match(/^(~?<?[−+-]?\$?\d[\d,]*(?:\.\d+)?(?:st|nd|rd|th)?(?:[MBK]|\+|%)?)/i);
-  if (!match) return null;
-  const figure = match[0];
-  const rest = text.slice(figure.length).trim();
-  if (!rest || /^[−+-]?\d{1,2}$/.test(figure)) return null;
-  return { figure, rest };
 }
 
 function cardsFromRisk(risk: { items: string[]; refs: number[]; lineRefs: Record<string, number[]> }): ContextCard[] {
@@ -753,7 +744,8 @@ export function AnalysisOverview({
                     <div className={styles.splitA} style={{ width: `${(values.inside / values.displacedTotal) * 100}%` }} />
                     <div className={styles.splitB} style={{ width: `${(values.abroad / values.displacedTotal) * 100}%` }} />
                   </div>
-                  <div className={styles.legend}>
+                  <div className={styles.legend} data-testid="displaced-split">
+                    <span className={styles.splitNote}>{t("kpis.roundedParts")}</span>
                     <span>
                       <i className={styles.swatch} style={{ background: "var(--sa-accent)" }} />
                       {t("kpis.inside", { scope: scopeName })} {compactNumber(values.inside)} {pct(values.inside / values.displacedTotal)}

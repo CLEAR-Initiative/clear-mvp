@@ -3063,6 +3063,7 @@
       "inside": "En {scope}",
       "abroad": "À l'étranger",
       "differentDates": "les parts peuvent dater de moments différents",
+      "roundedParts": "arrondies séparément, elles peuvent ne pas correspondre au total",
       "rangeLabel": "Fourchette selon les sources",
       "headline": "Chiffre retenu",
       "bySector": "Personnes dans le besoin par secteur",
