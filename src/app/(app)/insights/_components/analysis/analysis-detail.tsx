@@ -208,6 +208,7 @@ export function AnalysisDetail({
             figures={figures.data}
             events={events.data}
             eventsPending={events.isLoading}
+            eventsFailed={events.isError}
             scopeName={name}
             countryId={scope.countryId}
             countryName={scope.countryName}

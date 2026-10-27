@@ -3028,7 +3028,7 @@
     "meta": {
       "updated": "Mis à jour {relative}",
       "asOf": "au {date}",
-      "builtFrom": "{reports, plural, one {# rapport} other {# rapports}}, {events, plural, one {# événement} other {# événements}}",
+      "builtFrom": "{reports, plural, one {# rapport} other {# rapports}}, {events, plural, one {# événement cité} other {# événements cités}}",
       "covers": "{start} – aujourd'hui",
       "period": "{start} – {end}",
       "stale": "Pas à jour"
@@ -3087,6 +3087,8 @@
       "areas": "Où les événements ont eu lieu",
       "areaEvents": "{count, plural, one {# événement} other {# événements}}",
       "noEvents": "Aucun événement enregistré dans cette zone depuis le {date}.",
+      "loading": "Chargement des événements…",
+      "error": "Les événements n'ont pas pu être chargés.",
       "sample": "La carte montre les {count} plus récents",
       "hotspots": "{scope} · foyers d'événements",
       "recent": "{count, plural, one {# événement le plus récent} other {# événements les plus récents}}",
@@ -3134,7 +3136,7 @@
       "empty": "Aucun événement enregistré dans cette zone sur cette période.",
       "untitled": "Événement sans titre",
       "severity": "Gravité {value}",
-      "count": "{shown} sur {total}"
+      "count": "Échantillon : {shown} sur {total}"
     },
     "sources": {
       "title": "Sources citées"

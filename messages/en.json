@@ -3028,7 +3028,7 @@
     "meta": {
       "updated": "Updated {relative}",
       "asOf": "as of {date}",
-      "builtFrom": "{reports, plural, one {# report} other {# reports}}, {events, plural, one {# event} other {# events}}",
+      "builtFrom": "{reports, plural, one {# report} other {# reports}}, {events, plural, one {# cited event} other {# cited events}}",
       "covers": "{start} – today",
       "period": "{start} – {end}",
       "stale": "Out of date"
@@ -3087,6 +3087,8 @@
       "areas": "Where events happened",
       "areaEvents": "{count, plural, one {# event} other {# events}}",
       "noEvents": "No events recorded in this area since {date}.",
+      "loading": "Loading events…",
+      "error": "Events could not be loaded.",
       "sample": "Map shows the {count} most recent",
       "hotspots": "{scope} · event hotspots",
       "recent": "{count, plural, one {# most recent event} other {# most recent events}}",
@@ -3134,7 +3136,7 @@
       "empty": "No events recorded in this area in this period.",
       "untitled": "Untitled event",
       "severity": "Severity {value}",
-      "count": "{shown} of {total}"
+      "count": "Sample: {shown} of {total}"
     },
     "sources": {
       "title": "Sources cited"

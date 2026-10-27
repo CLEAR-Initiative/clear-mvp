@@ -516,6 +516,7 @@ export function AnalysisOverview({
   figures,
   events,
   eventsPending = false,
+  eventsFailed = false,
   scopeName,
   countryId,
   countryName,
@@ -533,6 +534,8 @@ export function AnalysisOverview({
   events: AnalysisEvents | undefined;
   /** The events query is in flight. A created analysis shows the timeline while it loads. */
   eventsPending?: boolean;
+  /** The events query failed. The map says so instead of staying on loading. */
+  eventsFailed?: boolean;
   scopeName: string;
   countryId: string;
   countryName: string;
@@ -885,6 +888,7 @@ export function AnalysisOverview({
         areaIds={areaIds}
         since={data.scope.windowStart}
         events={events}
+        failed={eventsFailed}
       />
 
       {(showTimeline || !isCountry) && (story ? axisCards.length > 0 : eventsPending || !!events) && (
