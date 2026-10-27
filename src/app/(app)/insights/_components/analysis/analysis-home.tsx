@@ -11,7 +11,7 @@ import type { CountryAnalysisEntry, CreatedAnalysis } from "~/server/api/mappers
 import type { MapRegion } from "~/components/map/crisis-map";
 import { resolveCountryConfig } from "~/lib/constants/country-config";
 import { ANALYSIS_CADENCES, containsPoint, generationOverdue, isStale, type AnalysisCadence } from "~/lib/analysis-view";
-import { readAnalysisTitle } from "~/lib/analysis-collaboration";
+import { analysisStorageKey, readAnalysisTitle } from "~/lib/analysis-collaboration";
 
 const CrisisMap = dynamic(() => import("~/components/map/crisis-map").then((m) => m.CrisisMap), {
   ssr: false,
@@ -58,6 +58,8 @@ export function AnalysisHome({
   const format = useFormatter();
   const now = useNow({ updateInterval: 60_000 });
   const utils = api.useUtils();
+  const me = api.auth.me.useQuery();
+  const userId = me.data?.user?.id ?? null;
   const [confirming, setConfirming] = useState<string | null>(null);
   const remove = api.analysis.remove.useMutation({
     onSuccess: () => utils.analysis.scopes.invalidate(),
@@ -79,14 +81,19 @@ export function AnalysisHome({
   );
   const [storedTitles, setStoredTitles] = useState<Record<string, string>>({});
   useEffect(() => {
+    if (!userId) {
+      setStoredTitles({});
+      return;
+    }
     const next: Record<string, string> = {};
+    const owner = { userId, teamId };
     for (const item of created) {
-      const stored = readAnalysisTitle(`created:${item.id}`);
+      const stored = readAnalysisTitle(analysisStorageKey(`created:${item.id}`, owner));
       if (stored) next[item.id] = stored;
     }
-    const countryTitle = readAnalysisTitle(`country:${countryId}`);
+    const countryTitle = readAnalysisTitle(analysisStorageKey(`country:${countryId}`, owner));
     setStoredTitles(countryTitle ? { ...next, [countryId]: countryTitle } : next);
-  }, [created, countryId]);
+  }, [created, countryId, userId, teamId]);
   const titled = (id: string, fallback: string) => storedTitles[id] ?? fallback;
 
   // Created analyses cover states (level 1) and/or districts (level 2). States

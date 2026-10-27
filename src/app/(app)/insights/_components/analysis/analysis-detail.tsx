@@ -16,7 +16,7 @@ import { CreateReportButton } from "./create-report-button";
 import { RefreshButton, type RefreshFrame } from "./refresh-button";
 import { AnalysisCrumbs, AnalysisHeader, AnalysisOverview, AnalysisTitle } from "./dark/dark-analysis";
 import { AnalysisDesk } from "./analysis-desk";
-import { readAnalysisTitle, writeAnalysisTitle } from "~/lib/analysis-collaboration";
+import { analysisStorageKey, readAnalysisTitle, writeAnalysisTitle } from "~/lib/analysis-collaboration";
 import { CHANGE_ANCHOR, changeChips, changeSessionKey, looseChangeNotes, type ChangeSection } from "./dark/change-notes";
 import styles from "./dark/analysis-dark.module.css";
 
@@ -75,6 +75,8 @@ export function AnalysisDetail({
   };
   const [changesSeen, setChangesSeen] = useState(false);
   const { activeTeamId } = useTeam();
+  const me = api.auth.me.useQuery();
+  const userId = me.data?.user?.id ?? null;
   // The version on screen when an update was requested (none yet for an overdue
   // first version), and when; polling runs until it changes or the wait times out.
   const [requested, setRequested] = useState<{ from: string | undefined; at: number } | null>(null);
@@ -86,14 +88,26 @@ export function AnalysisDetail({
   const locationIds = isCountry ? [scope.countryId] : scope.created.locationIds;
   const name = isCountry ? scope.countryName : scope.created.name;
   const key = scopeKey(scope);
+  const storedKey = userId ? analysisStorageKey(key, { userId, teamId: activeTeamId }) : null;
   const rename = api.analysis.rename.useMutation();
+  const automationId = isCountry ? null : scope.created.id;
+  const thread = api.analysis.thread.useQuery(
+    { id: automationId ?? "" },
+    { enabled: !!automationId, retry: false, refetchOnWindowFocus: false },
+  );
+  const serverTitle = thread.data?.title?.trim() || null;
   const [customTitle, setCustomTitle] = useState<string | null>(null);
   useEffect(() => {
-    setCustomTitle(readAnalysisTitle(key));
-  }, [key]);
+    setCustomTitle(storedKey ? readAnalysisTitle(storedKey) : null);
+  }, [storedKey]);
+  useEffect(() => {
+    if (!storedKey || !serverTitle) return;
+    writeAnalysisTitle(storedKey, serverTitle);
+    setCustomTitle(serverTitle);
+  }, [storedKey, serverTitle]);
   const displayName = customTitle?.trim() || name;
   const saveTitle = (title: string) => {
-    writeAnalysisTitle(key, title);
+    if (storedKey) writeAnalysisTitle(storedKey, title);
     setCustomTitle(title);
     if (!isCountry && activeTeamId) {
       rename.mutate(
@@ -192,7 +206,7 @@ export function AnalysisDetail({
       locationIds,
       from: since ?? "1970-01-01T00:00:00.000Z",
       ...(eventTypes.length > 0 ? { eventTypes } : {}),
-      ...(data?.eventSourceIds.length ? { citedIds: data.eventSourceIds } : {}),
+      ...(data?.eventSourceIds.length ? { citedIds: data.eventSourceIds.slice(0, 100) } : {}),
     },
     { enabled: !!since, staleTime: 5 * 60_000 },
   );
@@ -392,11 +406,13 @@ export function AnalysisDetail({
       )}
 
       {body}
-      <AnalysisDesk
-        storageKey={key}
-        automationId={isCountry ? null : scope.created.id}
-        teamId={isCountry ? null : activeTeamId}
-      />
+      {storedKey && (
+        <AnalysisDesk
+          storageKey={storedKey}
+          automationId={automationId}
+          teamId={isCountry ? null : activeTeamId}
+        />
+      )}
     </Box>
   );
 }

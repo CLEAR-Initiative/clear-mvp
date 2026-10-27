@@ -29,6 +29,7 @@ import {
 } from "@tabler/icons-react";
 import { cn } from "~/lib/utils";
 import { clearAgentSession } from "~/components/agent/agent-provider";
+import { clearAnalysisCollaboration } from "~/lib/analysis-collaboration";
 import { authClient } from "~/lib/auth-client";
 import { NrcLogoMark } from "~/components/ui/nrc-logo-mark";
 import { colors, fontSizesPx, spacingPx } from "~/lib/tokens";
@@ -258,6 +259,7 @@ export function NavSidebar({
     // redirect below tears down all in-memory React state. If a specific
     // app key ever needs clearing on sign-out, remove it explicitly here.
     clearAgentSession(); // the active Agent Thread belongs to this user
+    clearAnalysisCollaboration();
     window.location.href = "/auth/login";
   };
 

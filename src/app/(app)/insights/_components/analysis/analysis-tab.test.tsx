@@ -103,7 +103,7 @@ vi.mock("~/trpc/react", () => ({
     // ScopeMap loads each created area's geometry.
     useQueries: (build: (q: { locations: { getById: (input: { id: string }) => unknown } }) => unknown[]) =>
       build({ locations: { getById: () => null } }).map(() => ({ data: { geometry: null } })),
-    auth: { me: { useQuery: () => ({ data: { user: { role: role === "admin" ? "admin" : "member", teamMemberships: role === "analyst" ? [{ role: "analyst" }] : [] } } }) } },
+    auth: { me: { useQuery: () => ({ data: { user: { id: "user-1", role: role === "admin" ? "admin" : "member", teamMemberships: role === "analyst" ? [{ role: "analyst" }] : [] } } }) } },
     analysis: {
       scopes: {
         useQuery: (input: unknown, opts: { enabled?: boolean }) => (

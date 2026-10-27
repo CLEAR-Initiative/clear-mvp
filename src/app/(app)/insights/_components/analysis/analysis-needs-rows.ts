@@ -56,14 +56,17 @@ export function analysisNeedsRows(sectors: readonly SaSector[], figures: Analysi
   // The pipeline grades "food"; the stock figure is keyed "food_security".
   const food = byId.get("food_security") ?? byId.get("food");
   const fixed = (Object.keys(SECTOR_ID) as AnalysisNeedsKey[]).map((key) => {
-    const sectorId = SECTOR_ID[key];
-    const sector = sectorId === "food_security" ? food : byId.get(sectorId);
+    const stockId = SECTOR_ID[key];
+    const sector = stockId === "food_security" ? food : byId.get(stockId);
+    // Details are looked up by the sector's own id. `food` is not `food_security`.
+    const sectorId = sector?.id ?? stockId;
     return {
       key,
       sectorId,
       label: sector?.name ?? FIXED_LABEL[key],
       severity: sector?.severity ?? null,
       pin: stockPin(figures, sectorId),
+      present: !!sector,
     };
   });
   const fixedIds = new Set<string>([...Object.values(SECTOR_ID), "food"]);
@@ -75,7 +78,11 @@ export function analysisNeedsRows(sectors: readonly SaSector[], figures: Analysi
       label: sector.name,
       severity: sector.severity,
       pin: stockPin(figures, sector.id),
+      present: true,
     }));
-  // A fixed row with no grade and no figure is an empty cell, not a sector of this analysis.
-  return [...fixed, ...extra].filter((row) => row.severity != null || row.pin != null);
+  // A fixed row with no sector behind it is a placeholder. A sector the analysis
+  // actually contains stays, including one that has findings but no grade and no figure.
+  return [...fixed, ...extra]
+    .filter((row) => row.present || row.pin != null)
+    .map(({ present: _present, ...row }) => row);
 }

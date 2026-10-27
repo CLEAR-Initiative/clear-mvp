@@ -6,6 +6,7 @@ import { IconMessageCircle, IconUpload, IconX } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
 import type { GqlUserComment } from "~/lib/types/graphql";
 import {
+  dropConfirmed,
   mergePending,
   readAnalysisComments,
   readAnalysisFiles,
@@ -67,11 +68,17 @@ export function AnalysisDesk({
   const [pdfError, setPdfError] = useState(false);
   const [localComments, setLocalComments] = useState<StoredComment[]>([]);
   const [localFiles, setLocalFiles] = useState<StoredFile[]>([]);
+  const commentsRef = useRef<StoredComment[]>([]);
+  const filesRef = useRef<StoredFile[]>([]);
   const sessionUrls = useRef(new Map<string, string>());
 
   useEffect(() => {
-    setLocalComments(readAnalysisComments(storageKey));
-    setLocalFiles(readAnalysisFiles(storageKey));
+    const comments = readAnalysisComments(storageKey);
+    const files = readAnalysisFiles(storageKey);
+    commentsRef.current = comments;
+    filesRef.current = files;
+    setLocalComments(comments);
+    setLocalFiles(files);
     setDraft("");
     setPreview(null);
     setPdfError(false);
@@ -99,11 +106,15 @@ export function AnalysisDesk({
       : localFiles
   ).map((row) => ({ ...row, url: sessionUrls.current.get(row.id) ?? row.url }));
 
-  const rememberComments = (next: StoredComment[]) => {
+  const rememberComments = (update: (current: StoredComment[]) => StoredComment[]) => {
+    const next = update(commentsRef.current);
+    commentsRef.current = next;
     setLocalComments(next);
     writeAnalysisComments(storageKey, next);
   };
-  const rememberFiles = (next: StoredFile[]) => {
+  const rememberFiles = (update: (current: StoredFile[]) => StoredFile[]) => {
+    const next = update(filesRef.current);
+    filesRef.current = next;
     setLocalFiles(next);
     writeAnalysisFiles(storageKey, next);
   };
@@ -118,7 +129,7 @@ export function AnalysisDesk({
       author: me.data?.user?.name ?? null,
       pending: true,
     };
-    rememberComments([...localComments, row]);
+    rememberComments((current) => [...current, row]);
     setDraft("");
     if (!automationId) return;
     try {
@@ -126,7 +137,7 @@ export function AnalysisDesk({
       const fresh = await thread.refetch();
       if (fresh.data) {
         const saved = new Set(fresh.data.comments.map((item) => item.comment));
-        rememberComments([...localComments, row].filter((item) => item.pending && !saved.has(item.text)));
+        if (saved.has(text)) rememberComments((current) => dropConfirmed(current, new Set([row.id])));
       }
     } catch {
       // The comment stays in the local thread.
@@ -142,9 +153,11 @@ export function AnalysisDesk({
       sessionUrls.current.set(id, URL.createObjectURL(file));
       return { id, name: file.name, addedAt: new Date().toISOString(), pending: true };
     });
-    rememberFiles([...localFiles, ...added]);
+    rememberFiles((current) => [...current, ...added]);
     if (!automationId) return;
-    for (const file of pdfs) {
+    for (const [index, file] of pdfs.entries()) {
+      const local = added[index];
+      if (!local) continue;
       try {
         const body = new FormData();
         body.append("file", file);
@@ -154,9 +167,7 @@ export function AnalysisDesk({
         if (!res.ok) continue;
         const fresh = await thread.refetch();
         const saved = new Set((fresh.data?.documents ?? []).map((item) => item.fileName));
-        if (saved.size > 0) {
-          rememberFiles([...localFiles, ...added].filter((item) => item.pending && !saved.has(item.name)));
-        }
+        if (saved.has(local.name)) rememberFiles((current) => dropConfirmed(current, new Set([local.id])));
       } catch {
         // The name stays in the local list.
       }

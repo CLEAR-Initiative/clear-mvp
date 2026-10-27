@@ -824,8 +824,12 @@ export const analysisRouter = createTRPCRouter({
         locationIds: z.array(z.string().min(1)).min(1).max(MAX_CREATED_LOCATIONS),
         from: z.string().datetime(),
         eventTypes: z.array(z.string()).optional(),
-        /** `event:<id>` citations from the analysis. Used only when the scope query is empty. */
-        citedIds: z.array(z.string()).max(EVENTS_LIMIT).optional(),
+        /**
+         * `event:<id>` citations from the analysis. Used only when the scope
+         * query is empty. The lookup itself stays at EVENTS_LIMIT; a longer
+         * list must not reject the whole events request.
+         */
+        citedIds: z.array(z.string()).max(2_000).optional(),
       }),
     )
     .query(async ({ ctx, input }): Promise<AnalysisEvents> => {

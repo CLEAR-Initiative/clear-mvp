@@ -48,6 +48,7 @@ let cadencePending: { id: string; cadence: string } | null = null;
 vi.mock("~/trpc/react", () => ({
   api: {
     useUtils: () => ({ analysis: { scopes: { invalidate: vi.fn() } } }),
+    auth: { me: { useQuery: () => ({ data: { user: { id: "user-1" } } }) } },
     analysis: {
       remove: { useMutation: () => ({ mutate: removeMutate, isPending: false }) },
       setCadence: {

@@ -50,7 +50,7 @@ const utils = {
 vi.mock("~/trpc/react", () => ({
   api: {
     useUtils: () => utils,
-    auth: { me: { useQuery: () => ({ data: { user: { role: role === "admin" ? "admin" : "member", teamMemberships: role === "analyst" ? [{ role: "analyst" }] : [] } } }) } },
+    auth: { me: { useQuery: () => ({ data: { user: { id: "user-1", role: role === "admin" ? "admin" : "member", teamMemberships: role === "analyst" ? [{ role: "analyst" }] : [] } } }) } },
     analysis: {
       current: {
         useQuery: (input: unknown, opts: { enabled?: boolean }) => (

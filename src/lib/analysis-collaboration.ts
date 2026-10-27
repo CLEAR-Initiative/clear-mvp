@@ -1,14 +1,42 @@
 /**
  * Title, discussion, and evidence kept on this browser for an analysis.
  *
- * The server copy (automation title, comments, uploaded documents) wins when
- * it can be read. Until then, and whenever that read fails, this copy is what
- * the page shows, so a rename or a comment is still there after a refresh.
+ * clear-api does not store these yet. The copy is private to the signed-in
+ * user and their active team, and sign-out removes it. When a later API
+ * returns a title, comments, or files, that copy replaces this one.
  */
 
 const TITLE = "clear.analysis.title.";
 const COMMENTS = "clear.analysis.comments.";
 const FILES = "clear.analysis.files.";
+const PREFIXES = [TITLE, COMMENTS, FILES];
+
+/** Whose browser copy this is. A shared computer must not show another account's notes. */
+export interface AnalysisOwner {
+  userId: string;
+  teamId: string | null;
+}
+
+/** Storage suffix for one analysis. The scope key stays `country:<id>` or `created:<id>`. */
+export function analysisStorageKey(scopeKey: string, owner: AnalysisOwner): string {
+  return `${owner.userId}:${owner.teamId ?? ""}:${scopeKey}`;
+}
+
+/** Drop every analysis copy on this browser. Called on sign-out. */
+export function clearAnalysisCollaboration(): void {
+  if (typeof window === "undefined") return;
+  const drop: string[] = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key && PREFIXES.some((prefix) => key.startsWith(prefix))) drop.push(key);
+  }
+  for (const key of drop) localStorage.removeItem(key);
+}
+
+/** Rows whose ids the server has confirmed, taken off the latest list. */
+export function dropConfirmed<T extends { id: string }>(current: readonly T[], confirmedIds: ReadonlySet<string>): T[] {
+  return current.filter((item) => !confirmedIds.has(item.id));
+}
 
 export interface StoredComment {
   id: string;

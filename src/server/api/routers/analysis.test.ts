@@ -260,6 +260,37 @@ describe("analysis router", () => {
     expect(graphqlFetch).toHaveBeenCalledTimes(1);
   });
 
+  it("still returns scope events when the citation list is longer than the recovery lookup", async () => {
+    graphqlFetch.mockResolvedValueOnce({
+      eventsPage: {
+        totalCount: 3,
+        items: [
+          {
+            id: "e1",
+            title: "Shelling",
+            types: [],
+            severity: null,
+            firstSignalCreatedAt: "2026-09-01T00:00:00Z",
+            lastSignalCreatedAt: "2026-09-01T00:00:00Z",
+            casualties: null,
+            populationDisplaced: null,
+            representativePoint: null,
+            generalLocation: null,
+          },
+        ],
+      },
+    });
+
+    const result = await caller().analysis.events({
+      locationIds: ["sdn"],
+      from: "2026-01-01T00:00:00.000Z",
+      citedIds: Array.from({ length: 101 }, (_, i) => `event:c${i}`),
+    });
+
+    expect(result.totalCount).toBe(3);
+    expect(graphqlFetch).toHaveBeenCalledTimes(1);
+  });
+
   it("leaves a geometry-less event off the map rather than guessing", () => {
     const e = toAnalysisEvent({
       id: "e2",
