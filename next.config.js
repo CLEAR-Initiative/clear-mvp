@@ -32,6 +32,13 @@ const nextConfig = {
       "./sentry.server.config.ts",
       "./sentry.edge.config.ts",
     ],
+    // @react-pdf/renderer (insights report export) depends on pdfkit 0.20,
+    // which loads its built-in fonts through package.json subpath imports
+    // (`require('#standard-fonts/Helvetica')`). The tracer doesn't follow
+    // those, so the standalone image shipped without pdfkit's font files and
+    // the server logged an unhandledRejection "Cannot find module
+    // .../pdfkit/js/standard-fonts/Helvetica.cjs" on every insights render.
+    "/insights": ["./node_modules/pdfkit/js/**/*"],
   },
   // The clear-mcp Tool library is Node-only (it reads its own package.json
   // at load), so it is required at runtime instead of bundled.
