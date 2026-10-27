@@ -26,9 +26,12 @@ vi.mock("next/link", () => ({
   ),
 }));
 
-/** The Analysis page URL. Empty is the list. */
+/** The Analysis page URL. Empty is the list. `replace` applies it, as the router would. */
 let search = "";
-const replace = vi.fn();
+const replace = vi.fn((href: string) => {
+  const q = href.indexOf("?");
+  search = q === -1 ? "" : href.slice(q + 1);
+});
 vi.mock("next/navigation", () => ({
   usePathname: () => "/analysis",
   useRouter: () => ({ replace }),
@@ -589,6 +592,38 @@ describe("Insights > Analysis tab", () => {
     expect(screen.getByText("analysis.home.title")).toBeInTheDocument();
     expect(screen.queryByText("analysis.error")).not.toBeInTheDocument();
     expect(currentQuery).not.toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ enabled: true }));
+  });
+
+  it("follows query changes on the same page, from a created analysis to a country and back to the list", () => {
+    team = { countries: [AFG, SUDAN], countryId: "sdn" };
+    scopesResult.created = [created()];
+    frameResult = {
+      data: analysis({ summary: "The Sheikan analysis." }),
+      isLoading: false,
+      isError: false,
+    };
+    const view = renderHome();
+
+    fireEvent.click(within(screen.getByTestId("analysis-scope-auto-1")).getAllByRole("button")[0]!);
+    expect(search).toBe("automation=auto-1");
+    expect(screen.getByRole("heading", { name: "Sheikan, North Kordofan, Sudan" })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId("analysis-back"));
+    expect(search).toBe("");
+    expect(screen.getByText("analysis.home.title")).toBeInTheDocument();
+
+    fireEvent.click(within(screen.getByTestId("analysis-scope-country")).getAllByRole("button")[0]!);
+    expect(search).toBe("country=sdn");
+    expect(screen.getByRole("heading", { name: "Sudan" })).toBeInTheDocument();
+
+    search = "country=afg";
+    view.rerender(<MantineProvider><AnalysisTab /></MantineProvider>);
+    expect(screen.getByRole("heading", { name: "Afghanistan" })).toBeInTheDocument();
+
+    search = "automation=missing";
+    view.rerender(<MantineProvider><AnalysisTab /></MantineProvider>);
+    expect(screen.getByText("analysis.home.title")).toBeInTheDocument();
+    expect(screen.queryByText("analysis.error")).not.toBeInTheDocument();
   });
 
   it("keeps the automation and country keys apart", () => {
