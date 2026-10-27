@@ -3,6 +3,7 @@
 import { Group, Text, Tooltip } from "@mantine/core";
 import { useTranslations } from "next-intl";
 import type { SaSource } from "~/server/api/mappers/situation-analysis";
+import { isEventCitationId, isHapiCitationId, sourceHeading } from "./source-heading";
 
 /**
  * Component-level source attribution: the reports a whole component (the AI
@@ -32,9 +33,16 @@ export function Citations({
 
   const chips = refs.map((n) => {
     const src = sources[n - 1];
-    // `||` not `??`: reports cited by the narrative but absent from the
-    // pipeline's sources list carry an empty title, not a missing one.
-    const label = src?.title || t("citations.report", { n });
+    const title = src?.title.trim() ?? "";
+    const id = src?.id ?? "";
+    const titleIsInternal = isEventCitationId(title) || isHapiCitationId(title);
+    const idIsInternal = isEventCitationId(id) || isHapiCitationId(id);
+    // An internal citation id is not a title. A report with no title still
+    // falls back to "Report n" rather than a made-up report name.
+    const label =
+      src && (titleIsInternal || (!title && idIsInternal))
+        ? sourceHeading(src, { event: t("sources.eventLabel"), hapiFigure: t("sources.hapiFigure") })
+        : title || t("citations.report", { n });
     return (
       <Tooltip key={n} label={label} withArrow multiline w={260} openDelay={200}>
         <Text

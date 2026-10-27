@@ -339,19 +339,37 @@ async function hydrateAnalysis(
   const missingEvents = missing
     .map((id) => [id, eventIdFromCitation(id)] as const)
     .filter((p): p is readonly [string, string] => p[1] !== null);
-  const reportIds = [...listedIds, ...missing.filter((id) => eventIdFromCitation(id) === null)].filter(
-    (id): id is string => !!id,
+  // A listed row can still carry the raw `event:` id as its title. Look those
+  // up too, so a resolved event keeps its title instead of the citation id.
+  const listedEvents = listed
+    .map((r) => [r.report_id, r.report_id ? eventIdFromCitation(r.report_id) : null] as const)
+    .filter((p): p is readonly [string, string] => p[1] !== null);
+  const eventIds = [...new Set([...listedEvents, ...missingEvents].map(([, eventId]) => eventId))];
+  const reportIds = [...listedIds, ...missing].filter(
+    (id): id is string => !!id && eventIdFromCitation(id) === null,
   );
 
   const [reportMeta, eventMeta] = await Promise.all([
     fetchReportMeta(reportIds, headers),
-    fetchEventMeta(
-      missingEvents.map(([, eventId]) => eventId),
-      headers,
-    ),
+    fetchEventMeta(eventIds, headers),
   ]);
 
   const withPublisher = listed.map((r) => {
+    const eventId = r.report_id ? eventIdFromCitation(r.report_id) : null;
+    if (eventId) {
+      const ev = eventMeta.get(eventId);
+      const resolvedTitle = ev?.title?.trim();
+      if (ev && resolvedTitle) {
+        return {
+          ...r,
+          report_title: resolvedTitle,
+          source_url: r.source_url || `/event/${eventId}`,
+          published_at: r.published_at ?? ev.firstSignalCreatedAt,
+          publisher: "CLEAR",
+        };
+      }
+      return r;
+    }
     const name = r.report_id ? reportMeta.get(r.report_id)?.source?.name : undefined;
     return name ? { ...r, publisher: name } : r;
   });
