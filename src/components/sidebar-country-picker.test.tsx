@@ -32,7 +32,7 @@ vi.mock("~/providers/working-country-provider", () => ({
   useWorkingCountry: () => ({ ...working, setWorkingCountry }),
 }));
 
-const { SidebarCountryPicker } = await import("./sidebar-country-picker");
+const { SidebarCountryPicker, resetDefaultedTeamsForTest } = await import("./sidebar-country-picker");
 
 function renderPicker(collapsed = false) {
   return render(
@@ -55,6 +55,7 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   setWorkingCountry.mockReset();
+  resetDefaultedTeamsForTest();
 });
 
 describe("SidebarCountryPicker", () => {
@@ -82,6 +83,16 @@ describe("SidebarCountryPicker", () => {
     working = { ...working, countryId: null, countryName: null };
     renderPicker();
     expect(setWorkingCountry).toHaveBeenCalledWith("af");
+  });
+
+  it("does not default again when another picker mounts later (mobile menu)", () => {
+    working = { ...working, countryId: null, countryName: null };
+    renderPicker();
+    expect(setWorkingCountry).toHaveBeenCalledTimes(1);
+    cleanup();
+    // The user then picks All Countries on a page and opens the mobile menu.
+    renderPicker();
+    expect(setWorkingCountry).toHaveBeenCalledTimes(1);
   });
 
   it("keeps an existing pick", () => {

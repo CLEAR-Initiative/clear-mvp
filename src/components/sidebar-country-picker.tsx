@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { Menu, Text, UnstyledButton } from "@mantine/core";
 import { IconChevronDown } from "@tabler/icons-react";
@@ -9,6 +9,18 @@ import { useWorkingCountry } from "~/providers/working-country-provider";
 import { isoForCountryName } from "~/lib/constants/countries";
 import { shortCountryName } from "~/lib/constants/country-config";
 import { colors, fontSizesPx, spacingPx } from "~/lib/tokens";
+
+/**
+ * Teams already started on their first country in this page session. Shared
+ * by every picker instance: the mobile menu mounts a fresh one each time it
+ * opens, and that must not reset a later "All Countries" from a page.
+ */
+const defaultedTeams = new Set<string>();
+
+/** Test seam: forget which teams were defaulted. */
+export function resetDefaultedTeamsForTest() {
+  defaultedTeams.clear();
+}
 
 /**
  * The app-wide working country, picked under the sidebar logo. Shown only
@@ -25,11 +37,10 @@ export function SidebarCountryPicker({ collapsed = false }: { collapsed?: boolea
 
   // A multi-country team with no stored pick starts on its first country,
   // once per team, so a later "All Countries" on a page is not overridden.
-  const defaulted = useRef(new Set<string>());
   useEffect(() => {
     if (!scopeReady || !showCountrySelector || !activeTeamId) return;
-    if (defaulted.current.has(activeTeamId)) return;
-    defaulted.current.add(activeTeamId);
+    if (defaultedTeams.has(activeTeamId)) return;
+    defaultedTeams.add(activeTeamId);
     const first = countries[0];
     if (!countryId && first) setWorkingCountry(first.id);
   }, [scopeReady, showCountrySelector, activeTeamId, countryId, countries, setWorkingCountry]);
