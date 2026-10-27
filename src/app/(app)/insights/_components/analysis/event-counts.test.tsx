@@ -83,9 +83,18 @@ describe("Analysis event count labels", () => {
     expect(map).toHaveTextContent("No events recorded in this area since Jan 1, 2026.");
     expect(map).not.toHaveTextContent("Loading events…");
   });
+
+  it("says the events request failed instead of staying on loading", () => {
+    renderMap(undefined, true);
+    const map = screen.getByRole("region", { name: "Analysis area" });
+    expect(map).toHaveTextContent("Events could not be loaded.");
+    expect(map).not.toHaveTextContent("Loading events…");
+    expect(map).not.toHaveTextContent("No events recorded");
+    expect(map.textContent).not.toMatch(/\b0\b/);
+  });
 });
 
-function renderMap(events: AnalysisEvents | undefined) {
+function renderMap(events: AnalysisEvents | undefined, failed = false) {
   return render(
     <NextIntlClientProvider locale="en" messages={en} timeZone="UTC">
       <ScopeMap
@@ -95,6 +104,7 @@ function renderMap(events: AnalysisEvents | undefined) {
         areaIds={[]}
         since="2026-01-01T00:00:00.000Z"
         events={events}
+        failed={failed}
       />
     </NextIntlClientProvider>,
   );

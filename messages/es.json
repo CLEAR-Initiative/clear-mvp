@@ -3088,6 +3088,7 @@
       "areaEvents": "{count, plural, one {# evento} other {# eventos}}",
       "noEvents": "No hay eventos registrados en esta área desde el {date}.",
       "loading": "Cargando eventos…",
+      "error": "No se pudieron cargar los eventos.",
       "sample": "El mapa muestra los {count} más recientes",
       "hotspots": "{scope} · focos de eventos",
       "recent": "{count, plural, one {# evento más reciente} other {# eventos más recientes}}",

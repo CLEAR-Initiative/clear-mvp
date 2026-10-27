@@ -3088,6 +3088,7 @@
       "areaEvents": "{count, plural, one {# événement} other {# événements}}",
       "noEvents": "Aucun événement enregistré dans cette zone depuis le {date}.",
       "loading": "Chargement des événements…",
+      "error": "Les événements n'ont pas pu être chargés.",
       "sample": "La carte montre les {count} plus récents",
       "hotspots": "{scope} · foyers d'événements",
       "recent": "{count, plural, one {# événement le plus récent} other {# événements les plus récents}}",

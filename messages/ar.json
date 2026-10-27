@@ -3088,6 +3088,7 @@
       "areaEvents": "{count, plural, one {حدث واحد} other {# أحداث}}",
       "noEvents": "لم تُسجَّل أي أحداث في هذه المنطقة منذ {date}.",
       "loading": "جارٍ تحميل الأحداث…",
+      "error": "تعذر تحميل الأحداث.",
       "sample": "تعرض الخريطة أحدث {count}",
       "hotspots": "{scope} · بؤر الأحداث",
       "recent": "{count, plural, one {أحدث حدث} two {أحدث حدثين} few {أحدث # أحداث} many {أحدث # حدثًا} other {أحدث # حدث}}",

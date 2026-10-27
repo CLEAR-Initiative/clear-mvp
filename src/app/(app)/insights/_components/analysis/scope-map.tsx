@@ -60,6 +60,7 @@ export function ScopeMap({
   areaIds,
   since,
   events,
+  failed = false,
 }: {
   countryId: string;
   countryName: string;
@@ -68,6 +69,8 @@ export function ScopeMap({
   areaIds: string[];
   since: string;
   events: AnalysisEvents | undefined;
+  /** The events query failed. Missing events are still loading until then. */
+  failed?: boolean;
 }) {
   const [legendOpen, setLegendOpen] = useState(false);
   const stageRef = useRef<HTMLDivElement>(null);
@@ -119,8 +122,9 @@ export function ScopeMap({
   const areas = useMemo(() => eventsByArea(items).slice(0, MAX_AREAS), [items]);
   const sinceLabel = format.dateTime(new Date(since), { day: "numeric", month: "short", year: "numeric" });
   // Undefined means the events query has not arrived. A resolved empty page
-  // is `{ totalCount: 0, items: [] }` and still uses the empty copy.
-  const loading = events == null;
+  // is `{ totalCount: 0, items: [] }` and still uses the empty copy. A failure
+  // is neither of those: the request stopped, and the total is unknown.
+  const loading = !failed && events == null;
   const total = events?.totalCount ?? 0;
   const scopeLine = areaIds.length > 0 ? t("scope.areas", { count: areaIds.length }) : t("scope.wholeCountry");
   const meta = items.length > 0 ? `${scopeLine} · ${t("map.recent", { count: items.length })}` : scopeLine;
@@ -223,7 +227,9 @@ export function ScopeMap({
       </div>
       <div className={styles.sideCard}>
         <div className={styles.sideCount}>
-          {loading ? (
+          {failed ? (
+            <span className={styles.mapSample}>{t("map.error")}</span>
+          ) : loading ? (
             <span className={styles.mapSample}>{t("map.loading")}</span>
           ) : (
             <>
@@ -233,7 +239,7 @@ export function ScopeMap({
           )}
         </div>
         <div className={styles.railLabel}>{t("map.areas")}</div>
-        {loading ? null : areas.length === 0 ? (
+        {failed || loading ? null : areas.length === 0 ? (
           <span style={{ fontSize: 13, color: "var(--sa-muted)" }}>{t("map.noEvents", { date: sinceLabel })}</span>
         ) : (
           areas.map((area) => (
