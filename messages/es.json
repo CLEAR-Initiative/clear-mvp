@@ -281,7 +281,9 @@
         "visit": "Visitar fuente",
         "published": "Publicado el {date}",
         "empty": "No hay fuentes registradas para esta instantánea.",
-        "count": "{count} referencias"
+        "count": "{count} referencias",
+        "eventLabel": "Evento",
+        "hapiFigure": "Cifra HAPI"
       },
       "kpi": {
         "informSeverity": "Gravedad INFORM",
@@ -3237,6 +3239,8 @@
       "noResponse": "No se informan actividades de respuesta en las fuentes actuales.",
       "outlook": "Perspectivas",
       "sources": "Fuentes",
+      "eventLabel": "Evento",
+      "hapiFigure": "Cifra HAPI",
       "provenance": "Procedencia",
       "generated": "Informe creado el {date} por {author} en CLEAR. Los números entre corchetes remiten a la lista de fuentes.",
       "footer": "CLEAR · {scope}",

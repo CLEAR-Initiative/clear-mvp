@@ -281,7 +281,9 @@
         "visit": "زيارة المصدر",
         "published": "نُشر في {date}",
         "empty": "لا توجد مصادر مسجلة لهذه اللقطة.",
-        "count": "{count} مرجع"
+        "count": "{count} مرجع",
+        "eventLabel": "حدث",
+        "hapiFigure": "رقم HAPI"
       },
       "kpi": {
         "informSeverity": "شدة INFORM",
@@ -3237,6 +3239,8 @@
       "noResponse": "لا توجد أنشطة استجابة مذكورة في المصادر الحالية.",
       "outlook": "التوقعات",
       "sources": "المصادر",
+      "eventLabel": "حدث",
+      "hapiFigure": "رقم HAPI",
       "provenance": "المصدر",
       "generated": "أُنشئ التقرير في {date} بواسطة {author} في CLEAR. تشير الأرقام بين الأقواس إلى قائمة المصادر.",
       "footer": "CLEAR · {scope}",

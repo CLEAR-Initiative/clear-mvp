@@ -121,6 +121,52 @@ describe("analysis router", () => {
     expect(result?.scope).toMatchObject({ name: "Sudan", locationIds: ["sdn"] });
   });
 
+  it("uses the event title when a listed citation is the raw event id", async () => {
+    graphqlFetch.mockImplementation(async (query: string, vars?: Record<string, string>) => {
+      if (query.includes("query Analysis(")) {
+        return {
+          analysis: {
+            ...row,
+            sourceReportIds: ["r1", "event:e1", "event:e-missing"],
+            data: {
+              ai_summary: { text: "Sudan summary.", source_report_ids: ["event:e1", "event:e-missing"] },
+              sources: {
+                reports: [
+                  { report_id: "r1", report_title: "Listed report", source_url: "https://rw/1" },
+                  { report_id: "event:e1", report_title: "event:e1" },
+                ],
+              },
+            },
+          },
+        };
+      }
+      if (query.includes("query ReportMeta")) {
+        return {
+          r0: { reportId: "r1", reportTitle: "Listed report", sourceUrl: "https://rw/1", publishedAt: null, source: { name: "OCHA" } },
+        };
+      }
+      if (query.includes("query CitedEvents")) {
+        const events: Record<string, unknown> = {};
+        for (const [key, id] of Object.entries(vars ?? {})) {
+          events[key] =
+            id === "e1"
+              ? { id: "e1", title: "Shelling in El Fasher", firstSignalCreatedAt: "2026-09-20T00:00:00Z" }
+              : null;
+        }
+        return events;
+      }
+      throw new Error(`unexpected query ${query.slice(0, 40)}`);
+    });
+
+    const result = await caller().analysis.current({ countryLocationId: "sdn", countryName: "Sudan" });
+
+    expect(result?.sources.map((s) => [s.id, s.title])).toEqual([
+      ["r1", "Listed report"],
+      ["event:e1", "Shelling in El Fasher"],
+      ["event:e-missing", ""],
+    ]);
+  });
+
   it("falls back to last year's frame, then to null", async () => {
     graphqlFetch.mockResolvedValue({ analysis: null });
     const result = await caller().analysis.current({ countryLocationId: "sdn", countryName: "Sudan" });

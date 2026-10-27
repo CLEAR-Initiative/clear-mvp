@@ -4,6 +4,7 @@ import { useFormatter, useTranslations } from "next-intl";
 import { Anchor, Box, Group, Text } from "@mantine/core";
 import { IconArrowUpRight } from "@tabler/icons-react";
 import type { SaSource } from "~/server/api/mappers/situation-analysis";
+import { sourceHeading } from "./source-heading";
 
 /**
  * Situation Analysis -> Sources: a numbered references list.
@@ -72,6 +73,7 @@ export function SituationSources({ sources, className }: { sources: SaSource[]; 
                 : null
             }
             visitLabel={t("sources.visit")}
+            headingLabels={{ event: t("sources.eventLabel"), hapiFigure: t("sources.hapiFigure") }}
           />
         ))}
       </Box>
@@ -85,17 +87,20 @@ function Reference({
   first,
   publishedLabel,
   visitLabel,
+  headingLabels,
 }: {
   n: number;
   source: SaSource;
   first: boolean;
   publishedLabel: string | null;
   visitLabel: string;
+  headingLabels: { event: string; hapiFigure: string };
 }) {
   // Prefer the publisher clear-api resolved from the report's ReliefWeb
   // `source` ("OCHA", "WFP"); the URL host is the label of last resort and
   // only ever says "reliefweb.int" - the aggregator, not the publisher.
   const publisher = source.publisher ?? publisherFromUrl(source.url);
+  const heading = sourceHeading(source, headingLabels);
 
   return (
     <Box
@@ -134,13 +139,11 @@ function Reference({
             fw={600}
             style={{ fontSize: 13.5, lineHeight: 1.4 }}
           >
-            {source.title}
+            {heading}
           </Anchor>
         ) : (
           <Text fw={600} c="var(--src-text, var(--color-text-primary))" style={{ fontSize: 13.5, lineHeight: 1.4 }}>
-            {/* Cited by the narrative but absent from the pipeline's sources
-                list, so no title was resolved - show the report id. */}
-            {source.title || `ReliefWeb report ${source.id}`}
+            {heading}
           </Text>
         )}
 
