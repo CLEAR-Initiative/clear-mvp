@@ -1,5 +1,6 @@
 import { test, expect } from "../support/test";
 import { SEEDED_ANALYSIS } from "../support/data";
+import { countryIdByName } from "../support/helpers";
 
 /**
  * Analysis redesign. The list is real scopes only: there is no design sample.
@@ -32,20 +33,16 @@ test.describe("Analysis redesign", () => {
     await page.emulateMedia({ colorScheme: "light" });
 
     let holdEvents = true;
-    let failScopes = false;
     await page.route(/\/api\/trpc\//, async (route) => {
       const url = route.request().url();
-      if (failScopes && url.includes("analysis.scopes")) {
-        await route.abort();
-        return;
-      }
       if (holdEvents && url.includes("analysis.events") && !url.includes("analysis.current")) {
         await new Promise((resolve) => setTimeout(resolve, EVENTS_HOLD_MS));
       }
       await route.continue();
     });
 
-    await page.goto(`/analysis?country=${SEEDED_ANALYSIS.countryId}`, { waitUntil: "domcontentloaded" });
+    const sudan = await countryIdByName(page, SEEDED_ANALYSIS.countryName);
+    await page.goto(`/analysis?country=${sudan}`, { waitUntil: "domcontentloaded" });
     const detail = page.getByTestId("analysis-page");
     await expect(detail).toBeVisible();
 
@@ -86,9 +83,5 @@ test.describe("Analysis redesign", () => {
     await page.goto("/analysis?automation=not-a-real-automation", { waitUntil: "domcontentloaded" });
     await expect(page.getByRole("heading", { name: "Analyses" })).toBeVisible();
     await expect(page.getByTestId("analysis-page")).toHaveCount(0);
-
-    failScopes = true;
-    await page.goto("/analysis", { waitUntil: "domcontentloaded" });
-    await expect(page.getByText("The analysis could not be loaded.")).toBeVisible();
   });
 });

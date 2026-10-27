@@ -84,7 +84,7 @@ export const SEEDED_EVENTS = {
  * Keep these strings identical to that script.
  */
 export const SEEDED_ANALYSIS = {
-  countryId: "sudan",
+  countryName: "Sudan",
   sourceTitle: "OCHA Sudan humanitarian update",
   /** An event citation id that is not a seeded event, so it cannot resolve to a title. */
   unresolvedEventCitation: "event:e2e-cited",

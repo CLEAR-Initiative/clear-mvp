@@ -6,7 +6,8 @@
 /**
  * One Sudan analysis for the Analysis page smoke.
  *
- * The hermetic seed has the Sudan location and four events, and no analysis
+ * The hermetic seed has a level-0 location named Sudan (its id is a UUID; the
+ * seed key "sudan" is not the row id) and four events, and no analysis
  * document, so the page cannot open. This inserts the current-year country
  * frame plus the all-time stock figures the needs rows read.
  *
@@ -17,14 +18,21 @@
 
 import { prisma } from "./src/lib/prisma.js";
 
-const COUNTRY_ID = "sudan";
+const COUNTRY_NAME = "Sudan";
+const ANALYSIS_ID = "e2e-sudan-analysis";
+const FIGURES_ID = "e2e-sudan-figures";
 const SOURCE_TITLE = "OCHA Sudan humanitarian update";
 const EVENT_CITATION = "event:e2e-cited";
 const RANGE = "2\u20133 million people remain displaced from the fighting.";
 
 async function main() {
-  const country = await prisma.locations.findUnique({ where: { id: COUNTRY_ID } });
-  if (!country) throw new Error(`[analysis-seed] expected location "${COUNTRY_ID}" from the main seed`);
+  const country = await prisma.locations.findFirst({
+    where: { name: COUNTRY_NAME, level: 0 },
+  });
+  if (!country) {
+    throw new Error(`[analysis-seed] expected a level-0 location named "${COUNTRY_NAME}" from the main seed`);
+  }
+  const countryId = country.id;
 
   const year = new Date().getUTCFullYear();
   const windowStart = new Date(Date.UTC(year, 0, 1));
@@ -33,12 +41,14 @@ async function main() {
   const now = new Date();
 
   await prisma.analysis.deleteMany({
-    where: { locationIds: { equals: [COUNTRY_ID] }, windowStart, windowEnd },
+    where: {
+      OR: [{ id: ANALYSIS_ID }, { locationIds: { equals: [countryId] }, windowStart, windowEnd }],
+    },
   });
   await prisma.analysis.create({
     data: {
-      id: "e2e-sudan-analysis",
-      locationIds: [COUNTRY_ID],
+      id: ANALYSIS_ID,
+      locationIds: [countryId],
       eventTypes: [],
       needSectors: [],
       windowStart,
@@ -71,15 +81,20 @@ async function main() {
   });
 
   await prisma.aggregatedDatapoint.deleteMany({
-    where: { locationId: COUNTRY_ID, windowKind: "all", windowStart: figuresStart, schemaVersion: "v5" },
+    where: {
+      OR: [
+        { id: FIGURES_ID },
+        { locationId: countryId, windowKind: "all", windowStart: figuresStart, schemaVersion: "v5" },
+      ],
+    },
   });
   await prisma.aggregatedDatapoint.create({
     data: {
-      id: "e2e-sudan-figures",
+      id: FIGURES_ID,
       windowStart: figuresStart,
       windowEnd: now,
       windowKind: "all",
-      locationId: COUNTRY_ID,
+      locationId: countryId,
       data: { pin_wash: { value: 25_000_000 } },
       contributingReportIds: [],
       newestSourceAt: now,
