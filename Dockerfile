@@ -78,6 +78,14 @@ ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
+# The builder stage's NODE_OPTIONS does not carry into this stage, so without
+# this line the server runs on V8's default heap, which inside the 1 GB
+# container on dev comes out near 500 MB. One History tab load (3 x 100-row
+# pages with nested signal geometries, plus the map's full-scan resolvers)
+# exceeds that and the process dies with "JavaScript heap out of memory",
+# which Caddy surfaces as 502s until the container restarts. 768 MB leaves
+# ~250 MB headroom for the non-heap RSS under the 1 GB cgroup limit.
+ENV NODE_OPTIONS=--max-old-space-size=768
 
 # Run as a non-root user — Next.js docs' recommended pattern.
 RUN addgroup -g 1001 -S nodejs && \
