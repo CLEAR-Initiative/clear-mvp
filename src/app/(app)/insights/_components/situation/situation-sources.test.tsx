@@ -31,13 +31,19 @@ describe("Analysis sources", () => {
   });
 
   it("hides an event id and a HAPI id behind typed labels", () => {
-    renderSources([source(EVENT_ID), source(UNTITLED_EVENT_ID, ""), source(HAPI_ID)]);
+    renderSources([
+      source(EVENT_ID),
+      source(UNTITLED_EVENT_ID, ""),
+      source("event:e-placeholder", "Untitled report"),
+      source(HAPI_ID),
+    ]);
 
     const list = screen.getByTestId("analysis-sources");
     expect(list).toHaveTextContent("insights.situation.sources.eventLabel");
     expect(list).toHaveTextContent("insights.situation.sources.hapiFigure");
     expect(list).not.toHaveTextContent(EVENT_ID);
     expect(list).not.toHaveTextContent(UNTITLED_EVENT_ID);
+    expect(list).not.toHaveTextContent("Untitled report");
     expect(list).not.toHaveTextContent(HAPI_ID);
     expect(list).not.toHaveTextContent("ReliefWeb report");
   });

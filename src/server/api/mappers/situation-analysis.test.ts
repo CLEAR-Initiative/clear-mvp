@@ -211,3 +211,29 @@ describe("fillMissingKeyFigures", () => {
     expect(needsYearlyFill(complete)).toBe(false);
   });
 });
+
+describe("mapSituationAnalysis sources", () => {
+  it("leaves a missing title empty for an event or HAPI citation", () => {
+    const mapped = mapSituationAnalysis(
+      {
+        ...row({}),
+        data: {
+          sources: {
+            reports: [
+              { report_id: "event:e-missing" },
+              { report_id: "api:sdn:hapi_humanitarian_needs:pin" },
+              { report_id: "r-blank" },
+            ],
+          },
+        },
+      },
+      "Sudan",
+    );
+
+    expect(mapped.sources.map((s) => [s.id, s.title])).toEqual([
+      ["event:e-missing", ""],
+      ["api:sdn:hapi_humanitarian_needs:pin", ""],
+      ["r-blank", "Untitled report"],
+    ]);
+  });
+});

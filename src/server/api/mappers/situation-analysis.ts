@@ -551,7 +551,7 @@ function mapSources(raw: SaPayload["sources"], citedIds: string[]): SaSource[] {
     .filter((r) => r.report_id)
     .map((r) => ({
       id: r.report_id!,
-      title: r.report_title?.trim() ?? "Untitled report",
+      title: listedTitle(r.report_id!, r.report_title),
       url: r.source_url ?? null,
       publishedAt: r.published_at ?? null,
       publisher: r.publisher?.trim() || null,
@@ -574,6 +574,17 @@ function mapSources(raw: SaPayload["sources"], citedIds: string[]): SaSource[] {
     sources.push({ id, title: "", url: null, publishedAt: null, publisher: null });
   }
   return sources;
+}
+
+/** A listed report with no title stays "Untitled report". An event or HAPI
+ *  citation with no title stays empty, so the sources list can show a typed
+ *  label instead of inventing a report name. */
+function listedTitle(id: string, raw: string | null | undefined): string {
+  const title = raw?.trim() ?? "";
+  if (title) return title;
+  const event = id.startsWith("event:") && id.length > "event:".length;
+  const hapi = id.startsWith("api:") && id.includes("hapi_humanitarian_needs");
+  return event || hapi ? "" : "Untitled report";
 }
 
 export function mapSituationAnalysis(
