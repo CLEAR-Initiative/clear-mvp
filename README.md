@@ -55,7 +55,7 @@ decisions are recorded in [`docs/adr/`](./docs/adr/).
 | Detection | `/detection` | Live feed of Alerts, Events and Signals, with filters and history. |
 | Map | `/map` | Everything on a Mapbox map, with layers (e.g. access constraints, seismic activity). |
 | Inbox | `/inbox` | Items waiting on a person's decision — hotline threads, proposed signals. |
-| Crisis / Analysis | `/crisis`, `/analysis` | Build and read situation analyses for a crisis; export to PDF. |
+| Analysis | `/analysis`, `/crisis/[id]` | Build and read situation analyses; open a crisis to see its Events, summary and scenarios; export to PDF. |
 | Agent | `/agent` (and a drawer on every page) | Chat with the CLEAR Agent, which answers from CLEAR's data and NRC's knowledge base. |
 | Observe | `/observe` | Field officers report something they have seen as a new Signal. |
 | Admin | `/admin`, `/metrics` | Users, teams, invitations, data sources, platform metrics. |
@@ -162,7 +162,7 @@ bun run lint          # next lint
 bun run i18n:check    # every locale has every message key
 bun run check         # lint + typecheck + i18n:check
 bun run test          # unit tests (Vitest)
-bun run e2e           # end-to-end tests (Playwright against a Dockerised clear-api stack)
+bun run e2e           # end-to-end tests (Playwright; needs Docker and clear-api checked out at ../clear-api)
 ```
 
 ## Contributing and deployment
