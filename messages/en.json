@@ -3077,7 +3077,8 @@
         "protection": "Protection",
         "shelter": "Shelter & NFI",
         "education": "Education",
-        "nutrition": "Nutrition"
+        "nutrition": "Nutrition",
+        "agriculture": "Agriculture"
       }
     },
     "map": {
@@ -3129,7 +3130,8 @@
       "severityIntro": "Each sector is graded by the analysis from the sector reporting it cites.",
       "severityNull": "Not assessed: too little evidence to grade.",
       "inferred": "Graded from reporting outside this sector. Treat as indicative.",
-      "notAssessed": "Not assessed"
+      "notAssessed": "Not assessed",
+      "noFigure": "No people-in-need figure"
     },
     "events": {
       "title": "Events in this area",
@@ -3149,6 +3151,7 @@
     "generating": {
       "title": "Generating the first version",
       "description": "The pipeline is building this analysis from the knowledge base. This page updates by itself when it is ready.",
+      "elapsed": "Usually ready in 5–6 minutes. Running for {minutes, plural, one {# minute} other {# minutes}}.",
       "overdueTitle": "Not generated yet",
       "overdueDescription": "The first version has not arrived. It may have failed; request it again with Update now."
     },
@@ -3297,6 +3300,11 @@
       "nrcEvidence": "NRC evidence",
       "breadcrumb": "Breadcrumb",
       "addEvidence": "Add evidence",
+      "editTitle": "Edit title",
+      "saveTitle": "Save title",
+      "titlePlaceholder": "Name this analysis",
+      "evidencePdfOnly": "Only PDF files can be added.",
+      "discussionYou": "You",
       "evidenceFiles": "{count, plural, one {# file} other {# files}}",
       "evidenceDrop": "Drop files to add evidence",
       "evidencePreview": "Preview of {name}",

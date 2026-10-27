@@ -99,7 +99,21 @@
 
 @media (max-width: 48em) {
   .shell {
-    padding: 16px 16px 72px;
+    /* Clear the fixed chat button (48px, sitting 88px off the bottom). */
+    padding: 16px 16px 160px;
+  }
+
+  .title {
+    font-size: 32px;
+  }
+
+  .sectionButton {
+    padding: 16px;
+  }
+
+  .fresh,
+  .updated {
+    max-width: 100%;
   }
 }
 
@@ -308,6 +322,28 @@
   font-weight: 700;
   letter-spacing: -0.025em;
   color: var(--sa-text);
+}
+
+.titleRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.titleInput {
+  composes: title;
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  border-radius: 0;
+  padding: 0 0 2px;
+  background: transparent;
+  border-bottom: 1px solid var(--sa-line);
+}
+
+.titleInput:focus {
+  outline: none;
+  border-bottom-color: var(--sa-accent);
 }
 
 .meta {

@@ -9,12 +9,13 @@ import {
   generationOverdue,
   GENERATION_OVERDUE_MS,
   isStale,
+  kpiValues,
   pickCountry,
   sameLocations,
   scopeLabel,
   timelineLayout,
 } from "~/lib/analysis-view";
-import type { AnalysisEvent } from "~/server/api/mappers/analysis";
+import type { Analysis, AnalysisEvent, AnalysisFigures } from "~/server/api/mappers/analysis";
 
 function ev(id: string, startedAt: string, severity: number | null, admin1: AnalysisEvent["admin1"] = null): AnalysisEvent {
   return {
@@ -31,6 +32,79 @@ function ev(id: string, startedAt: string, severity: number | null, admin1: Anal
     admin1,
   };
 }
+
+function analysisDisplaced(displaced: number | null): Analysis {
+  return {
+    id: "a",
+    scope: { locationIds: ["sdn"], name: "Sudan", windowStart: "2026-01-01T00:00:00Z", windowEnd: null },
+    crisis: {
+      country: "Sudan",
+      year: "2026",
+      generatedAt: "2026-09-01T00:00:00Z",
+      generatedByModel: "m",
+      schemaVersion: "v4",
+      reportCount: 1,
+      qualityScore: null,
+      freshestSourceAt: null,
+    },
+    summary: null,
+    summaryRefs: [],
+    summaryLineRefs: {},
+    stats: [],
+    figures: { displaced, affected: null, inNeed: null, returnees: null, fundingRequired: null, fundingReceived: null },
+    contextRisks: [],
+    hazards: { hazards: [], vulnerabilities: [] },
+    displacement: { push: [], return: [] },
+    sectors: [],
+    sources: [],
+    changes: { comparedTo: null, notes: {} },
+    scenarios: null,
+    keyFindings: [],
+    eventSourceIds: [],
+  };
+}
+
+const stock = (value: number): AnalysisFigures => ({
+  idpStock: { value, low: null, high: null, newestAt: null },
+  refugees: null,
+  returneeStock: null,
+  overallPin: null,
+  pinBySector: [],
+});
+
+describe("kpiValues", () => {
+  it("uses the analysis displaced figure ahead of the all-time stock", () => {
+    expect(kpiValues(analysisDisplaced(8_600_000), stock(4_900_000)).inside).toBe(8_600_000);
+    expect(kpiValues(analysisDisplaced(41_569), stock(122_700)).inside).toBe(41_569);
+  });
+
+  it("falls back to the all-time stock when the analysis has no displaced figure", () => {
+    expect(kpiValues(analysisDisplaced(null), stock(4_900_000)).inside).toBe(4_900_000);
+  });
+
+  it("uses the window funding when the snapshot left both dollars empty", () => {
+    const values = kpiValues(analysisDisplaced(null), {
+      ...stock(1),
+      fundingReceived: { value: 1_200_000_000, low: null, high: null, newestAt: null },
+      fundingRequired: { value: 4_000_000_000, low: null, high: null, newestAt: null },
+    });
+    expect(values.fundingReceived).toBe(1_200_000_000);
+    expect(values.fundingRequired).toBe(4_000_000_000);
+  });
+
+  it("keeps snapshot funding ahead of the window bucket", () => {
+    const data = analysisDisplaced(null);
+    data.figures.fundingReceived = 500;
+    data.figures.fundingRequired = 1_000;
+    const values = kpiValues(data, {
+      ...stock(1),
+      fundingReceived: { value: 1_200_000_000, low: null, high: null, newestAt: null },
+      fundingRequired: { value: 4_000_000_000, low: null, high: null, newestAt: null },
+    });
+    expect(values.fundingReceived).toBe(500);
+    expect(values.fundingRequired).toBe(1_000);
+  });
+});
 
 describe("eventsByArea", () => {
   it("counts per admin-1, most first, skipping events with no area", () => {

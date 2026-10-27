@@ -3077,7 +3077,8 @@
         "protection": "Protección",
         "shelter": "Refugio y artículos no alimentarios",
         "education": "Educación",
-        "nutrition": "Nutrición"
+        "nutrition": "Nutrición",
+        "agriculture": "Agricultura"
       }
     },
     "map": {
@@ -3129,7 +3130,8 @@
       "severityIntro": "El análisis califica cada sector a partir de los informes sectoriales que cita.",
       "severityNull": "Sin evaluar: muy poca evidencia para calificar.",
       "inferred": "Calificado a partir de informes ajenos a este sector. Tómalo como indicativo.",
-      "notAssessed": "Sin evaluar"
+      "notAssessed": "Sin evaluar",
+      "noFigure": "Sin cifra de personas que necesitan ayuda"
     },
     "events": {
       "title": "Eventos en esta área",
@@ -3149,6 +3151,7 @@
     "generating": {
       "title": "Generando la primera versión",
       "description": "El pipeline está construyendo este análisis a partir de la base de conocimiento. Esta página se actualiza sola cuando esté listo.",
+      "elapsed": "Suele estar listo en 5–6 minutos. Lleva {minutes, plural, one {# minuto} other {# minutos}}.",
       "overdueTitle": "Aún no generado",
       "overdueDescription": "La primera versión no ha llegado. Puede haber fallado; vuelva a solicitarla con Actualizar ahora."
     },
@@ -3297,6 +3300,11 @@
       "nrcEvidence": "Evidencia del NRC",
       "breadcrumb": "Ruta",
       "addEvidence": "Añadir evidencia",
+      "editTitle": "Editar el título",
+      "saveTitle": "Guardar el título",
+      "titlePlaceholder": "Nombre de este análisis",
+      "evidencePdfOnly": "Solo se pueden añadir archivos PDF.",
+      "discussionYou": "Usted",
       "evidenceFiles": "{count, plural, one {# archivo} other {# archivos}}",
       "evidenceDrop": "Suelte archivos para añadir evidencia",
       "evidencePreview": "Vista previa de {name}",

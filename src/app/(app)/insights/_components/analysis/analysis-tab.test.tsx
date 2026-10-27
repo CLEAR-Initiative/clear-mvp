@@ -132,6 +132,17 @@ vi.mock("~/trpc/react", () => ({
       remove: { useMutation: () => mutation(removeMutate) },
       refresh: { useMutation: () => mutation(vi.fn()) },
       setCadence: { useMutation: () => mutation(vi.fn()) },
+      thread: {
+        useQuery: () => ({
+          data: undefined,
+          isSuccess: false,
+          isError: false,
+          isLoading: false,
+          refetch: async () => ({ data: undefined }),
+        }),
+      },
+      rename: { useMutation: () => mutation(vi.fn()) },
+      comment: { useMutation: () => ({ mutateAsync: vi.fn(), isPending: false }) },
     },
     locations: {
       getById: { useQuery: () => ({ data: { geometry: null } }) },
@@ -677,7 +688,11 @@ describe("Insights > Analysis tab", () => {
     );
     expect(screen.getByRole("heading", { name: "Sheikan and Um Rawaba, North Kordofan, Sudan" })).toBeInTheDocument();
     expect(screen.getByText("analysis.scope.created")).toBeInTheDocument();
-    expect(eventsQuery).toHaveBeenLastCalledWith({ locationIds: ["sheikan", "umrawaba"], from: "2026-07-01T00:00:00.000Z" });
+    expect(eventsQuery).toHaveBeenLastCalledWith({
+      locationIds: ["sheikan", "umrawaba"],
+      from: "2026-07-01T00:00:00.000Z",
+      citedIds: ["event:e1"],
+    });
     expect(screen.getByTestId("analysis-section-timeline")).toBeInTheDocument();
     expect(screen.getByText("Shelling in El Fasher")).toBeInTheDocument();
     expect(screen.queryByText(/Treason proceedings/)).not.toBeInTheDocument();

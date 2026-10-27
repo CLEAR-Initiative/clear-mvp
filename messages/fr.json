@@ -3077,7 +3077,8 @@
         "protection": "Protection",
         "shelter": "Abris et BNA",
         "education": "Éducation",
-        "nutrition": "Nutrition"
+        "nutrition": "Nutrition",
+        "agriculture": "Agriculture"
       }
     },
     "map": {
@@ -3129,7 +3130,8 @@
       "severityIntro": "Chaque secteur est évalué par l'analyse à partir des rapports sectoriels qu'elle cite.",
       "severityNull": "Non évalué : trop peu d'éléments pour noter.",
       "inferred": "Évalué à partir de rapports hors de ce secteur. À considérer comme indicatif.",
-      "notAssessed": "Non évalué"
+      "notAssessed": "Non évalué",
+      "noFigure": "Pas de chiffre de personnes dans le besoin"
     },
     "events": {
       "title": "Événements dans cette zone",
@@ -3149,6 +3151,7 @@
     "generating": {
       "title": "Génération de la première version",
       "description": "Le pipeline construit cette analyse à partir de la base de connaissances. Cette page se met à jour d'elle-même lorsqu'elle est prête.",
+      "elapsed": "Généralement prêt en 5–6 minutes. En cours depuis {minutes, plural, one {# minute} other {# minutes}}.",
       "overdueTitle": "Pas encore générée",
       "overdueDescription": "La première version n'est pas arrivée. Elle a peut-être échoué ; demandez-la à nouveau avec Mettre à jour."
     },
@@ -3297,6 +3300,11 @@
       "nrcEvidence": "Preuves du NRC",
       "breadcrumb": "Fil d'Ariane",
       "addEvidence": "Ajouter des éléments",
+      "editTitle": "Modifier le titre",
+      "saveTitle": "Enregistrer le titre",
+      "titlePlaceholder": "Nom de cette analyse",
+      "evidencePdfOnly": "Seuls les fichiers PDF peuvent être ajoutés.",
+      "discussionYou": "Vous",
       "evidenceFiles": "{count, plural, one {# fichier} other {# fichiers}}",
       "evidenceDrop": "Déposez des fichiers pour ajouter une preuve",
       "evidencePreview": "Aperçu de {name}",

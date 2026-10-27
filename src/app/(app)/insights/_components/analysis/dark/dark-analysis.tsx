@@ -15,6 +15,7 @@ import {
   IconFlag,
   IconHeart,
   IconInfoCircle,
+  IconPencil,
   IconScale,
   IconShield,
   IconSparkles,
@@ -139,6 +140,96 @@ function Updated({ label }: { label: string }) {
   );
 }
 
+/** The analysis name. Analysts can change it; the parent stores the result. */
+export function AnalysisTitle({
+  name,
+  canRename = false,
+  onRename,
+}: {
+  name: string;
+  canRename?: boolean;
+  onRename?: (title: string) => void;
+}) {
+  const t = useTranslations("analysis.layout");
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(name);
+
+  useEffect(() => {
+    setDraft(name);
+    setEditing(false);
+  }, [name]);
+
+  const save = () => {
+    const next = draft.trim();
+    if (!next || next === name) {
+      setDraft(name);
+      setEditing(false);
+      return;
+    }
+    onRename?.(next);
+    setEditing(false);
+  };
+
+  if (editing) {
+    return (
+      <div className={styles.titleRow}>
+        <input
+          className={styles.titleInput}
+          value={draft}
+          aria-label={t("editTitle")}
+          placeholder={t("titlePlaceholder")}
+          data-testid="analysis-title-input"
+          autoFocus
+          onChange={(event) => setDraft(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") save();
+            if (event.key === "Escape") {
+              setDraft(name);
+              setEditing(false);
+            }
+          }}
+        />
+        <button type="button" className={styles.expand} onClick={save}>
+          {t("saveTitle")}
+        </button>
+        <button
+          type="button"
+          className={styles.iconButton}
+          aria-label={t("cancelEdit")}
+          onClick={() => {
+            setDraft(name);
+            setEditing(false);
+          }}
+        >
+          <IconX size={15} />
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className={styles.titleRow}>
+      <h1 className={styles.title} data-testid="analysis-title">
+        {name}
+      </h1>
+      {canRename && (
+        <button
+          type="button"
+          className={styles.iconButton}
+          aria-label={t("editTitle")}
+          data-testid="analysis-title-edit"
+          onClick={() => {
+            setDraft(name);
+            setEditing(true);
+          }}
+        >
+          <IconPencil size={16} />
+        </button>
+      )}
+    </div>
+  );
+}
+
 export function AnalysisHeader({
   eyebrow,
   name,
@@ -157,6 +248,8 @@ export function AnalysisHeader({
   onOpenSources,
   onHome,
   actions,
+  canRename = false,
+  onRename,
 }: {
   eyebrow: string;
   name: string;
@@ -177,6 +270,9 @@ export function AnalysisHeader({
   onOpenSources: () => void;
   onHome: () => void;
   actions: ReactNode;
+  /** Analysts can rename the analysis. The parent stores the new title. */
+  canRename?: boolean;
+  onRename?: (title: string) => void;
 }) {
   const t = useTranslations("analysis.layout");
   const showChanges = !seen && (board != null || chips.length > 0 || loose.length > 0);
@@ -189,7 +285,7 @@ export function AnalysisHeader({
         <span className={styles.eyebrow}>{eyebrow}</span>
         <div className={styles.actions}>{actions}</div>
       </div>
-      <h1 className={styles.title}>{name}</h1>
+      <AnalysisTitle name={name} canRename={canRename} onRename={onRename} />
       <div className={styles.meta} data-testid="analysis-meta">
         <span className={stale ? `${styles.fresh} ${styles.stale}` : styles.fresh}>
           <span className={styles.freshDot} />

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useFormatter, useNow, useTranslations } from "next-intl";
 import { Alert, Box, Center, Loader, SimpleGrid, Stack, Tabs, Text } from "@mantine/core";
 import { api } from "~/trpc/react";
@@ -13,11 +14,17 @@ import { EventsList } from "./events-list";
 import { Notice } from "./notice";
 import { CreateReportButton } from "./create-report-button";
 import { RefreshButton, type RefreshFrame } from "./refresh-button";
-import { AnalysisCrumbs, AnalysisHeader, AnalysisOverview } from "./dark/dark-analysis";
+import { AnalysisCrumbs, AnalysisHeader, AnalysisOverview, AnalysisTitle } from "./dark/dark-analysis";
+import { AnalysisDesk } from "./analysis-desk";
+import { readAnalysisTitle, writeAnalysisTitle } from "~/lib/analysis-collaboration";
 import { CHANGE_ANCHOR, changeChips, changeSessionKey, looseChangeNotes, type ChangeSection } from "./dark/change-notes";
 import styles from "./dark/analysis-dark.module.css";
 
 type Tab = "overview" | "needs" | "sources";
+
+function tabFrom(value: string | null): Tab {
+  return value === "needs" || value === "sources" ? value : "overview";
+}
 
 /** Which analysis is open: the country default, or one the team created. */
 export type AnalysisScopeRef =
@@ -51,7 +58,21 @@ export function AnalysisDetail({
   const t = useTranslations("analysis");
   const format = useFormatter();
   const now = useNow({ updateInterval: 60_000 });
-  const [tab, setTab] = useState<Tab>("overview");
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const [tab, setTabState] = useState<Tab>(() => tabFrom(searchParams.get("tab")));
+  useEffect(() => {
+    setTabState(tabFrom(searchParams.get("tab")));
+  }, [searchParams]);
+  const setTab = (next: Tab) => {
+    setTabState(next);
+    const params = new URLSearchParams(searchParams.toString());
+    if (next === "overview") params.delete("tab");
+    else params.set("tab", next);
+    const qs = params.toString();
+    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+  };
   const [changesSeen, setChangesSeen] = useState(false);
   const { activeTeamId } = useTeam();
   // The version on screen when an update was requested (none yet for an overdue
@@ -64,6 +85,23 @@ export function AnalysisDetail({
   const isCountry = scope.kind === "country";
   const locationIds = isCountry ? [scope.countryId] : scope.created.locationIds;
   const name = isCountry ? scope.countryName : scope.created.name;
+  const key = scopeKey(scope);
+  const rename = api.analysis.rename.useMutation();
+  const [customTitle, setCustomTitle] = useState<string | null>(null);
+  useEffect(() => {
+    setCustomTitle(readAnalysisTitle(key));
+  }, [key]);
+  const displayName = customTitle?.trim() || name;
+  const saveTitle = (title: string) => {
+    writeAnalysisTitle(key, title);
+    setCustomTitle(title);
+    if (!isCountry && activeTeamId) {
+      rename.mutate(
+        { id: scope.created.id, teamId: activeTeamId, title },
+        { onSuccess: () => void utils.analysis.scopes.invalidate() },
+      );
+    }
+  };
 
   const country = api.analysis.current.useQuery(
     { countryLocationId: scope.countryId, countryName: scope.countryName },
@@ -141,7 +179,10 @@ export function AnalysisDetail({
   // Stock breakdowns come from one location's aggregation; a multi-district
   // scope falls back to the analysis' own figures.
   const figures = api.analysis.figures.useQuery(
-    { locationId: locationIds[0] ?? "" },
+    {
+      locationId: locationIds[0] ?? "",
+      ...(data ? { windowStart: data.scope.windowStart, windowEnd: data.scope.windowEnd } : {}),
+    },
     { enabled: locationIds.length === 1, staleTime: 5 * 60_000 },
   );
   const since = data?.scope.windowStart;
@@ -151,6 +192,7 @@ export function AnalysisDetail({
       locationIds,
       from: since ?? "1970-01-01T00:00:00.000Z",
       ...(eventTypes.length > 0 ? { eventTypes } : {}),
+      ...(data?.eventSourceIds.length ? { citedIds: data.eventSourceIds } : {}),
     },
     { enabled: !!since, staleTime: 5 * 60_000 },
   );
@@ -183,7 +225,17 @@ export function AnalysisDetail({
         </Center>
       </Stack>
     ) : (
-      <Notice title={t("generating.title")} text={t("generating.description")} loading testId="analysis-generating" />
+      <Notice
+        title={t("generating.title")}
+        text={t("generating.elapsed", {
+          minutes:
+            scope.kind === "created"
+              ? Math.max(1, Math.round((now.getTime() - Date.parse(scope.created.createdAt)) / 60_000))
+              : 1,
+        })}
+        loading
+        testId="analysis-generating"
+      />
     );
   } else {
     body = (
@@ -298,7 +350,7 @@ export function AnalysisDetail({
       {data ? (
         <AnalysisHeader
           eyebrow={isCountry ? t("scope.country") : t("scope.created")}
-          name={name}
+          name={displayName}
           updated={t("meta.updated", { relative: format.relativeTime(new Date(data.crisis.generatedAt), now) })}
           stale={stale}
           staleLabel={t("meta.stale")}
@@ -319,15 +371,17 @@ export function AnalysisDetail({
           onOpenSources={openSources}
           onHome={onBack}
           actions={actions}
+          canRename
+          onRename={saveTitle}
         />
       ) : (
         <header className={styles.header}>
-          <AnalysisCrumbs name={name} onHome={onBack} />
+          <AnalysisCrumbs name={displayName} onHome={onBack} />
           <div className={styles.eyebrowRow}>
             <span className={styles.eyebrow}>{isCountry ? t("scope.country") : t("scope.created")}</span>
             {actions}
           </div>
-          <h1 className={styles.title}>{name}</h1>
+          <AnalysisTitle name={displayName} canRename onRename={saveTitle} />
         </header>
       )}
 
@@ -338,6 +392,11 @@ export function AnalysisDetail({
       )}
 
       {body}
+      <AnalysisDesk
+        storageKey={key}
+        automationId={isCountry ? null : scope.created.id}
+        teamId={isCountry ? null : activeTeamId}
+      />
     </Box>
   );
 }

@@ -32,9 +32,19 @@ const FIXED_LABEL: Record<AnalysisNeedsKey, string> = {
   education: "Education",
 };
 
+/** Pipeline sector ids that share one stock key. `food` and `food_security` are the same figure. */
+const STOCK_KEYS: Record<string, readonly string[]> = {
+  food: ["food_security", "food"],
+  food_security: ["food_security", "food"],
+};
+
 function stockPin(figures: AnalysisFigures | undefined, sectorId: string): number | null {
-  const hit = figures?.pinBySector.find((row) => row.sector === sectorId);
-  return hit ? hit.figure.value : null;
+  const keys = STOCK_KEYS[sectorId] ?? [sectorId];
+  for (const key of keys) {
+    const hit = figures?.pinBySector.find((row) => row.sector === key);
+    if (hit) return hit.figure.value;
+  }
+  return null;
 }
 
 /**
@@ -43,9 +53,11 @@ function stockPin(figures: AnalysisFigures | undefined, sectorId: string): numbe
  */
 export function analysisNeedsRows(sectors: readonly SaSector[], figures: AnalysisFigures | undefined): AnalysisNeedsRow[] {
   const byId = new Map(sectors.map((sector) => [sector.id, sector]));
+  // The pipeline grades "food"; the stock figure is keyed "food_security".
+  const food = byId.get("food_security") ?? byId.get("food");
   const fixed = (Object.keys(SECTOR_ID) as AnalysisNeedsKey[]).map((key) => {
     const sectorId = SECTOR_ID[key];
-    const sector = byId.get(sectorId);
+    const sector = sectorId === "food_security" ? food : byId.get(sectorId);
     return {
       key,
       sectorId,
@@ -54,7 +66,7 @@ export function analysisNeedsRows(sectors: readonly SaSector[], figures: Analysi
       pin: stockPin(figures, sectorId),
     };
   });
-  const fixedIds = new Set<string>(Object.values(SECTOR_ID));
+  const fixedIds = new Set<string>([...Object.values(SECTOR_ID), "food"]);
   const extra = sectors
     .filter((sector) => !fixedIds.has(sector.id))
     .map((sector) => ({
@@ -64,5 +76,6 @@ export function analysisNeedsRows(sectors: readonly SaSector[], figures: Analysi
       severity: sector.severity,
       pin: stockPin(figures, sector.id),
     }));
-  return [...fixed, ...extra];
+  // A fixed row with no grade and no figure is an empty cell, not a sector of this analysis.
+  return [...fixed, ...extra].filter((row) => row.severity != null || row.pin != null);
 }

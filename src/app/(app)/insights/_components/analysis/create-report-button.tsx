@@ -60,7 +60,8 @@ export function CreateReportButton({
   const me = api.auth.me.useQuery(undefined, { staleTime: 60_000 });
   const [busy, setBusy] = useState(false);
   const [building, setBuilding] = useState(false);
-  const initialSections = useMemo(() => defaultReportSections(data, events?.items.length ?? 0), [data, events]);
+  const eventTotal = events?.totalCount ?? 0;
+  const initialSections = useMemo(() => defaultReportSections(data, eventTotal), [data, eventTotal]);
   const unsupported = UNSUPPORTED_LOCALES.has(locale);
 
   const date = (iso: string, withTime = false) =>
@@ -109,7 +110,7 @@ export function CreateReportButton({
         notReported: t("notReported"),
         map: t("sections.map"),
         mapScope: isCountry ? t("mapCountry") : t("mapArea"),
-        mapEvents: t("mapEvents", { count: items.length, date: date(data.scope.windowStart) }),
+        mapEvents: t("mapEvents", { count: eventTotal, date: date(data.scope.windowStart) }),
         contexts: t("contexts"),
         hazards: t("hazards"),
         displacement: t("displacement"),

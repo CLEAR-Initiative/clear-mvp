@@ -3077,7 +3077,8 @@
         "protection": "الحماية",
         "shelter": "المأوى والمواد غير الغذائية",
         "education": "التعليم",
-        "nutrition": "التغذية"
+        "nutrition": "التغذية",
+        "agriculture": "الزراعة"
       }
     },
     "map": {
@@ -3129,7 +3130,8 @@
       "severityIntro": "يقيّم التحليل كل قطاع بناءً على التقارير القطاعية التي يستشهد بها.",
       "severityNull": "لم يُقيَّم: الأدلة غير كافية للتقييم.",
       "inferred": "تم التقييم من تقارير خارج هذا القطاع. يُعتبر إرشاديًا.",
-      "notAssessed": "لم يُقيَّم"
+      "notAssessed": "لم يُقيَّم",
+      "noFigure": "لا يوجد رقم للأشخاص المحتاجين"
     },
     "events": {
       "title": "الأحداث في هذه المنطقة",
@@ -3149,6 +3151,7 @@
     "generating": {
       "title": "جارٍ إنشاء النسخة الأولى",
       "description": "يبني خط المعالجة هذا التحليل من قاعدة المعرفة. ستتحدث هذه الصفحة تلقائيًا عند جاهزيته.",
+      "elapsed": "يصبح جاهزًا عادة خلال 5–6 دقائق. مستمر منذ {minutes, plural, one {دقيقة واحدة} other {# دقائق}}.",
       "overdueTitle": "لم يُنشأ بعد",
       "overdueDescription": "لم تصل النسخة الأولى بعد. ربما فشلت؛ اطلبها مرة أخرى عبر تحديث الآن."
     },
@@ -3297,6 +3300,11 @@
       "nrcEvidence": "أدلة NRC",
       "breadcrumb": "مسار التنقل",
       "addEvidence": "إضافة دليل",
+      "editTitle": "تعديل العنوان",
+      "saveTitle": "حفظ العنوان",
+      "titlePlaceholder": "اسم هذا التحليل",
+      "evidencePdfOnly": "يمكن إضافة ملفات PDF فقط.",
+      "discussionYou": "أنت",
       "evidenceFiles": "{count, plural, one {ملف واحد} other {# ملفات}}",
       "evidenceDrop": "أفلت الملفات لإضافة دليل",
       "evidencePreview": "معاينة {name}",

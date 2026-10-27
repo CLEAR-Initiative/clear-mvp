@@ -66,6 +66,31 @@ describe("analysis needs rows", () => {
     });
   });
 
+  it("omits a fixed sector the analysis did not grade and has no figure for", () => {
+    const rows = analysisNeedsRows([sector("wash", "high", "WASH")], figures([]));
+
+    expect(rows.map((row) => row.sectorId)).toEqual(["wash"]);
+  });
+
+  it("puts the food-security stock on a sector graded as food", () => {
+    const rows = analysisNeedsRows([sector("food", "critical", "Food")], figures([{ sector: "food_security", value: 8_600_000 }]));
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ key: "food", label: "Food", severity: "critical", pin: 8_600_000 });
+  });
+
+  it("shows an agriculture stock figure on the agriculture row", () => {
+    const rows = analysisNeedsRows(
+      [sector("agriculture", "critical", "Agriculture")],
+      figures([{ sector: "agriculture", value: 3_100_000 }]),
+    );
+
+    expect(rows.find((row) => row.sectorId === "agriculture")).toMatchObject({
+      severity: "critical",
+      pin: 3_100_000,
+    });
+  });
+
   it("puts the food security stock figure on the food row", () => {
     const rows = analysisNeedsRows(
       [sector("food_security", "high", "Food Security")],

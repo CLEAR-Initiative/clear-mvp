@@ -48,6 +48,28 @@ describe("Analysis sources", () => {
     expect(list).not.toHaveTextContent("ReliefWeb report");
   });
 
+  it("tells two untitled HAPI figures apart by their indicator", () => {
+    renderSources([
+      source("api:sdn:hapi_humanitarian_needs:pin-2026", ""),
+      source("api:sdn:hapi_humanitarian_needs:funding-2026", ""),
+    ]);
+
+    const list = screen.getByTestId("analysis-sources");
+    expect(list).toHaveTextContent("pin 2026");
+    expect(list).toHaveTextContent("funding 2026");
+  });
+
+  it("qualifies duplicate report titles with the publisher", () => {
+    renderSources([
+      { ...source("r1", "Humanitarian update"), publisher: "OCHA" },
+      { ...source("r2", "Humanitarian update"), publisher: "IOM" },
+    ]);
+
+    const list = screen.getByTestId("analysis-sources");
+    expect(list).toHaveTextContent("Humanitarian update (OCHA)");
+    expect(list).toHaveTextContent("Humanitarian update (IOM)");
+  });
+
   it("shows a resolved event title as the heading", () => {
     renderSources([source("event:e1", "Shelling in El Fasher")]);
 
