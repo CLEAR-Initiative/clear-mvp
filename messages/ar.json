@@ -3028,7 +3028,7 @@
     "meta": {
       "updated": "تم التحديث {relative}",
       "asOf": "حتى {date}",
-      "builtFrom": "{reports, plural, one {تقرير واحد} other {# تقارير}}، {events, plural, one {حدث واحد} other {# أحداث}}",
+      "builtFrom": "{reports, plural, one {تقرير واحد} other {# تقارير}}، {events, plural, one {حدث مُستشهَد به} other {# أحداث مُستشهَد بها}}",
       "covers": "{start} – اليوم",
       "period": "{start} – {end}",
       "stale": "غير محدَّث"
@@ -3087,6 +3087,7 @@
       "areas": "أين وقعت الأحداث",
       "areaEvents": "{count, plural, one {حدث واحد} other {# أحداث}}",
       "noEvents": "لم تُسجَّل أي أحداث في هذه المنطقة منذ {date}.",
+      "loading": "جارٍ تحميل الأحداث…",
       "sample": "تعرض الخريطة أحدث {count}",
       "hotspots": "{scope} · بؤر الأحداث",
       "recent": "{count, plural, one {أحدث حدث} two {أحدث حدثين} few {أحدث # أحداث} many {أحدث # حدثًا} other {أحدث # حدث}}",
@@ -3134,7 +3135,7 @@
       "empty": "لم تُسجَّل أي أحداث في هذه المنطقة خلال هذه الفترة.",
       "untitled": "حدث بلا عنوان",
       "severity": "الخطورة {value}",
-      "count": "{shown} من {total}"
+      "count": "عينة: {shown} من {total}"
     },
     "sources": {
       "title": "المصادر المستشهد بها"
