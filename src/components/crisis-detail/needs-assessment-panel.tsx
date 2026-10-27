@@ -15,6 +15,7 @@ import {
   IconInfoCircle,
 } from "@tabler/icons-react";
 import type { GqlCrisis } from "~/server/api/routers/crises";
+import { compactNumber } from "~/server/api/mappers/situation-analysis";
 
 // ── SAF scale ─────────────────────────────────────────────────────────────────
 
@@ -108,6 +109,10 @@ export const NEEDS_SECTORS: {
 ];
 
 const SECTORS = NEEDS_SECTORS;
+
+function isNeedsSectorKey(key: string): key is NeedsSectorKey {
+  return NEEDS_SECTORS.some((sector) => sector.key === key);
+}
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -378,7 +383,7 @@ function SectorRow({
           {pin != null ? (
             <Box>
               <Text style={{ fontSize: 13, fontWeight: 700, color: text, lineHeight: 1 }}>
-                {formatPin(pin)}
+                {analysis ? compactNumber(pin) : formatPin(pin)}
               </Text>
               {pinIsApprox && (
                 <Text style={{ fontSize: 9, color: muted, lineHeight: 1, marginTop: 2 }}>
@@ -535,7 +540,8 @@ function ColHeader({ children, style }: { children: React.ReactNode; style?: Rea
 // ── Needs summary card ────────────────────────────────────────────────────────
 
 export interface NeedsSectorRow {
-  key: SectorKey;
+  /** One of the six needs-table keys, or an analysis sector id for a row outside that table. */
+  key: string;
   label: string;
   icon: SectorIcon;
   severity: NeedsSeverity;
@@ -908,7 +914,7 @@ export function NeedsAssessmentView({ rows: unsorted, summary, scopeBadge, sever
         {rows.map((row, idx) => (
           <SectorRow
             key={row.key}
-            label={t(`needs.sectors.${row.key}`)}
+            label={isNeedsSectorKey(row.key) ? t(`needs.sectors.${row.key}`) : row.label}
             Icon={row.icon}
             severity={row.severity}
             description={row.description}
