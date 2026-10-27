@@ -144,6 +144,29 @@ function isWinAnsi(ch: string): boolean {
   return c === 0x0a || (c >= 0x20 && c <= 0x7e) || (c >= 0xa0 && c <= 0xff) || WIN_ANSI_EXTRA.has(ch);
 }
 
+/**
+ * How long the in-browser PDF build may run before the button stops waiting.
+ * A Sudan analysis was observed sitting busy past this with no file and no error.
+ */
+export const REPORT_BUILD_TIMEOUT_MS = 25_000;
+
+/** Resolves with `work`, or rejects once `ms` passes without a result. */
+export function withDeadline<T>(work: Promise<T>, ms: number): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error("PDF build timed out")), ms);
+    work.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (error: unknown) => {
+        clearTimeout(timer);
+        reject(error instanceof Error ? error : new Error("PDF build failed"));
+      },
+    );
+  });
+}
+
 /** "sitrep-sheikan-north-kordofan-sudan-2026-09-29.pdf" */
 export function reportFileName(scopeName: string, at: Date): string {
   const slug = scopeName

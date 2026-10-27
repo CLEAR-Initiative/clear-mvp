@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { MantineProvider } from "@mantine/core";
 import type { Analysis } from "~/server/api/mappers/analysis";
+import { REPORT_BUILD_TIMEOUT_MS } from "~/lib/analysis-report";
 import type { AnalysisEvents, AnalysisFigures, AnalysisScopes, CreatedAnalysis } from "~/server/api/mappers/analysis";
 
 vi.mock("next-intl", () => ({
@@ -139,9 +140,10 @@ vi.mock("~/trpc/react", () => ({
 }));
 
 const pdfSections = vi.fn();
+const pdfToBlob = vi.fn(async () => new Blob(["%PDF-"]));
 vi.mock("@react-pdf/renderer", () => ({
   pdf: (el: { props: { sections: string[] } }) => (
-    pdfSections(el.props.sections), { toBlob: async () => new Blob(["%PDF-"]) }
+    pdfSections(el.props.sections), { toBlob: () => pdfToBlob() }
   ),
 }));
 vi.mock("./report/report-document", () => ({ ReportDocument: () => null }));
@@ -285,6 +287,8 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
+  vi.useRealTimers();
+  pdfToBlob.mockImplementation(async () => new Blob(["%PDF-"]));
 });
 
 describe("Insights > Analysis tab", () => {
@@ -642,7 +646,10 @@ describe("Insights > Analysis tab", () => {
 
   it("builds the report from the sections the reader keeps, in their order", async () => {
     vi.stubGlobal("URL", Object.assign(URL, { createObjectURL: () => "blob:x", revokeObjectURL: () => {} }));
-    const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+    const downloads: string[] = [];
+    const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(function (this: HTMLAnchorElement) {
+      downloads.push(this.download);
+    });
     renderPage();
     fireEvent.click(screen.getByTestId("analysis-create-report"));
     const list = await screen.findByTestId("report-builder-list");
@@ -661,7 +668,23 @@ describe("Insights > Analysis tab", () => {
     expect(sections).not.toContain("responseActivities");
     expect(sections.slice(0, 3)).toEqual(["keyDevelopments", "currentStatus", "map"]);
     await vi.waitFor(() => expect(click).toHaveBeenCalled());
+    expect(downloads[0]).toMatch(/^sitrep-sudan-\d{4}-\d{2}-\d{2}\.pdf$/);
     click.mockRestore();
+  });
+
+  it("shows the report error and clears the busy state when the PDF build never finishes", async () => {
+    pdfToBlob.mockImplementation(() => new Promise(() => {}));
+    renderPage();
+    fireEvent.click(screen.getByTestId("analysis-create-report"));
+    const create = await screen.findByTestId("report-builder-create");
+    vi.useFakeTimers();
+    fireEvent.click(create);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(REPORT_BUILD_TIMEOUT_MS);
+    });
+    expect(showNotification).toHaveBeenCalledWith({ color: "red", message: "analysis.report.error" });
+    expect(screen.getByTestId("report-builder-create")).toBeEnabled();
+    expect(screen.getByTestId("analysis-create-report")).toBeEnabled();
   });
 
   it("opens a new analysis on its own frame and paints that version when it lands", async () => {
