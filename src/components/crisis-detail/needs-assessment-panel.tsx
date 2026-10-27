@@ -294,6 +294,7 @@ function SectorRow({
   nrcRelevant,
   ochaData,
   pin,
+  pinMissing,
   pinIsApprox,
   assessmentLevel,
   precision,
@@ -309,6 +310,8 @@ function SectorRow({
   nrcRelevant: boolean | null;
   ochaData: Ocha3wSector | null;
   pin: number | null;
+  /** Shown in place of a dash when the analysis graded the sector and has no stock figure. */
+  pinMissing?: string;
   pinIsApprox: boolean;
   assessmentLevel: AssessmentLevel;
   precision: Precision | null;
@@ -392,7 +395,7 @@ function SectorRow({
               )}
             </Box>
           ) : (
-            <Text size="xs" c={muted}>-</Text>
+            <Text size="xs" c={muted}>{pinMissing ?? "-"}</Text>
           )}
         </Box>
 
@@ -554,6 +557,8 @@ export interface NeedsSectorRow {
   nrcRelevant: boolean | null;
   ochaMatch: Ocha3wSector | null;
   pin: number | null;
+  /** Shown in place of a dash when this row has no stock figure. */
+  pinMissing?: string;
   pinIsApprox: boolean;
   assessmentLevel: AssessmentLevel;
   precision: Precision | null;
@@ -923,6 +928,7 @@ export function NeedsAssessmentView({ rows: unsorted, summary, scopeBadge, sever
             nrcRelevant={row.nrcRelevant}
             ochaData={row.ochaMatch}
             pin={row.pin}
+            pinMissing={row.pinMissing}
             pinIsApprox={row.pinIsApprox}
             assessmentLevel={row.assessmentLevel}
             precision={row.precision}

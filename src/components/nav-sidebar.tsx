@@ -29,6 +29,7 @@ import {
 } from "@tabler/icons-react";
 import { cn } from "~/lib/utils";
 import { clearAgentSession } from "~/components/agent/agent-provider";
+import { clearAnalysisCollaboration } from "~/lib/analysis-collaboration";
 import { authClient } from "~/lib/auth-client";
 import { NrcLogoMark } from "~/components/ui/nrc-logo-mark";
 import { colors, fontSizesPx, spacingPx } from "~/lib/tokens";
@@ -45,7 +46,7 @@ import { mapNavHrefFromFocusSession, readMapFocusSession } from "~/lib/map-focus
 import { NAV_COLLAPSED_W_PX, NAV_EXPANDED_W_PX } from "~/lib/is-map-path";
 import { setNavCollapsedCookie } from "~/lib/nav-collapsed-cookie";
 import { useInboxUnread } from "~/lib/inbox-badge";
-import { NAV_ROUTES, type NavItemKey } from "~/lib/nav-routes";
+import { ANALYSIS_NAV_LABEL, NAV_ROUTES, type NavItemKey } from "~/lib/nav-routes";
 import { NotificationsBell } from "~/components/notifications-bell";
 
 interface NavVisibility {
@@ -56,8 +57,15 @@ interface NavVisibility {
   inbox: InboxAccess;
 }
 
+type NavLabelKey = NavItemKey | typeof ANALYSIS_NAV_LABEL;
+
+function navBadge(badges: Partial<Record<NavItemKey, string>>, key: NavLabelKey): string | undefined {
+  if (!(key in badges)) return undefined;
+  return badges[key as NavItemKey];
+}
+
 interface NavItem {
-  labelKey: NavItemKey;
+  labelKey: NavLabelKey;
   href: string;
   icon: React.ElementType;
   featureKey?: string;
@@ -108,7 +116,7 @@ const navSections: NavSection[] = [
         visibleWhen: ({ inbox }) => inbox.any,
       },
       { labelKey: "map", href: NAV_ROUTES.map, icon: IconMapPin, featureKey: "crisis_map" },
-      { labelKey: "analysis", href: NAV_ROUTES.analysis, icon: IconChartPie },
+      { labelKey: ANALYSIS_NAV_LABEL, href: NAV_ROUTES.analysis, icon: IconChartPie },
       { labelKey: "metrics", href: NAV_ROUTES.metrics, icon: IconChartBar, adminOnly: true },
       { labelKey: "operations", href: NAV_ROUTES.operations, icon: IconUser, featureKey: "operations", adminOnly: true },
       { labelKey: "cash", href: NAV_ROUTES.cash, icon: IconCurrencyDollar, featureKey: "cash_assistance", adminOnly: true },
@@ -251,6 +259,7 @@ export function NavSidebar({
     // redirect below tears down all in-memory React state. If a specific
     // app key ever needs clearing on sign-out, remove it explicitly here.
     clearAgentSession(); // the active Agent Thread belongs to this user
+    clearAnalysisCollaboration();
     window.location.href = "/auth/login";
   };
 
@@ -382,9 +391,9 @@ export function NavSidebar({
                       <Text fw={isActive ? 600 : 500} style={{ fontSize: fontSizesPx.lg, flex: 1 }}>{t(`items.${item.labelKey}`)}</Text>
                       {isDisabled && <Badge size="xs" variant="light" color="gray" style={{ fontSize: fontSizesPx["2xs"] }}>{tBadges("soon")}</Badge>}
                       {!isDisabled && item.demo && <Badge size="xs" variant="light" color="accent" style={{ fontSize: fontSizesPx["2xs"] }}>{tBadges("demo")}</Badge>}
-                      {!isDisabled && badges[item.labelKey] && (
+                      {!isDisabled && navBadge(badges, item.labelKey) && (
                         <Badge size="xs" variant="filled" color="accent" circle data-testid={`nav-badge-${item.labelKey}`} style={{ fontSize: fontSizesPx["2xs"] }}>
-                          {badges[item.labelKey]}
+                          {navBadge(badges, item.labelKey)}
                         </Badge>
                       )}
                     </Box>
@@ -758,7 +767,7 @@ export function NavSidebar({
                         </Badge>
                       )}
 
-                      {!isDisabled && badges[item.labelKey] && (
+                      {!isDisabled && navBadge(badges, item.labelKey) && (
                         <Badge
                           size="xs"
                           variant="filled"
@@ -767,7 +776,7 @@ export function NavSidebar({
                           data-testid={`nav-badge-${item.labelKey}`}
                           style={{ fontSize: fontSizesPx["2xs"], fontWeight: 600, flexShrink: 0, ...labelStyle }}
                         >
-                          {badges[item.labelKey]}
+                          {navBadge(badges, item.labelKey)}
                         </Badge>
                       )}
 

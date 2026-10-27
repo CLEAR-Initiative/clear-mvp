@@ -103,7 +103,7 @@ vi.mock("~/trpc/react", () => ({
     // ScopeMap loads each created area's geometry.
     useQueries: (build: (q: { locations: { getById: (input: { id: string }) => unknown } }) => unknown[]) =>
       build({ locations: { getById: () => null } }).map(() => ({ data: { geometry: null } })),
-    auth: { me: { useQuery: () => ({ data: { user: { role: role === "admin" ? "admin" : "member", teamMemberships: role === "analyst" ? [{ role: "analyst" }] : [] } } }) } },
+    auth: { me: { useQuery: () => ({ data: { user: { id: "user-1", role: role === "admin" ? "admin" : "member", teamMemberships: role === "analyst" ? [{ role: "analyst" }] : [] } } }) } },
     analysis: {
       scopes: {
         useQuery: (input: unknown, opts: { enabled?: boolean }) => (
@@ -132,6 +132,17 @@ vi.mock("~/trpc/react", () => ({
       remove: { useMutation: () => mutation(removeMutate) },
       refresh: { useMutation: () => mutation(vi.fn()) },
       setCadence: { useMutation: () => mutation(vi.fn()) },
+      thread: {
+        useQuery: () => ({
+          data: undefined,
+          isSuccess: false,
+          isError: false,
+          isLoading: false,
+          refetch: async () => ({ data: undefined }),
+        }),
+      },
+      rename: { useMutation: () => mutation(vi.fn()) },
+      comment: { useMutation: () => ({ mutateAsync: vi.fn(), isPending: false }) },
     },
     locations: {
       getById: { useQuery: () => ({ data: { geometry: null } }) },
@@ -327,18 +338,18 @@ describe("Insights > Analysis tab", () => {
     expect(screen.getAllByText(/\$1\.2B/).length).toBeGreaterThan(0);
     expect(screen.getByTestId("minimap")).toHaveTextContent("1 markers");
     expect(screen.getByText("North Darfur")).toBeInTheDocument();
-    // Country scope: no event timeline.
+    // Country scope: no event timeline. Forecasts stay off the overview.
     expect(screen.queryByTestId("analysis-section-timeline")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("analysis-section-forecast")).not.toBeInTheDocument();
+    expect(screen.queryByText("Fighting continues.")).not.toBeInTheDocument();
     fireEvent.click(within(screen.getByTestId("analysis-section-hazards")).getAllByRole("button")[0]!);
     expect(screen.getByText("Cholera outbreak.")).toBeInTheDocument();
-    expect(screen.getByText("Fighting continues.")).toBeInTheDocument();
   });
 
-  it("opens context and forecast, and keeps hazards and displacement collapsed", () => {
+  it("opens context and keeps hazards and displacement collapsed", () => {
     renderPage();
-    for (const id of ["contexts", "forecast"]) {
-      expect(within(screen.getByTestId(`analysis-section-${id}`)).getAllByRole("button")[0]).toHaveAttribute("aria-expanded", "true");
-    }
+    expect(screen.queryByTestId("analysis-section-forecast")).not.toBeInTheDocument();
+    expect(within(screen.getByTestId("analysis-section-contexts")).getAllByRole("button")[0]).toHaveAttribute("aria-expanded", "true");
     for (const id of ["hazards", "displacement"]) {
       const toggle = within(screen.getByTestId(`analysis-section-${id}`)).getAllByRole("button")[0]!;
       expect(toggle).toHaveAttribute("aria-expanded", "false");
@@ -677,7 +688,11 @@ describe("Insights > Analysis tab", () => {
     );
     expect(screen.getByRole("heading", { name: "Sheikan and Um Rawaba, North Kordofan, Sudan" })).toBeInTheDocument();
     expect(screen.getByText("analysis.scope.created")).toBeInTheDocument();
-    expect(eventsQuery).toHaveBeenLastCalledWith({ locationIds: ["sheikan", "umrawaba"], from: "2026-07-01T00:00:00.000Z" });
+    expect(eventsQuery).toHaveBeenLastCalledWith({
+      locationIds: ["sheikan", "umrawaba"],
+      from: "2026-07-01T00:00:00.000Z",
+      citedIds: ["event:e1"],
+    });
     expect(screen.getByTestId("analysis-section-timeline")).toBeInTheDocument();
     expect(screen.getByText("Shelling in El Fasher")).toBeInTheDocument();
     expect(screen.queryByText(/Treason proceedings/)).not.toBeInTheDocument();
@@ -817,17 +832,22 @@ describe("Insights > Analysis tab", () => {
     expect(screen.getByTestId("analysis-create-submit")).toBeDisabled();
   });
 
-  it("renders key findings with the subject in bold", () => {
+  it("keeps key findings to the subject line when the summary expands", () => {
     analysisResult = {
-      data: analysis({ keyFindings: [{ text: "Security: Drone strikes hit El Obeid on 25 Sep.", refs: [2] }] }),
+      data: analysis({
+        summary: "First point. Second point. Third point. Fourth point.",
+        keyFindings: [{ text: "Security: Drone strikes hit El Obeid on 25 Sep.", refs: [2] }],
+      }),
       isLoading: false,
       isError: false,
     };
     renderPage();
     const findings = screen.getByTestId("analysis-highlights");
     expect(within(findings).getByText("Security").tagName).toBe("SPAN");
+    expect(findings).not.toHaveTextContent("Drone strikes hit El Obeid on 25 Sep.");
     fireEvent.click(screen.getByTestId("summary-toggle"));
-    expect(findings).toHaveTextContent("Drone strikes hit El Obeid on 25 Sep.");
+    expect(screen.getByText(/Third point\. Fourth point\./)).toBeInTheDocument();
+    expect(findings).not.toHaveTextContent("Drone strikes hit El Obeid on 25 Sep.");
   });
 
   it("offers Create report on an opened analysis instead of the model name and switcher", () => {

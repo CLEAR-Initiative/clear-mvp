@@ -222,6 +222,75 @@ describe("analysis router", () => {
     });
   });
 
+  it("uses cited events when the scope query is empty, and keeps the scope total otherwise", async () => {
+    const cited = {
+      id: "k1",
+      title: "Clash in Kassala",
+      types: ["conflict"],
+      severity: 3,
+      firstSignalCreatedAt: "2026-09-02T00:00:00Z",
+      lastSignalCreatedAt: "2026-09-02T00:00:00Z",
+      casualties: null,
+      populationDisplaced: null,
+      representativePoint: { id: "p", name: "Kassala", level: 2, geometry: { type: "Point", coordinates: [36.4, 15.4] } },
+      generalLocation: { id: "ks", name: "Kassala", level: 1 },
+    };
+    graphqlFetch.mockResolvedValueOnce({ eventsPage: { totalCount: 0, items: [] } }).mockResolvedValueOnce({ e0: cited });
+
+    const empty = await caller().analysis.events({
+      locationIds: ["kassala"],
+      from: "2026-07-01T00:00:00.000Z",
+      citedIds: ["event:k1"],
+    });
+
+    expect(empty.totalCount).toBe(1);
+    expect(empty.items.map((e) => e.id)).toEqual(["k1"]);
+    expect(graphqlFetch).toHaveBeenCalledTimes(2);
+
+    graphqlFetch.mockReset();
+    graphqlFetch.mockResolvedValueOnce({
+      eventsPage: { totalCount: 4495, items: [{ ...cited, id: "e1" }] },
+    });
+    const full = await caller().analysis.events({
+      locationIds: ["sdn"],
+      from: "2026-01-01T00:00:00.000Z",
+      citedIds: ["event:k1"],
+    });
+    expect(full.totalCount).toBe(4495);
+    expect(graphqlFetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("still returns scope events when the citation list is longer than the recovery lookup", async () => {
+    graphqlFetch.mockResolvedValueOnce({
+      eventsPage: {
+        totalCount: 3,
+        items: [
+          {
+            id: "e1",
+            title: "Shelling",
+            types: [],
+            severity: null,
+            firstSignalCreatedAt: "2026-09-01T00:00:00Z",
+            lastSignalCreatedAt: "2026-09-01T00:00:00Z",
+            casualties: null,
+            populationDisplaced: null,
+            representativePoint: null,
+            generalLocation: null,
+          },
+        ],
+      },
+    });
+
+    const result = await caller().analysis.events({
+      locationIds: ["sdn"],
+      from: "2026-01-01T00:00:00.000Z",
+      citedIds: Array.from({ length: 101 }, (_, i) => `event:c${i}`),
+    });
+
+    expect(result.totalCount).toBe(3);
+    expect(graphqlFetch).toHaveBeenCalledTimes(1);
+  });
+
   it("leaves a geometry-less event off the map rather than guessing", () => {
     const e = toAnalysisEvent({
       id: "e2",
@@ -250,6 +319,8 @@ describe("analysis router", () => {
           pin_wash: { value: 25512902 },
           pin_wash_male: { value: 1 },
           returnee_stock: null,
+          funding_received_usd: { value: 1 },
+          funding_required_usd: { value: 2 },
         },
       },
     });
@@ -262,6 +333,53 @@ describe("analysis router", () => {
     expect(result.returneeStock).toBeNull();
     expect(result.overallPin).toMatchObject({ low: 19000000, high: 33699770 });
     expect(result.pinBySector.map((r) => r.sector)).toEqual(["wash", "health"]);
+    expect(result.fundingReceived).toBeNull();
+    expect(result.fundingRequired).toBeNull();
+  });
+
+  it("reads funding from the analysis window and not from the all-time tier", async () => {
+    graphqlFetch.mockImplementation(async (query: string) => {
+      if ((query as string).includes("AnalysisWindowFunding")) {
+        return {
+          aggregatedDatapoint: {
+            data: {
+              funding_received_usd: { value: 1_200_000_000 },
+              funding_required_usd: { value: 4_000_000_000 },
+            },
+          },
+        };
+      }
+      return {
+        aggregatedDatapoint: {
+          data: { funding_received_usd: { value: 99 }, funding_required_usd: { value: 99 }, idp_stock: { value: 10 } },
+        },
+      };
+    });
+    const result = await caller().analysis.figures({
+      locationId: "sdn",
+      windowStart: "2026-01-01T00:00:00Z",
+      windowEnd: "2026-12-31T23:59:59Z",
+    });
+    const fundingCall = graphqlFetch.mock.calls.find(([query]) => (query as string).includes("AnalysisWindowFunding"));
+    expect(fundingCall?.[1]).toMatchObject({
+      locationId: "sdn",
+      windowStart: "2026-01-01T00:00:00Z",
+      windowEnd: "2026-12-31T23:59:59Z",
+      windowKind: "yearly",
+    });
+    expect(result.idpStock?.value).toBe(10);
+    expect(result.fundingReceived?.value).toBe(1_200_000_000);
+    expect(result.fundingRequired?.value).toBe(4_000_000_000);
+
+    graphqlFetch.mockClear();
+    await caller().analysis.figures({
+      locationId: "gedaref",
+      windowStart: "2026-07-01T00:00:00.000Z",
+      windowEnd: null,
+    });
+    const rolling = graphqlFetch.mock.calls.find(([query]) => (query as string).includes("AnalysisWindowFunding"));
+    expect(rolling?.[1]).toMatchObject({ windowKind: "window", windowStart: "2026-07-01T00:00:00.000Z" });
+    expect((rolling?.[1] as { windowEnd: string }).windowEnd).not.toBe("1970-01-01T00:00:00Z");
   });
 
   it("maps a missing bucket to empty figures", () => {

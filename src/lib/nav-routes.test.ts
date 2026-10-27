@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import enMessages from "../../messages/en.json";
-import { NAV_ROUTES, navItemForRoute } from "~/lib/nav-routes";
+import { ANALYSIS_NAV_LABEL, NAV_ROUTES, navItemForRoute } from "~/lib/nav-routes";
 
 describe("navItemForRoute", () => {
   it("names a route's nav section by its first segment", () => {
@@ -15,5 +15,11 @@ describe("navItemForRoute", () => {
       expect(navItemForRoute(href)).toBe(key);
       expect(enMessages.nav.items).toHaveProperty(key);
     }
+  });
+
+  it("keeps the analysis route labeled Insights", () => {
+    expect(ANALYSIS_NAV_LABEL).toBe("insights");
+    expect(enMessages.nav.items[ANALYSIS_NAV_LABEL]).toBe("Insights");
+    expect(navItemForRoute(NAV_ROUTES.analysis)).toBe("analysis");
   });
 });

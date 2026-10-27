@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import dynamic from "next/dynamic";
 import { useFormatter, useNow, useTranslations } from "next-intl";
 import { ActionIcon, Badge, Box, Button, Grid, Group, Select, Stack, Text, Title, UnstyledButton } from "@mantine/core";
@@ -11,6 +11,7 @@ import type { CountryAnalysisEntry, CreatedAnalysis } from "~/server/api/mappers
 import type { MapRegion } from "~/components/map/crisis-map";
 import { resolveCountryConfig } from "~/lib/constants/country-config";
 import { ANALYSIS_CADENCES, containsPoint, generationOverdue, isStale, type AnalysisCadence } from "~/lib/analysis-view";
+import { analysisStorageKey, readAnalysisTitle } from "~/lib/analysis-collaboration";
 
 const CrisisMap = dynamic(() => import("~/components/map/crisis-map").then((m) => m.CrisisMap), {
   ssr: false,
@@ -57,6 +58,8 @@ export function AnalysisHome({
   const format = useFormatter();
   const now = useNow({ updateInterval: 60_000 });
   const utils = api.useUtils();
+  const me = api.auth.me.useQuery();
+  const userId = me.data?.user?.id ?? null;
   const [confirming, setConfirming] = useState<string | null>(null);
   const remove = api.analysis.remove.useMutation({
     onSuccess: () => utils.analysis.scopes.invalidate(),
@@ -76,6 +79,22 @@ export function AnalysisHome({
       }),
     [created],
   );
+  const [storedTitles, setStoredTitles] = useState<Record<string, string>>({});
+  useEffect(() => {
+    if (!userId) {
+      setStoredTitles({});
+      return;
+    }
+    const next: Record<string, string> = {};
+    const owner = { userId, teamId };
+    for (const item of created) {
+      const stored = readAnalysisTitle(analysisStorageKey(`created:${item.id}`, owner));
+      if (stored) next[item.id] = stored;
+    }
+    const countryTitle = readAnalysisTitle(analysisStorageKey(`country:${countryId}`, owner));
+    setStoredTitles(countryTitle ? { ...next, [countryId]: countryTitle } : next);
+  }, [created, countryId, userId, teamId]);
+  const titled = (id: string, fallback: string) => storedTitles[id] ?? fallback;
 
   // Created analyses cover states (level 1) and/or districts (level 2). States
   // also bound the country, so they load even without created analyses.
@@ -97,10 +116,10 @@ export function AnalysisHome({
           id: `${c.id}-${id}`,
           geometry: geo.get(id) as MapRegion["geometry"],
           severity: "high" as const,
-          title: c.name,
+          title: titled(c.id, c.name),
         })),
     );
-  }, [created, geo]);
+  }, [created, geo, storedTitles]);
 
   // Map: a click opens the created analysis whose area is under it, and
   // anywhere else in the country opens the country analysis.
@@ -124,7 +143,9 @@ export function AnalysisHome({
   };
   const countryStatus = country?.generatedAt
     ? status(country.generatedAt, COUNTRY_CADENCE)
-    : { text: t("noCountryAnalysis"), stale: false };
+    : loading
+      ? { text: "", stale: false }
+      : { text: t("noCountryAnalysis"), stale: false };
 
   return (
     <Box>
@@ -153,7 +174,7 @@ export function AnalysisHome({
             <Box>
               <GroupLabel>{t("countryGroup")}</GroupLabel>
               <ScopeRow
-                title={countryName}
+                title={titled(countryId, countryName)}
                 subtitle={t("wholeCountry")}
                 headline={country?.headline ?? null}
                 status={countryStatus.text}
@@ -182,7 +203,7 @@ export function AnalysisHome({
                     return (
                       <ScopeRow
                         key={c.id}
-                        title={c.name}
+                        title={titled(c.id, c.name)}
                         subtitle={t("areas", { count: c.locationIds.length })}
                         status={s.text}
                         stale={s.stale}
@@ -336,13 +357,15 @@ function ScopeRow({
           <Text c="var(--color-text-secondary)" mt={2} style={{ fontSize: 12 }}>
             {subtitle}
           </Text>
-          <Text
-            c={generating ? "var(--color-info)" : overdue ? "var(--color-warning)" : "var(--color-text-muted)"}
-            mt={2}
-            style={{ fontSize: 12 }}
-          >
-            {status}
-          </Text>
+          {status ? (
+            <Text
+              c={generating ? "var(--color-info)" : overdue ? "var(--color-warning)" : "var(--color-text-muted)"}
+              mt={2}
+              style={{ fontSize: 12 }}
+            >
+              {status}
+            </Text>
+          ) : null}
         </Box>
         <IconChevronRight size={16} color="var(--color-text-muted)" style={{ flexShrink: 0 }} />
       </UnstyledButton>

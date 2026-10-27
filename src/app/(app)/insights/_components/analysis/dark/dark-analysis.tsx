@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useFormatter, useNow, useTranslations } from "next-intl";
 import {
@@ -9,12 +9,12 @@ import {
   IconBuilding,
   IconCash,
   IconChevronDown,
-  IconClock,
   IconCloud,
   IconCopy,
   IconFlag,
   IconHeart,
   IconInfoCircle,
+  IconPencil,
   IconScale,
   IconShield,
   IconSparkles,
@@ -34,6 +34,7 @@ import { ScopeMap } from "../scope-map";
 import { SectionChange } from "../../situation/section-change";
 import styles from "./analysis-dark.module.css";
 import { CHANGE_ANCHOR, type ChangeSection } from "./change-notes";
+import { summaryCollapseAnchor, summaryScrollDelta } from "../summary-scroll";
 import { EventAxis, cardsFromHighlights, eventTone, type TimelineStory } from "./event-axis";
 
 const PREVIEW = 4;
@@ -139,6 +140,96 @@ function Updated({ label }: { label: string }) {
   );
 }
 
+/** The analysis name. Analysts can change it; the parent stores the result. */
+export function AnalysisTitle({
+  name,
+  canRename = false,
+  onRename,
+}: {
+  name: string;
+  canRename?: boolean;
+  onRename?: (title: string) => void;
+}) {
+  const t = useTranslations("analysis.layout");
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(name);
+
+  useEffect(() => {
+    setDraft(name);
+    setEditing(false);
+  }, [name]);
+
+  const save = () => {
+    const next = draft.trim();
+    if (!next || next === name) {
+      setDraft(name);
+      setEditing(false);
+      return;
+    }
+    onRename?.(next);
+    setEditing(false);
+  };
+
+  if (editing) {
+    return (
+      <div className={styles.titleRow}>
+        <input
+          className={styles.titleInput}
+          value={draft}
+          aria-label={t("editTitle")}
+          placeholder={t("titlePlaceholder")}
+          data-testid="analysis-title-input"
+          autoFocus
+          onChange={(event) => setDraft(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") save();
+            if (event.key === "Escape") {
+              setDraft(name);
+              setEditing(false);
+            }
+          }}
+        />
+        <button type="button" className={styles.expand} onClick={save}>
+          {t("saveTitle")}
+        </button>
+        <button
+          type="button"
+          className={styles.iconButton}
+          aria-label={t("cancelEdit")}
+          onClick={() => {
+            setDraft(name);
+            setEditing(false);
+          }}
+        >
+          <IconX size={15} />
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className={styles.titleRow}>
+      <h1 className={styles.title} data-testid="analysis-title">
+        {name}
+      </h1>
+      {canRename && (
+        <button
+          type="button"
+          className={styles.iconButton}
+          aria-label={t("editTitle")}
+          data-testid="analysis-title-edit"
+          onClick={() => {
+            setDraft(name);
+            setEditing(true);
+          }}
+        >
+          <IconPencil size={16} />
+        </button>
+      )}
+    </div>
+  );
+}
+
 export function AnalysisHeader({
   eyebrow,
   name,
@@ -157,6 +248,8 @@ export function AnalysisHeader({
   onOpenSources,
   onHome,
   actions,
+  canRename = false,
+  onRename,
 }: {
   eyebrow: string;
   name: string;
@@ -177,6 +270,9 @@ export function AnalysisHeader({
   onOpenSources: () => void;
   onHome: () => void;
   actions: ReactNode;
+  /** Analysts can rename the analysis. The parent stores the new title. */
+  canRename?: boolean;
+  onRename?: (title: string) => void;
 }) {
   const t = useTranslations("analysis.layout");
   const showChanges = !seen && (board != null || chips.length > 0 || loose.length > 0);
@@ -189,7 +285,7 @@ export function AnalysisHeader({
         <span className={styles.eyebrow}>{eyebrow}</span>
         <div className={styles.actions}>{actions}</div>
       </div>
-      <h1 className={styles.title}>{name}</h1>
+      <AnalysisTitle name={name} canRename={canRename} onRename={onRename} />
       <div className={styles.meta} data-testid="analysis-meta">
         <span className={stale ? `${styles.fresh} ${styles.stale}` : styles.fresh}>
           <span className={styles.freshDot} />
@@ -303,6 +399,19 @@ export function AnalysisCrumbs({ name, onHome }: { name: string; onHome: () => v
       <span className={styles.crumbHere}>{name}</span>
     </nav>
   );
+}
+
+/** The element that actually scrolls, or the window when the page itself scrolls. */
+function scrollParent(node: HTMLElement): HTMLElement | Window {
+  let current = node.parentElement;
+  while (current) {
+    const overflow = getComputedStyle(current).overflowY;
+    if ((overflow === "auto" || overflow === "scroll") && current.scrollHeight > current.clientHeight + 1) {
+      return current;
+    }
+    current = current.parentElement;
+  }
+  return window;
 }
 
 const FOLD_MS = 280;
@@ -556,6 +665,24 @@ export function AnalysisOverview({
   const format = useFormatter();
   const now = useNow({ updateInterval: 60_000 });
   const [sumOpen, setSumOpen] = useState(false);
+  const summaryRef = useRef<HTMLElement>(null);
+  const collapseAnchor = useRef<number | null>(null);
+  const toggleSummary = () => {
+    const section = summaryRef.current;
+    collapseAnchor.current = sumOpen && section ? summaryCollapseAnchor(section.getBoundingClientRect().top) : null;
+    setSumOpen((open) => !open);
+  };
+  useLayoutEffect(() => {
+    const anchor = collapseAnchor.current;
+    collapseAnchor.current = null;
+    const section = summaryRef.current;
+    if (anchor == null || !section) return;
+    const delta = summaryScrollDelta(section.getBoundingClientRect().top, anchor);
+    if (Math.abs(delta) < 1) return;
+    const scroller = scrollParent(section);
+    if (scroller instanceof HTMLElement) scroller.scrollTop += delta;
+    else scroller.scrollBy(0, delta);
+  }, [sumOpen]);
   const [copied, setCopied] = useState(false);
   const [riskKey, setRiskKey] = useState<string | null>(null);
   const updatedLabel = t("layout.updated");
@@ -617,7 +744,7 @@ export function AnalysisOverview({
   return (
     <div className={styles.stack}>
       {(data.summary || findings.length > 0) && (
-        <section id={CHANGE_ANCHOR.summary} className={styles.summary} data-testid="analysis-summary">
+        <section ref={summaryRef} id={CHANGE_ANCHOR.summary} className={styles.summary} data-testid="analysis-summary">
           <div className={styles.summaryGrid}>
             <div className={styles.summaryBody}>
               <div className={styles.summaryTop}>
@@ -654,29 +781,27 @@ export function AnalysisOverview({
                     </p>
                   );
                 })}
-              {(restText || summaryNote) && (
-                <Collapse open={sumOpen}>
-                  <div className={styles.summaryMore}>
-                    {restText &&
-                      planSummaryParagraphs(restText, data.summaryLineRefs).map((para, i) => {
-                        const segments = planSentenceSegments(para, data.summaryLineRefs);
-                        return (
-                          <p key={i} className={styles.prose}>
-                            {segments
-                              ? segments.map((seg, j) =>
-                                  seg.kind === "text" ? (
-                                    seg.text
-                                  ) : (
-                                    <Citations key={j} refs={seg.refs} sources={data.sources} onOpen={onOpenSources} variant="inline" />
-                                  ),
-                                )
-                              : para}
-                          </p>
-                        );
-                      })}
-                    <SectionChange note={summaryNote} />
-                  </div>
-                </Collapse>
+              {sumOpen && (restText || summaryNote) && (
+                <div className={styles.summaryMore}>
+                  {restText &&
+                    planSummaryParagraphs(restText, data.summaryLineRefs).map((para, i) => {
+                      const segments = planSentenceSegments(para, data.summaryLineRefs);
+                      return (
+                        <p key={i} className={styles.prose}>
+                          {segments
+                            ? segments.map((seg, j) =>
+                                seg.kind === "text" ? (
+                                  seg.text
+                                ) : (
+                                  <Citations key={j} refs={seg.refs} sources={data.sources} onOpen={onOpenSources} variant="inline" />
+                                ),
+                              )
+                            : para}
+                        </p>
+                      );
+                    })}
+                  <SectionChange note={summaryNote} />
+                </div>
               )}
             </div>
             {findings.length > 0 && (
@@ -688,20 +813,11 @@ export function AnalysisOverview({
                   const metric = highlightMetric(subject ? body : "");
                   const dotClass = DOT_CLASS[tone];
                   return (
-                    <div key={i}>
-                      <div className={styles.railButton}>
-                        <span className={dotClass ? `${styles.dot} ${dotClass}` : styles.dot} />
-                        <span className={styles.railTitle}>{subject ?? finding.text}</span>
-                        {metric && (
-                          <span className={tone === "access" ? styles.railValueAccess : styles.railValue}>{metric}</span>
-                        )}
-                      </div>
-                      {!metric && (
-                        <Collapse open={sumOpen}>
-                          <div className={styles.railContext}>
-                            <Cited text={subject ? body : finding.text} refs={finding.refs} sources={data.sources} onOpen={onOpenSources} />
-                          </div>
-                        </Collapse>
+                    <div key={i} className={styles.railButton}>
+                      <span className={dotClass ? `${styles.dot} ${dotClass}` : styles.dot} />
+                      <span className={styles.railTitle}>{subject ?? finding.text}</span>
+                      {metric && (
+                        <span className={tone === "access" ? styles.railValueAccess : styles.railValue}>{metric}</span>
                       )}
                     </div>
                   );
@@ -709,9 +825,9 @@ export function AnalysisOverview({
               </aside>
             )}
           </div>
-          {(preview?.truncated || findings.length > 0) && (
+          {(preview?.truncated || summaryNote) && (
             <div className={styles.expandRow}>
-              <button type="button" className={styles.expand} data-testid="summary-toggle" aria-expanded={sumOpen} onClick={() => setSumOpen((open) => !open)}>
+              <button type="button" className={styles.expand} data-testid="summary-toggle" aria-expanded={sumOpen} onClick={toggleSummary}>
                 {sumOpen ? t("layout.collapseSummary") : t("layout.expandSummary")}
                 <IconChevronDown size={14} className={styles.twist} style={{ transform: sumOpen ? "rotate(180deg)" : undefined }} />
               </button>
@@ -1055,42 +1171,6 @@ export function AnalysisOverview({
         </Fold>
       )}
 
-      {data.scenarios &&
-        (data.scenarios.description || data.scenarios.mostLikely || data.scenarios.bestCase || data.scenarios.worstCase) && (
-        <Fold
-          id={CHANGE_ANCHOR.forecast}
-          title={t("findings.forecast")}
-          meta={t("findings.forecastNote")}
-          icon={<IconClock size={18} />}
-          iconTone="ai"
-          tag={t("findings.forecastTag")}
-          defaultOpen
-          updated={!!noteFor("forecast")}
-          updatedLabel={updatedLabel}
-          testId="analysis-section-forecast"
-          className={styles.forecast}
-        >
-          {data.scenarios.description && <p className={styles.prose}>{data.scenarios.description}</p>}
-          {(
-            [
-              ["mostLikely", data.scenarios.mostLikely],
-              ["bestCase", data.scenarios.bestCase],
-              ["worstCase", data.scenarios.worstCase],
-            ] as const
-          )
-            .filter((entry): entry is [(typeof entry)[0], string] => !!entry[1])
-            .map(([key, text]) => (
-              <div key={key} className={styles.scenario}>
-                <div className={styles.itemTitle}>{t(`findings.${key}`)}</div>
-                <div className={styles.findingText}>{text}</div>
-              </div>
-            ))}
-          {data.scenarios.refs.length > 0 && (
-            <Citations refs={data.scenarios.refs} sources={data.sources} onOpen={onOpenSources} />
-          )}
-          <SectionChange note={noteFor("forecast")} />
-        </Fold>
-      )}
     </div>
   );
 }

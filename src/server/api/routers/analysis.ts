@@ -7,6 +7,7 @@ import {
   eventIdFromCitation,
   mapAnalysis,
   mapFigures,
+  mapWindowFunding,
   countryFrame,
   toAnalysisEvent,
   toCreatedAnalysis,
@@ -29,6 +30,7 @@ import {
   type AnalysisCadence,
 } from "~/lib/analysis-view";
 import { isPlatformAdmin } from "~/lib/roles";
+import type { GqlUserComment } from "~/lib/types/graphql";
 
 // Domain types live in the mapper; re-exported so existing imports keep compiling.
 /**
@@ -93,6 +95,25 @@ const FIGURES_QUERY = `
     }
   }
 `;
+
+/** Funding for the analysis window. Yearly hits the country cache; anything else is computed for that window. */
+const WINDOW_FUNDING_QUERY = `
+  query AnalysisWindowFunding($locationId: String, $windowStart: DateTime!, $windowEnd: DateTime!, $windowKind: String!) {
+    aggregatedDatapoint(
+      locationId: $locationId
+      windowStart: $windowStart
+      windowEnd: $windowEnd
+      windowKind: $windowKind
+    ) {
+      data
+    }
+  }
+`;
+
+/** A calendar-year start matches the stored yearly country bucket. */
+function fundingWindowKind(windowStart: string): "yearly" | "window" {
+  return /^\d{4}-01-01T00:00:00/.test(windowStart) ? "yearly" : "window";
+}
 
 /** clear-api clamps `eventsPage.limit` to 100. */
 const EVENTS_LIMIT = 100;
@@ -173,6 +194,43 @@ const DELETE_AUTOMATION_MUTATION = `
     deleteAnalysisAutomation(id: $id)
   }
 `;
+
+const THREAD_QUERY = `
+  query AnalysisThread($id: String!) {
+    analysisAutomation(id: $id) {
+      title
+      comments {
+        id
+        comment
+        createdAt
+        isCommentReply
+        repliedToCommentId
+        user { id name image }
+        tags { user { id name image } }
+      }
+      documents { id fileName createdAt url }
+    }
+  }
+`;
+
+const RENAME_AUTOMATION_MUTATION = `
+  mutation RenameAnalysis($id: String!, $input: UpdateAnalysisAutomationInput!) {
+    updateAnalysisAutomation(id: $id, input: $input) { id }
+  }
+`;
+
+const ADD_ANALYSIS_COMMENT = `
+  mutation AddAnalysisComment($input: AddCommentInput!) {
+    addComment(input: $input) { id comment createdAt }
+  }
+`;
+
+interface AnalysisDocumentRow {
+  id: string;
+  fileName: string;
+  createdAt: string;
+  url: string | null;
+}
 
 type Caller = { user: { role: string } };
 
@@ -670,13 +728,67 @@ export const analysisRouter = createTRPCRouter({
     }),
 
   /**
+   * Title, discussion, and uploaded files for one analysis automation.
+   * Empty when the automation is gone. The page keeps a local copy when this
+   * call cannot be served yet.
+   */
+  thread: protectedProcedure
+    .input(z.object({ id: z.string().min(1) }))
+    .query(async ({ ctx, input }) => {
+      const data = await graphqlFetch<{
+        analysisAutomation: {
+          title: string | null;
+          comments: GqlUserComment[];
+          documents: AnalysisDocumentRow[];
+        } | null;
+      }>(THREAD_QUERY, { id: input.id }, cookieHeaders(ctx));
+      return (
+        data.analysisAutomation ?? {
+          title: null,
+          comments: [] as GqlUserComment[],
+          documents: [] as AnalysisDocumentRow[],
+        }
+      );
+    }),
+
+  /** Store the display name on the automation. Blank is rejected here. */
+  rename: protectedProcedure
+    .input(z.object({ id: z.string().min(1), teamId: z.string().min(1), title: z.string().trim().min(1).max(120) }))
+    .mutation(async ({ ctx, input }) => {
+      const headers = cookieHeaders(ctx);
+      await requireTeamAutomation(ctx, input.teamId, input.id, headers);
+      await graphqlFetch(RENAME_AUTOMATION_MUTATION, { id: input.id, input: { title: input.title } }, headers);
+      return { id: input.id, title: input.title };
+    }),
+
+  /** Add a discussion comment on the automation. The thread is shared. */
+  comment: protectedProcedure
+    .input(z.object({ id: z.string().min(1), comment: z.string().trim().min(1).max(4000) }))
+    .mutation(async ({ ctx, input }) => {
+      const data = await graphqlFetch<{ addComment: { id: string; comment: string; createdAt: string } }>(
+        ADD_ANALYSIS_COMMENT,
+        { input: { analysisAutomationId: input.id, comment: input.comment } },
+        cookieHeaders(ctx),
+      );
+      return data.addComment;
+    }),
+
+  /**
    * Breakdown figures for the KPI cards (inside vs abroad, people in need by
-   * sector) from the scope's all-time aggregation. Null-safe: missing fields
-   * come back null and the card hides that subsection.
+   * sector) from the scope's all-time aggregation. Funding, when a window is
+   * given, comes from that window's bucket — never the all-time tier, which
+   * sums funding across years. Missing fields come back null.
    */
   figures: protectedProcedure
-    .input(z.object({ locationId: z.string().min(1) }))
+    .input(
+      z.object({
+        locationId: z.string().min(1),
+        windowStart: z.string().min(1).optional(),
+        windowEnd: z.string().min(1).nullable().optional(),
+      }),
+    )
     .query(async ({ ctx, input }): Promise<AnalysisFigures> => {
+      const headers = cookieHeaders(ctx);
       const res = await graphqlFetch<{ aggregatedDatapoint: { data: Record<string, unknown> } | null }>(
         FIGURES_QUERY,
         {
@@ -684,9 +796,21 @@ export const analysisRouter = createTRPCRouter({
           windowStart: "1970-01-01T00:00:00Z",
           windowEnd: new Date().toISOString(),
         },
-        cookieHeaders(ctx),
+        headers,
       );
-      return mapFigures(res.aggregatedDatapoint?.data);
+      const stocks = mapFigures(res.aggregatedDatapoint?.data);
+      if (!input.windowStart) return { ...stocks, fundingReceived: null, fundingRequired: null };
+      const funding = await graphqlFetch<{ aggregatedDatapoint: { data: Record<string, unknown> } | null }>(
+        WINDOW_FUNDING_QUERY,
+        {
+          locationId: input.locationId,
+          windowStart: input.windowStart,
+          windowEnd: input.windowEnd ?? new Date().toISOString(),
+          windowKind: fundingWindowKind(input.windowStart),
+        },
+        headers,
+      );
+      return { ...stocks, ...mapWindowFunding(funding.aggregatedDatapoint?.data) };
     }),
 
   /**
@@ -700,6 +824,12 @@ export const analysisRouter = createTRPCRouter({
         locationIds: z.array(z.string().min(1)).min(1).max(MAX_CREATED_LOCATIONS),
         from: z.string().datetime(),
         eventTypes: z.array(z.string()).optional(),
+        /**
+         * `event:<id>` citations from the analysis. Used only when the scope
+         * query is empty. The lookup itself stays at EVENTS_LIMIT; a longer
+         * list must not reject the whole events request.
+         */
+        citedIds: z.array(z.string()).max(2_000).optional(),
       }),
     )
     .query(async ({ ctx, input }): Promise<AnalysisEvents> => {
@@ -723,14 +853,25 @@ export const analysisRouter = createTRPCRouter({
         ),
       );
       const seen = new Set<string>();
-      const items = pages
+      const pageItems = pages
         .flatMap((p) => p.eventsPage.items)
-        .filter((e) => (seen.has(e.id) ? false : (seen.add(e.id), true)))
+        .filter((e) => (seen.has(e.id) ? false : (seen.add(e.id), true)));
+      const pageTotal = pages.reduce((n, p) => n + p.eventsPage.totalCount, 0);
+      // A district query can miss events the write-up cited (location, window, or type).
+      // An empty page then reads as "0 events" next to a header that names those citations.
+      let recovered: GqlAnalysisEvent[] = [];
+      if (pageTotal === 0) {
+        const missing = [...new Set((input.citedIds ?? []).map(eventIdFromCitation).filter((id): id is string => !!id && !seen.has(id)))];
+        if (missing.length > 0) {
+          recovered = [...(await fetchEventMeta(missing.slice(0, EVENTS_LIMIT), headers)).values()];
+        }
+      }
+      const items = [...pageItems, ...recovered]
         .map(toAnalysisEvent)
         .sort((a, b) => b.startedAt.localeCompare(a.startedAt))
         .slice(0, EVENTS_LIMIT);
       return {
-        totalCount: pages.reduce((n, p) => n + p.eventsPage.totalCount, 0),
+        totalCount: pageTotal > 0 ? pageTotal : items.length,
         items,
       };
     }),

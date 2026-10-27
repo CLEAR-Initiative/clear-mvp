@@ -5,6 +5,13 @@ import { MantineProvider } from "@mantine/core";
 import type { Analysis } from "~/server/api/mappers/analysis";
 import type { CreatedAnalysis } from "~/server/api/mappers/analysis";
 
+const replace = vi.fn();
+const params = new URLSearchParams("country=sdn");
+vi.mock("next/navigation", () => ({
+  usePathname: () => "/analysis",
+  useRouter: () => ({ replace }),
+  useSearchParams: () => params,
+}));
 vi.mock("next-intl", () => ({
   useTranslations: (ns?: string) => (key: string, vars?: Record<string, unknown>) =>
     `${ns ? `${ns}.` : ""}${key}${vars ? `:${JSON.stringify(vars)}` : ""}`,
@@ -43,7 +50,7 @@ const utils = {
 vi.mock("~/trpc/react", () => ({
   api: {
     useUtils: () => utils,
-    auth: { me: { useQuery: () => ({ data: { user: { role: role === "admin" ? "admin" : "member", teamMemberships: role === "analyst" ? [{ role: "analyst" }] : [] } } }) } },
+    auth: { me: { useQuery: () => ({ data: { user: { id: "user-1", role: role === "admin" ? "admin" : "member", teamMemberships: role === "analyst" ? [{ role: "analyst" }] : [] } } }) } },
     analysis: {
       current: {
         useQuery: (input: unknown, opts: { enabled?: boolean }) => (
@@ -63,6 +70,17 @@ vi.mock("~/trpc/react", () => ({
           return { mutate: refreshMutate, isPending: false };
         },
       },
+      thread: {
+        useQuery: () => ({
+          data: undefined,
+          isSuccess: false,
+          isError: false,
+          isLoading: false,
+          refetch: async () => ({ data: undefined }),
+        }),
+      },
+      rename: { useMutation: () => ({ mutate: vi.fn(), isPending: false }) },
+      comment: { useMutation: () => ({ mutateAsync: vi.fn(), isPending: false }) },
     },
     locations: { getById: { useQuery: () => ({ data: { geometry: null } }) } },
     useQueries: (build: (q: unknown) => unknown[]) =>
@@ -155,6 +173,37 @@ afterEach(() => {
   cleanup();
   vi.clearAllMocks();
   sessionStorage.clear();
+  localStorage.clear();
+});
+
+describe("AnalysisDetail collaboration", () => {
+  it("shows add evidence and the discussion", () => {
+    renderDetail(COUNTRY);
+    expect(screen.getByTestId("analysis-evidence")).toHaveTextContent("analysis.layout.addEvidence");
+    expect(screen.getByTestId("analysis-discussion")).toHaveTextContent("analysis.layout.discussionTitle");
+    expect(screen.getByTestId("analysis-title-edit")).toBeInTheDocument();
+  });
+
+  it("keeps a comment after the page is opened again", () => {
+    const { unmount } = renderDetail(COUNTRY);
+    fireEvent.change(screen.getByTestId("analysis-comment-input"), { target: { value: "Check the west road" } });
+    fireEvent.click(screen.getByTestId("analysis-comment-post"));
+    expect(screen.getByTestId("analysis-comment")).toHaveTextContent("Check the west road");
+    unmount();
+    renderDetail(COUNTRY);
+    expect(screen.getByTestId("analysis-comment")).toHaveTextContent("Check the west road");
+  });
+
+  it("keeps a renamed title after the page is opened again", () => {
+    const { unmount } = renderDetail(createdScope(created()));
+    fireEvent.click(screen.getByTestId("analysis-title-edit"));
+    fireEvent.change(screen.getByTestId("analysis-title-input"), { target: { value: "Kordofan weekly" } });
+    fireEvent.click(screen.getByText("analysis.layout.saveTitle"));
+    expect(screen.getByTestId("analysis-title")).toHaveTextContent("Kordofan weekly");
+    unmount();
+    renderDetail(createdScope(created()));
+    expect(screen.getByTestId("analysis-title")).toHaveTextContent("Kordofan weekly");
+  });
 });
 
 describe("AnalysisDetail header", () => {
@@ -167,6 +216,13 @@ describe("AnalysisDetail header", () => {
   it("shows the period the analysis covers", () => {
     renderDetail(COUNTRY);
     expect(screen.getByTestId("analysis-meta")).toHaveTextContent('analysis.meta.covers:{"start":"2026-01-01"}');
+  });
+
+  it("writes the active tab into the page URL", () => {
+    renderDetail(COUNTRY);
+    fireEvent.click(screen.getByRole("tab", { name: "analysis.tabs.needs" }));
+    expect(replace).toHaveBeenCalledWith("/analysis?country=sdn&tab=needs", { scroll: false });
+    expect(screen.getByTestId("analysis-needs")).toBeInTheDocument();
   });
 
   it("flags an old version as out of date and a fresh one not", () => {

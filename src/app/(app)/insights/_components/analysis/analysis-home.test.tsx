@@ -48,6 +48,7 @@ let cadencePending: { id: string; cadence: string } | null = null;
 vi.mock("~/trpc/react", () => ({
   api: {
     useUtils: () => ({ analysis: { scopes: { invalidate: vi.fn() } } }),
+    auth: { me: { useQuery: () => ({ data: { user: { id: "user-1" } } }) } },
     analysis: {
       remove: { useMutation: () => ({ mutate: removeMutate, isPending: false }) },
       setCadence: {
@@ -98,7 +99,8 @@ function renderHome({
   country = null,
   list = [],
   manage = true,
-}: { country?: CountryAnalysisEntry | null; list?: CreatedAnalysis[]; manage?: boolean } = {}) {
+  loading = false,
+}: { country?: CountryAnalysisEntry | null; list?: CreatedAnalysis[]; manage?: boolean; loading?: boolean } = {}) {
   return render(
     <MantineProvider>
       <AnalysisHome
@@ -106,7 +108,7 @@ function renderHome({
         countryName="Sudan"
         country={country}
         created={list}
-        loading={false}
+        loading={loading}
         canCreate={manage}
         canRemove={manage}
         teamId="team-1"
@@ -136,6 +138,11 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe("AnalysisHome", () => {
+  it("does not say the country analysis is missing while the list is still loading", () => {
+    renderHome({ loading: true });
+    expect(screen.getByTestId("analysis-scope-country")).not.toHaveTextContent("analysis.home.noCountryAnalysis");
+  });
+
   it("lists generating analyses first, then the most recently updated", () => {
     renderHome({
       list: [

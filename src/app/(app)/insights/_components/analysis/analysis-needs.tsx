@@ -114,6 +114,7 @@ export function AnalysisNeeds({
           nrcRelevant: null,
           ochaMatch: null,
           pin: model.pin,
+          pinMissing: model.pin == null ? tA("noFigure") : undefined,
           pinIsApprox: false,
           // Graded by the analysis from reporting: the "AI review" level.
           assessmentLevel: 2,
@@ -124,11 +125,13 @@ export function AnalysisNeeds({
   );
 
   return (
-    <NeedsAssessmentView
-      rows={rows}
-      scopeBadge={scopeName}
-      severityLegend={<AnalysisSeverityLegend />}
-      panelClassName={styles.sectorsCard}
-    />
+    <Box data-testid="analysis-needs">
+      <NeedsAssessmentView
+        rows={rows}
+        scopeBadge={scopeName}
+        severityLegend={<AnalysisSeverityLegend />}
+        panelClassName={styles.sectorsCard}
+      />
+    </Box>
   );
 }

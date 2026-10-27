@@ -150,8 +150,9 @@ function latest(...dates: (string | null | undefined)[]): string | null {
 /**
  * Displaced, In need and Funding with their breakdowns. Stock figures come
  * from the scope's all-time aggregation (`figures`, the latest value per
- * field); the analysis datapoints are the fallback. Funding reads only the
- * analysis window: the all-time tier sums funding across years.
+ * field); the analysis datapoints are the fallback. Funding uses the snapshot
+ * dollars, then the same window's aggregation. The all-time tier is not used
+ * for funding, because it sums those flows across years.
  */
 export function AnalysisKpis({
   data,

@@ -4,7 +4,7 @@ import { useFormatter, useTranslations } from "next-intl";
 import { Anchor, Box, Group, Text } from "@mantine/core";
 import { IconArrowUpRight } from "@tabler/icons-react";
 import type { SaSource } from "~/server/api/mappers/situation-analysis";
-import { sourceHeading } from "./source-heading";
+import { distinctHeadings } from "./source-heading";
 
 /**
  * Situation Analysis -> Sources: a numbered references list.
@@ -18,6 +18,10 @@ import { sourceHeading } from "./source-heading";
 export function SituationSources({ sources, className }: { sources: SaSource[]; className?: string }) {
   const t = useTranslations("insights.situation");
   const format = useFormatter();
+  const headingLabels = { event: t("sources.eventLabel"), hapiFigure: t("sources.hapiFigure") };
+  const headings = distinctHeadings(sources, headingLabels, (iso) =>
+    format.dateTime(new Date(iso), { year: "numeric", month: "short", day: "numeric" }),
+  );
 
   if (sources.length === 0) {
     return (
@@ -73,7 +77,7 @@ export function SituationSources({ sources, className }: { sources: SaSource[]; 
                 : null
             }
             visitLabel={t("sources.visit")}
-            headingLabels={{ event: t("sources.eventLabel"), hapiFigure: t("sources.hapiFigure") }}
+            heading={headings[i] ?? ""}
           />
         ))}
       </Box>
@@ -87,20 +91,19 @@ function Reference({
   first,
   publishedLabel,
   visitLabel,
-  headingLabels,
+  heading,
 }: {
   n: number;
   source: SaSource;
   first: boolean;
   publishedLabel: string | null;
   visitLabel: string;
-  headingLabels: { event: string; hapiFigure: string };
+  heading: string;
 }) {
   // Prefer the publisher clear-api resolved from the report's ReliefWeb
   // `source` ("OCHA", "WFP"); the URL host is the label of last resort and
   // only ever says "reliefweb.int" - the aggregator, not the publisher.
   const publisher = source.publisher ?? publisherFromUrl(source.url);
-  const heading = sourceHeading(source, headingLabels);
 
   return (
     <Box
