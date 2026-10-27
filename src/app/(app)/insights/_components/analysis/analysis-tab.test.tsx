@@ -55,6 +55,8 @@ let analysisResult: { data: Analysis | null | undefined; isLoading: boolean; isE
 let eventsResult: { data: AnalysisEvents | undefined };
 let figuresResult: AnalysisFigures | undefined;
 let scopesResult: AnalysisScopes;
+let scopesError = false;
+let countriesError = false;
 let frameResult: { data: Analysis | null | undefined; isLoading: boolean; isError: boolean };
 const currentQuery = vi.fn();
 const frameQuery = vi.fn();
@@ -92,7 +94,13 @@ vi.mock("~/trpc/react", () => ({
     analysis: {
       scopes: {
         useQuery: (input: unknown, opts: { enabled?: boolean }) => (
-          scopesQuery(input, opts), { data: opts.enabled ? scopesResult : undefined, isLoading: false, isFetching: false }
+          scopesQuery(input, opts),
+          {
+            data: opts.enabled && !scopesError ? scopesResult : undefined,
+            isLoading: false,
+            isFetching: false,
+            isError: !!opts.enabled && scopesError,
+          }
         ),
       },
       current: {
@@ -118,7 +126,15 @@ vi.mock("~/trpc/react", () => ({
         useQuery: ({ level }: { level: number }) => ({ data: level === 1 ? states : districts, isLoading: false }),
       },
     },
-    situationAnalysis: { countries: { useQuery: () => ({ data: allCountries, isLoading: false }) } },
+    situationAnalysis: {
+      countries: {
+        useQuery: () => ({
+          data: countriesError ? undefined : allCountries,
+          isLoading: false,
+          isError: countriesError,
+        }),
+      },
+    },
   },
 }));
 
@@ -251,6 +267,8 @@ beforeEach(() => {
   frameResult = { data: undefined, isLoading: false, isError: false };
   team = { countries: [SUDAN], countryId: "sdn" };
   allCountries = [];
+  scopesError = false;
+  countriesError = false;
   analysisResult = { data: analysis(), isLoading: false, isError: false };
   eventsResult = { data: events };
   figuresResult = {
@@ -384,6 +402,28 @@ describe("Insights > Analysis tab", () => {
     team = { countries: [], countryId: null };
     renderHome();
     expect(screen.getByText("analysis.noCountry")).toBeInTheDocument();
+    expect(screen.queryByText("analysis.error")).not.toBeInTheDocument();
+  });
+
+  it("shows an error when the country list fails, not the no-country empty state", () => {
+    team = { countries: [], countryId: null };
+    countriesError = true;
+    renderHome();
+    expect(screen.getByText("analysis.error")).toBeInTheDocument();
+    expect(screen.queryByText("analysis.noCountry")).not.toBeInTheDocument();
+  });
+
+  it("shows the empty created list only after the scopes request succeeds", () => {
+    renderHome();
+    expect(screen.getByTestId("analysis-created-empty")).toBeInTheDocument();
+    expect(screen.queryByText("analysis.error")).not.toBeInTheDocument();
+  });
+
+  it("shows an error when the scopes list fails, not an empty created list", () => {
+    scopesError = true;
+    renderHome();
+    expect(screen.getByText("analysis.error")).toBeInTheDocument();
+    expect(screen.queryByTestId("analysis-created-empty")).not.toBeInTheDocument();
   });
 
   it("shows the empty state when no analysis exists for the scope", () => {
