@@ -745,7 +745,7 @@ export function AnalysisOverview({
                     <div className={styles.splitB} style={{ width: `${(values.abroad / values.displacedTotal) * 100}%` }} />
                   </div>
                   <div className={styles.legend} data-testid="displaced-split">
-                    <span className={styles.splitNote}>{t("kpis.differentDates")}</span>
+                    <span className={styles.splitNote}>{t("kpis.roundedParts")}</span>
                     <span>
                       <i className={styles.swatch} style={{ background: "var(--sa-accent)" }} />
                       {t("kpis.inside", { scope: scopeName })} {compactNumber(values.inside)} {pct(values.inside / values.displacedTotal)}

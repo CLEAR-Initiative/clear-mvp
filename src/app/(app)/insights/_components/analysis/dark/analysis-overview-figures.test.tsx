@@ -132,7 +132,7 @@ describe("AnalysisOverview figures", () => {
     expect(screen.getByTestId("analysis-figures")).toHaveTextContent("8.6M");
     expect(split).toHaveTextContent("7.3M");
     expect(split).toHaveTextContent("1.4M");
-    expect(split).toHaveTextContent("analysis.kpis.differentDates");
+    expect(split).toHaveTextContent("analysis.kpis.roundedParts");
     expect(split).not.toHaveTextContent("8.7M");
   });
 });

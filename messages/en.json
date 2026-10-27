@@ -3063,6 +3063,7 @@
       "inside": "Inside {scope}",
       "abroad": "Abroad",
       "differentDates": "parts may come from different dates",
+      "roundedParts": "rounded separately, so they may not add up to the headline",
       "rangeLabel": "Range across sources",
       "headline": "Headline",
       "bySector": "People in need by sector",
