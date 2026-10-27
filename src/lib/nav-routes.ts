@@ -17,6 +17,9 @@ export const NAV_ROUTES = {
 
 export type NavItemKey = keyof typeof NAV_ROUTES;
 
+/** The analysis route stays `/analysis`. The sidebar entry keeps the Insights name. */
+export const ANALYSIS_NAV_LABEL = "insights" as const;
+
 const BY_SEGMENT = new Map<string, NavItemKey>(
   (Object.entries(NAV_ROUTES) as Array<[NavItemKey, string]>).map(([key, href]) => [href.split("/")[1] ?? "", key]),
 );

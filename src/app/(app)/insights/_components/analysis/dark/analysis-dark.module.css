@@ -702,6 +702,7 @@
 .summary {
   composes: card;
   border-color: var(--sa-ai-border);
+  overflow-anchor: none;
 }
 
 .summaryGrid {
@@ -798,12 +799,7 @@
   background: transparent;
   color: inherit;
   text-align: left;
-  cursor: pointer;
   font: inherit;
-}
-
-.railButton:hover {
-  background: var(--sa-raised);
 }
 
 .dot {

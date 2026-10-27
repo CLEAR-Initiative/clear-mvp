@@ -288,7 +288,7 @@ export function AnalysisDetail({
     );
   }
 
-  const chips = data ? changeChips(data.changes.notes) : [];
+  const chips = data ? changeChips(data.changes.notes).filter((chip) => chip.section !== "forecast") : [];
   const loose = data ? looseChangeNotes(data.changes.notes) : [];
   const changesKey = data ? changeSessionKey(scopeKey(scope), data.changes.notes) : null;
   useEffect(() => {

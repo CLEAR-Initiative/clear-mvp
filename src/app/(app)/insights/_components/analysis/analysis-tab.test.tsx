@@ -338,18 +338,18 @@ describe("Insights > Analysis tab", () => {
     expect(screen.getAllByText(/\$1\.2B/).length).toBeGreaterThan(0);
     expect(screen.getByTestId("minimap")).toHaveTextContent("1 markers");
     expect(screen.getByText("North Darfur")).toBeInTheDocument();
-    // Country scope: no event timeline.
+    // Country scope: no event timeline. Forecasts stay off the overview.
     expect(screen.queryByTestId("analysis-section-timeline")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("analysis-section-forecast")).not.toBeInTheDocument();
+    expect(screen.queryByText("Fighting continues.")).not.toBeInTheDocument();
     fireEvent.click(within(screen.getByTestId("analysis-section-hazards")).getAllByRole("button")[0]!);
     expect(screen.getByText("Cholera outbreak.")).toBeInTheDocument();
-    expect(screen.getByText("Fighting continues.")).toBeInTheDocument();
   });
 
-  it("opens context and forecast, and keeps hazards and displacement collapsed", () => {
+  it("opens context and keeps hazards and displacement collapsed", () => {
     renderPage();
-    for (const id of ["contexts", "forecast"]) {
-      expect(within(screen.getByTestId(`analysis-section-${id}`)).getAllByRole("button")[0]).toHaveAttribute("aria-expanded", "true");
-    }
+    expect(screen.queryByTestId("analysis-section-forecast")).not.toBeInTheDocument();
+    expect(within(screen.getByTestId("analysis-section-contexts")).getAllByRole("button")[0]).toHaveAttribute("aria-expanded", "true");
     for (const id of ["hazards", "displacement"]) {
       const toggle = within(screen.getByTestId(`analysis-section-${id}`)).getAllByRole("button")[0]!;
       expect(toggle).toHaveAttribute("aria-expanded", "false");
@@ -832,17 +832,22 @@ describe("Insights > Analysis tab", () => {
     expect(screen.getByTestId("analysis-create-submit")).toBeDisabled();
   });
 
-  it("renders key findings with the subject in bold", () => {
+  it("keeps key findings to the subject line when the summary expands", () => {
     analysisResult = {
-      data: analysis({ keyFindings: [{ text: "Security: Drone strikes hit El Obeid on 25 Sep.", refs: [2] }] }),
+      data: analysis({
+        summary: "First point. Second point. Third point. Fourth point.",
+        keyFindings: [{ text: "Security: Drone strikes hit El Obeid on 25 Sep.", refs: [2] }],
+      }),
       isLoading: false,
       isError: false,
     };
     renderPage();
     const findings = screen.getByTestId("analysis-highlights");
     expect(within(findings).getByText("Security").tagName).toBe("SPAN");
+    expect(findings).not.toHaveTextContent("Drone strikes hit El Obeid on 25 Sep.");
     fireEvent.click(screen.getByTestId("summary-toggle"));
-    expect(findings).toHaveTextContent("Drone strikes hit El Obeid on 25 Sep.");
+    expect(screen.getByText(/Third point\. Fourth point\./)).toBeInTheDocument();
+    expect(findings).not.toHaveTextContent("Drone strikes hit El Obeid on 25 Sep.");
   });
 
   it("offers Create report on an opened analysis instead of the model name and switcher", () => {
