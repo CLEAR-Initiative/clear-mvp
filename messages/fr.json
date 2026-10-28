@@ -1822,7 +1822,7 @@
     "viewOnCrisisMap": "Voir sur la carte",
     "status": {
       "active": "Actif",
-      "resolved": "Résolu"
+      "inactive": "Inactif"
     },
     "signalCount": "{count, plural, one {# signal} other {# signaux}}",
     "sourceCount": "{count, plural, one {# source} other {# sources}}",

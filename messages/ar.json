@@ -1822,7 +1822,7 @@
     "viewOnCrisisMap": "عرض على الخريطة",
     "status": {
       "active": "نشط",
-      "resolved": "محلول"
+      "inactive": "غير نشط"
     },
     "signalCount": "{count, plural, zero {لا إشارات} one {إشارة واحدة} two {إشارتان} few {# إشارات} many {# إشارةً} other {# إشارة}}",
     "sourceCount": "{count, plural, zero {لا مصادر} one {مصدر واحد} two {مصدران} few {# مصادر} many {# مصدراً} other {# مصدر}}",
