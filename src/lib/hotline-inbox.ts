@@ -1,19 +1,17 @@
 import { getHazardName } from "./disaster-types";
-import { sourceSearchTerm } from "./impact-prior-source";
 import type {
   GqlCaseProposal,
   GqlGroundInboxMessage,
   GqlGroundInboxThread,
   GqlHotlineInbox,
   GqlReviewCaseProposal,
-  GqlTask,
 } from "~/lib/types/graphql";
 
 /**
  * Inbox view model (/inbox).
  *
  * Pure helpers that turn what the Inbox lists into standalone, reviewable
- * entries of three kinds (`InboxEntry.kind`):
+ * entries of two kinds (`InboxEntry.kind`), one per Inbox tab:
  *
  *   hotline_thread — one unverified thread from the hotline staging payload
  *                    (open threads + staged messages). The hotline is free
@@ -26,10 +24,6 @@ import type {
  *                    grouped under it; each case has its own
  *                    Accept / Reject. It counts as one Review item per
  *                    undecided case, not one per group.
- *   task           — one enrichment Task the reader requested ("My
- *                    requests"): its status, never a decision. Not a Review
- *                    item, so it is listed only under its own filter and
- *                    never counts toward "awaiting" or the nav badge.
  *
  * PRIVACY: hotline messages carry no sender identity. `senderRef` is a
  * per-conversation HMAC pseudonym minted by clear-api; `intakeRef` below
@@ -43,18 +37,30 @@ export interface GroundTranslationState {
   text: string | null;
 }
 
-/** The three hotline classifications, the proposed signals (web cases),
- * the reader's own requests, and everything (every Review item — not the
- * requests). The page shows only the filters whose kind the reader may
- * see. */
-export const INBOX_FILTERS = ["reports", "unclassified", "chatter", "proposals", "requests", "all"] as const;
+/** The Inbox's tabs: hotline threads ("community signals") and the
+ * proposed signals (web cases). The page shows only the tabs whose kind the
+ * reader may see. */
+export const INBOX_TABS = ["community", "proposals"] as const;
+export type InboxTab = (typeof INBOX_TABS)[number];
+
+/** The filters inside the tabs: every hotline thread ("community"), the
+ * three hotline classifications, and the proposed signals. */
+export const INBOX_FILTERS = ["community", "reports", "unclassified", "chatter", "proposals"] as const;
 export type InboxFilter = (typeof INBOX_FILTERS)[number];
 
-/** Which filters apply to a reader who sees these kinds; "all" always. */
-export function filtersFor(access: { hotline: boolean; proposals: boolean; requests?: boolean }): InboxFilter[] {
-  return INBOX_FILTERS.filter((f) =>
-    f === "all" ? true : f === "proposals" ? access.proposals : f === "requests" ? !!access.requests : access.hotline,
-  );
+/** The tab a filter belongs to. */
+export function tabOf(filter: InboxFilter): InboxTab {
+  return filter === "proposals" ? "proposals" : "community";
+}
+
+/** Which tabs apply to a reader who sees these kinds. */
+export function tabsFor(access: { hotline: boolean; proposals: boolean }): InboxTab[] {
+  return INBOX_TABS.filter((tab) => (tab === "proposals" ? access.proposals : access.hotline));
+}
+
+/** The filters within one tab, in display order. */
+export function filtersFor(tab: InboxTab): InboxFilter[] {
+  return INBOX_FILTERS.filter((f) => tabOf(f) === tab);
 }
 
 export const INBOX_SORTS = ["reportsFirst", "newest"] as const;
@@ -126,7 +132,7 @@ export interface InboxAttachment {
 }
 
 /** What an Inbox entry is about; each kind has its own row and pane. */
-export type InboxEntryKind = "hotline_thread" | "cases" | "task";
+export type InboxEntryKind = "hotline_thread" | "cases";
 
 /** What every kind of entry carries: enough to list, select, search and
  * sort it. */
@@ -189,16 +195,7 @@ export interface CaseGroupEntry extends InboxEntryBase {
   undecided: number;
 }
 
-/** One enrichment Task the reader requested. The id is the Task's. */
-export interface TaskEntry extends InboxEntryBase {
-  kind: "task";
-  task: GqlTask;
-  eventId: string;
-  /** The Event's title; null when it has none or the reader cannot see it. */
-  eventTitle: string | null;
-}
-
-export type InboxEntry = HotlineEntry | CaseGroupEntry | TaskEntry;
+export type InboxEntry = HotlineEntry | CaseGroupEntry;
 
 export function isHotlineEntry(entry: InboxEntry): entry is HotlineEntry {
   return entry.kind === "hotline_thread";
@@ -206,41 +203,6 @@ export function isHotlineEntry(entry: InboxEntry): entry is HotlineEntry {
 
 export function isCaseGroupEntry(entry: InboxEntry): entry is CaseGroupEntry {
   return entry.kind === "cases";
-}
-
-export function isTaskEntry(entry: InboxEntry): entry is TaskEntry {
-  return entry.kind === "task";
-}
-
-/** A Review item: something waiting for this reader's decision. The
- * reader's own requests are not — they are status, not work. */
-export function isReviewItem(entry: InboxEntry): boolean {
-  return !isTaskEntry(entry);
-}
-
-/**
- * One entry per Task the reader requested (clear-api `myTasks`, newest
- * first). `eventTitles` maps an Event id to its title as the reader may
- * see it; the row titles itself after the Event. `text` carries the
- * source word, the status and the outcome so search finds "failed" or
- * "web".
- */
-export function buildTaskEntries(tasks: GqlTask[], eventTitles: Record<string, string | null>): TaskEntry[] {
-  // Every kind today is about an Event; a Task about anything else has no
-  // Event page to link to, so it is not listed here.
-  return tasks.filter((task) => task.subjectType === "event").map((task) => {
-    const eventTitle = eventTitles[task.subjectId] ?? null;
-    return {
-      id: task.id,
-      kind: "task",
-      task,
-      eventId: task.subjectId,
-      eventTitle,
-      title: eventTitle ?? "",
-      text: [sourceSearchTerm(task.kind), task.status, task.outcome ?? ""].join(" "),
-      sentAt: task.createdAt,
-    };
-  });
 }
 
 /** The id of an Event's case group. */
@@ -470,13 +432,14 @@ export function entryDescription(entry: HotlineEntry, transcriptLabel: (text: st
     .join("\n\n");
 }
 
-/** The classification filters are the hotline's, "proposals" the web
- * cases' (proposed signals), "requests" the reader's own Tasks, "all" every
- * Review item (so the reader's requests never inflate "awaiting").
- * "unclassified" covers both pending and failed entries: neither has a
- * label yet. The row pill tells them apart. */
+/** "community" is every hotline thread, the classification filters narrow
+ * it, "proposals" is the web cases (proposed signals). "unclassified" covers
+ * both pending and failed entries: neither has a label yet. The row pill
+ * tells them apart. */
 export function matchesFilter(entry: InboxEntry, filter: InboxFilter): boolean {
   switch (filter) {
+    case "community":
+      return isHotlineEntry(entry);
     case "reports":
       return isHotlineEntry(entry) && entry.classification === "field_report";
     case "unclassified":
@@ -485,10 +448,6 @@ export function matchesFilter(entry: InboxEntry, filter: InboxFilter): boolean {
       return isHotlineEntry(entry) && entry.classification === "chatter";
     case "proposals":
       return isCaseGroupEntry(entry);
-    case "requests":
-      return isTaskEntry(entry);
-    case "all":
-      return isReviewItem(entry);
   }
 }
 
@@ -535,7 +494,7 @@ export function entryWeight(entry: InboxEntry): number {
 }
 
 export function countByFilter(entries: InboxEntry[]): Record<InboxFilter, number> {
-  const counts: Record<InboxFilter, number> = { reports: 0, unclassified: 0, chatter: 0, proposals: 0, requests: 0, all: 0 };
+  const counts: Record<InboxFilter, number> = { community: 0, reports: 0, unclassified: 0, chatter: 0, proposals: 0 };
   for (const e of entries) {
     for (const f of INBOX_FILTERS) if (matchesFilter(e, f)) counts[f] += entryWeight(e);
   }
@@ -545,12 +504,11 @@ export function countByFilter(entries: InboxEntry[]): Record<InboxFilter, number
 /**
  * The small number on each Inbox filter: Review items the reader has not
  * opened yet. Opening a row drops it; a decision drops it too, because the
- * row has left the queue. My requests are status, not unread work, so they
- * keep counting. The "awaiting review" line stays on `countByFilter` — work
- * still waiting after it has been opened.
+ * row has left the queue. The "awaiting review" line stays on
+ * `countByFilter`: work still waiting after it has been opened.
  */
 export function countUnreadByFilter(entries: InboxEntry[], readIds: ReadonlySet<string>): Record<InboxFilter, number> {
-  const counts: Record<InboxFilter, number> = { reports: 0, unclassified: 0, chatter: 0, proposals: 0, requests: 0, all: 0 };
+  const counts: Record<InboxFilter, number> = { community: 0, reports: 0, unclassified: 0, chatter: 0, proposals: 0 };
   for (const e of entries) {
     const weight = unreadWeight(e, readIds);
     for (const f of INBOX_FILTERS) if (matchesFilter(e, f)) counts[f] += weight;
@@ -578,13 +536,11 @@ export function caseGroupUnread(entry: CaseGroupEntry, readIds: ReadonlySet<stri
 }
 
 function unreadWeight(entry: InboxEntry, readIds: ReadonlySet<string>): number {
-  if (!isReviewItem(entry)) return entryWeight(entry);
   if (isCaseGroupEntry(entry)) return caseGroupUnread(entry, readIds);
   return readIds.has(entry.id) ? 0 : entryWeight(entry);
 }
 
-/** The row's unread dot. My requests are not a queue, but opening one
- * still clears its dot; a case group stays unread while any of its
+/** The row's unread dot. A case group stays unread while any of its
  * undecided cases arrived after the reader opened it. */
 export function isUnreadEntry(entry: InboxEntry, readIds: ReadonlySet<string>): boolean {
   if (isCaseGroupEntry(entry)) return caseGroupUnread(entry, readIds) > 0;

@@ -41,7 +41,7 @@ export const CREDS: Record<Persona, Creds | undefined> = {
 };
 
 /**
- * Flags the matrix assumes ON (ground_intel ships ON). Enabled once, as admin,
+ * Flags the matrix assumes ON. Enabled once, as admin,
  * through the app's own toggle — the hermetic stack starts at flag defaults.
  */
 export const MATRIX_FLAGS = [

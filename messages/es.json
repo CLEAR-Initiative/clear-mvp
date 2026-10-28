@@ -1467,8 +1467,7 @@
       "alerts": "Alertas",
       "events": "Eventos",
       "signals": "Señales",
-      "history": "Historial",
-      "ground": "Intel. de terreno"
+      "history": "Historial"
     },
     "actions": {
       "createSignal": "Crear señal"
@@ -1721,82 +1720,6 @@
         "critical": "5 - Crítica"
       },
       "submit": "Crear alerta"
-    },
-    "groundIntel": {
-      "title": "Revisión de inteligencia de terreno",
-      "count": "{count, plural, one {# mensaje en preparación} other {# mensajes en preparación}}",
-      "privateTier": "Nivel privado — solo revisión interna",
-      "classifications": {
-        "field_report": "Informe de terreno",
-        "news_digest": "Resumen de noticias",
-        "operational": "Operacional",
-        "chatter": "Conversación",
-        "unclassified": "Sin clasificar"
-      },
-      "sources": {
-        "all": "Todas las fuentes"
-      },
-      "sourceKinds": {
-        "staff_group": "Grupo de personal",
-        "partner_group": "Grupo de socios",
-        "hotline": "Línea directa"
-      },
-      "columns": {
-        "sent": "Enviado",
-        "sender": "Remitente",
-        "source": "Fuente",
-        "classification": "Clasificación",
-        "message": "Mensaje",
-        "media": "Medios",
-        "thread": "Hilo"
-      },
-      "lifecycle": {
-        "reported": "Reportado",
-        "updated": "Actualizado",
-        "confirmed": "Confirmado",
-        "corrected": "Corregido",
-        "retracted": "Retirado"
-      },
-      "reviewStates": {
-        "unverified": "No verificado",
-        "approved_private": "Aprobado (privado)",
-        "approved_public": "Aprobado (público)",
-        "rejected": "Rechazado"
-      },
-      "thread": {
-        "untitled": "Hilo sin título",
-        "notFound": "Hilo no encontrado",
-        "reviewNote": "Nota de revisión",
-        "rejectReason": "Motivo del rechazo"
-      },
-      "review": {
-        "approvePrivate": "Aprobar (privado)",
-        "approvePublic": "Aprobar (público)",
-        "reject": "Rechazar",
-        "confirmPublish": "La publicación es definitiva: este hilo se promociona y se convierte en una señal en el grafo de señales.",
-        "confirm": "Confirmar publicación",
-        "cancel": "Cancelar",
-        "finalNotice": "Aprobado público: este hilo se convirtió en una señal en el grafo de señales.",
-        "viewSignal": "Ver señal promocionada",
-        "help": {
-          "approvePrivate": {
-            "title": "Verificado, pero permanece en la sala.",
-            "body": "El hilo se marca como revisado y creíble, pero permanece en el nivel de preparación de terreno: visible solo en esta pestaña de inteligencia de terreno, solo para admins y analistas. No se crea ninguna señal: nada aparece en el mapa ni en eventos y alertas, y nada se expone a través de la API. Este es el estado para contenido verdadero pero operativamente sensible: movimientos de personal, o atribución que podría poner en peligro al informante. Aún puede promocionarse a público más adelante si cambian las circunstancias."
-          },
-          "approvePublic": {
-            "title": "Verificado: libérelo en CLEAR.",
-            "body": "Esto es una promoción: el hilo se convierte en una señal real en el grafo de cinco niveles de CLEAR — fuente \"whatsapp\", visible en las vistas de Señales e Historial y en el mapa, elegible para agrupación de eventos y todo lo posterior — con toda la identidad del remitente eliminada estructuralmente: el payload de promoción no tiene campos de remitente, de modo que el nombre del remitente no puede viajar con él. Esta acción es terminal: una vez promocionada, la señal existe en el grafo y el hilo no puede despromocionarse; el servidor rechaza cualquier cambio posterior."
-          },
-          "reject": {
-            "title": "No accionable.",
-            "body": "Aplaza el hilo. A diferencia de la aprobación pública, el rechazo es reversible si alguien cambia de opinión."
-          }
-        }
-      },
-      "empty": "Aún no hay mensajes de terreno en preparación",
-      "noMatch": "Ningún mensaje coincide con el filtro actual",
-      "noText": "Medios sin pie de foto",
-      "edited": "editado"
     },
     "dataSources": {
       "title": "Fuentes de datos conectadas",
@@ -2873,13 +2796,16 @@
   "inbox": {
     "title": "Bandeja de entrada",
     "awaiting": "{count, plural, one {# pendiente de revisión} other {# pendientes de revisión}}",
+    "tabs": {
+      "community": "Señales comunitarias",
+      "proposals": "Señales propuestas"
+    },
     "filters": {
+      "community": "Todas",
       "reports": "Reportes de campo",
       "unclassified": "Sin clasificar",
       "chatter": "Charla",
-      "proposals": "Señales propuestas",
-      "requests": "Mis solicitudes",
-      "all": "Todo"
+      "proposals": "Señales propuestas"
     },
     "search": "Buscar texto, ref. de ingreso",
     "sort": {
@@ -3003,20 +2929,12 @@
       "partial": "De nuevo en cola: {done} de {total} mensajes. {error}"
     },
     "kinds": {
-      "task": "Mi solicitud",
       "cases": "Señales propuestas"
     },
     "event": {
       "untitled": "Evento sin título",
       "open": "Abrir el evento",
       "proposedAt": "Propuesto el {date}"
-    },
-    "requests": {
-      "requestedAt": "Solicitado el {date}",
-      "awaitingReview": "Propuesto, pendiente de revisión",
-      "cancelFailed": "Esta solicitud no se pudo cancelar. Inténtalo de nuevo.",
-      "producedSeeEvent": "Propuesta generada — ver el evento",
-      "proposalLoadFailed": "No se pudo cargar la propuesta. Abra el evento para verla."
     },
     "cases": {
       "preview": "{count, plural, =0 {Todas las señales propuestas decididas} one {# señal propuesta por revisar} other {# señales propuestas por revisar}} · {hazard}"

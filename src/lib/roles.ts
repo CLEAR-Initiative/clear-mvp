@@ -82,14 +82,30 @@ export function canReadContent(role: string | null | undefined): boolean {
 /**
  * Client twin of clear-api `decideCaseProposal` / `caseProposals`
  * `requireRole(["admin", "analyst"])`: who may decide a proposed signal
- * (a web case, clear-api CaseProposal). Admin OR a team analyst (optimistic —
- * the server is the real, location-scoped gate).
+ * (a web case, clear-api CaseProposal). Admin, a team analyst or a team admin
+ * (optimistic: the server is the real, team-scoped gate).
  */
 export function canDecideCaseProposals(
   role: string | null | undefined,
   teamMemberships?: { role: string }[] | null,
 ): boolean {
-  return isPlatformAdmin(role) || isTeamAnalyst(teamMemberships);
+  return isPlatformAdmin(role) || isTeamAnalyst(teamMemberships) || isTeamAdmin(teamMemberships);
+}
+
+/**
+ * The team role that administers a team, a value of
+ * `teamMemberships[].role`, mirroring clear-api's `TEAM_ADMIN_ROLE`. In the
+ * Inbox a team admin works every list: community signals and proposed
+ * signals.
+ */
+export const TEAM_ADMIN = "team_admin";
+
+/** Whether the user is a `team_admin` on any team (optimistic UI gate; the
+ * server scopes what they may do to their own teams). */
+export function isTeamAdmin(
+  teamMemberships: { role: string }[] | null | undefined,
+): boolean {
+  return !!teamMemberships?.some((m) => m.role === TEAM_ADMIN);
 }
 
 /**

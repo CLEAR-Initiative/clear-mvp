@@ -8,12 +8,11 @@ import { IconX } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
 import { useFeatureEnabled } from "~/components/feature-flags-provider";
 import { inboxAccess } from "~/lib/inbox-access";
-import { isEmergencyResponseManager } from "~/lib/roles";
+import { isEmergencyResponseManager, isTeamAdmin } from "~/lib/roles";
 import { canReviewSource } from "~/lib/ground-review";
 import {
   buildCaseGroupEntries,
   buildInboxEntries,
-  buildTaskEntries,
   countByFilter,
   countUnreadByFilter,
   filtersFor,
@@ -23,12 +22,14 @@ import {
   nextSelection,
   readMarks,
   saveReadIds,
+  tabsFor,
   visibleEntries,
   withDecision,
   type InboxEntry,
   type InboxFailure,
   type InboxFilter,
   type InboxSort,
+  type InboxTab,
   type RejectReason,
 } from "~/lib/hotline-inbox";
 import type { GqlCaseProposal, GqlCaseProposalDecision, GqlReviewCaseProposal } from "~/lib/types/graphql";
@@ -51,9 +52,11 @@ function rememberOpened(prev: Set<string>, id: string, entries: readonly InboxEn
 }
 
 /**
- * Inbox: Review items of two kinds, side by side (see InboxEntry.kind).
+ * Inbox: Review items of two kinds, each under its own tab (see
+ * InboxEntry.kind), shown only to readers who may see that kind
+ * (src/lib/inbox-access.ts).
  *
- * Hotline threads: ERM triage of WhatsApp hotline submissions. One entry
+ * Community signals (hotline threads): ERM and admin triage of WhatsApp hotline submissions. One entry
  * per open (unverified) ground thread from an active hotline source.
  * Actions map 1:1 onto clear-api's ground review state machine:
  *   Add to CLEAR -> approve_public, carrying the reviewer's edits (title,
@@ -77,12 +80,8 @@ function rememberOpened(prev: Set<string>, id: string, entries: readonly InboxEn
  * each case with its own Accept / Reject (the same row the Event page
  * mounts). A decided case turns to its decision in place and stays in its
  * group until the Inbox is reloaded; the awaiting line is the undecided
- * cases. The small number on each filter is how many of those rows are
- * still unopened, so it drops as soon as a row is opened or reviewed.
- *
- * My requests (clear-api `myTasks`): the Tasks the reader asked for, under
- * their own filter, read-only with Cancel. Status, not Review items: they
- * are never in "Everything", the awaiting count or the nav badge.
+ * cases. The small number on each tab and filter is how many of those rows
+ * are still unopened, so it drops as soon as a row is opened or reviewed.
  */
 
 const TOAST_MS = 6000;
@@ -112,7 +111,6 @@ export default function InboxPage() {
   const hotlineInbox = useFeatureEnabled("hotline_inbox");
   const translation = useFeatureEnabled("hotline_translation");
   const impactPriorReview = useFeatureEnabled("impact_prior_review");
-  const eventEnrichment = useFeatureEnabled("event_enrichment");
   const { data: authData, isLoading: authLoading } = api.auth.me.useQuery(undefined, { staleTime: 60_000 });
   const role = authData?.user?.role;
   // An emergency_response_manager (global viewer + ERM team membership) reaches
@@ -121,7 +119,7 @@ export default function InboxPage() {
   const isErm = isEmergencyResponseManager(teamMemberships);
   // One rule with the nav entry (src/lib/inbox-access.ts): the page shows
   // for whichever kinds the reader may see, and lists only those.
-  const access = inboxAccess({ role, teamMemberships, isErm, hotlineInbox, impactPriorReview, eventEnrichment });
+  const access = inboxAccess({ role, teamMemberships, isErm, hotlineInbox, impactPriorReview });
   const canSee = access.any;
   /** Deciders see the proposed signals beside the hotline threads. */
   const canDecide = access.proposals;
@@ -152,15 +150,6 @@ export default function InboxPage() {
    * them. */
   const [decidedCases, setDecidedCases] = useState<Record<string, GqlReviewCaseProposal>>({});
 
-  // The reader's own requests: polled faster while one is still open, so a
-  // request made a moment ago settles here without a reload.
-  const myTasksQuery = api.tasks.myTasks.useQuery(undefined, {
-    enabled: access.requests,
-    staleTime: 15_000,
-    refetchInterval: (q) =>
-      q.state.data?.tasks.some((task) => task.status === "PENDING" || task.status === "LEASED") ? 30_000 : 120_000,
-  });
-
   /** Hotline threads reviewed this visit. They leave the queue before the
    * refetch returns, so the counts do not sit on the old total. */
   const [dismissedIds, setDismissedIds] = useState<ReadonlySet<string>>(() => new Set());
@@ -169,24 +158,27 @@ export default function InboxPage() {
     const built: InboxEntry[] = [
       ...(inboxQuery.data ? buildInboxEntries(inboxQuery.data) : []),
       ...(casesQuery.data ? buildCaseGroupEntries(casesQuery.data, decidedCases) : []),
-      ...(myTasksQuery.data ? buildTaskEntries(myTasksQuery.data.tasks, myTasksQuery.data.eventTitles) : []),
     ];
     return dismissedIds.size === 0 ? built : built.filter((entry) => !dismissedIds.has(entry.id));
-  }, [inboxQuery.data, casesQuery.data, decidedCases, myTasksQuery.data, dismissedIds]);
+  }, [inboxQuery.data, casesQuery.data, decidedCases, dismissedIds]);
   const sourceById = useMemo(() => {
     const m = new Map<string, string[]>();
     for (const s of inboxQuery.data?.sources ?? []) m.set(s.id, s.reviewerRoles);
     return m;
   }, [inboxQuery.data]);
 
-  const filters = useMemo(() => filtersFor(access), [access.hotline, access.proposals, access.requests]); // eslint-disable-line react-hooks/exhaustive-deps
+  const tabs = useMemo(() => tabsFor(access), [access.hotline, access.proposals]); // eslint-disable-line react-hooks/exhaustive-deps
+  const [chosenTab, setTab] = useState<InboxTab>("community");
   const [chosenFilter, setFilter] = useState<InboxFilter>("reports");
-  // The filter in force is derived, never synced: the session and the
-  // feature flags land at different times, and a fallback stored while
-  // nothing applied yet would stick. A reader without the hotline starts
-  // on the first filter they have (proposals); a choice that stops applying
-  // (flag flipped) falls back the same way.
-  const filter: InboxFilter = filters.includes(chosenFilter) ? chosenFilter : (filters[0] ?? "all");
+  // The tab and filter in force are derived, never synced: the session and
+  // the feature flags land at different times, and a fallback stored while
+  // nothing applied yet would stick. A reader without the hotline starts on
+  // the first tab they have (proposals); a choice that stops applying (flag
+  // flipped) falls back the same way. Each tab keeps the filter last chosen
+  // in it only while that filter belongs to the tab.
+  const tab: InboxTab = tabs.includes(chosenTab) ? chosenTab : (tabs[0] ?? "community");
+  const filters = useMemo(() => filtersFor(tab), [tab]);
+  const filter: InboxFilter = filters.includes(chosenFilter) ? chosenFilter : filters[0]!;
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState<InboxSort>("reportsFirst");
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -276,7 +268,8 @@ export default function InboxPage() {
    * item of another kind has its own gate (canDecide). */
   const selectedThread = selected && isHotlineEntry(selected) ? selected : null;
   const canReviewSelected =
-    !!selectedThread && canReviewSource(role, sourceById.get(selectedThread.thread.groundSourceId) ?? [], isErm);
+    !!selectedThread &&
+    canReviewSource(role, sourceById.get(selectedThread.thread.groundSourceId) ?? [], isErm || isTeamAdmin(teamMemberships));
 
   const review = api.ground.review.useMutation();
   const selectedRetry = selectedId ? retries[selectedId] : undefined;
@@ -506,29 +499,46 @@ export default function InboxPage() {
       <header className={styles.header}>
         <div className={styles.headerRow}>
           <span className={styles.title}>{t("title")}</span>
-          <span className={styles.awaiting}>{t("awaiting", { count: counts.all })}</span>
-          {(inboxQuery.isFetching || casesQuery.isFetching || myTasksQuery.isFetching) && (
-            <Loader size={12} />
-          )}
-          {(inboxQuery.error || casesQuery.error || myTasksQuery.error) && (
+          <span className={styles.awaiting}>{t("awaiting", { count: counts.community + counts.proposals })}</span>
+          {(inboxQuery.isFetching || casesQuery.isFetching) && <Loader size={12} />}
+          {(inboxQuery.error || casesQuery.error) && (
             <span className={styles.actionError}>{t("loadError")}</span>
           )}
         </div>
-        <div className={styles.filters} data-testid="inbox-filters">
-          {filters.map((f) => (
+        <div className={styles.tabs} role="tablist" data-testid="inbox-tabs">
+          {tabs.map((tb) => (
             <button
               type="button"
-              key={f}
-              className={styles.filterPill}
-              data-active={filter === f}
-              data-testid={`inbox-filter-${f}`}
-              onClick={() => { setFilter(f); setRejectOpen(false); }}
+              role="tab"
+              key={tb}
+              className={styles.tab}
+              aria-selected={tab === tb}
+              data-active={tab === tb}
+              data-testid={`inbox-tab-${tb}`}
+              onClick={() => { setTab(tb); setRejectOpen(false); }}
             >
-              {t(`filters.${f}`)}
-              <span className={styles.filterCount}>{unreadCounts[f]}</span>
+              {t(`tabs.${tb}`)}
+              <span className={styles.filterCount}>{unreadCounts[tb]}</span>
             </button>
           ))}
         </div>
+        {filters.length > 1 && (
+          <div className={styles.filters} data-testid="inbox-filters">
+            {filters.map((f) => (
+              <button
+                type="button"
+                key={f}
+                className={styles.filterPill}
+                data-active={filter === f}
+                data-testid={`inbox-filter-${f}`}
+                onClick={() => { setFilter(f); setRejectOpen(false); }}
+              >
+                {t(`filters.${f}`)}
+                <span className={styles.filterCount}>{unreadCounts[f]}</span>
+              </button>
+            ))}
+          </div>
+        )}
       </header>
 
       <div className={styles.row} data-mobile-pane={mobilePane && selected !== null}>
@@ -543,8 +553,7 @@ export default function InboxPage() {
           onSelect={select}
           loading={
             (access.hotline && inboxQuery.isLoading) ||
-            (access.proposals && casesQuery.isLoading) ||
-            (access.requests && myTasksQuery.isLoading)
+            (access.proposals && casesQuery.isLoading)
           }
         />
         <ReadingPane

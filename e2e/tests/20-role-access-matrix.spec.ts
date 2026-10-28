@@ -71,13 +71,13 @@ function resolve(page: Page, sel: string) {
 
 /**
  * Selectors whose ABSENCE is a robust deny-side signal: nav links, tabs, and
- * inbox filter pills that render from access alone (no seeded record). Excludes
+ * inbox tabs / filter pills that render from access alone (no seeded record). Excludes
  * `inbox-no-access` on purpose — that's a NEGATIVE marker (shown WHEN access is
  * denied), so its presence is inverted vs a filter pill and would mislead a
  * generic absence check.
  */
 function absenceAssertable(sel: string): boolean {
-  return sel.startsWith("a[") || /^(tab|nav):/.test(sel) || /-filter-(reports|proposals)$/.test(sel);
+  return sel.startsWith("a[") || /^(tab|nav):/.test(sel) || /-(filter|tab)-(reports|community|proposals)$/.test(sel);
 }
 
 /**

@@ -6,6 +6,7 @@ import {
   canWriteCrisisEvents,
   isEmergencyResponseManager,
   isPlatformAdmin,
+  isTeamAdmin,
   isTeamAnalyst,
 } from "./roles";
 
@@ -37,7 +38,6 @@ describe("isTeamAnalyst", () => {
 describe.each([
   ["canWriteCrisisEvents", canWriteCrisisEvents],
   ["canManageAnalyses", canManageAnalyses],
-  ["canDecideCaseProposals", canDecideCaseProposals],
 ] as const)("%s (admin or team analyst)", (_name, fn) => {
   it("admits a platform admin regardless of memberships", () => {
     expect(fn("admin")).toBe(true);
@@ -53,6 +53,29 @@ describe.each([
     expect(fn("member")).toBe(false);
     expect(fn("pending", teamAnalyst)).toBe(true); // analyst membership still wins
     expect(fn(undefined)).toBe(false);
+  });
+});
+
+describe("canDecideCaseProposals (admin, team analyst or team admin)", () => {
+  it("admits a platform admin, a team analyst and a team admin", () => {
+    expect(canDecideCaseProposals("admin")).toBe(true);
+    expect(canDecideCaseProposals("member", teamAnalyst)).toBe(true);
+    expect(canDecideCaseProposals("member", [{ role: "team_admin" }])).toBe(true);
+  });
+
+  it("refuses a member with neither membership, and an ERM", () => {
+    expect(canDecideCaseProposals("member", [{ role: "team_member" }])).toBe(false);
+    expect(canDecideCaseProposals("member", [{ role: "emergency_response_manager" }])).toBe(false);
+    expect(canDecideCaseProposals("member")).toBe(false);
+    expect(canDecideCaseProposals(undefined)).toBe(false);
+  });
+});
+
+describe("isTeamAdmin", () => {
+  it("is true only for a team_admin membership", () => {
+    expect(isTeamAdmin(noAnalyst)).toBe(true);
+    expect(isTeamAdmin(teamAnalyst)).toBe(false);
+    expect(isTeamAdmin(undefined)).toBe(false);
   });
 });
 

@@ -5,7 +5,7 @@ import { WORLD_VIEW } from "../../src/lib/constants/country-config";
  * Case 11 — smoke for features landed this week / morning merges:
  *   - map "All Countries" → global WORLD_VIEW (not Sahel crop)
  *   - Analysis list (the retired Insights page redirects here)
- *   - Detection → Ground Intel + History tabs reachable
+ *   - Detection → History tab reachable, Ground Intel tab gone
  *   - Map layers / satellite A/B chrome still mounts
  *
  * Controls + DOM only — never assert the WebGL canvas pixels.
@@ -68,23 +68,15 @@ test.describe("Recent features smoke (case 11)", () => {
     await expect(page.getByRole("tab", { name: /Situation|Crisis Overview/i })).toHaveCount(0);
   });
 
-  test("Detection Ground Intel and History tabs are reachable", async ({
+  test("Detection History tab is reachable and Ground Intel is gone", async ({
     page,
   }) => {
     await page.goto("/detection", { waitUntil: "domcontentloaded" });
 
-    // Ground Intel tab is gated by feature flag + analyst/admin role.
-    // Test it if visible, otherwise just verify History tab works.
-    const ground = page.getByRole("tab", { name: /Ground/i });
-    const isGroundVisible = await ground.isVisible().catch(() => false);
-    
-    if (isGroundVisible) {
-      await ground.click();
-      await expect(page.getByTestId("ground-intel-tab")).toBeVisible();
-    }
-
     const history = page.getByRole("tab", { name: /History/i });
     await expect(history).toBeVisible({ timeout: 20_000 });
+    // Ground threads are reviewed in the Inbox now (Community signals).
+    await expect(page.getByRole("tab", { name: /Ground/i })).toHaveCount(0);
     await history.click();
     // Opt-in filter chips (#164) — at least the Class chip row / table shell.
     await expect(page.getByText(/Class|Alert|Event|Signal/i).first()).toBeVisible();
