@@ -165,6 +165,38 @@ describe("LocationChallengeModal", () => {
     });
   });
 
+  it("starts typed coordinates from the picked point, so editing one keeps the other", () => {
+    placement = IN_AREA;
+    open({ existing: OPEN_WITH_POINT });
+    fireEvent.click(screen.getByText("modal.enterCoordinatesManually"));
+    fireEvent.change(screen.getByLabelText(/modal\.lat/), { target: { value: "12.2" } });
+    fireEvent.click(submitButton());
+    expect(submitMutate.mock.calls[0]![0]).toMatchObject({
+      proposedLat: 12.2,
+      proposedLng: 24.9,
+      proposedName: "Kalma",
+    });
+  });
+
+  it("keeps the success screen when the filed challenge comes back", () => {
+    const view = open();
+    fireEvent.click(submitButton());
+    expect(screen.getByText("modal.successTitle")).toBeTruthy();
+    view.rerender(
+      <MantineProvider>
+        <LocationChallengeModal
+          opened
+          onClose={() => {}}
+          signalId="S1"
+          sourceLat={12.05}
+          sourceLng={24.88}
+          existing={OPEN_WITH_POINT}
+        />
+      </MantineProvider>,
+    );
+    expect(screen.getByText("modal.successTitle")).toBeTruthy();
+  });
+
   it("looks a place up, shows where it lands in CLEAR, and files it with its name", async () => {
     placement = IN_AREA;
     open();

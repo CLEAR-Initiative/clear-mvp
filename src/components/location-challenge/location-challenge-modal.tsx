@@ -114,8 +114,14 @@ export function LocationChallengeModal({
   /** True when clear-api is missing and we only queued a session-local visual. */
   const [submittedSessionOnly, setSubmittedSessionOnly] = useState(false);
 
+  // Start the form when the modal opens, not whenever the open challenge is
+  // refetched: filing refetches it, and resetting then would drop the
+  // success screen (or unsent edits) for the saved copy.
+  const wasOpen = useRef(false);
   useEffect(() => {
-    if (!opened) return;
+    const justOpened = opened && !wasOpen.current;
+    wasOpen.current = opened;
+    if (!justOpened) return;
     const point =
       existing?.proposedLat != null && existing.proposedLng != null
         ? { lat: existing.proposedLat, lng: existing.proposedLng }
@@ -261,11 +267,15 @@ export function LocationChallengeModal({
   }
 
   function toggleManualEntry() {
-    setManualEntry((open) => {
-      // Typed coordinates replace a picked place.
-      if (!open) clearPick();
-      return !open;
-    });
+    // Typed coordinates replace a picked place, starting from it so that
+    // editing one field keeps the other.
+    if (!manualEntry && picked) {
+      setLat(picked.lat);
+      setLng(picked.lng);
+      setName(picked.name ?? "");
+      clearPick();
+    }
+    setManualEntry(!manualEntry);
   }
 
   function handleSubmit() {
