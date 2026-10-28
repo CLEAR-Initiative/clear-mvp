@@ -320,7 +320,7 @@ export interface GqlCrisis {
   }>;
 }
 
-/* ─── Ground intel staging tier ─── */
+/* ─── Ground staging tier (hotline threads, reviewed in the Inbox) ─── */
 
 /** Message classification labels ("unclassified" = pipeline hasn't labeled yet). */
 export const GROUND_CLASSIFICATIONS = [
@@ -365,9 +365,9 @@ export interface GqlGroundThreadDetail extends GqlGroundThread {
 }
 
 /**
- * A staged ground message. PRIVATE TIER: `senderName` may be rendered in
- * the detection Ground-intel tab ONLY — never anywhere else, and never in
- * anything promoted to the signals graph. Text is phone-number-redacted
+ * A staged ground message. PRIVATE TIER: `senderName` is not rendered
+ * anywhere (the Inbox shows only the pseudonymous intake ref), and never
+ * goes into anything promoted to the signals graph. Text is phone-number-redacted
  * at persistence by clear-api.
  */
 export interface GqlGroundMessage {
