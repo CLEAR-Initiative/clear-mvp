@@ -1827,7 +1827,7 @@
     },
     "status": {
       "active": "Activo",
-      "resolved": "Resuelto"
+      "inactive": "Inactivo"
     },
     "signalCount": "{count, plural, one {# señal} other {# señales}}",
     "sourceCount": "{count, plural, one {# fuente} other {# fuentes}}",

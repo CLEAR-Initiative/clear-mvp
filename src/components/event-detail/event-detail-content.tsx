@@ -75,6 +75,9 @@ import {
 } from "~/components/ui/detail-navigation-skeletons";
 import { useAgentCurrentView } from "~/lib/agent-current-view";
 
+/** An event counts as active while its last signal is at most this old. */
+const ACTIVE_WINDOW_MS = 14 * 24 * 60 * 60 * 1000;
+
 function bigIntStrToNumber(s: string | null | undefined): number | null {
   if (s === null || s === undefined) return null;
   const n = Number(s);
@@ -332,8 +335,11 @@ export function EventDetailContent({
     );
   }
 
+  // Active while signals keep arriving. Alert status can't drive this: most
+  // events have no alert, and the pipeline archives stale/suppressed ones.
+  const isActive =
+    Date.now() - new Date(event.lastSignalCreatedAt).getTime() <= ACTIVE_WINDOW_MS;
   // Field mappings from old schema to current GqlEvent schema
-  const eventStatus = event.alerts[0]?.status ?? "active";
   // event.firstSignalCreatedAt replaces event.createdAt
   // event.lastSignalCreatedAt replaces event.updatedAt
   const eventCreatedAt = event.firstSignalCreatedAt;
@@ -511,7 +517,7 @@ export function EventDetailContent({
                 width: 7,
                 height: 7,
                 borderRadius: "50%",
-                background: eventStatus === "published" ? "#059669" : "#A3A3A3",
+                background: isActive ? "#059669" : "#A3A3A3",
                 flexShrink: 0,
                 marginTop: 1,
               }}
@@ -519,9 +525,9 @@ export function EventDetailContent({
             <Text
               size="xs"
               fw={500}
-              c={eventStatus === "published" ? "#059669" : "#737373"}
+              c={isActive ? "#059669" : "#737373"}
             >
-              {eventStatus === "published" ? t("status.active") : t("status.resolved")}
+              {isActive ? t("status.active") : t("status.inactive")}
             </Text>
           </Group>
         </Group>
