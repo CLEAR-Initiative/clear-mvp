@@ -44,7 +44,7 @@ const matrix = JSON.parse(
   readFileSync(join(process.cwd(), "e2e/support/role-access/matrix.json"), "utf8"),
 ) as Matrix;
 
-const CORE: Persona[] = ["admin", "analyst", "member", "erm", "pending"];
+const CORE: Persona[] = ["admin", "analyst", "member", "erm", "pending", "team_admin"];
 
 /** First concrete, static route for a case ("*" → /dashboard; "a|b" → a). */
 function routeOf(route: string): { path: string; dynamic: boolean } {
@@ -143,6 +143,36 @@ test.describe("Role-access matrix (case 20)", () => {
       }
     });
   }
+
+  // Inbox tabs, positive side: each reader gets exactly their tabs and both
+  // lists load (a refused clear-api call shows the load error). The matrix
+  // cases above only assert the hidden side.
+  test.describe("inbox tabs", () => {
+    const EXPECTED: [Persona, ("community" | "proposals")[]][] = [
+      ["admin", ["community", "proposals"]],
+      ["team_admin", ["community", "proposals"]],
+      ["erm", ["community"]],
+      ["analyst", ["proposals"]],
+    ];
+    for (const [persona, tabs] of EXPECTED) {
+      test(`${persona} gets ${tabs.join(" + ")} and the lists load`, async ({ browser }) => {
+        const ctx = await contextFor(browser, persona);
+        test.skip(!ctx, `no credentials configured for persona "${persona}"`);
+        const page = await ctx!.newPage();
+        try {
+          await page.goto("/inbox", { waitUntil: "domcontentloaded" });
+          await expect(page.getByTestId("inbox-page")).toBeVisible({ timeout: 20_000 });
+          for (const tab of ["community", "proposals"] as const) {
+            await expect(page.getByTestId(`inbox-tab-${tab}`)).toHaveCount(tabs.includes(tab) ? 1 : 0);
+          }
+          await page.waitForLoadState("networkidle");
+          await expect(page.getByTestId("inbox-load-error")).toHaveCount(0);
+        } finally {
+          await ctx!.close();
+        }
+      });
+    }
+  });
 
   // Team & Org role cases — need seeded team/org users + Settings navigation.
   test.describe("team & org roles", () => {
