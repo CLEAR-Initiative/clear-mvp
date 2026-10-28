@@ -523,7 +523,7 @@ describe("Insights > Analysis tab", () => {
     };
     renderHome();
     fireEvent.click(within(screen.getByTestId("analysis-scope-auto-1")).getAllByRole("button")[0]!);
-    expect(replace).toHaveBeenCalledWith("/analysis?automation=auto-1", { scroll: false });
+    expect(replace).toHaveBeenCalledWith("/analysis?analysis=auto-1", { scroll: false });
     expect(screen.getByRole("heading", { name: "Sheikan, North Kordofan, Sudan" })).toBeInTheDocument();
     fireEvent.click(screen.getByTestId("analysis-back"));
     expect(replace).toHaveBeenLastCalledWith("/analysis", { scroll: false });
@@ -616,7 +616,7 @@ describe("Insights > Analysis tab", () => {
     const view = renderHome();
 
     fireEvent.click(within(screen.getByTestId("analysis-scope-auto-1")).getAllByRole("button")[0]!);
-    expect(search).toBe("automation=auto-1");
+    expect(search).toBe("analysis=auto-1");
     expect(screen.getByRole("heading", { name: "Sheikan, North Kordofan, Sudan" })).toBeInTheDocument();
 
     fireEvent.click(screen.getByTestId("analysis-back"));

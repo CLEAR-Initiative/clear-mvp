@@ -3088,7 +3088,7 @@
     "map": {
       "title": "Zone d'analyse",
       "events": "{count, plural, one {# événement} other {# événements}} depuis le {date}",
-      "eventsSince": "{count, plural, one {événement} other {événements}} depuis le {date}",
+      "eventsSince": "{count, plural, one {événement dans cette zone} other {événements dans cette zone}} depuis le {date}",
       "areas": "Où les événements ont eu lieu",
       "areaEvents": "{count, plural, one {# événement} other {# événements}}",
       "noEvents": "Aucun événement enregistré dans cette zone depuis le {date}.",
@@ -3140,6 +3140,8 @@
     "events": {
       "title": "Événements dans cette zone",
       "empty": "Aucun événement enregistré dans cette zone sur cette période.",
+      "loading": "Chargement des événements…",
+      "error": "Les événements n'ont pas pu être chargés.",
       "untitled": "Événement sans titre",
       "severity": "Gravité {value}",
       "count": "Échantillon : {shown} sur {total}"

@@ -70,6 +70,29 @@ describe("Analysis sources", () => {
     expect(list).toHaveTextContent("Humanitarian update (IOM)");
   });
 
+  it("tells apart duplicate titles that share a publisher by their link host", () => {
+    renderSources([
+      { ...source("r1", "Humanitarian update"), publisher: "OCHA", url: "https://reliefweb.int/a", publishedAt: "2024-01-01T00:00:00.000Z" },
+      { ...source("r2", "Humanitarian update"), publisher: "OCHA", url: "https://www.unocha.org/b", publishedAt: "2024-01-01T00:00:00.000Z" },
+    ]);
+
+    const list = screen.getByTestId("analysis-sources");
+    expect(list).toHaveTextContent("reliefweb.int");
+    expect(list).toHaveTextContent("unocha.org");
+  });
+
+  it("numbers a remaining tie instead of showing an id", () => {
+    renderSources([
+      { ...source("r1", "Humanitarian update"), publisher: "OCHA", url: "https://reliefweb.int/a" },
+      { ...source("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee", "Humanitarian update"), publisher: "OCHA", url: "https://reliefweb.int/b" },
+    ]);
+
+    const list = screen.getByTestId("analysis-sources");
+    expect(list).toHaveTextContent("Humanitarian update (OCHA) (reliefweb.int) (1)");
+    expect(list).toHaveTextContent("Humanitarian update (OCHA) (reliefweb.int) (2)");
+    expect(list).not.toHaveTextContent("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
+  });
+
   it("shows a resolved event title as the heading", () => {
     renderSources([source("event:e1", "Shelling in El Fasher")]);
 

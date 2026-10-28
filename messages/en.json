@@ -3088,7 +3088,7 @@
     "map": {
       "title": "Analysis area",
       "events": "{count, plural, one {# event} other {# events}} since {date}",
-      "eventsSince": "{count, plural, one {event} other {events}} since {date}",
+      "eventsSince": "{count, plural, one {event in this area} other {events in this area}} since {date}",
       "areas": "Where events happened",
       "areaEvents": "{count, plural, one {# event} other {# events}}",
       "noEvents": "No events recorded in this area since {date}.",
@@ -3140,6 +3140,8 @@
     "events": {
       "title": "Events in this area",
       "empty": "No events recorded in this area in this period.",
+      "loading": "Loading events…",
+      "error": "Events could not be loaded.",
       "untitled": "Untitled event",
       "severity": "Severity {value}",
       "count": "Sample: {shown} of {total}"

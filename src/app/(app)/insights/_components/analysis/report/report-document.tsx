@@ -4,7 +4,7 @@ import type { SaBullet, SaSector } from "~/server/api/mappers/situation-analysis
 import { compactNumber } from "~/server/api/mappers/situation-analysis";
 import { splitSubject, type KpiValues } from "~/lib/analysis-view";
 import { pdfSafe, type ReportMap, type ReportSectionKey } from "~/lib/analysis-report";
-import { readablePublisher, sourceHeading } from "../../situation/source-heading";
+import { distinctHeadings, readablePublisher, sourceHeading } from "../../situation/source-heading";
 
 /**
  * The PDF can't read the app's CSS variables, so this mirrors the light-theme
@@ -364,14 +364,21 @@ export function ReportDocument({
       }
       case "sources":
         if (data.sources.length === 0) return null;
+        {
+        const sourceLabels = { event: labels.eventLabel, hapiFigure: labels.hapiFigure };
+        const headings = distinctHeadings(data.sources, sourceLabels, (iso) => iso.slice(0, 10));
         return (
           <>
-            {data.sources.map((src, i) => (
+            {data.sources.map((src, i) => {
+              const plain = sourceHeading(src, sourceLabels);
+              const heading = headings[i] ?? plain;
+              const publisher = heading === plain ? readablePublisher(src.publisher) : null;
+              return (
               <View key={src.id} style={s.source} wrap={false}>
                 <Text style={s.sourceNo}>{i + 1}.</Text>
                 <Text style={{ flex: 1 }}>
-                  {clean(sourceHeading(src, { event: labels.eventLabel, hapiFigure: labels.hapiFigure }))}
-                  {readablePublisher(src.publisher) ? ` · ${clean(readablePublisher(src.publisher)!)}` : ""}
+                  {clean(heading)}
+                  {publisher ? ` · ${clean(publisher)}` : ""}
                   {src.url?.startsWith("http") ? (
                     <>
                       {" · "}
@@ -382,10 +389,12 @@ export function ReportDocument({
                   ) : null}
                 </Text>
               </View>
-            ))}
+              );
+            })}
           </>
         );
-    }
+        }
+      }
   };
 
   const titled = (key: ReportSectionKey): string => {

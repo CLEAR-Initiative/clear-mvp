@@ -299,7 +299,7 @@ export function AnalysisDetail({
             </Text>
             <SituationSources sources={data.sources} className={styles.sourcesCard} />
             </Box>
-            <EventsList events={events.data} />
+            <EventsList events={events.data} pending={events.isLoading} failed={events.isError} />
           </SimpleGrid>
         )}
       </>

@@ -338,7 +338,7 @@ function SectorRow({
         className={analysis ? undefined : "hover:bg-[var(--color-bg-muted)]"}
         style={{
           display: "grid",
-          gridTemplateColumns: "180px 110px 100px 150px 120px 70px 24px",
+          gridTemplateColumns: analysis ? ANALYSIS_COLUMNS : FULL_COLUMNS,
           alignItems: "center",
           columnGap: 16,
           padding: "12px 16px",
@@ -399,30 +399,32 @@ function SectorRow({
           )}
         </Box>
 
-        {/* Operational presence */}
-        <Box>
-          {ochaData ? (
-            <OrgPresence byType={ochaData.by_type} total={ochaData.org_count} />
-          ) : (
-            <Text size="xs" c={muted}>-</Text>
-          )}
-        </Box>
+        {!analysis && (
+          <Box>
+            {ochaData ? (
+              <OrgPresence byType={ochaData.by_type} total={ochaData.org_count} />
+            ) : (
+              <Text size="xs" c={muted}>-</Text>
+            )}
+          </Box>
+        )}
 
         {/* Assessment level */}
         <Box>
           <AssessmentBar level={assessmentLevel} />
         </Box>
 
-        {/* Precision */}
-        <Box>
-          {precision ? (
-            <Text style={{ fontSize: 11, fontWeight: 500, color: muted }}>
-              {t(`needs.precision.${precision === "District" ? "district" : "locality"}`)}
-            </Text>
-          ) : (
-            <Text size="xs" c={muted}>-</Text>
-          )}
-        </Box>
+        {!analysis && (
+          <Box>
+            {precision ? (
+              <Text style={{ fontSize: 11, fontWeight: 500, color: muted }}>
+                {t(`needs.precision.${precision === "District" ? "district" : "locality"}`)}
+              </Text>
+            ) : (
+              <Text size="xs" c={muted}>-</Text>
+            )}
+          </Box>
+        )}
 
         {/* Chevron */}
         <Chevron size={14} color={muted} />
@@ -839,6 +841,10 @@ interface NeedsAssessmentViewProps {
   panelClassName?: string;
 }
 
+/** Crisis detail keeps presence and precision. Analysis has neither, so those columns stay off that card. */
+const FULL_COLUMNS = "180px 110px 100px 150px 120px 70px 24px";
+const ANALYSIS_COLUMNS = "minmax(140px, 1.4fr) 110px minmax(88px, 0.9fr) minmax(96px, 1fr) 24px";
+
 /** Sector needs table shared by every scope: rows arrive fully resolved. */
 export function NeedsAssessmentView({ rows: unsorted, summary, scopeBadge, severityLegend, panelClassName }: NeedsAssessmentViewProps) {
   const t = useTranslations("crisisDetail");
@@ -884,7 +890,7 @@ export function NeedsAssessmentView({ rows: unsorted, summary, scopeBadge, sever
         <Box
           style={{
             display: "grid",
-            gridTemplateColumns: "180px 110px 100px 150px 120px 70px 24px",
+            gridTemplateColumns: analysis ? ANALYSIS_COLUMNS : FULL_COLUMNS,
             columnGap: 16,
             padding: "8px 16px",
             borderBottom: `1px solid ${line}`,
@@ -900,18 +906,22 @@ export function NeedsAssessmentView({ rows: unsorted, summary, scopeBadge, sever
             <ColHeader>{t("needs.columns.pin")}</ColHeader>
             <InfoButton onClick={() => setPinInfoOpen(true)} />
           </Box>
-          <Box style={{ display: "flex", alignItems: "center", gap: 4 }}>
-            <ColHeader>{t("needs.columns.presence")}</ColHeader>
-            <InfoButton onClick={() => setPresenceInfoOpen(true)} />
-          </Box>
+          {!analysis && (
+            <Box style={{ display: "flex", alignItems: "center", gap: 4 }}>
+              <ColHeader>{t("needs.columns.presence")}</ColHeader>
+              <InfoButton onClick={() => setPresenceInfoOpen(true)} />
+            </Box>
+          )}
           <Box style={{ display: "flex", alignItems: "center", gap: 4 }}>
             <ColHeader>{t("needs.columns.assessment")}</ColHeader>
             <InfoButton onClick={() => setAssessmentInfoOpen(true)} />
           </Box>
-          <Box style={{ display: "flex", alignItems: "center", gap: 4 }}>
-            <ColHeader>{t("needs.columns.precision")}</ColHeader>
-            <InfoButton onClick={() => setPrecisionInfoOpen(true)} />
-          </Box>
+          {!analysis && (
+            <Box style={{ display: "flex", alignItems: "center", gap: 4 }}>
+              <ColHeader>{t("needs.columns.precision")}</ColHeader>
+              <InfoButton onClick={() => setPrecisionInfoOpen(true)} />
+            </Box>
+          )}
           <Box />
         </Box>
 
