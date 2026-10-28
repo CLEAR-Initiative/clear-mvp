@@ -2115,7 +2115,25 @@
   font-weight: 600;
 }
 
+.previewActions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: none;
+}
+
+.previewMissing {
+  margin: 0;
+  padding: 28px 20px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--sa-secondary, #525252);
+}
+
 .previewClose {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   flex: none;
   width: 32px;
   height: 32px;
@@ -2123,6 +2141,7 @@
   border-radius: 8px;
   background: transparent;
   color: inherit;
+  text-decoration: none;
   cursor: pointer;
 }
 

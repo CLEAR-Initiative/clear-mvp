@@ -1,10 +1,12 @@
 /**
- * Title, discussion, and evidence kept on this browser for an analysis.
+ * Title, discussion, and evidence names kept on this browser for an analysis.
  *
- * clear-api does not store these yet. The copy is private to the signed-in
- * user and their active team, and sign-out removes it. When a later API
- * returns a title, comments, or files, that copy replaces this one.
+ * The copy is private to the signed-in user and their active team, and
+ * sign-out removes it. PDF bytes live in the file store, not here. When a
+ * later API returns a title, comments, or files, that copy replaces this one.
  */
+
+import { clearAnalysisFiles } from "~/lib/analysis-file-store";
 
 const TITLE = "clear.analysis.title.";
 const COMMENTS = "clear.analysis.comments.";
@@ -31,6 +33,7 @@ export function clearAnalysisCollaboration(): void {
     if (key && PREFIXES.some((prefix) => key.startsWith(prefix))) drop.push(key);
   }
   for (const key of drop) localStorage.removeItem(key);
+  void clearAnalysisFiles();
 }
 
 /** Rows whose ids the server has confirmed, taken off the latest list. */
@@ -51,8 +54,10 @@ export interface StoredFile {
   id: string;
   name: string;
   addedAt: string;
-  /** Session-only preview. Not written to storage. */
+  /** Session-only preview link. Not written to storage. */
   url?: string;
+  /** Knowledge-base id from the upload, once clear-api has accepted the PDF. */
+  reportId?: string;
   pending: boolean;
 }
 

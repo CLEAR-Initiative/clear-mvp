@@ -3312,6 +3312,8 @@
       "evidenceFiles": "{count, plural, one {# fichier} other {# fichiers}}",
       "evidenceDrop": "Déposez des fichiers pour ajouter une preuve",
       "evidencePreview": "Aperçu de {name}",
+      "evidenceDownload": "Télécharger",
+      "evidenceUnavailable": "Ce fichier n'est pas sur ce navigateur. Ajoutez-le de nouveau pour l'afficher ou le télécharger.",
       "evidenceClose": "Fermer l'aperçu",
       "evidenceNew": "NOUVEAU",
       "evidenceProcessed": "TRAITÉ",
