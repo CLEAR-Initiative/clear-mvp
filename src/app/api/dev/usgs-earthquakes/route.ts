@@ -13,7 +13,7 @@ import {
 } from "~/lib/map/usgs-earthquakes";
 
 /**
- * DEV/preview USGS earthquakes spike feed.
+ * USGS earthquakes spike feed for `next dev` and the dev deploy.
  *
  * Fetches live USGS FDSN Event GeoJSON, applies the slim transform, and returns
  * map-ready SeismicMapCollection. Geography follows the map country toggle

@@ -45,8 +45,10 @@ ENV NEXT_PUBLIC_SENTRY_DSN=${NEXT_PUBLIC_SENTRY_DSN}
 ARG NEXT_PUBLIC_SENTRY_ENV="development"
 ENV NEXT_PUBLIC_SENTRY_ENV=${NEXT_PUBLIC_SENTRY_ENV}
 
-# Hermetic Playwright stack only. Lets `/observe?noTeam=1` run against the
-# production Next image (NODE_ENV=production, no Vercel preview env).
+# Hermetic Playwright stack only (docker-compose.e2e.yml sets it to 1). No
+# code reads it today. The e2e image keeps NEXT_PUBLIC_SENTRY_ENV at its
+# default, so it is not a dev deploy (src/lib/deploy-env.ts) and dev-only tools
+# such as `/observe?noTeam=1` stay off; spec 12 mocks auth.me instead.
 ARG NEXT_PUBLIC_E2E=""
 ENV NEXT_PUBLIC_E2E=${NEXT_PUBLIC_E2E}
 

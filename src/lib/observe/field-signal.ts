@@ -1,3 +1,5 @@
+import { type DeployEnvInput, isDevToolingAllowed } from "~/lib/deploy-env";
+
 export type ObserveSubmitFailure = "network" | "noTeam" | "other";
 
 export type TeamGate =
@@ -76,15 +78,11 @@ export function resolveTeamIdForSubmit(input: {
 }
 
 /**
- * Preview / `next dev` only. Production ignores `?noTeam=1` so a team
+ * `next dev` / dev deploy only. Prod ignores `?noTeam=1` so a team
  * member cannot lock themselves out of submit.
  */
-export function isObserveQaOverrideAllowed(env: {
-  nodeEnv?: string;
-  vercelEnv?: string;
-}): boolean {
-  if (env.nodeEnv === "development") return true;
-  return env.vercelEnv === "preview";
+export function isObserveQaOverrideAllowed(env?: DeployEnvInput): boolean {
+  return isDevToolingAllowed(env);
 }
 
 /** True when the URL asks to simulate a user with no defaultTeamId. */
