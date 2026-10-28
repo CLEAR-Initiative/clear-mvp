@@ -165,7 +165,12 @@ test.describe("Role-access matrix (case 20)", () => {
           for (const tab of ["community", "proposals"] as const) {
             await expect(page.getByTestId(`inbox-tab-${tab}`)).toHaveCount(tabs.includes(tab) ? 1 : 0);
           }
-          await page.waitForLoadState("networkidle");
+          // The list footer is data-loading until every list this reader gets
+          // has settled: loaded, or failed after React Query's retries. Only
+          // then is a missing load error meaningful.
+          await expect(page.getByTestId("inbox-list-footer")).toHaveAttribute("data-loading", "false", {
+            timeout: 45_000,
+          });
           await expect(page.getByTestId("inbox-load-error")).toHaveCount(0);
         } finally {
           await ctx!.close();
