@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { Box, Loader, Text } from "@mantine/core";
@@ -442,6 +442,26 @@ export default function InboxPage() {
     [selectedThread, busy, review, afterAction, t], // eslint-disable-line react-hooks/exhaustive-deps
   );
 
+  const chooseTab = (next: InboxTab) => {
+    setTab(next);
+    setRejectOpen(false);
+  };
+  /** Tabs pattern: Left/Right (and Home/End) move between tabs and select
+   * the one they land on, focusing it. */
+  const onTabKey = (e: ReactKeyboardEvent<HTMLDivElement>) => {
+    const at = tabs.indexOf(tab);
+    const next =
+      e.key === "ArrowRight" ? tabs[(at + 1) % tabs.length]
+      : e.key === "ArrowLeft" ? tabs[(at - 1 + tabs.length) % tabs.length]
+      : e.key === "Home" ? tabs[0]
+      : e.key === "End" ? tabs[tabs.length - 1]
+      : undefined;
+    if (!next) return;
+    e.preventDefault();
+    chooseTab(next);
+    document.getElementById(`inbox-tab-${next}`)?.focus();
+  };
+
   // Keyboard: Escape closes modal > popover; A/E/R act (hotline threads
   // only: a case is decided on its own row); J/K move.
   useEffect(() => {
@@ -502,20 +522,24 @@ export default function InboxPage() {
           <span className={styles.awaiting}>{t("awaiting", { count: counts.community + counts.proposals })}</span>
           {(inboxQuery.isFetching || casesQuery.isFetching) && <Loader size={12} />}
           {(inboxQuery.error || casesQuery.error) && (
-            <span className={styles.actionError}>{t("loadError")}</span>
+            <span className={styles.actionError} data-testid="inbox-load-error">{t("loadError")}</span>
           )}
         </div>
-        <div className={styles.tabs} role="tablist" data-testid="inbox-tabs">
+        <div className={styles.tabs} role="tablist" aria-label={t("title")} data-testid="inbox-tabs" onKeyDown={onTabKey}>
           {tabs.map((tb) => (
             <button
               type="button"
               role="tab"
               key={tb}
+              id={`inbox-tab-${tb}`}
               className={styles.tab}
               aria-selected={tab === tb}
+              aria-controls="inbox-tabpanel"
+              // One tab stop: Tab lands on the selected tab, arrows move between them.
+              tabIndex={tab === tb ? 0 : -1}
               data-active={tab === tb}
               data-testid={`inbox-tab-${tb}`}
-              onClick={() => { setTab(tb); setRejectOpen(false); }}
+              onClick={() => chooseTab(tb)}
             >
               {t(`tabs.${tb}`)}
               <span className={styles.filterCount}>{unreadCounts[tb]}</span>
@@ -541,7 +565,13 @@ export default function InboxPage() {
         )}
       </header>
 
-      <div className={styles.row} data-mobile-pane={mobilePane && selected !== null}>
+      <div
+        className={styles.row}
+        id="inbox-tabpanel"
+        role="tabpanel"
+        aria-labelledby={`inbox-tab-${tab}`}
+        data-mobile-pane={mobilePane && selected !== null}
+      >
         <EntryList
           entries={visible}
           selectedId={selectedId}

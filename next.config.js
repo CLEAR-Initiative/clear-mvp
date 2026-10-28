@@ -18,6 +18,9 @@ const nextConfig = {
     ? { turbopack: { root: path.resolve(appDir, "..") } }
     : { outputFileTracingRoot: appDir }),
   devIndicators: false,
+  // Lint runs as its own CI gate (`bun run lint` in unit-tests.yml); skipping it
+  // here keeps Docker builds, which are already memory-tight, from paying for it twice.
+  eslint: { ignoreDuringBuilds: true },
   output: "standalone",
   // Force @sentry/nextjs and the instrumentation config files into the
   // standalone trace. Without this, Next.js's file tracer can miss them

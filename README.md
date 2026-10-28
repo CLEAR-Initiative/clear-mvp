@@ -158,7 +158,7 @@ bun dev               # dev server on :3000 (Turbopack)
 bun run build         # production build
 bun start             # serve the production build
 bun run typecheck     # tsc --noEmit
-bun run lint          # next lint
+bun run lint          # eslint (flat config: eslint.config.mjs)
 bun run i18n:check    # every locale has every message key
 bun run check         # lint + typecheck + i18n:check
 bun run test          # unit tests (Vitest)
