@@ -4,7 +4,7 @@ import { useFormatter, useTranslations } from "next-intl";
 import { Anchor, Box, Group, Text } from "@mantine/core";
 import { IconArrowUpRight } from "@tabler/icons-react";
 import type { SaSource } from "~/server/api/mappers/situation-analysis";
-import { distinctHeadings } from "./source-heading";
+import { distinctHeadings, readablePublisher } from "./source-heading";
 
 /**
  * Situation Analysis -> Sources: a numbered references list.
@@ -103,7 +103,7 @@ function Reference({
   // Prefer the publisher clear-api resolved from the report's ReliefWeb
   // `source` ("OCHA", "WFP"); the URL host is the label of last resort and
   // only ever says "reliefweb.int" - the aggregator, not the publisher.
-  const publisher = source.publisher ?? publisherFromUrl(source.url);
+  const publisher = readablePublisher(source.publisher) ?? publisherFromUrl(source.url);
 
   return (
     <Box

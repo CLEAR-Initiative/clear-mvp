@@ -78,4 +78,31 @@ describe("Analysis sources", () => {
     expect(list).not.toHaveTextContent("event:e1");
     expect(list).not.toHaveTextContent("insights.situation.sources.eventLabel");
   });
+
+  it("omits a country id publisher and a pasted date suffix", () => {
+    const countryId = "0b1c2d3e-4f50-6123-8456-778899aabbcc";
+    renderSources([
+      {
+        ...source("hapi-27", "HAPI figure"),
+        publisher: countryId,
+      },
+      {
+        ...source(
+          "gedaref",
+          "Gedaref IPC update Publication Date: 12 Mar 2024 | Data Valid: 1 Jun 2024",
+        ),
+        publisher: "IPC",
+        publishedAt: "2024-03-12T00:00:00.000Z",
+      },
+    ]);
+
+    const list = screen.getByTestId("analysis-sources");
+    expect(list).toHaveTextContent("HAPI figure");
+    expect(list).not.toHaveTextContent(countryId);
+    expect(list).toHaveTextContent("Gedaref IPC update");
+    expect(list).not.toHaveTextContent("Publication Date");
+    expect(list).not.toHaveTextContent("Data Valid");
+    expect(list).toHaveTextContent("IPC");
+    expect(list).toHaveTextContent("1 Jan 2026");
+  });
 });

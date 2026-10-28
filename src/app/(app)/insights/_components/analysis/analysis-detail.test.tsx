@@ -392,6 +392,52 @@ describe("AnalysisDetail generating", () => {
     expect(interval()({ state: { data: undefined } })).toBe(30_000);
   });
 
+  it("stays on the generating notice when a poll fails before the first version", () => {
+    analysisResult = { data: null, isLoading: false, isError: true };
+    renderDetail(createdScope(pending("2026-09-29T11:50:00Z")));
+    expect(screen.getByTestId("analysis-generating")).toBeInTheDocument();
+    expect(screen.queryByText("analysis.error")).not.toBeInTheDocument();
+    expect(interval()({ state: { data: undefined, status: "error" } })).toBe(30_000);
+  });
+
+  it("shows the analysis when the row arrives after a failed poll", () => {
+    analysisResult = { data: null, isLoading: false, isError: true };
+    const view = renderDetail(createdScope(pending("2026-09-29T11:50:00Z")));
+    expect(screen.getByTestId("analysis-generating")).toBeInTheDocument();
+
+    analysisResult = { data: analysis(), isLoading: false, isError: false };
+    view.rerender(
+      <MantineProvider>
+        <AnalysisDetail scope={createdScope(pending("2026-09-29T11:50:00Z"))} onBack={() => {}} />
+      </MantineProvider>,
+    );
+    expect(screen.getByText("analysis.tabs.overview")).toBeInTheDocument();
+    expect(screen.queryByTestId("analysis-generating")).not.toBeInTheDocument();
+    expect(screen.queryByText("analysis.error")).not.toBeInTheDocument();
+  });
+
+  it("keeps a readable analysis on screen when a later refetch fails", () => {
+    analysisResult = { data: analysis(), isLoading: false, isError: true };
+    renderDetail(createdScope(created()));
+    expect(screen.getByText("analysis.tabs.overview")).toBeInTheDocument();
+    expect(screen.queryByText("analysis.error")).not.toBeInTheDocument();
+  });
+
+  it("shows the overdue retry when the first version never arrives, even if the last poll failed", () => {
+    analysisResult = { data: null, isLoading: false, isError: true };
+    renderDetail(createdScope(pending("2026-09-29T10:00:00Z")));
+    expect(screen.getByTestId("analysis-overdue")).toBeInTheDocument();
+    expect(screen.queryByText("analysis.error")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("analysis-generating")).not.toBeInTheDocument();
+  });
+
+  it("shows the load error when a country analysis fails and nothing is readable", () => {
+    analysisResult = { data: undefined, isLoading: false, isError: true };
+    renderDetail(COUNTRY);
+    expect(screen.getByText("analysis.error")).toBeInTheDocument();
+    expect(screen.queryByTestId("analysis-generating")).not.toBeInTheDocument();
+  });
+
   it("hides the retry from viewers", () => {
     role = "viewer";
     analysisResult.data = null;
@@ -447,5 +493,21 @@ describe("Analysis detail layout", () => {
     cleanup();
     renderDetail(COUNTRY);
     expect(screen.getByTestId("analysis-changes")).toHaveTextContent("analysis.layout.sections.summary");
+  });
+
+  it("does not cite a funding share the card cannot show", () => {
+    const row = analysis();
+    row.figures = { ...row.figures, displaced: 8_600_000 };
+    row.changes = {
+      comparedTo: "2026-09-01T00:00:00Z",
+      notes: { funding_received: "People in need rose. Funding coverage moved from 41% to 31%." },
+    };
+    analysisResult.data = row;
+    renderDetail(COUNTRY);
+    expect(screen.getByText("People in need rose.")).toBeInTheDocument();
+    expect(screen.queryByText(/41%/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/31%/)).not.toBeInTheDocument();
+    expect(screen.queryByTitle(/41%/)).not.toBeInTheDocument();
+    expect(screen.getByText("analysis.kpis.funding").closest("article")).toHaveTextContent("analysis.kpis.notReported");
   });
 });

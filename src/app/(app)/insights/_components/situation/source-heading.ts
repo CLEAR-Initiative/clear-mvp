@@ -9,6 +9,21 @@
 
 const EVENT_PREFIX = "event:";
 const UNTITLED_REPORT = "Untitled report";
+const RAW_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+/** Metadata pasted onto a report title, through the end of the string. */
+const TITLE_META = /\s*(?:[|·–-]\s*)?(?:Publication Date|Data Valid)\s*:[\s\S]*$/i;
+
+/** A publisher that is only an id is not a name. */
+export function readablePublisher(publisher: string | null | undefined): string | null {
+  const value = publisher?.trim() ?? "";
+  if (!value || RAW_ID.test(value)) return null;
+  return value;
+}
+
+/** Take a pasted publication-date suffix off a human title. */
+export function cleanSourceTitle(title: string): string {
+  return title.replace(TITLE_META, "").trim();
+}
 
 export function isEventCitationId(value: string): boolean {
   return value.startsWith(EVENT_PREFIX) && value.length > EVENT_PREFIX.length;
@@ -35,7 +50,7 @@ export function sourceHeading(
   source: { id: string; title: string },
   labels: { event: string; hapiFigure: string },
 ): string {
-  const title = source.title.trim();
+  const title = cleanSourceTitle(source.title.trim());
   const internal =
     isEventCitationId(source.id) ||
     isHapiCitationId(source.id) ||
@@ -68,7 +83,7 @@ export function distinctHeadings(
     const heading = base[i]!;
     if ((counts.get(heading) ?? 0) < 2) return heading;
     const when = source.publishedAt ? publishedLabel(source.publishedAt) : "";
-    const extra = [source.publisher, when].filter(Boolean).join(", ");
+    const extra = [readablePublisher(source.publisher), when].filter(Boolean).join(", ");
     return extra ? `${heading} (${extra})` : heading;
   });
 }

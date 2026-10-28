@@ -4,7 +4,7 @@ import type { SaBullet, SaSector } from "~/server/api/mappers/situation-analysis
 import { compactNumber } from "~/server/api/mappers/situation-analysis";
 import { splitSubject, type KpiValues } from "~/lib/analysis-view";
 import { pdfSafe, type ReportMap, type ReportSectionKey } from "~/lib/analysis-report";
-import { sourceHeading } from "../../situation/source-heading";
+import { readablePublisher, sourceHeading } from "../../situation/source-heading";
 
 /**
  * The PDF can't read the app's CSS variables, so this mirrors the light-theme
@@ -371,7 +371,7 @@ export function ReportDocument({
                 <Text style={s.sourceNo}>{i + 1}.</Text>
                 <Text style={{ flex: 1 }}>
                   {clean(sourceHeading(src, { event: labels.eventLabel, hapiFigure: labels.hapiFigure }))}
-                  {src.publisher ? ` · ${clean(src.publisher)}` : ""}
+                  {readablePublisher(src.publisher) ? ` · ${clean(readablePublisher(src.publisher)!)}` : ""}
                   {src.url?.startsWith("http") ? (
                     <>
                       {" · "}
