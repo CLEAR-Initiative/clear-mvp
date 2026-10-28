@@ -64,3 +64,4 @@ jobs:
           registry-token: ${{ secrets.GITHUB_TOKEN }}
           mapbox-token: ${{ secrets.NEXT_PUBLIC_MAPBOX_TOKEN }}
           sentry-dsn: ${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}
+          sentry-client: ${{ secrets.NEXT_PUBLIC_SENTRY_CLIENT }}

@@ -45,6 +45,11 @@ ENV NEXT_PUBLIC_SENTRY_DSN=${NEXT_PUBLIC_SENTRY_DSN}
 ARG NEXT_PUBLIC_SENTRY_ENV="development"
 ENV NEXT_PUBLIC_SENTRY_ENV=${NEXT_PUBLIC_SENTRY_ENV}
 
+# Browser reporting stays off unless this is "on". The public DSN can be set
+# and still be rejected by ingest; runtime env cannot change the client bundle.
+ARG NEXT_PUBLIC_SENTRY_CLIENT=""
+ENV NEXT_PUBLIC_SENTRY_CLIENT=${NEXT_PUBLIC_SENTRY_CLIENT}
+
 # Hermetic Playwright stack only. Lets `/observe?noTeam=1` run against the
 # production Next image (NODE_ENV=production, no Vercel preview env).
 ARG NEXT_PUBLIC_E2E=""
