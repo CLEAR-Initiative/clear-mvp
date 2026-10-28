@@ -54,6 +54,13 @@ vi.mock("~/components/location-challenge", () => ({
   LocationChallengeStatus: () => null,
 }));
 
+/** Whether the reader may file a Location challenge (the active team's
+ *  analysts and platform admins). */
+let canFile = false;
+vi.mock("~/components/location-challenge/use-location-challenge-filing", () => ({
+  useLocationChallengeFiling: () => ({ canFile, teamId: canFile ? "T1" : null, teamLocations: null, canPlaceAnywhere: false }),
+}));
+
 const LONG_DESCRIPTION =
   "A very long marker description that wraps past several lines on a phone sheet. ".repeat(8);
 
@@ -71,6 +78,7 @@ const marker: CrisisMarker = {
 
 afterEach(() => {
   cleanup();
+  canFile = false;
 });
 
 describe("MapMarkerDetail mobile sheet (#506)", () => {
@@ -96,5 +104,28 @@ describe("MapMarkerDetail mobile sheet (#506)", () => {
     const viewDetails = screen.getByRole("link", { name: "detail.viewDetails" });
     expect(cta?.contains(viewDetails)).toBe(true);
     expect(body?.contains(viewDetails)).toBe(false);
+  });
+});
+
+describe("MapMarkerDetail Location challenge", () => {
+  const signalMarker: CrisisMarker = { ...marker, id: 2, markerKind: "signal", eventId: "sig_1" };
+
+  function renderSignal() {
+    render(
+      <MantineProvider>
+        <MapMarkerDetail marker={signalMarker} onClose={() => undefined} />
+      </MantineProvider>,
+    );
+  }
+
+  it("offers Challenge location to the active team's analysts", () => {
+    canFile = true;
+    renderSignal();
+    expect(screen.getByRole("button", { name: "actions.challengeLocation" })).toBeTruthy();
+  });
+
+  it("hides it from readers who can't file", () => {
+    renderSignal();
+    expect(screen.queryByRole("button", { name: "actions.challengeLocation" })).toBeNull();
   });
 });

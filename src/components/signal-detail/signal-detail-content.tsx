@@ -44,6 +44,7 @@ import {
   LocationChallengeModal,
   LocationChallengeStatus,
 } from "~/components/location-challenge";
+import { useLocationChallengeFiling } from "~/components/location-challenge/use-location-challenge-filing";
 import { severityColors } from "~/lib/constants/severity";
 import type { MapMarker } from "~/components/map/crisis-map";
 import { mapFocusHref } from "~/lib/map-focus-href";
@@ -180,6 +181,8 @@ export function SignalDetailContent({
   const format = useFormatter();
   const isMobile = useMediaQuery("(max-width: 48em)") === true;
   const [challengeOpen, setChallengeOpen] = useState(false);
+  /** Only the active team's analysts (and platform admins) file. */
+  const { canFile: canChallenge } = useLocationChallengeFiling();
 
   const challengeQuery = api.locationChallenge.getBySignal.useQuery(
     { signalId: signal?.id ?? "" },
@@ -562,7 +565,7 @@ export function SignalDetailContent({
             </Group>
           </Group>
 
-          {isCompact && (
+          {isCompact && canChallenge && (
             <Button
               mt={12}
               variant="light"
@@ -885,19 +888,21 @@ export function SignalDetailContent({
                     >
                       Bookmark
                     </Button> */}
-                    <Button
-                      variant="light"
-                      color="gray"
-                      size="xs"
-                      leftSection={<IconMapPinOff size={13} />}
-                      fullWidth
-                      onClick={() => setChallengeOpen(true)}
-                      style={{ fontSize: 12 }}
-                    >
-                      {challengeQuery.data
-                        ? tChallenge("actions.updateChallenge")
-                        : tChallenge("actions.challengeLocation")}
-                    </Button>
+                    {canChallenge && (
+                      <Button
+                        variant="light"
+                        color="gray"
+                        size="xs"
+                        leftSection={<IconMapPinOff size={13} />}
+                        fullWidth
+                        onClick={() => setChallengeOpen(true)}
+                        style={{ fontSize: 12 }}
+                      >
+                        {challengeQuery.data
+                          ? tChallenge("actions.updateChallenge")
+                          : tChallenge("actions.challengeLocation")}
+                      </Button>
+                    )}
                     <Button
                       variant="light"
                       color="gray"
@@ -993,6 +998,7 @@ export function SignalDetailContent({
         signalId={signal.id}
         sourceLat={mapMarkers[0]?.lat}
         sourceLng={mapMarkers[0]?.lng}
+        existing={challengeQuery.data}
       />
     </Box>
   );

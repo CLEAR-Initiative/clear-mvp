@@ -3,7 +3,9 @@ import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { graphqlFetch, cookieHeaders } from "~/server/api/graphql";
 import { isGraphqlSchemaUnavailable } from "~/server/api/graphql-schema-unavailable";
+import { toTrpcError } from "~/server/api/routers/tasks";
 import type { GqlSignalLocationChallenge } from "~/lib/types/graphql";
+import type { PlacedLocation } from "~/lib/location-challenge";
 
 const CHALLENGE_FIELDS = `
   id
@@ -40,6 +42,17 @@ const SUBMIT_MUTATION = `
   mutation SubmitSignalLocationChallenge($input: SubmitSignalLocationChallengeInput!) {
     submitSignalLocationChallenge(input: $input) {
       ${CHALLENGE_FIELDS}
+    }
+  }
+`;
+
+const PLACEMENT_QUERY = `
+  query LocationPlacement($lat: Float!, $lng: Float!) {
+    locationPlacement(lat: $lat, lng: $lng) {
+      id
+      name
+      level
+      ancestors { id name level }
     }
   }
 `;
@@ -104,15 +117,36 @@ export const locationChallengeRouter = createTRPCRouter({
       }
     }),
 
+  /** The admin area a point falls in, with its ancestors, or null outside
+   * the areas CLEAR covers: where a corrected point would be placed. */
+  placement: protectedProcedure
+    .input(z.object({ lat: z.number().min(-90).max(90), lng: z.number().min(-180).max(180) }))
+    .query(async ({ ctx, input }): Promise<PlacedLocation | null> => {
+      try {
+        const data = await graphqlFetch<{ locationPlacement: PlacedLocation | null }>(
+          PLACEMENT_QUERY,
+          input,
+          cookieHeaders(ctx),
+        );
+        return data.locationPlacement ?? null;
+      } catch (err) {
+        toTrpcError(err);
+      }
+    }),
+
+  /** File a challenge for the active team (its analysts, or a platform
+   * admin). clear-api checks the team role and areas; its error comes back
+   * with its code (FORBIDDEN, BAD_REQUEST, CONFLICT). */
   submit: protectedProcedure
     .input(
       z
-        .object({ signalId: z.string().min(1) })
+        .object({ signalId: z.string().min(1), teamId: z.string().min(1) })
         .and(proposedPointPair),
     )
     .mutation(async ({ ctx, input }): Promise<GqlSignalLocationChallenge> => {
       const gqlInput = {
         signalId: input.signalId,
+        teamId: input.teamId,
         note: input.note || undefined,
         proposedLng: input.proposedLng,
         proposedLat: input.proposedLat,
@@ -130,7 +164,7 @@ export const locationChallengeRouter = createTRPCRouter({
             message: "LOCATION_CHALLENGE_BACKEND_UNAVAILABLE",
           });
         }
-        throw err;
+        toTrpcError(err);
       }
     }),
 });

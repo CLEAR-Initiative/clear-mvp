@@ -45,6 +45,7 @@ import {
   applyLocationChallengesToMarkers,
 } from "./_components/map-markers-data";
 import type { GqlSignalLocationChallenge } from "~/lib/types/graphql";
+import { challengeErrorKey } from "~/lib/location-challenge";
 import { useLocations } from "~/hooks/use-locations";
 import { useLastFocusedCountry } from "~/hooks/use-last-focused-country";
 import { resolveCountryConfig, shortCountryName, staticCountryBounds, WORLD_VIEW } from "~/lib/constants/country-config";
@@ -1609,10 +1610,13 @@ function MapPageContent() {
     ) {
       return;
     }
+    // Filed for the active team (only its analysts start this flow).
+    if (!activeTeamId) return;
     setLocationCorrectionDraft({ ...draft, submitting: true });
     try {
       await submitLocationCorrection.mutateAsync({
         signalId: draft.signalId,
+        teamId: activeTeamId,
         note: draft.note,
         proposedLat: draft.draftLat,
         proposedLng: draft.draftLng,
@@ -1653,13 +1657,15 @@ function MapPageContent() {
         return;
       }
       setLocationCorrectionDraft({ ...draft, submitting: false });
+      const code = (err as { data?: { code?: string } } | null)?.data?.code;
       notifications.show({
         title: tToasts("error"),
-        message: tChallenge("errors.submitFailed"),
+        message: tChallenge(challengeErrorKey(code)),
         color: "red",
       });
     }
   }, [
+    activeTeamId,
     locationCorrectionDraft,
     submitLocationCorrection,
     utils.locationChallenge.listForMap,
