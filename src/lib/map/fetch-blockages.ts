@@ -16,9 +16,11 @@
  * | Local spike (#280) | `GET /api/dev/logie-blockages?iso3=` (disk dump) | Layers toggle |
  * | clear-api ready | `GET /api/logie/blockages?iso3=` BFF | Same toggle |
  *
- * Optional override: `NEXT_PUBLIC_LOGIE_BLOCKAGES_URL`. Like every
- * `NEXT_PUBLIC_*` value it is inlined at build time, so it must be passed as a
- * Docker build arg — setting it in the runtime env file has no effect.
+ * Optional override: `NEXT_PUBLIC_LOGIE_BLOCKAGES_URL`, for `next dev` via `.env.local`.
+ * Like every `NEXT_PUBLIC_*` value it is inlined at build time, so the runtime
+ * env file can't set it, and the deploy images don't wire it up. Using it there
+ * needs an `ARG`/`ENV` pair in the Dockerfile plus a build arg in
+ * `.github/actions/build-image`.
  *
  * Spec: `docs/clear-api-logie-ingest.md` · ADR-0003
  */

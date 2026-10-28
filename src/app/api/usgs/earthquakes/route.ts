@@ -8,7 +8,7 @@ import { API_URL } from "~/server/env";
  * session cookie to clear-api `GET /api/usgs/earthquakes` (auth required).
  * Map client uses this path on the prod deploy. `next dev` and the dev deploy
  * use the spike (`isUsgsSpikeAllowed`).
- * Optional override: `NEXT_PUBLIC_USGS_EARTHQUAKES_URL` (build arg; inlined at build).
+ * Optional override: `NEXT_PUBLIC_USGS_EARTHQUAKES_URL` (see fetch-usgs-earthquakes.ts).
  */
 export async function GET(request: NextRequest) {
   const incoming = request.nextUrl.searchParams;
