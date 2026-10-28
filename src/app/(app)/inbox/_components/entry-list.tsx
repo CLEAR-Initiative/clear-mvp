@@ -10,9 +10,8 @@ import {
   type HotlineEntry,
   type InboxEntry,
   type InboxSort,
-  type TaskEntry,
 } from "~/lib/hotline-inbox";
-import { WEB_SEARCH_KIND, requestLabel } from "~/lib/impact-prior-source";
+import { WEB_SEARCH_KIND } from "~/lib/impact-prior-source";
 import { getHazardName } from "~/lib/disaster-types";
 import { InboxEntryPills } from "./classification-pill";
 import styles from "../inbox.module.css";
@@ -83,28 +82,6 @@ function CaseGroupRow({ entry }: { entry: CaseGroupEntry }) {
   );
 }
 
-/** One of the reader's own requests: the Event, which source, and where it stands. */
-function TaskRow({ entry }: { entry: TaskEntry }) {
-  const t = useTranslations("inbox");
-  const tEnrichment = useTranslations("eventDetail.enrichment");
-  const format = useFormatter();
-  const { task } = entry;
-  return (
-    <span className={styles.entryBody}>
-      <span className={styles.entryLine1}>
-        <span className={styles.entryTitle}>{entry.eventTitle ?? t("event.untitled")}</span>
-        <span className={styles.entryTime}>{format.relativeTime(new Date(entry.sentAt))}</span>
-      </span>
-      <span className={styles.entryPreview}>
-        {tEnrichment("kindStatus", { source: requestLabel(task.kind, tEnrichment), status: tEnrichment(`status.${task.status}`) })}
-      </span>
-      <span className={styles.entryMeta}>
-        <InboxEntryPills entry={entry} />
-      </span>
-    </span>
-  );
-}
-
 export function EntryList({
   entries,
   selectedId,
@@ -147,11 +124,8 @@ export function EntryList({
               className={styles.entry}
               data-testid="inbox-entry"
               data-kind={entry.kind}
-              data-source-kind={
-                // Proposed signals come from the web Worker's kind.
-                isCaseGroupEntry(entry) ? WEB_SEARCH_KIND : isHotlineEntry(entry) ? undefined : entry.task.kind
-              }
-              data-status={entry.kind === "task" ? entry.task.status : undefined}
+              // Proposed signals come from the web Worker's kind.
+              data-source-kind={isCaseGroupEntry(entry) ? WEB_SEARCH_KIND : undefined}
               data-undecided={isCaseGroupEntry(entry) ? entry.undecided : undefined}
               data-selected={entry.id === selectedId}
               data-unread={unread}
@@ -159,13 +133,7 @@ export function EntryList({
               onClick={() => onSelect(entry.id)}
             >
               <span className={styles.gutter}>{unread && <span className={styles.unreadDot} />}</span>
-              {isHotlineEntry(entry) ? (
-                <HotlineRow entry={entry} />
-              ) : isCaseGroupEntry(entry) ? (
-                <CaseGroupRow entry={entry} />
-              ) : (
-                <TaskRow entry={entry} />
-              )}
+              {isHotlineEntry(entry) ? <HotlineRow entry={entry} /> : <CaseGroupRow entry={entry} />}
             </button>
           );
         })}

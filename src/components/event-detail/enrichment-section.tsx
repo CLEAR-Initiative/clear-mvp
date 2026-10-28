@@ -110,8 +110,7 @@ export function EnrichmentSection({ eventId }: { eventId: string }) {
 }
 
 /** One Task's status line — kind and source, status, requester, Worker,
- * outcome, and its error when the server let us see it. Shared with the
- * Inbox's "My requests" pane. */
+ * outcome, and its error when the server let us see it. */
 export function TaskRow({ task }: { task: GqlTask }) {
   const t = useTranslations("eventDetail.enrichment");
   const format = useFormatter();

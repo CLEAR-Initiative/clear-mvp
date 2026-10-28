@@ -2796,13 +2796,16 @@
   "inbox": {
     "title": "Bandeja de entrada",
     "awaiting": "{count, plural, one {# pendiente de revisión} other {# pendientes de revisión}}",
+    "tabs": {
+      "community": "Señales comunitarias",
+      "proposals": "Señales propuestas"
+    },
     "filters": {
+      "community": "Todas",
       "reports": "Reportes de campo",
       "unclassified": "Sin clasificar",
       "chatter": "Charla",
-      "proposals": "Señales propuestas",
-      "requests": "Mis solicitudes",
-      "all": "Todo"
+      "proposals": "Señales propuestas"
     },
     "search": "Buscar texto, ref. de ingreso",
     "sort": {
@@ -2926,20 +2929,12 @@
       "partial": "De nuevo en cola: {done} de {total} mensajes. {error}"
     },
     "kinds": {
-      "task": "Mi solicitud",
       "cases": "Señales propuestas"
     },
     "event": {
       "untitled": "Evento sin título",
       "open": "Abrir el evento",
       "proposedAt": "Propuesto el {date}"
-    },
-    "requests": {
-      "requestedAt": "Solicitado el {date}",
-      "awaitingReview": "Propuesto, pendiente de revisión",
-      "cancelFailed": "Esta solicitud no se pudo cancelar. Inténtalo de nuevo.",
-      "producedSeeEvent": "Propuesta generada — ver el evento",
-      "proposalLoadFailed": "No se pudo cargar la propuesta. Abra el evento para verla."
     },
     "cases": {
       "preview": "{count, plural, =0 {Todas las señales propuestas decididas} one {# señal propuesta por revisar} other {# señales propuestas por revisar}} · {hazard}"

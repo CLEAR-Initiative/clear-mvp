@@ -136,25 +136,26 @@
       ],
       "flags": [
         "hotline_inbox",
-        "impact_prior_review",
-        "event_enrichment"
+        "impact_prior_review"
       ],
       "source": "inbox-access.ts:51",
       "expect": {
         "admin": "allow",
         "analyst": "allow",
-        "member": "allow",
+        "member": "hidden",
         "erm": "allow",
-        "pending": "hidden"
-      }
+        "pending": "hidden",
+        "team_admin": "allow"
+      },
+      "note": "Only kinds the reader works: community signals (admin, team admin, ERM) or proposed signals (admin, team admin, team analyst). My requests is gone, so a plain member has no Inbox."
     },
     {
       "id": "inbox-hotline",
       "area": "inbox",
-      "action": "See hotline threads (Reports)",
+      "action": "See community signals (hotline threads)",
       "route": "/inbox",
       "selectors": [
-        "inbox-filter-reports"
+        "inbox-tab-community"
       ],
       "flags": [
         "hotline_inbox"
@@ -165,9 +166,10 @@
         "analyst": "hidden",
         "member": "hidden",
         "erm": "allow",
-        "pending": "hidden"
+        "pending": "hidden",
+        "team_admin": "allow"
       },
-      "note": "ground inbox is admin + ERM only"
+      "note": "ground inbox is admin, team admin + ERM"
     },
     {
       "id": "inbox-triage",
@@ -189,9 +191,10 @@
         "analyst": "hidden",
         "member": "hidden",
         "erm": "allow",
-        "pending": "hidden"
+        "pending": "hidden",
+        "team_admin": "allow"
       },
-      "note": "requireGroundInboxAccess admits admin + ERM only; analyst has no hotline surface"
+      "note": "requireGroundInboxAccess admits admin, team admin + ERM; analyst has no hotline surface"
     },
     {
       "id": "inbox-retry",
@@ -206,9 +209,10 @@
       "expect": {
         "admin": "allow",
         "analyst": "block",
-        "erm": "allow"
+        "erm": "allow",
+        "team_admin": "allow"
       },
-      "note": "retryGroundMessage → requireGroundInboxAccess (admin + ERM only)"
+      "note": "retryGroundMessage → requireGroundInboxAccess (admin, team admin + ERM)"
     },
     {
       "id": "inbox-translate",
@@ -225,16 +229,17 @@
       "source": "reading-pane.tsx:230",
       "expect": {
         "admin": "allow",
-        "erm": "allow"
+        "erm": "allow",
+        "team_admin": "allow"
       }
     },
     {
       "id": "inbox-proposals",
       "area": "inbox",
-      "action": "See proposed signals + badge",
+      "action": "See proposed signals tab + badge",
       "route": "/inbox",
       "selectors": [
-        "inbox-filter-proposals"
+        "inbox-tab-proposals"
       ],
       "flags": [
         "impact_prior_review"
@@ -245,9 +250,10 @@
         "analyst": "allow",
         "member": "hidden",
         "erm": "hidden",
-        "pending": "hidden"
+        "pending": "hidden",
+        "team_admin": "allow"
       },
-      "note": "requireCaseProposalInboxAccess: admin (unscoped) + team-analyst (team-scoped); ERM excluded"
+      "note": "requireCaseProposalInboxAccess: admin (unscoped) + team analyst / team admin (team-scoped); ERM excluded"
     },
     {
       "id": "inbox-decide",
@@ -268,29 +274,10 @@
         "analyst": "allow",
         "member": "readonly",
         "erm": "hidden",
-        "pending": "hidden"
+        "pending": "hidden",
+        "team_admin": "allow"
       },
-      "note": "team analyst decides only for the task's own team; ERM no longer decides case proposals"
-    },
-    {
-      "id": "inbox-myreq",
-      "area": "inbox",
-      "action": "My requests + cancel own",
-      "route": "/inbox",
-      "selectors": [
-        "inbox-task-cancel"
-      ],
-      "flags": [
-        "event_enrichment"
-      ],
-      "source": "task.resolver.ts:625",
-      "expect": {
-        "admin": "own",
-        "analyst": "own",
-        "member": "own",
-        "erm": "own",
-        "pending": "hidden"
-      }
+      "note": "team analyst / team admin decides only for the task's own team; ERM does not decide case proposals"
     },
     {
       "id": "ev-alert",

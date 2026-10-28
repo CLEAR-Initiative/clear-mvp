@@ -2796,13 +2796,16 @@
   "inbox": {
     "title": "Boîte de réception",
     "awaiting": "{count, plural, one {# en attente de revue} other {# en attente de revue}}",
+    "tabs": {
+      "community": "Signaux communautaires",
+      "proposals": "Signaux proposés"
+    },
     "filters": {
+      "community": "Tous",
       "reports": "Rapports terrain",
       "unclassified": "Non classés",
       "chatter": "Bavardage",
-      "proposals": "Signaux proposés",
-      "requests": "Mes demandes",
-      "all": "Tout"
+      "proposals": "Signaux proposés"
     },
     "search": "Rechercher texte, réf. d'admission",
     "sort": {
@@ -2926,20 +2929,12 @@
       "partial": "Remis en file : {done} message(s) sur {total}. {error}"
     },
     "kinds": {
-      "task": "Ma demande",
       "cases": "Signaux proposés"
     },
     "event": {
       "untitled": "Événement sans titre",
       "open": "Ouvrir l'événement",
       "proposedAt": "Proposé le {date}"
-    },
-    "requests": {
-      "requestedAt": "Demandé le {date}",
-      "awaitingReview": "Proposé, en attente d'examen",
-      "cancelFailed": "Cette demande n'a pas pu être annulée. Réessayez.",
-      "producedSeeEvent": "Proposition produite — voir l'événement",
-      "proposalLoadFailed": "La proposition n'a pas pu être chargée. Ouvrez l'événement pour la voir."
     },
     "cases": {
       "preview": "{count, plural, =0 {Tous les signaux proposés décidés} one {# signal proposé à examiner} other {# signaux proposés à examiner}} · {hazard}"
