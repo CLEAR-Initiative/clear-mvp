@@ -10,15 +10,17 @@
  *
  * | Phase | Source | UI |
  * |-------|--------|-----|
- * | Local + Vercel preview | `GET /api/dev/usgs-earthquakes` (live USGS FDSN) | Layers toggle |
- * | Production (clear-api) | `GET /api/usgs/earthquakes` BFF | Same toggle |
+ * | Local + dev deploy | `GET /api/dev/usgs-earthquakes` (live USGS FDSN) | Layers toggle |
+ * | Prod deploy (clear-api) | `GET /api/usgs/earthquakes` BFF | Same toggle |
  *
- * Optional override: `NEXT_PUBLIC_USGS_EARTHQUAKES_URL` (must be a **plain**
- * Vercel env — Sensitive/`encrypted` vars are not available at Next build time).
+ * Optional override: `NEXT_PUBLIC_USGS_EARTHQUAKES_URL`. Like every
+ * `NEXT_PUBLIC_*` value it is inlined at build time, so it must be passed as a
+ * Docker build arg — setting it in the runtime env file has no effect.
  *
  * Spec: `docs/clear-api-usgs-seismic-ingest.md` · Expo #465
  */
 
+import { isDevToolingAllowed } from "~/lib/deploy-env";
 import type { SeismicMapCollection } from "~/lib/map/usgs-earthquakes";
 import {
   formatBboxParam,
@@ -31,31 +33,25 @@ export const EARTHQUAKES_BFF_PATH = "/api/usgs/earthquakes";
 
 /**
  * True when Layers → Seismic activity should be an interactive toggle (not Coming soon).
- * Always on — the spike is live USGS in dev, BFF in prod. Do not gate on NEXT_PUBLIC_*:
- * Sensitive Vercel envs are runtime-only.
+ * Always on — the spike is live USGS in dev, BFF in prod.
  */
 export function isSeismicSignalsUiEnabled(): boolean {
   return true;
 }
 
 /**
- * Live USGS spike is for `next dev` and Vercel Preview. Production (`VERCEL_ENV=production`)
- * uses the BFF → clear-api path. Preview must not hit that BFF until ingest exists —
- * Vercel builds with `NODE_ENV=production`, so a NODE_ENV-only check 404s the spike
- * and proxies `/api/usgs/earthquakes` to a missing clear-api route.
- *
- * `NEXT_PUBLIC_VERCEL_ENV` is inlined into the client bundle at build time.
+ * Live USGS spike is for `next dev` and the dev deploy. The prod deploy uses the
+ * BFF → clear-api path. Every Docker image runs with `NODE_ENV=production`, so a
+ * NODE_ENV-only check would 404 the spike on dev and proxy
+ * `/api/usgs/earthquakes` to clear-api before ingest exists there.
  */
 export function isUsgsSpikeAllowed(): boolean {
-  if (process.env.NODE_ENV === "development") return true;
-  const vercelEnv =
-    process.env.NEXT_PUBLIC_VERCEL_ENV ?? process.env.VERCEL_ENV;
-  return vercelEnv === "preview";
+  return isDevToolingAllowed();
 }
 
 /**
  * Resolve the GeoJSON URL.
- * Prefer env override; else spike in development/preview; else BFF in production.
+ * Prefer env override; else spike in next dev / dev deploy; else BFF in prod.
  * Callers must gate on `isSeismicSignalsUiEnabled()` first.
  * Optional `bbox` is the map country (padded); omit for All Countries / global.
  */

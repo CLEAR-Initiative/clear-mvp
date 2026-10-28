@@ -16,9 +16,9 @@
  * | Local spike (#280) | `GET /api/dev/logie-blockages?iso3=` (disk dump) | Layers toggle |
  * | clear-api ready | `GET /api/logie/blockages?iso3=` BFF | Same toggle |
  *
- * Optional override: `NEXT_PUBLIC_LOGIE_BLOCKAGES_URL` (must be a **plain**
- * Vercel env — Sensitive/`encrypted` vars are not available at Next build time,
- * so they never inline into the client bundle).
+ * Optional override: `NEXT_PUBLIC_LOGIE_BLOCKAGES_URL`. Like every
+ * `NEXT_PUBLIC_*` value it is inlined at build time, so it must be passed as a
+ * Docker build arg — setting it in the runtime env file has no effect.
  *
  * Spec: `docs/clear-api-logie-ingest.md` · ADR-0003
  */
@@ -32,9 +32,10 @@ export const BLOCKAGES_BFF_PATH = "/api/logie/blockages";
 
 /**
  * True when Layers → Blockages should be an interactive toggle (not Coming soon).
- * Always on — the BFF is the product default. Do not gate on NEXT_PUBLIC_*:
- * Sensitive Vercel envs are runtime-only and leave the client stub stuck on
- * Coming soon even when the value looks correct in the dashboard.
+ * Always on — the BFF is the product default. Do not gate on a NEXT_PUBLIC_*
+ * flag: it is frozen into the image at build time, so a value added later to
+ * the runtime env file never reaches the client and the toggle stays on
+ * Coming soon.
  */
 export function isBlockagesUiEnabled(): boolean {
   return true;
@@ -42,7 +43,7 @@ export function isBlockagesUiEnabled(): boolean {
 
 /**
  * Resolve the GeoJSON URL (no query string).
- * Prefer env override; else BFF in preview/prod; else local spike in development.
+ * Prefer env override; else local spike in next dev; else BFF on every deploy.
  * Callers must gate on `isBlockagesUiEnabled()` first.
  */
 export function getBlockagesFetchUrl(): string {
