@@ -558,11 +558,7 @@ export default function ObservePage() {
   }, []);
 
   useEffect(() => {
-    const allowed = isObserveQaOverrideAllowed({
-      nodeEnv: process.env.NODE_ENV,
-      vercelEnv: process.env.NEXT_PUBLIC_VERCEL_ENV ?? process.env.VERCEL_ENV,
-    });
-    if (!allowed) return;
+    if (!isObserveQaOverrideAllowed()) return;
     setForceNoTeam(searchForcesMissingTeam(window.location.search));
   }, []);
 
