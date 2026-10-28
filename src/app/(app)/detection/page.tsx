@@ -958,7 +958,6 @@ function DetectionPageContent() {
     setHistoryEventsItems([]);
     setHistorySignalsItems([]);
     setHistoryVersion((v) => v + 1);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [historySortOrder, historySources]);
 
   const historyHasMore = historyAlertsHasMore || historyEventsHasMore || historySignalsHasMore;
