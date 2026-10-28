@@ -23,7 +23,7 @@ bunx playwright test e2e/tests/20-role-access-matrix.spec.ts --list   # enumerat
 ```
 
 `beforeAll` enables the matrix feature flags (`hotline_inbox`, `impact_prior_review`,
-`event_enrichment`, `hotline_translation`) via the admin API. `ground_intel` ships ON.
+`event_enrichment`, `hotline_translation`) via the admin API.
 
 ## Personas & credentials
 

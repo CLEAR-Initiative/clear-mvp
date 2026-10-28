@@ -2,8 +2,8 @@
  * Feature flag registry.
  *
  * Most entries gate a top-level nav item (they carry a `route`). Entries
- * without a `route` gate a sub-tab within a page (e.g. the Ground Intel tab in
- * Detection) — the component reads the flag via `useFeatureEnabled(key)`.
+ * without a `route` gate something within a page (e.g. the Event page's
+ * enrichment) — the component reads the flag via `useFeatureEnabled(key)`.
  *
  * Tier 1 = Core (always on, non-toggleable)
  * Tier 2 = High priority
@@ -105,14 +105,6 @@ export const FEATURE_FLAGS: FeatureFlagDefinition[] = [
       "On-demand translation of hotline messages in the Hotline Inbox (needs `hotline_inbox`), into the reader's language. Turn on only where clear-api has on-demand translation (clear-api#627) and the pipeline's translate drain (clear-pipeline#626) are live: while on, the inbox asks clear-api for each message's detected language, and an API without it fails the whole inbox. Enforced in the ground router, not only the UI, so turning it off also contains a rollback without a deploy.",
     tier: 4,
     defaultEnabled: false,
-  },
-  {
-    key: "ground_intel",
-    label: "Ground Intel",
-    description:
-      "Ground Intel review tab in the Detection page (also admin/analyst only)",
-    tier: 2,
-    defaultEnabled: true,
   },
   {
     key: "event_enrichment",
