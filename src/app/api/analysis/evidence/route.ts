@@ -1,9 +1,15 @@
 /**
- * Attach a PDF to an analysis. The file is forwarded to clear-api's
- * knowledgebase upload, which also records it on the analysis automation.
+ * Attach a PDF to an analysis, and hand back a download link for one that
+ * the knowledge base has already ingested.
+ *
+ * The upload is forwarded to clear-api, which stores the PDF and records it
+ * on the analysis automation. The download link is the presigned URL from
+ * `searchReports`, matched to the report id the upload returned. Until ingest
+ * finishes, that lookup is empty and the browser copy is what opens.
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { pickEvidenceDownload } from "~/lib/analysis-evidence";
 import { GRAPHQL_URL } from "~/server/env";
 
 const UPLOAD = `
@@ -72,5 +78,46 @@ export async function POST(req: NextRequest) {
     });
   } catch {
     return NextResponse.json({ error: "Upload failed" }, { status: 500 });
+  }
+}
+
+const DOWNLOAD = `
+  query EvidenceDownload($source: String) {
+    searchReports(source: $source, limit: 20) {
+      reportId
+      downloadUrl
+    }
+  }
+`;
+
+/** A fresh download link for a PDF this analysis already uploaded. */
+export async function GET(req: NextRequest) {
+  const reportId = req.nextUrl.searchParams.get("reportId")?.trim();
+  const name = req.nextUrl.searchParams.get("name")?.trim();
+  if (!reportId || !name) return NextResponse.json({ error: "Missing report" }, { status: 400 });
+  try {
+    const resp = await fetch(GRAPHQL_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Cookie: req.headers.get("Cookie") ?? "" },
+      body: JSON.stringify({ query: DOWNLOAD, variables: { source: name } }),
+    });
+    const json = (await resp.json()) as {
+      data?: { searchReports?: Array<{ reportId?: string | null; downloadUrl?: string | null }> };
+      errors?: Array<{ message?: string }>;
+    };
+    if (!resp.ok || json.errors?.length) {
+      return NextResponse.json({ error: json.errors?.[0]?.message ?? "Download failed" }, { status: resp.ok ? 400 : resp.status });
+    }
+    const downloadUrl = pickEvidenceDownload(
+      (json.data?.searchReports ?? []).map((report) => ({
+        reportId: report.reportId ?? "",
+        downloadUrl: report.downloadUrl ?? null,
+      })),
+      reportId,
+    );
+    if (!downloadUrl) return NextResponse.json({ error: "The file is not ready" }, { status: 404 });
+    return NextResponse.json({ downloadUrl });
+  } catch {
+    return NextResponse.json({ error: "Download failed" }, { status: 500 });
   }
 }

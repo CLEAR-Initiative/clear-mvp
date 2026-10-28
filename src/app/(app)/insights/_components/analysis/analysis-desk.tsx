@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useFormatter, useTranslations } from "next-intl";
-import { IconMessageCircle, IconUpload, IconX } from "@tabler/icons-react";
+import { IconDownload, IconMessageCircle, IconUpload, IconX } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
 import type { GqlUserComment } from "~/lib/types/graphql";
 import {
@@ -15,6 +15,7 @@ import {
   type StoredComment,
   type StoredFile,
 } from "~/lib/analysis-collaboration";
+import { readAnalysisFile, saveAnalysisFile } from "~/lib/analysis-file-store";
 import styles from "./dark/analysis-dark.module.css";
 
 interface ShownComment {
@@ -29,6 +30,9 @@ interface ShownFile {
   name: string;
   addedAt: string;
   url?: string;
+  reportId?: string;
+  /** This browser has no bytes and the knowledge base has no link yet. */
+  missing?: boolean;
 }
 
 function fromServerComment(row: GqlUserComment): ShownComment {
@@ -62,6 +66,7 @@ export function AnalysisDesk({
   );
   const addComment = api.analysis.comment.useMutation();
   const fileRef = useRef<HTMLInputElement>(null);
+  const ownedUrl = useRef<string | null>(null);
   const [dragging, setDragging] = useState(false);
   const [draft, setDraft] = useState("");
   const [preview, setPreview] = useState<ShownFile | null>(null);
@@ -84,6 +89,12 @@ export function AnalysisDesk({
     setPdfError(false);
   }, [storageKey]);
 
+  useEffect(() => {
+    return () => {
+      if (ownedUrl.current) URL.revokeObjectURL(ownedUrl.current);
+    };
+  }, []);
+
   const serverReady = !!automationId && thread.isSuccess && thread.data != null;
   const comments: ShownComment[] = serverReady
     ? mergePending(
@@ -99,6 +110,7 @@ export function AnalysisDesk({
             name: row.fileName,
             addedAt: row.createdAt,
             url: row.url ?? undefined,
+            reportId: row.reportId ?? undefined,
             pending: false,
           })),
           localFiles,
@@ -144,15 +156,57 @@ export function AnalysisDesk({
     }
   };
 
+  const closePreview = () => {
+    if (ownedUrl.current) {
+      URL.revokeObjectURL(ownedUrl.current);
+      ownedUrl.current = null;
+    }
+    setPreview(null);
+  };
+
+  const openFile = async (file: ShownFile) => {
+    if (ownedUrl.current) {
+      URL.revokeObjectURL(ownedUrl.current);
+      ownedUrl.current = null;
+    }
+    const saved = (file.reportId ? await readAnalysisFile(storageKey, file.reportId) : null) ?? (await readAnalysisFile(storageKey, file.id));
+    if (saved) {
+      const url = URL.createObjectURL(saved);
+      ownedUrl.current = url;
+      setPreview({ ...file, url, missing: false });
+      return;
+    }
+    if (file.url) {
+      setPreview({ ...file, missing: false });
+      return;
+    }
+    if (file.reportId) {
+      try {
+        const params = new URLSearchParams({ reportId: file.reportId, name: file.name });
+        const res = await fetch(`/api/analysis/evidence?${params}`);
+        const body = (await res.json()) as { downloadUrl?: string };
+        if (res.ok && body.downloadUrl) {
+          setPreview({ ...file, url: body.downloadUrl, missing: false });
+          return;
+        }
+      } catch {
+        // The knowledge base has not ingested this PDF yet.
+      }
+    }
+    setPreview({ ...file, url: undefined, missing: true });
+  };
+
   const addFiles = async (list: File[]) => {
     const pdfs = list.filter(isPdf);
     setPdfError(pdfs.length !== list.length);
     if (pdfs.length === 0) return;
-    const added: StoredFile[] = pdfs.map((file) => {
+    const added: StoredFile[] = [];
+    for (const file of pdfs) {
       const id = `local-${file.name}-${file.size}-${Date.now()}`;
       sessionUrls.current.set(id, URL.createObjectURL(file));
-      return { id, name: file.name, addedAt: new Date().toISOString(), pending: true };
-    });
+      await saveAnalysisFile(storageKey, id, file);
+      added.push({ id, name: file.name, addedAt: new Date().toISOString(), pending: true });
+    }
     rememberFiles((current) => [...current, ...added]);
     if (!automationId) return;
     for (const [index, file] of pdfs.entries()) {
@@ -165,11 +219,18 @@ export function AnalysisDesk({
         if (teamId) body.append("teamId", teamId);
         const res = await fetch("/api/analysis/evidence", { method: "POST", body });
         if (!res.ok) continue;
+        const uploaded = (await res.json()) as { reportId?: string | null };
+        if (uploaded.reportId) {
+          await saveAnalysisFile(storageKey, uploaded.reportId, file);
+          rememberFiles((current) =>
+            current.map((row) => (row.id === local.id ? { ...row, reportId: uploaded.reportId ?? undefined } : row)),
+          );
+        }
         const fresh = await thread.refetch();
-        const saved = new Set((fresh.data?.documents ?? []).map((item) => item.fileName));
-        if (saved.has(local.name)) rememberFiles((current) => dropConfirmed(current, new Set([local.id])));
+        const saved = fresh.data?.documents.find((item) => item.fileName === local.name && item.url);
+        if (saved) rememberFiles((current) => dropConfirmed(current, new Set([local.id])));
       } catch {
-        // The name stays in the local list.
+        // The name and the bytes stay in the local list.
       }
     }
   };
@@ -230,14 +291,10 @@ export function AnalysisDesk({
                   </span>
                 </>
               );
-              return file.url ? (
-                <button key={file.id} type="button" className={styles.fileButton} onClick={() => setPreview(file)}>
+              return (
+                <button key={file.id} type="button" className={styles.fileButton} onClick={() => void openFile(file)}>
                   {body}
                 </button>
-              ) : (
-                <div key={file.id} className={styles.file}>
-                  {body}
-                </div>
               );
             })}
           </div>
@@ -292,8 +349,8 @@ export function AnalysisDesk({
         </form>
       </section>
 
-      {preview?.url && (
-        <div className={styles.previewBackdrop} role="presentation" onClick={() => setPreview(null)}>
+      {preview && (
+        <div className={styles.previewBackdrop} role="presentation" onClick={closePreview}>
           <div
             className={styles.previewFrame}
             role="dialog"
@@ -302,11 +359,29 @@ export function AnalysisDesk({
           >
             <div className={styles.previewBar}>
               <span className={styles.previewName}>{preview.name}</span>
-              <button type="button" className={styles.previewClose} aria-label={t("evidenceClose")} onClick={() => setPreview(null)}>
-                <IconX size={16} />
-              </button>
+              <span className={styles.previewActions}>
+                {preview.url && (
+                  <a
+                    className={styles.previewClose}
+                    href={preview.url}
+                    download={preview.name}
+                    target="_blank"
+                    rel="noopener"
+                    aria-label={t("evidenceDownload")}
+                  >
+                    <IconDownload size={16} />
+                  </a>
+                )}
+                <button type="button" className={styles.previewClose} aria-label={t("evidenceClose")} onClick={closePreview}>
+                  <IconX size={16} />
+                </button>
+              </span>
             </div>
-            <iframe className={styles.previewDoc} title={t("evidencePreview", { name: preview.name })} src={preview.url} />
+            {preview.url ? (
+              <iframe className={styles.previewDoc} title={t("evidencePreview", { name: preview.name })} src={preview.url} />
+            ) : (
+              <p className={styles.previewMissing}>{t("evidenceUnavailable")}</p>
+            )}
           </div>
         </div>
       )}

@@ -3312,6 +3312,8 @@
       "evidenceFiles": "{count, plural, one {# file} other {# files}}",
       "evidenceDrop": "Drop files to add evidence",
       "evidencePreview": "Preview of {name}",
+      "evidenceDownload": "Download",
+      "evidenceUnavailable": "This file isn't on this browser. Add it again to preview or download it.",
       "evidenceClose": "Close preview",
       "evidenceNew": "NEW",
       "evidenceProcessed": "PROCESSED",

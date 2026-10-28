@@ -3312,6 +3312,8 @@
       "evidenceFiles": "{count, plural, one {ملف واحد} other {# ملفات}}",
       "evidenceDrop": "أفلت الملفات لإضافة دليل",
       "evidencePreview": "معاينة {name}",
+      "evidenceDownload": "تنزيل",
+      "evidenceUnavailable": "هذا الملف غير موجود على هذا المتصفح. أضفه مرة أخرى لمعاينته أو تنزيله.",
       "evidenceClose": "إغلاق المعاينة",
       "evidenceNew": "جديد",
       "evidenceProcessed": "معالج",

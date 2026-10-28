@@ -4,6 +4,7 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { MantineProvider } from "@mantine/core";
 import type { Analysis } from "~/server/api/mappers/analysis";
 import type { CreatedAnalysis } from "~/server/api/mappers/analysis";
+import { clearAnalysisFiles } from "~/lib/analysis-file-store";
 
 const replace = vi.fn();
 const params = new URLSearchParams("country=sdn");
@@ -169,11 +170,12 @@ beforeEach(() => {
   analysisResult = { data: analysis(), isLoading: false, isError: false };
   refreshOpts = {};
 });
-afterEach(() => {
+afterEach(async () => {
   cleanup();
   vi.clearAllMocks();
   sessionStorage.clear();
   localStorage.clear();
+  await clearAnalysisFiles();
 });
 
 describe("AnalysisDetail collaboration", () => {
@@ -192,6 +194,22 @@ describe("AnalysisDetail collaboration", () => {
     unmount();
     renderDetail(COUNTRY);
     expect(screen.getByTestId("analysis-comment")).toHaveTextContent("Check the west road");
+  });
+
+  it("opens a saved PDF after the page is opened again", async () => {
+    Object.defineProperty(URL, "createObjectURL", { configurable: true, writable: true, value: () => "blob:evidence" });
+    Object.defineProperty(URL, "revokeObjectURL", { configurable: true, writable: true, value: () => {} });
+    const { unmount } = renderDetail(COUNTRY);
+    fireEvent.change(screen.getByTestId("analysis-evidence-input"), {
+      target: { files: [new File(["%PDF-1.4"], "brief.pdf", { type: "application/pdf" })] },
+    });
+    expect(await screen.findByRole("button", { name: /brief\.pdf/ })).toBeInTheDocument();
+    unmount();
+
+    renderDetail(COUNTRY);
+    fireEvent.click(await screen.findByRole("button", { name: /brief\.pdf/ }));
+    expect(await screen.findByTitle(/evidencePreview/)).toHaveAttribute("src", "blob:evidence");
+    expect(screen.getByRole("link", { name: "analysis.layout.evidenceDownload" })).toHaveAttribute("href", "blob:evidence");
   });
 
   it("keeps a renamed title after the page is opened again", () => {

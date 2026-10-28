@@ -208,7 +208,7 @@ const THREAD_QUERY = `
         user { id name image }
         tags { user { id name image } }
       }
-      documents { id fileName createdAt url }
+      documents { id fileName reportId createdAt url }
     }
   }
 `;
@@ -228,6 +228,7 @@ const ADD_ANALYSIS_COMMENT = `
 interface AnalysisDocumentRow {
   id: string;
   fileName: string;
+  reportId: string | null;
   createdAt: string;
   url: string | null;
 }
