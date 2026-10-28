@@ -71,7 +71,7 @@ export default withPWA({
   // Disabled in dev (PWA service worker caches aggressively, breaks HMR) and
   // in Docker builds where memory headroom is tight - next-pwa + workbox
   // generation can push peak build RSS past 5 GB and OOM-kill the container.
-  // Vercel / non-Docker builds keep PWA enabled.
+  // Non-Docker builds (e.g. a local `bun run build`) keep PWA enabled.
   disable:
     process.env.NODE_ENV === "development" || process.env.DISABLE_PWA === "1",
   workboxOptions: {
