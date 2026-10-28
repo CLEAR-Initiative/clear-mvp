@@ -326,6 +326,28 @@ describe("InboxPage access", () => {
     }
   });
 
+  it("works the tabs from the keyboard: one tab stop, arrows move and select, the panel follows", () => {
+    renderPage();
+    const community = screen.getByTestId("inbox-tab-community");
+    const proposals = screen.getByTestId("inbox-tab-proposals");
+    expect([community.tabIndex, proposals.tabIndex]).toEqual([0, -1]);
+    expect(screen.getByRole("tabpanel")).toHaveAttribute("aria-labelledby", "inbox-tab-community");
+
+    fireEvent.keyDown(community, { key: "ArrowRight" });
+    expect(proposals).toHaveAttribute("aria-selected", "true");
+    expect(proposals).toHaveFocus();
+    expect([community.tabIndex, proposals.tabIndex]).toEqual([-1, 0]);
+    expect(screen.getByRole("tabpanel")).toHaveAttribute("aria-labelledby", "inbox-tab-proposals");
+
+    // Wraps around, and Home goes back to the first tab.
+    fireEvent.keyDown(proposals, { key: "ArrowRight" });
+    expect(community).toHaveAttribute("aria-selected", "true");
+    fireEvent.keyDown(community, { key: "End" });
+    expect(proposals).toHaveAttribute("aria-selected", "true");
+    fireEvent.keyDown(proposals, { key: "Home" });
+    expect(community).toHaveFocus();
+  });
+
   it("gives an ERM the community signals only: no proposed signals tab or fetch", () => {
     role = "erm";
     casesData = [webCase("cp-1")];

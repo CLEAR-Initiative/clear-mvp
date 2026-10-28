@@ -21,17 +21,19 @@ import type {
 } from "~/lib/types/graphql";
 
 /**
- * Ground intel staging tier (detection → Ground intel tab).
+ * Ground staging tier: hotline threads, reviewed in the Inbox (Community
+ * signals).
  *
- * The whole tier is PRIVATE: clear-api gates every query and mutation on
- * the global admin/analyst role, and `reviewGroundThread` additionally
- * consults the source's own `reviewerRoles` policy record. This router is
- * a thin proxy — authorization lives in clear-api; the UI mirrors it only
- * to avoid showing controls that would always fail.
+ * The whole tier is PRIVATE: clear-api admits platform admins (every
+ * source) and ERMs / team admins (the sources assigned to their teams), and
+ * `reviewGroundThread` additionally consults the source's own
+ * `reviewerRoles` policy record for admins. This router is a thin proxy:
+ * authorization lives in clear-api; the UI mirrors it only to avoid showing
+ * controls that would always fail.
  *
- * Privacy: `senderName` is private-tier data. It may be rendered inside
- * the Ground-intel tab ONLY. Phone numbers are redacted at persistence by
- * clear-api and must never surface anywhere.
+ * Privacy: `senderName` is private-tier data and is not rendered anywhere
+ * (the Inbox shows only the pseudonymous intake ref). Phone numbers are
+ * redacted at persistence by clear-api and must never surface anywhere.
  */
 
 const GROUND_SOURCE_FIELDS = `id name kind reviewerRoles privacyDefault isActive`;
@@ -151,8 +153,8 @@ const HOTLINE_INBOX_MESSAGE_FIELDS = `
 
 /** Inbox thread fields: GROUND_THREAD_FIELDS plus the hotline-enrichment
  * drafts (LLM suggestions the Add to CLEAR modal pre-fills from). Kept
- * inbox-only so the detection Ground intel tab's queries do not depend on
- * the draft columns. */
+ * inbox-only so the other ground queries do not depend on the draft
+ * columns. */
 const HOTLINE_INBOX_THREAD_FIELDS = `
   ${GROUND_THREAD_FIELDS}
   draftTitle
@@ -354,8 +356,8 @@ export const groundRouter = createTRPCRouter({
   /**
    * Hotline inbox (/inbox): every active hotline source with its open
    * (unverified) threads and staged messages incl. presigned media URLs.
-   * Group sources are excluded — the inbox is the hotline review surface;
-   * group capture stays in the detection Ground intel tab.
+   * Group sources are excluded: the inbox is the hotline review surface,
+   * and group capture has no review surface in the app.
    */
   hotlineInbox: protectedProcedure.query(async ({ ctx }): Promise<GqlHotlineInbox> => {
     const [{ groundSources }, withLanguage] = await Promise.all([
