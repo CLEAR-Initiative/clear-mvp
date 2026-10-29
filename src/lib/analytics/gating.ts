@@ -73,7 +73,7 @@ export const KEPT_QUERY_VALUES = {
     "overview", "needs", "sources", // Analysis, Crisis
     "enrichment", "priors", "comments", // Event
   ],
-  from: ["map", "detection", "observe", "crisis", "dashboard", "notification", "agent", "inbox"],
+  from: ["map", "detection", "observe", "crisis", "dashboard", "notification", "agent", "inbox", "insights"],
 } as const satisfies Record<string, readonly string[]>;
 
 /**
