@@ -7,7 +7,15 @@ import {
   shouldLoadTracker,
   type TrackerGateInput,
 } from "./gating";
-import { parseOptOutCookie } from "./opt-out";
+import {
+  MIRROR_CLEAR_GRACE_MS,
+  mirrorClearDecision,
+  parseMirrorWrittenAt,
+  parseOptOutCookie,
+  parseOptOutCookieValue,
+  resolveOptOut,
+  syncAction,
+} from "./opt-out";
 
 const config = readUmamiConfig({ hostUrl: "https://app.clearinitiative.io/ux/", websiteId: "site-1" });
 const base: TrackerGateInput = {
@@ -90,6 +98,52 @@ describe("parseOptOutCookie", () => {
   it("reads the opt-out cookie", () => {
     expect(parseOptOutCookie("a=1; clear_analytics_opt_out=1")).toBe(true);
     expect(parseOptOutCookie("clear_analytics_opt_out=")).toBe(false);
+    expect(parseOptOutCookieValue("clear_analytics_opt_out=1")).toBe("legacy");
+    expect(parseOptOutCookieValue("x=1; clear_analytics_opt_out=2")).toBe("mirror");
+    expect(parseOptOutCookieValue("")).toBeNull();
+  });
+
+  it("treats an unknown account value as opted out", () => {
+    expect(resolveOptOut(null, undefined)).toBe(true);
+    expect(resolveOptOut(null, null)).toBe(true);
+    expect(resolveOptOut(null, false)).toBe(false);
+    expect(resolveOptOut(null, true)).toBe(true);
+    // A legacy cookie holds until migrated; a mirror never overrides the account.
+    expect(resolveOptOut("legacy", false)).toBe(true);
+    expect(resolveOptOut("mirror", false)).toBe(false);
+  });
+
+  it("syncs the cookie to the account and migrates a legacy opt-out", () => {
+    expect(syncAction("legacy", false)).toBe("migrate");
+    expect(syncAction("legacy", true)).toBe("mirror-on");
+    expect(syncAction(null, true)).toBe("mirror-on");
+    expect(syncAction("mirror", true)).toBe("none");
+    expect(syncAction("mirror", false)).toBe("mirror-off");
+    expect(syncAction(null, false)).toBe("none");
     expect(parseOptOutCookie("")).toBe(false);
+  });
+});
+
+describe("opt-out mirror timestamp", () => {
+  it("parses stamped and legacy-format mirrors", () => {
+    expect(parseOptOutCookieValue("clear_analytics_opt_out=2.1700000000000")).toBe("mirror");
+    expect(parseMirrorWrittenAt("a=1; clear_analytics_opt_out=2.1700000000000")).toBe(1700000000000);
+    expect(parseMirrorWrittenAt("clear_analytics_opt_out=2")).toBe(0);
+    expect(parseMirrorWrittenAt("clear_analytics_opt_out=1")).toBeNull();
+    expect(parseOptOutCookieValue("clear_analytics_opt_out=2.abc")).toBeNull();
+  });
+
+  it("only clears a mirror against an account value fetched after the grace period", () => {
+    const writtenAt = 1_000_000;
+    // Another tab just opted out; this tab's fetch may predate the save landing.
+    expect(mirrorClearDecision(writtenAt, writtenAt + 1_000, writtenAt + 2_000)).toEqual({
+      clear: false,
+      retryInMs: MIRROR_CLEAR_GRACE_MS - 2_000,
+    });
+    expect(mirrorClearDecision(writtenAt, writtenAt + MIRROR_CLEAR_GRACE_MS, writtenAt + MIRROR_CLEAR_GRACE_MS)).toEqual({
+      clear: true,
+    });
+    // An old, bare mirror from another device can be cleared at once.
+    expect(mirrorClearDecision(0, writtenAt, writtenAt)).toEqual({ clear: true });
   });
 });
