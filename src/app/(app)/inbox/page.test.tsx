@@ -749,7 +749,7 @@ describe("InboxPage proposed signals tab", () => {
 
     fireEvent.click(row);
     expect(screen.getByTestId("inbox-pane")).toHaveAttribute("data-kind", "cases");
-    expect(screen.getByRole("link", { name: "event.open" })).toHaveAttribute("href", "/event/evt-1");
+    expect(screen.getByRole("link", { name: "event.open" })).toHaveAttribute("href", "/event/evt-1?from=inbox");
     expect(screen.queryByTestId("inbox-action-bar")).not.toBeInTheDocument();
     fireEvent.keyDown(window, { key: "e" });
     expect(reviewMutate).not.toHaveBeenCalled();
@@ -794,7 +794,7 @@ describe("InboxPage web cases", () => {
     fireEvent.click(groups[1]!);
     const pane = screen.getByTestId("inbox-pane");
     expect(pane).toHaveAttribute("data-kind", "cases");
-    expect(within(pane).getByRole("link", { name: "event.open" })).toHaveAttribute("href", "/event/evt-1");
+    expect(within(pane).getByRole("link", { name: "event.open" })).toHaveAttribute("href", "/event/evt-1?from=inbox");
     expect(within(pane).getAllByTestId("case-proposal").map((c) => c.getAttribute("data-case-id"))).toEqual(["cp-1", "cp-2"]);
     expect(within(pane).getAllByTestId("case-proposal-accept")).toHaveLength(2);
   });
@@ -807,11 +807,11 @@ describe("InboxPage web cases", () => {
     const view = renderPage();
     const rows = () => screen.getAllByTestId("case-proposal");
     // The matched one says which CLEAR Event it is.
-    expect(within(rows()[1]!).getByTestId("case-proposal-matched-event")).toHaveAttribute("href", "/event/evt-2019");
+    expect(within(rows()[1]!).getByTestId("case-proposal-matched-event")).toHaveAttribute("href", "/event/evt-2019?from=inbox");
     fireEvent.click(within(rows()[0]!).getByTestId("case-proposal-accept"));
     expect(decideCaseMutate).toHaveBeenCalledWith({ id: "cp-1", decision: "accepted", rationale: undefined }, expect.any(Object));
     expect(rows()[0]).toHaveAttribute("data-state", "accepted");
-    expect(within(rows()[0]!).getByTestId("case-proposal-result-event")).toHaveAttribute("href", "/event/evt-h");
+    expect(within(rows()[0]!).getByTestId("case-proposal-result-event")).toHaveAttribute("href", "/event/evt-h?from=inbox");
     expect(within(rows()[0]!).queryByTestId("case-proposal-decision")).not.toBeInTheDocument();
     expect(screen.getByTestId("inbox-toast").textContent).toBe("toast.accepted");
     // The count is what is still undecided.
@@ -862,6 +862,6 @@ describe("InboxPage web cases", () => {
     fireEvent.click(screen.getByTestId("case-proposal-accept"));
     expect(forEventFetch).toHaveBeenCalledWith({ eventId: "evt-1" }, { staleTime: 0 });
     await waitFor(() => expect(screen.getByTestId("case-proposal")).toHaveAttribute("data-state", "accepted"));
-    expect(screen.getByTestId("case-proposal-result-event")).toHaveAttribute("href", "/event/evt-h");
+    expect(screen.getByTestId("case-proposal-result-event")).toHaveAttribute("href", "/event/evt-h?from=inbox");
   });
 });

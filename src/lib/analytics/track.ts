@@ -32,7 +32,30 @@ export function track<E extends AnalyticsEventName>(name: E, ...args: PropsArg<E
     return;
   }
   if (typeof window === "undefined") return;
-  window.umami?.track(name, Object.keys(props).length ? props : undefined);
+  const data = Object.keys(props).length ? props : undefined;
+  if (window.umami) {
+    window.umami.track(name, data);
+  } else if (window.__clearAnalyticsOff !== true && pending.length < MAX_PENDING) {
+    // The tracker may still be loading (an Event opened on a fresh page load):
+    // hold the event until it is ready. Dropped if tracking turns out off.
+    pending.push([name, data]);
+  }
+}
+
+const MAX_PENDING = 20;
+let pending: [string, Record<string, string> | undefined][] = [];
+
+/** Send events held while the tracker loaded. Call once it is ready. */
+export function flushPendingEvents(): void {
+  if (typeof window === "undefined" || !window.umami) return;
+  const queued = pending;
+  pending = [];
+  for (const [name, data] of queued) window.umami.track(name, data);
+}
+
+/** Drop held events: tracking is off for this user (admin, opted out, flag off). */
+export function clearPendingEvents(): void {
+  pending = [];
 }
 
 export interface AnalyticsIdentity {

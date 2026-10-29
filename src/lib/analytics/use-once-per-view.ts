@@ -26,20 +26,24 @@ export function createOncePerView() {
 }
 
 /**
- * Fire `event.opened {from}` once per open of `eventId`. A new id (prev/next,
- * a related Event) is a new open; `null` (drawer closed) ends the view, so
+ * Fire `event.opened {from}` once per open of `eventId`. A different id
+ * (prev/next, a related Event) is a new open; `null` (drawer closed) ends the view, so
  * reopening the same Event counts again.
  */
 export function useTrackEventOpened(eventId: string | null | undefined, from: EventOpenedFrom): void {
-  const once = useRef(createOncePerView());
+  // Only the current open is remembered: A → B → A is three opens, while an
+  // effect re-run for the same open (strict mode, re-render) is not.
+  const current = useRef<string | null>(null);
   const fromRef = useRef(from);
   fromRef.current = from;
   useEffect(() => {
     if (!eventId) {
-      once.current.reset();
+      current.current = null;
       return;
     }
-    if (once.current.claim(eventId)) track("event.opened", { from: fromRef.current });
+    if (current.current === eventId) return;
+    current.current = eventId;
+    track("event.opened", { from: fromRef.current });
   }, [eventId]);
 }
 

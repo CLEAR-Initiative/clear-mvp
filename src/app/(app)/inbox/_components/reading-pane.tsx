@@ -1,5 +1,6 @@
 "use client";
 
+import { eventHref } from "~/lib/analytics/event-source";
 import { useState } from "react";
 import { useFormatter, useLocale, useTranslations } from "next-intl";
 import {
@@ -326,7 +327,7 @@ function InboxCaseGroupPane({
         </span>
       </header>
       <div className={styles.paneBody}>
-        <Link href={`/event/${encodeURIComponent(entry.eventId)}`} className={styles.translateBtn} data-testid="inbox-cases-event-link">
+        <Link href={eventHref(entry.eventId, "inbox")} className={styles.translateBtn} data-testid="inbox-cases-event-link">
           {t("event.open")}
         </Link>
         <p className={styles.sectionLabel} data-testid="inbox-cases-title">

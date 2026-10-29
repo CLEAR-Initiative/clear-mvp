@@ -89,6 +89,7 @@ export function EnrichmentSection({ eventId }: { eventId: string }) {
                 </Text>
                 {cases.map((proposal) => (
                   <CaseProposalRow
+                    eventFrom="related_event"
                     key={proposal.id}
                     proposal={proposal}
                     canDecide={canDecide}

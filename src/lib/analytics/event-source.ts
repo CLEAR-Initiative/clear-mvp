@@ -31,7 +31,7 @@ export function normaliseEventFrom(raw: string | null | undefined): EventOpenedF
 
 /** An in-app link to an Event, tagged with where it was followed from. */
 export function eventHref(eventId: string, from: EventFrom): string {
-  return `/event/${eventId}?from=${from}`;
+  return `/event/${encodeURIComponent(eventId)}?from=${from}`;
 }
 
 /**
