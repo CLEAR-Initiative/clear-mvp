@@ -19,24 +19,42 @@
  * re-running against a kept-up stack is safe.
  *
  * Titles mirror SEEDED_EVENTS in e2e/support/data.ts.
+ *
+ * clear-api's seed stamps the same `lastSignalCreatedAt` on every event, so
+ * Newest vs Oldest is a no-op until these four get distinct times. Fixed
+ * instants, not `now`, so a later insert from another spec cannot tie them.
  */
 
 import { prisma } from "./src/lib/prisma.js";
 
-const TYPES_BY_TITLE: Record<string, string[]> = {
-  "North Darfur Conflict Escalation": ["ba"], // battles → "conflict and violence"
-  "South Darfur Displacement Crisis": ["ce"], // complex emergency
-  "Khartoum Flood Emergency": ["fl"], // flood
-  "North Darfur Food Security Emergency": ["fa"], // famine
+const FIXTURES: Record<string, { types: string[]; lastSignalCreatedAt: Date }> = {
+  "North Darfur Conflict Escalation": {
+    types: ["ba"], // battles → "conflict and violence"
+    lastSignalCreatedAt: new Date("2024-01-01T00:00:00.000Z"),
+  },
+  "South Darfur Displacement Crisis": {
+    types: ["ce"], // complex emergency
+    lastSignalCreatedAt: new Date("2024-06-01T00:00:00.000Z"),
+  },
+  "Khartoum Flood Emergency": {
+    types: ["fl"], // flood
+    lastSignalCreatedAt: new Date("2025-01-01T00:00:00.000Z"),
+  },
+  "North Darfur Food Security Emergency": {
+    types: ["fa"], // famine
+    lastSignalCreatedAt: new Date("2026-01-01T00:00:00.000Z"),
+  },
 };
 
 async function main() {
-  for (const [title, types] of Object.entries(TYPES_BY_TITLE)) {
-    const { count } = await prisma.events.updateMany({ where: { title }, data: { types } });
+  for (const [title, data] of Object.entries(FIXTURES)) {
+    const { count } = await prisma.events.updateMany({ where: { title }, data });
     if (count === 0) {
       throw new Error(`no seeded event titled "${title}" — did clear-api's seed change?`);
     }
-    console.log(`[event-types-seed] ${title} → ${JSON.stringify(types)}`);
+    console.log(
+      `[event-types-seed] ${title} → ${JSON.stringify(data.types)} @ ${data.lastSignalCreatedAt.toISOString()}`,
+    );
   }
 }
 
