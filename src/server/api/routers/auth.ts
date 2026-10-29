@@ -113,6 +113,12 @@ const ME_TEAM_MEMBERSHIPS = `
   }
 `;
 
+export const RECORD_ONBOARDING_COMPLETED = `
+  mutation RecordOnboardingCompleted {
+    recordOnboardingCompleted
+  }
+`;
+
 export const authRouter = createTRPCRouter({
   me: publicProcedure.query(async ({ ctx }) => {
     try {
@@ -193,6 +199,24 @@ export const authRouter = createTRPCRouter({
       });
       return { success: true, already_verified: !result.verifyEmail };
     }),
+
+  /**
+   * Records `user.onboarding_completed` in clear-api's activity log.
+   * Best-effort: a failure (or an older clear-api) only loses the log entry.
+   */
+  recordOnboardingCompleted: protectedProcedure.mutation(async ({ ctx }) => {
+    try {
+      const data = await graphqlFetch<{ recordOnboardingCompleted: boolean }>(
+        RECORD_ONBOARDING_COMPLETED,
+        undefined,
+        cookieHeaders(ctx),
+      );
+      return data.recordOnboardingCompleted === true;
+    } catch (err) {
+      console.error("recordOnboardingCompleted failed:", err);
+      return false;
+    }
+  }),
 
   myUserDetails: protectedProcedure.query(async ({ ctx }) => {
     const data = await graphqlFetch<{

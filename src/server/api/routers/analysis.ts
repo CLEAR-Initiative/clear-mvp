@@ -516,7 +516,33 @@ async function hydrateAnalysis(
   );
 }
 
+export const RECORD_REPORT_EXPORTED_MUTATION = `
+  mutation RecordReportExported($analysisId: String!) {
+    recordReportExported(analysisId: $analysisId)
+  }
+`;
+
 export const analysisRouter = createTRPCRouter({
+  /**
+   * Records `analysis.report_exported` in clear-api's activity log once a
+   * report PDF is built. Best-effort: a failure only loses the log entry.
+   */
+  recordReportExported: protectedProcedure
+    .input(z.object({ analysisId: z.string().min(1) }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        const data = await graphqlFetch<{ recordReportExported: boolean }>(
+          RECORD_REPORT_EXPORTED_MUTATION,
+          { analysisId: input.analysisId },
+          cookieHeaders(ctx),
+        );
+        return data.recordReportExported === true;
+      } catch (err) {
+        console.error("recordReportExported failed:", err);
+        return false;
+      }
+    }),
+
   /**
    * The current analysis for a country (the country-default scope). Tries the
    * current year's frame, then last year's for the days after New Year before

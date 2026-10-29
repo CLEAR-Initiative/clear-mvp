@@ -17,6 +17,8 @@ function ProductTourHostInner() {
   const userId = authQuery.data?.user?.id;
   const onboardingState = useOnboardingState(userId);
   const [tourActive, setTourActive] = useState(false);
+  // Best-effort: the activity log entry must never hold up leaving the tour.
+  const recordOnboardingCompleted = api.auth.recordOnboardingCompleted.useMutation();
   /** Prevents `?tour=1` from re-opening the tour after Finish/Skip. */
   const closedRef = useRef(false);
 
@@ -46,12 +48,16 @@ function ProductTourHostInner() {
     <ProductTour
       userId={userId}
       active={tourActive}
+      trigger={tourParam === "replay" ? "replay" : "auto"}
+      firstOnDevice={!onboardingState?.onboardingTourCompletedAt}
       onComplete={(options) => {
         closedRef.current = true;
         setTourActive(false);
-        // First finish of onboarding (not a replay): show the usage notice once.
+        // First finish of onboarding (not a replay): show the usage notice
+        // once, and record the completion in the activity log.
         if (tourParam !== "replay" && !onboardingState?.onboardingCompletedAt) {
           window.dispatchEvent(new Event(ONBOARDING_FINISHED_EVENT));
+          recordOnboardingCompleted.mutate();
         }
         notifyOnboardingChange();
         if (options?.landOnMap !== false) {
