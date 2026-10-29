@@ -13,7 +13,7 @@ import {
   readUmamiConfig,
   sanitizePageUrl,
   sanitizeReferrer,
-  shouldLoadTracker,
+  trackerGateState,
 } from "~/lib/analytics/gating";
 import {
   OPT_OUT_CHANGE_EVENT,
@@ -33,7 +33,10 @@ const BEFORE_SEND = "__clearUmamiBeforeSend";
 declare global {
   interface Window {
     [BEFORE_SEND]?: (type: string, payload: Record<string, unknown>) => Record<string, unknown> | false;
-    /** Set while the gate is closed, so an already-loaded script sends nothing. */
+    /**
+     * Set once the gate is known to be off: `track()` then drops events instead
+     * of holding them. Unset or `false` while the gate is still loading.
+     */
     __clearAnalyticsOff?: boolean;
   }
 }
@@ -53,6 +56,8 @@ export interface AnalyticsOptOutState {
   optedOut: boolean;
   /** Whether the account value (clear-api `User.analyticsOptOut`) has loaded. */
   known: boolean;
+  /** A local opt-out cookie is set, so this browser is opted out whatever the account says. */
+  locallyOptedOut: boolean;
   /** Write the choice to the account; mirrors it locally at once. */
   setOptedOut: (optedOut: boolean) => void;
   saving: boolean;
@@ -84,6 +89,7 @@ export function useAnalyticsOptOut(): AnalyticsOptOutState {
   return {
     optedOut: resolveOptOut(cookie, account),
     known: typeof account === "boolean",
+    locallyOptedOut: cookie !== null,
     setOptedOut,
     saving: mutation.isPending,
   };
@@ -163,35 +169,41 @@ export function UsageTracker() {
   const pathname = usePathname() ?? "";
   const locale = useLocale();
   useOptOutSync();
-  const { optedOut } = useAnalyticsOptOut();
+  const { optedOut, known, locallyOptedOut } = useAnalyticsOptOut();
   const { flags, isLoading: flagsLoading } = useFeatureFlags();
   const team = useOptionalTeam();
   const me = api.auth.me.useQuery(undefined, { staleTime: 60_000 });
   const [loaded, setLoaded] = useState(false);
 
   const user = me.data?.authenticated ? me.data.user : null;
-  const enabled = shouldLoadTracker({
-    config,
-    flagEnabled: !flagsLoading && flags[USAGE_ANALYTICS_FLAG] === true,
-    authenticated: !!user,
-    globalRole: user?.role,
-    optedOut,
-    pathname,
-  });
+  const gate = trackerGateState(
+    {
+      config,
+      flagEnabled: !flagsLoading && flags[USAGE_ANALYTICS_FLAG] === true,
+      authenticated: !!user,
+      globalRole: user?.role,
+      optedOut,
+      pathname,
+    },
+    { flags: flagsLoading, user: me.data === undefined, optOut: !known && !locallyOptedOut },
+  );
+  const enabled = gate === "on";
 
   useEffect(() => {
-    window.__clearAnalyticsOff = !enabled;
-    if (!enabled) clearPendingEvents();
+    // While loading, `track()` holds events (flushed below once the tracker is
+    // ready); once off, it drops them and the held ones are discarded.
+    window.__clearAnalyticsOff = gate === "off";
+    if (gate === "off") clearPendingEvents();
     window[BEFORE_SEND] = (_type, payload) => {
       // The opt-out mirror cookie is re-read per send so a toggle in another tab applies here too.
-      if (window.__clearAnalyticsOff || readOptOut() || !isTrackablePath(window.location.pathname)) return false;
+      if (gate !== "on" || readOptOut() || !isTrackablePath(window.location.pathname)) return false;
       return {
         ...payload,
         url: typeof payload.url === "string" ? sanitizePageUrl(payload.url) : payload.url,
         referrer: sanitizeReferrer(typeof payload.referrer === "string" ? payload.referrer : undefined),
       };
     };
-  }, [enabled]);
+  }, [gate]);
 
   const activeTeam = team?.activeTeam ?? null;
   const teamRole = activeTeam?.members.find((m) => m.user.id === user?.id)?.role ?? null;

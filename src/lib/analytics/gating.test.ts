@@ -5,6 +5,7 @@ import {
   sanitizePageUrl,
   sanitizeReferrer,
   shouldLoadTracker,
+  trackerGateState,
   type TrackerGateInput,
 } from "./gating";
 import {
@@ -64,6 +65,43 @@ describe("shouldLoadTracker", () => {
     ["email verification page", { pathname: "/verify-email" }],
   ])("does not load when %s", (_label, patch) => {
     expect(shouldLoadTracker({ ...base, ...patch })).toBe(false);
+  });
+});
+
+describe("trackerGateState", () => {
+  const ready = { flags: false, user: false, optOut: false };
+
+  it("is on once everything has loaded and allows tracking", () => {
+    expect(trackerGateState(base, ready)).toBe("on");
+  });
+
+  it.each([
+    ["flags", { flags: true }],
+    ["the user", { user: true, optOut: true }],
+    ["the account opt-out", { optOut: true }],
+  ])("is loading while %s is still loading", (_label, patch) => {
+    // optedOut reads true until the account value is known, which is fine
+    // while that value is still loading.
+    const optedOut = "optOut" in patch && patch.optOut;
+    expect(trackerGateState({ ...base, optedOut }, { ...ready, ...patch })).toBe("loading");
+  });
+
+  it("is off as soon as a known input rules tracking out, without waiting on the rest", () => {
+    const allLoading = { flags: true, user: true, optOut: true };
+    expect(trackerGateState({ ...base, config: null }, allLoading)).toBe("off");
+    expect(trackerGateState({ ...base, pathname: "/auth/login" }, allLoading)).toBe("off");
+    expect(trackerGateState({ ...base, flagEnabled: false }, { ...allLoading, flags: false })).toBe("off");
+    expect(trackerGateState({ ...base, globalRole: "admin" }, { ...ready, optOut: true })).toBe("off");
+    expect(trackerGateState({ ...base, authenticated: false }, { ...ready, optOut: true })).toBe("off");
+    expect(trackerGateState({ ...base, optedOut: true }, ready)).toBe("off");
+  });
+
+  it("is off for a known opt-out or admin even while flags are still loading", () => {
+    // Held events must never wait behind a known opt-out: if the user opted
+    // back in before flags arrived, they'd be sent.
+    expect(trackerGateState({ ...base, optedOut: true }, { ...ready, flags: true })).toBe("off");
+    expect(trackerGateState({ ...base, globalRole: "admin" }, { ...ready, flags: true, optOut: true })).toBe("off");
+    expect(trackerGateState({ ...base, authenticated: false }, { ...ready, flags: true, optOut: true })).toBe("off");
   });
 });
 
