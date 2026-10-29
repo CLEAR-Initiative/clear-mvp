@@ -77,11 +77,13 @@ describe("trackerGateState", () => {
 
   it.each([
     ["flags", { flags: true }],
-    ["the user", { user: true }],
+    ["the user", { user: true, optOut: true }],
     ["the account opt-out", { optOut: true }],
   ])("is loading while %s is still loading", (_label, patch) => {
-    // optedOut reads true until the account value is known.
-    expect(trackerGateState({ ...base, optedOut: true }, { ...ready, ...patch })).toBe("loading");
+    // optedOut reads true until the account value is known, which is fine
+    // while that value is still loading.
+    const optedOut = "optOut" in patch && patch.optOut;
+    expect(trackerGateState({ ...base, optedOut }, { ...ready, ...patch })).toBe("loading");
   });
 
   it("is off as soon as a known input rules tracking out, without waiting on the rest", () => {
@@ -92,6 +94,14 @@ describe("trackerGateState", () => {
     expect(trackerGateState({ ...base, globalRole: "admin" }, { ...ready, optOut: true })).toBe("off");
     expect(trackerGateState({ ...base, authenticated: false }, { ...ready, optOut: true })).toBe("off");
     expect(trackerGateState({ ...base, optedOut: true }, ready)).toBe("off");
+  });
+
+  it("is off for a known opt-out or admin even while flags are still loading", () => {
+    // Held events must never wait behind a known opt-out: if the user opted
+    // back in before flags arrived, they'd be sent.
+    expect(trackerGateState({ ...base, optedOut: true }, { ...ready, flags: true })).toBe("off");
+    expect(trackerGateState({ ...base, globalRole: "admin" }, { ...ready, flags: true, optOut: true })).toBe("off");
+    expect(trackerGateState({ ...base, authenticated: false }, { ...ready, flags: true, optOut: true })).toBe("off");
   });
 });
 

@@ -72,15 +72,19 @@ export interface TrackerGateLoading {
   optOut: boolean;
 }
 
-/** Decides as soon as any known input rules tracking out, without waiting on the rest. */
+/**
+ * Decides `off` as soon as any input that has arrived rules tracking out,
+ * whichever others are still loading. A known opt-out must never wait as
+ * `loading`: events held then could be sent if the user opts back in before
+ * the rest loads.
+ */
 export function trackerGateState(input: TrackerGateInput, loading: TrackerGateLoading): TrackerGateState {
   if (input.config === null || !isTrackablePath(input.pathname)) return "off";
-  if (loading.flags) return "loading";
-  if (!input.flagEnabled) return "off";
-  if (loading.user) return "loading";
-  if (!input.authenticated || isPlatformAdmin(input.globalRole)) return "off";
-  if (loading.optOut) return "loading";
-  return input.optedOut ? "off" : "on";
+  if (!loading.flags && !input.flagEnabled) return "off";
+  if (!loading.user && (!input.authenticated || isPlatformAdmin(input.globalRole))) return "off";
+  if (!loading.optOut && input.optedOut) return "off";
+  if (loading.flags || loading.user || loading.optOut) return "loading";
+  return "on";
 }
 
 /**

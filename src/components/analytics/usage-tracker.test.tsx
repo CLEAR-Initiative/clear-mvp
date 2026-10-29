@@ -196,6 +196,23 @@ describe("UsageTracker", () => {
       expect(umamiTrack).not.toHaveBeenCalledWith("event.opened", { from: "email" });
     });
 
+    it("never sends events tracked during a known opt-out, even if the user opts back in before flags load", () => {
+      delete window.umami;
+      me = { authenticated: true, user: { id: "u1", role: "member", analyticsOptOut: true } };
+      const view = render(<UsageTracker />);
+      expect(window.__clearAnalyticsOff).toBe(true);
+      track("event.opened", { from: "email" });
+      // Opts back in while flags are still loading, then flags arrive.
+      me = member();
+      document.cookie = "clear_analytics_opt_out=; path=/; max-age=0";
+      view.rerender(<UsageTracker />);
+      window.umami = { track: umamiTrack, identify: vi.fn() };
+      flagsLoading = false;
+      view.rerender(<UsageTracker />);
+      expect(view.queryByTestId("umami")).not.toBeNull();
+      expect(umamiTrack).not.toHaveBeenCalled();
+    });
+
     it("discards them if the flag turns out off", () => {
       delete window.umami;
       const view = render(<UsageTracker />);
