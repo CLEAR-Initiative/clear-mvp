@@ -62,20 +62,30 @@ export function shouldLoadTracker(input: TrackerGateInput): boolean {
   );
 }
 
-/** Query parameters a page view keeps. Everything else is dropped. */
-export const KEPT_QUERY_PARAMS = ["tab", "from"] as const;
+/**
+ * Query parameters a page view keeps, each with the only values it may carry.
+ * Anything else (another param, or an unknown value) is dropped, so a crafted
+ * link can't put free text into analytics. Add values as tabs / sources land.
+ */
+export const KEPT_QUERY_VALUES = {
+  tab: [
+    "alerts", "events", "signals", "history", "live", // Detection
+    "overview", "needs", "sources", // Analysis, Crisis
+    "enrichment", "priors", "comments", // Event
+  ],
+  from: ["map", "detection", "observe", "crisis", "dashboard", "notification", "agent", "inbox"],
+} as const satisfies Record<string, readonly string[]>;
 
 /**
  * Strip a page-view URL (path + query, as Umami sends it) down to its path
- * plus the kept parameters. Drops hashes. Values of kept params are kept as
- * is: they are fixed tab / source names, not free text.
+ * plus the kept parameters with known values. Drops hashes.
  */
 export function sanitizePageUrl(url: string): string {
   const parsed = new URL(url, "http://x");
   const kept = new URLSearchParams();
-  for (const key of KEPT_QUERY_PARAMS) {
+  for (const [key, allowed] of Object.entries(KEPT_QUERY_VALUES)) {
     const value = parsed.searchParams.get(key);
-    if (value !== null) kept.set(key, value);
+    if (value !== null && (allowed as readonly string[]).includes(value)) kept.set(key, value);
   }
   const query = kept.toString();
   return query ? `${parsed.pathname}?${query}` : parsed.pathname;

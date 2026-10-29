@@ -73,6 +73,7 @@ describe("sanitizePageUrl", () => {
     expect(sanitizePageUrl("/crisis/abc?tab=needs&q=secret&token=xyz&from=map")).toBe("/crisis/abc?tab=needs&from=map");
     expect(sanitizePageUrl("/inbox?search=khartoum")).toBe("/inbox");
     expect(sanitizePageUrl("/map#layer")).toBe("/map");
+    expect(sanitizePageUrl("/detection?tab=private-text&from=map")).toBe("/detection?from=map");
     expect(sanitizePageUrl("https://app.clearinitiative.io/event/1?token=t")).toBe("/event/1");
   });
 });

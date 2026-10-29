@@ -313,7 +313,7 @@ services:
       DATABASE_URL: postgresql://umami:umami@umami-db:5432/umami
       APP_SECRET: local-dev-only
     ports:
-      - "3300:3000"
+      - "127.0.0.1:3300:3000"
     depends_on:
       umami-db:
         condition: service_healthy

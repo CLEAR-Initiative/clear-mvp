@@ -67,7 +67,8 @@ export function UsageTracker() {
   useEffect(() => {
     window.__clearAnalyticsOff = !enabled;
     window[BEFORE_SEND] = (_type, payload) => {
-      if (window.__clearAnalyticsOff || !isTrackablePath(window.location.pathname)) return false;
+      // The opt-out cookie is re-read per send so a toggle in another tab applies here too.
+      if (window.__clearAnalyticsOff || readOptOut() || !isTrackablePath(window.location.pathname)) return false;
       return {
         ...payload,
         url: typeof payload.url === "string" ? sanitizePageUrl(payload.url) : payload.url,
@@ -100,7 +101,7 @@ export function UsageTracker() {
       data-host-url={config.hostUrl}
       data-before-send={BEFORE_SEND}
       data-do-not-track="true"
-      onLoad={() => setLoaded(true)}
+      onReady={() => setLoaded(true)}
     />
   );
 }
