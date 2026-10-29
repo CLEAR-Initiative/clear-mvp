@@ -3512,5 +3512,34 @@
       "allCountries": "Todos los países",
       "hint": "Los días están en UTC. Deje las fechas vacías para las últimas 12 semanas."
     }
+  },
+  "usageAnalytics": {
+    "profile": {
+      "title": "Estadísticas de uso",
+      "toggleLabel": "Ayudar a mejorar CLEAR con estadísticas de uso",
+      "toggleDescription": "Registra qué páginas y funciones usa. Desactívelo para detenerlo por completo en este navegador.",
+      "adminNote": "Los administradores globales nunca se rastrean.",
+      "noticeLink": "Cómo funcionan las estadísticas de uso",
+      "backToProfile": "Volver al perfil"
+    },
+    "notice": {
+      "title": "Estadísticas de uso en CLEAR",
+      "intro": "CLEAR registra cómo se usa la aplicación para que el equipo vea qué ayuda a los equipos de terreno y qué les estorba.",
+      "whatTitle": "Qué recopilamos",
+      "whatPages": "Qué páginas abre, conservando solo la dirección de la página (se eliminan el texto de búsqueda y otros detalles de la consulta).",
+      "whatActions": "Una lista fija de acciones, como abrir un evento o terminar el recorrido.",
+      "whatIdentity": "Su ID de usuario, rol, organización, equipo e idioma.",
+      "whatNot": "Nunca su nombre, correo, texto de búsqueda, mensajes al Agente, títulos ni nada que escriba.",
+      "whyTitle": "Por qué",
+      "why": "Para saber qué funciones se usan, dónde se atasca la gente y qué mejorar después.",
+      "whoTitle": "Quién lo ve",
+      "who": "Solo el equipo de producto de CLEAR, en una herramienta autoalojada en los servidores de CLEAR. No se comparte con terceros ni se usa para publicidad.",
+      "retentionTitle": "Cuánto tiempo se guarda",
+      "retention": "13 meses; después se elimina.",
+      "optOutTitle": "Desactivarlo",
+      "optOut": "Puede desactivar las estadísticas de uso en cualquier momento en su perfil. Cuando están desactivadas, el rastreador no se carga en absoluto.",
+      "manageInProfile": "Gestionar en el perfil",
+      "gotIt": "Entendido"
+    }
   }
 }

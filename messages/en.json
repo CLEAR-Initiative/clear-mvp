@@ -3512,5 +3512,34 @@
       "allCountries": "All countries",
       "hint": "Days are UTC. Leave the dates empty for the last 12 weeks."
     }
+  },
+  "usageAnalytics": {
+    "profile": {
+      "title": "Usage analytics",
+      "toggleLabel": "Help improve CLEAR with usage analytics",
+      "toggleDescription": "Records which pages and features you use. Turn off to stop it completely on this browser.",
+      "adminNote": "Global admins are never tracked.",
+      "noticeLink": "How usage analytics works",
+      "backToProfile": "Back to Profile"
+    },
+    "notice": {
+      "title": "Usage analytics in CLEAR",
+      "intro": "CLEAR records how the app is used so the team can see what helps field teams and what gets in the way.",
+      "whatTitle": "What we collect",
+      "whatPages": "Which pages you open, keeping only the page address (search text and other query details are removed).",
+      "whatActions": "A fixed list of actions, such as opening an Event or finishing the tour.",
+      "whatIdentity": "Your user ID, role, organisation, team and language.",
+      "whatNot": "Never your name, email, search text, Agent prompts, titles or anything you type.",
+      "whyTitle": "Why",
+      "why": "To learn which features are used, where people get stuck, and what to improve next.",
+      "whoTitle": "Who sees it",
+      "who": "Only the CLEAR product team, in a self-hosted tool on CLEAR's own servers. It is not shared with third parties or used for advertising.",
+      "retentionTitle": "How long we keep it",
+      "retention": "13 months, then it is deleted.",
+      "optOutTitle": "Turning it off",
+      "optOut": "You can turn usage analytics off at any time in your Profile. When it is off, the tracker is not loaded at all.",
+      "manageInProfile": "Manage in Profile",
+      "gotIt": "Got it"
+    }
   }
 }

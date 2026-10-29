@@ -219,6 +219,22 @@ _Avoid_: "map tour" as the product name (the tour starts on Detection); teaching
 Signal → Event → Alert as the tour path (that's the data pipeline, not the tour);
 an 8-stop Detection → Insights → Map hop as the minimal ship.
 
+### Usage analytics
+
+**Usage analytics**:
+Self-hosted Umami page views plus a fixed list of **usage events**, sent only for
+signed-in, non-admin users who haven't opted out, when the build carries the Umami env
+vars and the `usage_analytics` flag is on. Never loads on pre-login pages (they carry
+tokens in the URL). Page views keep only the path plus `tab` and `from`.
+**Usage event**: one entry in the allowlist in `src/lib/analytics/events.ts`, sent with
+`track()`. Properties are fixed values or record ids — never names, emails, search text,
+Agent prompts, titles or other free text. The tracker is identified with the user cuid,
+global role, team role, organisation id, team id and language.
+**Analytics opt-out**: the Profile toggle; a first-party cookie, so per browser (clear-api
+has no user field for it yet). Off means the tracker isn't loaded at all.
+_Avoid_: calling this "telemetry" (that's clear-pipeline's LLM-call telemetry);
+adding an event property that can hold free text.
+
 ### Detection detail navigation
 
 **Quick Navigation**:

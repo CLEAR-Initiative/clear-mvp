@@ -130,6 +130,14 @@ export const FEATURE_FLAGS: FeatureFlagDefinition[] = [
     tier: 4,
     defaultEnabled: false,
   },
+  {
+    key: "usage_analytics",
+    label: "Usage analytics",
+    description:
+      "Loads self-hosted Umami page views and allowlisted usage events (src/lib/analytics) for signed-in users. Also needs NEXT_PUBLIC_UMAMI_HOST_URL and NEXT_PUBLIC_UMAMI_WEBSITE_ID baked into the image. Global admins and users who opted out on their Profile are never tracked.",
+    tier: 4,
+    defaultEnabled: false,
+  },
 ];
 
 export const TIER_LABELS: Record<number, string> = {

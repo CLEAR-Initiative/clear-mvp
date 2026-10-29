@@ -3512,5 +3512,34 @@
       "allCountries": "Tous les pays",
       "hint": "Les jours sont en UTC. Laissez les dates vides pour les 12 dernières semaines."
     }
+  },
+  "usageAnalytics": {
+    "profile": {
+      "title": "Statistiques d'utilisation",
+      "toggleLabel": "Aider à améliorer CLEAR avec les statistiques d'utilisation",
+      "toggleDescription": "Enregistre les pages et fonctionnalités que vous utilisez. Désactivez pour l'arrêter complètement sur ce navigateur.",
+      "adminNote": "Les administrateurs globaux ne sont jamais suivis.",
+      "noticeLink": "Fonctionnement des statistiques d'utilisation",
+      "backToProfile": "Retour au profil"
+    },
+    "notice": {
+      "title": "Statistiques d'utilisation dans CLEAR",
+      "intro": "CLEAR enregistre l'utilisation de l'application pour que l'équipe voie ce qui aide les équipes de terrain et ce qui les freine.",
+      "whatTitle": "Ce que nous collectons",
+      "whatPages": "Les pages que vous ouvrez, en ne gardant que l'adresse de la page (le texte de recherche et les autres détails de requête sont supprimés).",
+      "whatActions": "Une liste fixe d'actions, comme ouvrir un événement ou terminer la visite guidée.",
+      "whatIdentity": "Votre identifiant utilisateur, rôle, organisation, équipe et langue.",
+      "whatNot": "Jamais votre nom, e-mail, texte de recherche, requêtes à l'Agent, titres ou tout ce que vous saisissez.",
+      "whyTitle": "Pourquoi",
+      "why": "Pour savoir quelles fonctionnalités sont utilisées, où les utilisateurs bloquent et quoi améliorer ensuite.",
+      "whoTitle": "Qui y a accès",
+      "who": "Uniquement l'équipe produit CLEAR, dans un outil auto-hébergé sur les serveurs de CLEAR. Rien n'est partagé avec des tiers ni utilisé à des fins publicitaires.",
+      "retentionTitle": "Durée de conservation",
+      "retention": "13 mois, puis les données sont supprimées.",
+      "optOutTitle": "Désactivation",
+      "optOut": "Vous pouvez désactiver les statistiques d'utilisation à tout moment dans votre profil. Une fois désactivées, le traceur n'est pas chargé du tout.",
+      "manageInProfile": "Gérer dans le profil",
+      "gotIt": "Compris"
+    }
   }
 }
