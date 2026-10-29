@@ -89,7 +89,7 @@ describe("AgentMessage", () => {
     );
     expect(screen.getByRole("heading", { name: "Sudan" })).toBeInTheDocument();
     const event = screen.getByRole("link", { name: "El Obeid" });
-    expect(event).toHaveAttribute("href", "/event/ev_1");
+    expect(event).toHaveAttribute("href", "/event/ev_1?from=agent");
     expect(event).not.toHaveAttribute("target");
     expect(screen.getByRole("link", { name: "Sudan on the Map" })).toHaveAttribute("href", "/map?countryId=loc1");
     expect(screen.getAllByTestId("agent-app-link")).toHaveLength(2);

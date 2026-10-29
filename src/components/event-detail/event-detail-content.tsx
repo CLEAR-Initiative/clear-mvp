@@ -1,6 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { eventHref } from "~/lib/analytics/event-source";
+import { useTrackSectionSeen } from "~/lib/analytics/use-once-per-view";
+import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useFormatter, useTranslations } from "next-intl";
@@ -137,6 +139,10 @@ export function EventDetailContent({
     agentViewId ? { entity: { kind: "event", id: agentViewId, label: event?.title ?? undefined } } : null,
   );
   const isMobile = useMediaQuery("(max-width: 48em)") === true;
+  const enrichmentRef = useRef<HTMLDivElement>(null);
+  const feedbackRef = useRef<HTMLDivElement>(null);
+  useTrackSectionSeen(enrichmentRef, "enrichment", event?.id);
+  useTrackSectionSeen(feedbackRef, "feedback", event?.id);
 
   // TODO: after Prisma migration use event.title directly; remove this fallback
   // TODO: after Prisma migration use event.types (list) instead of eventType
@@ -830,7 +836,7 @@ export function EventDetailContent({
                 return (
                   <Link
                     key={related.id}
-                    href={`/event/${related.id}`}
+                    href={eventHref(related.id, "related_event")}
                     style={{ textDecoration: "none", color: "inherit" }}
                   >
                     <Box
@@ -874,7 +880,11 @@ export function EventDetailContent({
 
           {/* Enrichment results - requested from the Actions card in the sidebar,
               shown here where the cited cases have room to breathe. */}
-          {!isCompact && <EnrichmentSection eventId={event.id} />}
+          {!isCompact && (
+            <div ref={enrichmentRef}>
+              <EnrichmentSection eventId={event.id} />
+            </div>
+          )}
         </Box>
 
         {/* Right sidebar - full-width under main column on phone */}
@@ -896,7 +906,9 @@ export function EventDetailContent({
 
               <SkeletonSlot pending={showPending} skeleton={<FeedbackCardSkeleton />}>
               <Card p={0} style={{ border: "1px solid var(--color-border)" }}>
-                <FeedbackSection entityId={event.id} entityType="event" />
+                <div ref={feedbackRef}>
+                  <FeedbackSection entityId={event.id} entityType="event" />
+                </div>
               </Card>
               </SkeletonSlot>
 

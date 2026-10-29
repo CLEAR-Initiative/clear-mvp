@@ -1,5 +1,6 @@
 "use client";
 
+import { useTrackEventOpened } from "~/lib/analytics/use-once-per-view";
 import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -56,6 +57,7 @@ export function EventDetailDrawer({
   );
 
   const utils = api.useUtils();
+  useTrackEventOpened(opened ? eventId : null, "detection");
   useEffect(() => {
     if (!opened || !eventId) return;
     void utils.comments.list.prefetch({ entityId: eventId, entityType: "event" });

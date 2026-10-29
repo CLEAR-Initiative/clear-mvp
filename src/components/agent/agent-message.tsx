@@ -15,6 +15,7 @@
  * into one. They render as their alt text.
  */
 
+import { tagEventPath } from "~/lib/analytics/event-source";
 import { useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
@@ -197,7 +198,7 @@ function Markdown({ text }: { text: string }) {
           a: ({ href, children }) => {
             const link = agentLink(href);
             return link ? (
-              <Anchor component={Link} href={link.href} onClick={() => onAppLink(link)} data-testid="agent-app-link">
+              <Anchor component={Link} href={tagEventPath(link.href, "agent")} onClick={() => onAppLink(link)} data-testid="agent-app-link">
                 {children}
               </Anchor>
             ) : (
