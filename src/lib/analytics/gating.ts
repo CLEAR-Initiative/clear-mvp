@@ -53,14 +53,34 @@ export interface TrackerGateInput {
 }
 
 export function shouldLoadTracker(input: TrackerGateInput): boolean {
-  return (
-    input.config !== null &&
-    input.flagEnabled &&
-    input.authenticated &&
-    !isPlatformAdmin(input.globalRole) &&
-    !input.optedOut &&
-    isTrackablePath(input.pathname)
-  );
+  return trackerGateState(input, { flags: false, user: false, optOut: false }) === "on";
+}
+
+/**
+ * `loading` while an input the gate depends on hasn't arrived yet, `off` once
+ * tracking is known not to happen, `on` once it is allowed. Events tracked
+ * while `loading` are held and only sent if the gate turns `on`.
+ */
+export type TrackerGateState = "loading" | "off" | "on";
+
+/** Which gate inputs haven't arrived yet. */
+export interface TrackerGateLoading {
+  flags: boolean;
+  /** `auth.me` hasn't returned. */
+  user: boolean;
+  /** The account opt-out isn't known and no local opt-out cookie decides it. */
+  optOut: boolean;
+}
+
+/** Decides as soon as any known input rules tracking out, without waiting on the rest. */
+export function trackerGateState(input: TrackerGateInput, loading: TrackerGateLoading): TrackerGateState {
+  if (input.config === null || !isTrackablePath(input.pathname)) return "off";
+  if (loading.flags) return "loading";
+  if (!input.flagEnabled) return "off";
+  if (loading.user) return "loading";
+  if (!input.authenticated || isPlatformAdmin(input.globalRole)) return "off";
+  if (loading.optOut) return "loading";
+  return input.optedOut ? "off" : "on";
 }
 
 /**

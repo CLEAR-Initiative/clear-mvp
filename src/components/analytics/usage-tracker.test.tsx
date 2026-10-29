@@ -10,10 +10,12 @@ import { cleanup, render } from "@testing-library/react";
  */
 
 vi.mock("next/script", () => ({
-  default: (props: Record<string, unknown>) => (
+  default: function ScriptStandIn(props: Record<string, unknown>) {
+    // Stand in for the tracker finishing loading.
+    React.useEffect(() => (props.onReady as (() => void) | undefined)?.(), [props.onReady]);
     // eslint-disable-next-line @next/next/no-sync-scripts -- test stand-in for next/script
-    <script data-testid="umami" src={props.src as string} data-website-id={props["data-website-id"] as string} />
-  ),
+    return <script data-testid="umami" src={props.src as string} data-website-id={props["data-website-id"] as string} />;
+  },
 }));
 let pathname = "/detection";
 vi.mock("next/navigation", () => ({ usePathname: () => pathname }));
@@ -42,6 +44,7 @@ vi.mock("~/trpc/react", () => ({
 }));
 
 import { UsageTracker } from "./usage-tracker";
+import { clearPendingEvents, track } from "~/lib/analytics/track";
 
 function renderTracker() {
   const { queryByTestId } = render(<UsageTracker />);
@@ -63,6 +66,9 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   vi.unstubAllEnvs();
+  delete window.umami;
+  delete window.__clearAnalyticsOff;
+  clearPendingEvents();
 });
 
 describe("UsageTracker", () => {
@@ -146,5 +152,64 @@ describe("UsageTracker", () => {
     flagsLoading = false;
     flags = {};
     expect(renderTracker()).toBeNull();
+  });
+
+  describe("events tracked while the gate is loading", () => {
+    const umamiTrack = vi.fn();
+    beforeEach(() => {
+      umamiTrack.mockClear();
+      window.umami = { track: umamiTrack, identify: vi.fn() };
+      // Fresh page load from an email link: nothing has arrived yet.
+      flagsLoading = true;
+      me = undefined;
+    });
+
+    it("sends them once the gate opens", () => {
+      delete window.umami; // the tracker script hasn't loaded yet either
+      const view = render(<UsageTracker />);
+      track("event.opened", { from: "email" });
+      expect(umamiTrack).not.toHaveBeenCalled();
+
+      window.umami = { track: umamiTrack, identify: vi.fn() };
+      flagsLoading = false;
+      me = member();
+      view.rerender(<UsageTracker />);
+      expect(view.queryByTestId("umami")).not.toBeNull();
+      expect(umamiTrack).toHaveBeenCalledTimes(1);
+      expect(umamiTrack).toHaveBeenCalledWith("event.opened", { from: "email" });
+    });
+
+    it.each([
+      ["a global admin", () => ({ authenticated: true, user: { id: "u1", role: "admin", analyticsOptOut: false } })],
+      ["opted out", () => ({ authenticated: true, user: { id: "u1", role: "member", analyticsOptOut: true } })],
+    ])("discards them if the gate resolves off (%s)", (_label, resolvedMe) => {
+      delete window.umami;
+      const view = render(<UsageTracker />);
+      track("event.opened", { from: "email" });
+      flagsLoading = false;
+      me = resolvedMe();
+      view.rerender(<UsageTracker />);
+      window.umami = { track: umamiTrack, identify: vi.fn() };
+      // Even if the gate later opened, nothing held from before should go out.
+      me = member();
+      view.rerender(<UsageTracker />);
+      expect(umamiTrack).not.toHaveBeenCalledWith("event.opened", { from: "email" });
+    });
+
+    it("discards them if the flag turns out off", () => {
+      delete window.umami;
+      const view = render(<UsageTracker />);
+      track("event.opened", { from: "email" });
+      flagsLoading = false;
+      flags = {};
+      view.rerender(<UsageTracker />);
+      expect(window.__clearAnalyticsOff).toBe(true);
+      track("event.opened", { from: "email" });
+      window.umami = { track: umamiTrack, identify: vi.fn() };
+      flags = { usage_analytics: true };
+      me = member();
+      view.rerender(<UsageTracker />);
+      expect(umamiTrack).not.toHaveBeenCalled();
+    });
   });
 });
