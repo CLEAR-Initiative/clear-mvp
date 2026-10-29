@@ -193,6 +193,7 @@ export default function AdminActivityPage() {
               <Button
                 leftSection={<IconDownload size={16} />}
                 loading={exportCsv.isPending}
+                disabled={result?.status !== "ok"}
                 onClick={() => exportCsv.mutate()}
               >
                 {t("export.button")}
