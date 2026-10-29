@@ -85,7 +85,7 @@ describe("Analysis event count labels", () => {
     expect(map.textContent).not.toMatch(/\b0\b/);
   });
 
-  it("names the map total as events since the window", () => {
+  it("names the map total as events in this area since the window", () => {
     renderMap({
       totalCount: 4465,
       items: [{ ...event("e1"), point: [25.3, 13.6], locationName: "El Fasher", admin1: { id: "nd", name: "North Darfur" } }],

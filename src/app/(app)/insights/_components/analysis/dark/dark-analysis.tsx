@@ -382,7 +382,7 @@ export function AnalysisHeader({
   );
 }
 
-/** CLEAR returns to the analysis list. Analysis opens the Analysis page. */
+/** CLEAR returns to the list. Insights opens the Insights page. */
 export function AnalysisCrumbs({ name, onHome }: { name: string; onHome: () => void }) {
   const t = useTranslations("analysis.layout");
   const tNav = useTranslations("nav.items");
@@ -392,8 +392,8 @@ export function AnalysisCrumbs({ name, onHome }: { name: string; onHome: () => v
         CLEAR
       </button>
       <span>/</span>
-      <Link href="/analysis" className={styles.crumbLink}>
-        {tNav("analysis")}
+      <Link href="/insights" className={styles.crumbLink}>
+        {tNav("insights")}
       </Link>
       <span>/</span>
       <span className={styles.crumbHere}>{name}</span>

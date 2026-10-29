@@ -26,14 +26,14 @@ vi.mock("next/link", () => ({
   ),
 }));
 
-/** The Analysis page URL. Empty is the list. `replace` applies it, as the router would. */
+/** The Insights page URL. Empty is the list. `replace` applies it, as the router would. */
 let search = "";
 const replace = vi.fn((href: string) => {
   const q = href.indexOf("?");
   search = q === -1 ? "" : href.slice(q + 1);
 });
 vi.mock("next/navigation", () => ({
-  usePathname: () => "/analysis",
+  usePathname: () => "/insights",
   useRouter: () => ({ replace }),
   useSearchParams: () => new URLSearchParams(search),
 }));
@@ -505,10 +505,19 @@ describe("Insights > Analysis tab", () => {
     );
     expect(screen.getByRole("heading", { name: "Sheikan, North Kordofan, Sudan" })).toBeInTheDocument();
     expect(screen.queryByText("analysis.home.title")).not.toBeInTheDocument();
+    expect(replace).toHaveBeenCalledWith("/insights?insights=auto-1", { scroll: false });
+    expect(search).toBe("insights=auto-1");
 
     cleanup();
     renderHome();
     expect(screen.getByRole("heading", { name: "Sheikan, North Kordofan, Sudan" })).toBeInTheDocument();
+
+    cleanup();
+    replace.mockClear();
+    search = "analysis=auto-1";
+    renderHome();
+    expect(screen.getByRole("heading", { name: "Sheikan, North Kordofan, Sudan" })).toBeInTheDocument();
+    expect(replace).toHaveBeenCalledWith("/insights?insights=auto-1", { scroll: false });
   });
 
   it("records the automation id when a created analysis is opened, and back returns to the list", () => {
@@ -523,10 +532,10 @@ describe("Insights > Analysis tab", () => {
     };
     renderHome();
     fireEvent.click(within(screen.getByTestId("analysis-scope-auto-1")).getAllByRole("button")[0]!);
-    expect(replace).toHaveBeenCalledWith("/analysis?analysis=auto-1", { scroll: false });
+    expect(replace).toHaveBeenCalledWith("/insights?insights=auto-1", { scroll: false });
     expect(screen.getByRole("heading", { name: "Sheikan, North Kordofan, Sudan" })).toBeInTheDocument();
     fireEvent.click(screen.getByTestId("analysis-back"));
-    expect(replace).toHaveBeenLastCalledWith("/analysis", { scroll: false });
+    expect(replace).toHaveBeenLastCalledWith("/insights", { scroll: false });
     expect(screen.getByText("analysis.home.title")).toBeInTheDocument();
   });
 
@@ -540,6 +549,7 @@ describe("Insights > Analysis tab", () => {
     );
     expect(screen.getByRole("heading", { name: "Afghanistan" })).toBeInTheDocument();
     expect(screen.queryByText("analysis.home.title")).not.toBeInTheDocument();
+    expect(replace).not.toHaveBeenCalled();
 
     cleanup();
     renderHome();
@@ -549,10 +559,10 @@ describe("Insights > Analysis tab", () => {
   it("records the country location id when the country analysis is opened, and back returns to the list", () => {
     renderHome();
     fireEvent.click(within(screen.getByTestId("analysis-scope-country")).getAllByRole("button")[0]!);
-    expect(replace).toHaveBeenCalledWith("/analysis?country=sdn", { scroll: false });
+    expect(replace).toHaveBeenCalledWith("/insights?country=sdn", { scroll: false });
     expect(screen.getByRole("heading", { name: "Sudan" })).toBeInTheDocument();
     fireEvent.click(screen.getByTestId("analysis-back"));
-    expect(replace).toHaveBeenLastCalledWith("/analysis", { scroll: false });
+    expect(replace).toHaveBeenLastCalledWith("/insights", { scroll: false });
     expect(screen.getByText("analysis.home.title")).toBeInTheDocument();
   });
 
@@ -595,6 +605,7 @@ describe("Insights > Analysis tab", () => {
     expect(screen.getByText("analysis.home.title")).toBeInTheDocument();
     expect(screen.queryByText("analysis.error")).not.toBeInTheDocument();
     expect(frameQuery).not.toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ enabled: true }));
+    expect(replace).toHaveBeenCalledWith("/insights?insights=missing", { scroll: false });
   });
 
   it("shows the list for a country id this team cannot open", () => {
@@ -616,7 +627,7 @@ describe("Insights > Analysis tab", () => {
     const view = renderHome();
 
     fireEvent.click(within(screen.getByTestId("analysis-scope-auto-1")).getAllByRole("button")[0]!);
-    expect(search).toBe("analysis=auto-1");
+    expect(search).toBe("insights=auto-1");
     expect(screen.getByRole("heading", { name: "Sheikan, North Kordofan, Sudan" })).toBeInTheDocument();
 
     fireEvent.click(screen.getByTestId("analysis-back"));

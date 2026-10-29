@@ -4,7 +4,7 @@ import { WORLD_VIEW } from "../../src/lib/constants/country-config";
 /**
  * Case 11 — smoke for features landed this week / morning merges:
  *   - map "All Countries" → global WORLD_VIEW (not Sahel crop)
- *   - Analysis list (the retired Insights page redirects here)
+ *   - Insights list (the old /analysis URL redirects here)
  *   - Detection → Ground Intel + History tabs reachable
  *   - Map layers / satellite A/B chrome still mounts
  *
@@ -59,11 +59,11 @@ test.describe("Recent features smoke (case 11)", () => {
     }
   });
 
-  test("Analysis list loads, and the retired Insights URL lands there", async ({
+  test("Insights list loads, and the old Analysis URL lands there", async ({
     page,
   }) => {
-    await page.goto("/insights", { waitUntil: "domcontentloaded" });
-    await expect(page).toHaveURL(/\/analysis/, { timeout: 20_000 });
+    await page.goto("/analysis", { waitUntil: "domcontentloaded" });
+    await expect(page).toHaveURL(/\/insights(?:\?|$)/, { timeout: 20_000 });
     await expect(page.getByRole("heading", { name: "Analyses" })).toBeVisible({ timeout: 20_000 });
     await expect(page.getByRole("tab", { name: /Situation|Crisis Overview/i })).toHaveCount(0);
   });

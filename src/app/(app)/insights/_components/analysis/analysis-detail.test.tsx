@@ -9,7 +9,7 @@ import { clearAnalysisFiles } from "~/lib/analysis-file-store";
 const replace = vi.fn();
 const params = new URLSearchParams("country=sdn");
 vi.mock("next/navigation", () => ({
-  usePathname: () => "/analysis",
+  usePathname: () => "/insights",
   useRouter: () => ({ replace }),
   useSearchParams: () => params,
 }));
@@ -239,7 +239,7 @@ describe("AnalysisDetail header", () => {
   it("writes the active tab into the page URL", () => {
     renderDetail(COUNTRY);
     fireEvent.click(screen.getByRole("tab", { name: "analysis.tabs.needs" }));
-    expect(replace).toHaveBeenCalledWith("/analysis?country=sdn&tab=needs", { scroll: false });
+    expect(replace).toHaveBeenCalledWith("/insights?country=sdn&tab=needs", { scroll: false });
     expect(screen.getByTestId("analysis-needs")).toBeInTheDocument();
   });
 

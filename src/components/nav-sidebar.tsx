@@ -46,7 +46,7 @@ import { mapNavHrefFromFocusSession, readMapFocusSession } from "~/lib/map-focus
 import { NAV_COLLAPSED_W_PX, NAV_EXPANDED_W_PX } from "~/lib/is-map-path";
 import { setNavCollapsedCookie } from "~/lib/nav-collapsed-cookie";
 import { useInboxUnread } from "~/lib/inbox-badge";
-import { ANALYSIS_NAV_LABEL, NAV_ROUTES, type NavItemKey } from "~/lib/nav-routes";
+import { NAV_ROUTES, type NavItemKey } from "~/lib/nav-routes";
 import { NotificationsBell } from "~/components/notifications-bell";
 import { SidebarCountryPicker } from "~/components/sidebar-country-picker";
 
@@ -58,7 +58,7 @@ interface NavVisibility {
   inbox: InboxAccess;
 }
 
-type NavLabelKey = NavItemKey | typeof ANALYSIS_NAV_LABEL;
+type NavLabelKey = NavItemKey;
 
 function navBadge(badges: Partial<Record<NavItemKey, string>>, key: NavLabelKey): string | undefined {
   if (!(key in badges)) return undefined;
@@ -117,7 +117,7 @@ const navSections: NavSection[] = [
         visibleWhen: ({ inbox }) => inbox.any,
       },
       { labelKey: "map", href: NAV_ROUTES.map, icon: IconMapPin, featureKey: "crisis_map" },
-      { labelKey: ANALYSIS_NAV_LABEL, href: NAV_ROUTES.analysis, icon: IconChartPie },
+      { labelKey: "insights", href: NAV_ROUTES.insights, icon: IconChartPie },
       { labelKey: "metrics", href: NAV_ROUTES.metrics, icon: IconChartBar, adminOnly: true },
       { labelKey: "operations", href: NAV_ROUTES.operations, icon: IconUser, featureKey: "operations", adminOnly: true },
       { labelKey: "cash", href: NAV_ROUTES.cash, icon: IconCurrencyDollar, featureKey: "cash_assistance", adminOnly: true },
