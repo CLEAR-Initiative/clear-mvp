@@ -169,4 +169,28 @@ describe("AnalysisNeeds", () => {
     expect(screen.getByText("water points")).toBeInTheDocument();
     expect(screen.getByText("IMC")).toBeInTheDocument();
   });
+
+  it("shows a sector that has survey data and no analysis entry", () => {
+    needsResult.data = {
+      hasMsna: true,
+      ochaAsOf: null,
+      sectors: [
+        { key: "health", saf: "Severe", pin: 12_000, pinIsApprox: false, hasMsna: true, ocha: null },
+        { key: "wash", saf: null, pin: null, pinIsApprox: false, hasMsna: false, ocha: null },
+        { key: "shelter", saf: null, pin: null, pinIsApprox: false, hasMsna: false, ocha: null },
+        { key: "protection", saf: null, pin: null, pinIsApprox: false, hasMsna: false, ocha: null },
+        { key: "food", saf: null, pin: null, pinIsApprox: false, hasMsna: false, ocha: null },
+        { key: "education", saf: null, pin: null, pinIsApprox: false, hasMsna: false, ocha: null },
+      ],
+    };
+    render(
+      <MantineProvider>
+        <AnalysisNeeds scopeName="Sheikan" locationIds={["sheikan"]} sources={[]} sectors={[]} figures={undefined} />
+      </MantineProvider>,
+    );
+    expect(screen.getByText("crisisDetail.needs.sectors.health")).toBeInTheDocument();
+    expect(screen.getByText("crisisDetail.needs.saf.severe")).toBeInTheDocument();
+    expect(screen.getByText("12K", { exact: true })).toBeInTheDocument();
+    expect(screen.queryByText("crisisDetail.needs.sectors.wash")).not.toBeInTheDocument();
+  });
 });

@@ -101,10 +101,17 @@ export function AnalysisNeeds({
     { enabled: locationIds.length > 0, staleTime: 5 * 60_000 },
   );
   const byKey = useMemo(() => new Map((needs.data?.sectors ?? []).map((sector) => [sector.key, sector])), [needs.data]);
+  const coveredKeys = useMemo(
+    () =>
+      (needs.data?.sectors ?? [])
+        .filter((sector) => sector.saf != null || sector.pin != null || sector.ocha != null || sector.hasMsna)
+        .map((sector) => sector.key),
+    [needs.data],
+  );
 
   const rows = useMemo<NeedsSectorRow[]>(
     () =>
-      analysisNeedsRows(sectors, figures).map((model) => {
+      analysisNeedsRows(sectors, figures, coveredKeys).map((model) => {
         const def = NEEDS_SECTORS.find((item) => item.key === model.key);
         const sector = sectors.find((item) => item.id === model.sectorId) ?? null;
         const scope = isScopeKey(model.key) ? byKey.get(model.key) : undefined;
@@ -137,7 +144,7 @@ export function AnalysisNeeds({
           severityNote: saf && model.severity ? tA("reportingGrade", { grade: tSev(model.severity) }) : null,
         };
       }),
-    [byKey, figures, sectors, sources, t, tA, tSev],
+    [byKey, coveredKeys, figures, sectors, sources, t, tA, tSev],
   );
 
   const scopeNeeds = needs.data;
