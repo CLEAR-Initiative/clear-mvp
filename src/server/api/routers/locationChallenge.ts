@@ -4,8 +4,8 @@ import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { graphqlFetch, cookieHeaders } from "~/server/api/graphql";
 import { isGraphqlSchemaUnavailable } from "~/server/api/graphql-schema-unavailable";
 import { toTrpcError } from "~/server/api/routers/tasks";
-import type { GqlSignalLocationChallenge } from "~/lib/types/graphql";
-import type { PlacedLocation } from "~/lib/location-challenge";
+import type { GqlLocationChallengeToDecide, GqlSignalLocationChallenge } from "~/lib/types/graphql";
+import { LOCATION_CHALLENGE_DECISIONS, type PlacedLocation } from "~/lib/location-challenge";
 
 const CHALLENGE_FIELDS = `
   id
@@ -26,6 +26,15 @@ const GET_BY_SIGNAL_QUERY = `
     signal(id: $id) {
       id
       locationChallenge { ${CHALLENGE_FIELDS} }
+    }
+  }
+`;
+
+const CORRECTED_AT_QUERY = `
+  query SignalLocationCorrectedAt($id: String!) {
+    signal(id: $id) {
+      id
+      locationCorrectedAt
     }
   }
 `;
@@ -57,6 +66,50 @@ const PLACEMENT_QUERY = `
   }
 `;
 
+// A Signal's location as the decider reads it: point geometry for the map,
+// the ancestors for its place name.
+const DECIDE_LOCATION_FIELDS = `id name level pointType geometry ancestors { id name level }`;
+
+const TO_DECIDE_QUERY = `
+  query SignalLocationChallengesToDecide {
+    signalLocationChallengesToDecide {
+      ${CHALLENGE_FIELDS}
+      teamId
+      createdByName
+      team { id name locations { id } }
+      signal {
+        id
+        title
+        generalLocation { ${DECIDE_LOCATION_FIELDS} }
+        originLocation { ${DECIDE_LOCATION_FIELDS} }
+        destinationLocation { ${DECIDE_LOCATION_FIELDS} }
+      }
+      proposedPlacement { id name level ancestors { id name level } }
+    }
+  }
+`;
+
+const TO_DECIDE_COUNT_QUERY = `
+  query SignalLocationChallengesToDecideCount {
+    signalLocationChallengesToDecide { id }
+  }
+`;
+
+const DECIDE_MUTATION = `
+  mutation DecideSignalLocationChallenge(
+    $id: String!
+    $decision: SignalLocationChallengeDecision!
+    $point: LocationChallengePointInput
+  ) {
+    decideSignalLocationChallenge(id: $id, decision: $decision, point: $point) {
+      ${CHALLENGE_FIELDS}
+    }
+  }
+`;
+
+/** clear-api's page maximum for challenges to decide. */
+const TO_DECIDE_MAX = 200;
+
 const proposedPointPair = z
   .object({
     proposedLng: z.number().min(-180).max(180).optional(),
@@ -85,6 +138,22 @@ export const locationChallengeRouter = createTRPCRouter({
           signal: { id: string; locationChallenge: GqlSignalLocationChallenge | null } | null;
         }>(GET_BY_SIGNAL_QUERY, { id: input.signalId }, cookieHeaders(ctx));
         return data.signal?.locationChallenge ?? null;
+      } catch (err) {
+        if (isGraphqlSchemaUnavailable(err)) return null;
+        throw err;
+      }
+    }),
+
+  /** When a decision last wrote the Signal's location (an admin accepted a
+   * change or placed a point), or null while it is the source's. */
+  correctedAt: protectedProcedure
+    .input(z.object({ signalId: z.string().min(1) }))
+    .query(async ({ ctx, input }): Promise<string | null> => {
+      try {
+        const data = await graphqlFetch<{
+          signal: { id: string; locationCorrectedAt: string | null } | null;
+        }>(CORRECTED_AT_QUERY, { id: input.signalId }, cookieHeaders(ctx));
+        return data.signal?.locationCorrectedAt ?? null;
       } catch (err) {
         if (isGraphqlSchemaUnavailable(err)) return null;
         throw err;
@@ -129,6 +198,79 @@ export const locationChallengeRouter = createTRPCRouter({
           cookieHeaders(ctx),
         );
         return data.locationPlacement ?? null;
+      } catch (err) {
+        toTrpcError(err);
+      }
+    }),
+
+  /** Open challenges the reader decides (a team admin: those filed for
+   * their teams; a platform admin: all), their own included, newest first. */
+  toDecide: protectedProcedure.query(async ({ ctx }): Promise<GqlLocationChallengeToDecide[]> => {
+    try {
+      const data = await graphqlFetch<{ signalLocationChallengesToDecide: GqlLocationChallengeToDecide[] }>(
+        TO_DECIDE_QUERY,
+        {},
+        cookieHeaders(ctx),
+      );
+      return data.signalLocationChallengesToDecide ?? [];
+    } catch (err) {
+      if (isGraphqlSchemaUnavailable(err)) return [];
+      toTrpcError(err);
+    }
+  }),
+
+  /** How many challenges wait for the reader's decision, for the nav badge
+   * (ids only). `capped` at clear-api's page maximum. */
+  toDecideCount: protectedProcedure.query(async ({ ctx }): Promise<{ count: number; capped: boolean }> => {
+    try {
+      const data = await graphqlFetch<{ signalLocationChallengesToDecide: { id: string }[] }>(
+        TO_DECIDE_COUNT_QUERY,
+        {},
+        cookieHeaders(ctx),
+      );
+      const count = data.signalLocationChallengesToDecide?.length ?? 0;
+      return { count, capped: count >= TO_DECIDE_MAX };
+    } catch (err) {
+      if (isGraphqlSchemaUnavailable(err)) return { count: 0, capped: false };
+      toTrpcError(err);
+    }
+  }),
+
+  /** Decide an open challenge: ACCEPT writes the proposed point onto the
+   * Signal, CORRECT writes `point` instead, DECLINE leaves the Signal as it
+   * is. clear-api checks the decider and the areas; its error comes back with
+   * its code (FORBIDDEN, BAD_REQUEST, CONFLICT, NOT_FOUND). */
+  decide: protectedProcedure
+    .input(
+      z
+        .object({
+          id: z.string().min(1),
+          decision: z.enum(LOCATION_CHALLENGE_DECISIONS),
+          point: z
+            .object({
+              lat: z.number().min(-90).max(90),
+              lng: z.number().min(-180).max(180),
+              name: z.string().trim().max(500).optional(),
+            })
+            .optional(),
+        })
+        .refine((val) => (val.decision === "CORRECT") === (val.point != null), {
+          message: "point is required with CORRECT and refused otherwise",
+          path: ["point"],
+        }),
+    )
+    .mutation(async ({ ctx, input }): Promise<GqlSignalLocationChallenge> => {
+      try {
+        const data = await graphqlFetch<{ decideSignalLocationChallenge: GqlSignalLocationChallenge }>(
+          DECIDE_MUTATION,
+          {
+            id: input.id,
+            decision: input.decision,
+            point: input.point ? { ...input.point, name: input.point.name || undefined } : undefined,
+          },
+          cookieHeaders(ctx),
+        );
+        return data.decideSignalLocationChallenge;
       } catch (err) {
         toTrpcError(err);
       }

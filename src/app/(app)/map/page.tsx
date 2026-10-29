@@ -1633,7 +1633,7 @@ function MapPageContent() {
       setLocationCorrectionDraft(null);
       notifications.show({
         title: tChallenge("modal.successTitle"),
-        message: tChallenge("modal.successCorrection"),
+        message: tChallenge("modal.successBody"),
         color: "green",
       });
     } catch (err) {

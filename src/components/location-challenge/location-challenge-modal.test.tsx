@@ -5,11 +5,13 @@ import { MantineProvider } from "@mantine/core";
 import type { GqlSignalLocationChallenge } from "~/lib/types/graphql";
 
 /**
- * Filing a Location challenge: it goes to the active team's admin, with a
- * corrected point found by place search or typed as coordinates. Typed
- * coordinates count only once they leave the source pin, an update starts
- * from the open challenge, and a place outside CLEAR's areas or the team's
- * area (unless a platform admin files it) is refused before it is sent.
+ * Changing a Signal's location (a Location challenge in clear-api): it shows
+ * where the Signal is now and goes to the active team's admin with the new
+ * point, found by place search, clicked on the map, or typed as coordinates.
+ * Typed coordinates count only once they leave the current pin, an edit
+ * starts from the open change, and a place outside CLEAR's areas or the
+ * team's area (unless a platform admin files it) is refused before it is
+ * sent.
  */
 
 vi.mock("next-intl", () => ({
@@ -20,6 +22,23 @@ vi.mock("next-intl", () => ({
 const notify = vi.fn();
 vi.mock("@mantine/notifications", () => ({
   notifications: { show: (...args: unknown[]) => notify(...args) },
+}));
+
+/** The map: a click on it places the new point. */
+vi.mock("./location-challenge-map", () => ({
+  LocationChallengeMap: (props: {
+    source: { lat: number; lng: number } | null;
+    placed: { lat: number; lng: number } | null;
+    onPick: (at: { lat: number; lng: number }) => void;
+  }) => (
+    <button
+      type="button"
+      data-testid="map"
+      data-source={props.source ? `${props.source.lat},${props.source.lng}` : ""}
+      data-placed={props.placed ? `${props.placed.lat},${props.placed.lng}` : ""}
+      onClick={() => props.onPick({ lat: 12.3, lng: 24.7 })}
+    />
+  ),
 }));
 
 const geocodePlaceQuery = vi.fn();
@@ -119,8 +138,35 @@ afterEach(() => {
 });
 
 describe("LocationChallengeModal", () => {
-  it("files a bare challenge for the active team", () => {
+  it("shows where the Signal is now, with its exact coordinates", () => {
+    open({ currentPlace: "Nyala, South Darfur, Sudan" });
+    const current = screen.getByTestId("location-challenge-current");
+    expect(current.textContent).toContain("Nyala, South Darfur, Sudan");
+    expect(current.textContent).toContain("12.05000, 24.88000");
+    expect(screen.getByTestId("map").getAttribute("data-source")).toBe("12.05,24.88");
+    cleanup();
+
+    open({ sourceLat: undefined, sourceLng: undefined });
+    expect(screen.getByTestId("location-challenge-current").textContent).toContain("modal.noPlace");
+    expect(screen.getByTestId("location-challenge-current").textContent).toContain("modal.noPin");
+  });
+
+  it("can't be proposed without a new location, even with a note", () => {
     open();
+    fireEvent.change(screen.getByLabelText("modal.noteLabel"), { target: { value: "Wrong town" } });
+    expect(submitButton().disabled).toBe(true);
+    fireEvent.click(submitButton());
+    expect(submitMutate).not.toHaveBeenCalled();
+  });
+
+  it("places the new location with a click on the map, and proposes it for the active team", () => {
+    placement = IN_AREA;
+    open();
+    fireEvent.click(screen.getByTestId("map"));
+    expect(screen.getByTestId("map").getAttribute("data-placed")).toBe("12.3,24.7");
+    expect(screen.getByTestId("location-challenge-preview").textContent).toContain(
+      'modal.landsIn:{"chain":"Nyala, Sudan"}',
+    );
     fireEvent.change(screen.getByLabelText("modal.noteLabel"), { target: { value: "  Wrong town  " } });
     fireEvent.click(submitButton());
     expect(submitMutate).toHaveBeenCalledWith({
@@ -128,19 +174,35 @@ describe("LocationChallengeModal", () => {
       teamId: "T1",
       note: "Wrong town",
       proposedName: undefined,
-      proposedLat: undefined,
-      proposedLng: undefined,
+      proposedLat: 12.3,
+      proposedLng: 24.7,
     });
   });
 
-  it("files no point when the coordinate fields are opened but left at the source pin", () => {
+  it("looks a place up, shows where it lands in CLEAR, and proposes it with its name", async () => {
+    placement = IN_AREA;
     open();
-    fireEvent.click(screen.getByText("modal.enterCoordinatesManually"));
+    fireEvent.change(screen.getByTestId("location-challenge-search"), { target: { value: "Kalma" } });
+    fireEvent.click(await screen.findByText("Kalma, South Darfur, Sudan"));
+    expect(screen.getByTestId("map").getAttribute("data-placed")).toBe("12,24.95");
+    expect(screen.getByTestId("location-challenge-preview").textContent).toContain(
+      'modal.landsIn:{"chain":"Nyala, Sudan"}',
+    );
     fireEvent.click(submitButton());
-    expect(submitMutate.mock.calls[0]![0]).toMatchObject({ proposedLat: undefined, proposedLng: undefined });
+    expect(submitMutate.mock.calls[0]![0]).toMatchObject({
+      proposedLat: 12.0,
+      proposedLng: 24.95,
+      proposedName: "Kalma",
+    });
   });
 
-  it("files typed coordinates once they leave the source pin", () => {
+  it("proposes nothing while the typed coordinates are still the current pin", () => {
+    open();
+    fireEvent.click(screen.getByText("modal.enterCoordinatesManually"));
+    expect(submitButton().disabled).toBe(true);
+  });
+
+  it("proposes typed coordinates once they leave the current pin", () => {
     placement = IN_AREA;
     open();
     fireEvent.click(screen.getByText("modal.enterCoordinatesManually"));
@@ -149,7 +211,7 @@ describe("LocationChallengeModal", () => {
     expect(submitMutate.mock.calls[0]![0]).toMatchObject({ proposedLat: 12.5, proposedLng: 24.88 });
   });
 
-  it("starts an update from the open challenge, so resubmitting keeps its note and point", () => {
+  it("starts an edit from the open change, so resubmitting keeps its note and point", () => {
     placement = IN_AREA;
     open({ existing: OPEN_WITH_POINT });
     expect((screen.getByLabelText("modal.noteLabel") as HTMLTextAreaElement).value).toBe("Wrong town");
@@ -178,8 +240,10 @@ describe("LocationChallengeModal", () => {
     });
   });
 
-  it("keeps the success screen when the filed challenge comes back", () => {
+  it("keeps the success screen when the proposed change comes back", () => {
+    placement = IN_AREA;
     const view = open();
+    fireEvent.click(screen.getByTestId("map"));
     fireEvent.click(submitButton());
     expect(screen.getByText("modal.successTitle")).toBeTruthy();
     view.rerender(
@@ -195,22 +259,6 @@ describe("LocationChallengeModal", () => {
       </MantineProvider>,
     );
     expect(screen.getByText("modal.successTitle")).toBeTruthy();
-  });
-
-  it("looks a place up, shows where it lands in CLEAR, and files it with its name", async () => {
-    placement = IN_AREA;
-    open();
-    fireEvent.change(screen.getByTestId("location-challenge-search"), { target: { value: "Kalma" } });
-    fireEvent.click(await screen.findByText("Kalma, South Darfur, Sudan"));
-    expect(screen.getByTestId("location-challenge-preview").textContent).toContain(
-      'modal.landsIn:{"chain":"Nyala, Sudan"}',
-    );
-    fireEvent.click(submitButton());
-    expect(submitMutate.mock.calls[0]![0]).toMatchObject({
-      proposedLat: 12.0,
-      proposedLng: 24.95,
-      proposedName: "Kalma",
-    });
   });
 
   it("refuses a place outside the team's area, unless a platform admin files it", () => {
@@ -234,15 +282,28 @@ describe("LocationChallengeModal", () => {
   });
 
   it("can't be sent without an active team", () => {
+    placement = IN_AREA;
     activeTeam = null;
-    open();
+    open({ existing: OPEN_WITH_POINT });
     expect(submitButton().disabled).toBe(true);
   });
 
   it("explains a refusal from clear-api", () => {
+    placement = IN_AREA;
     submitError = { message: "The place is outside the team's area", data: { code: "FORBIDDEN" } };
-    open();
+    open({ existing: OPEN_WITH_POINT });
     fireEvent.click(submitButton());
     expect(notify).toHaveBeenCalledWith(expect.objectContaining({ message: "errors.forbidden", color: "red" }));
+  });
+
+  it("on the Map page, sends the reader to the big map instead of a small one", () => {
+    const onPlaceOnMap = vi.fn();
+    const onClose = vi.fn();
+    open({ onPlaceOnMap, onClose });
+    expect(screen.queryByTestId("map")).toBeNull();
+    fireEvent.change(screen.getByLabelText("modal.noteLabel"), { target: { value: "Wrong town" } });
+    fireEvent.click(screen.getByText("modal.placeOnMap"));
+    expect(onPlaceOnMap).toHaveBeenCalledWith({ note: "Wrong town" });
+    expect(onClose).toHaveBeenCalled();
   });
 });

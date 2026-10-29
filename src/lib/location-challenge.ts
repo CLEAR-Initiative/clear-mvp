@@ -1,4 +1,5 @@
-import { TEAM_ANALYST, isPlatformAdmin } from "~/lib/roles";
+import { TEAM_ANALYST, isPlatformAdmin, isTeamAdmin } from "~/lib/roles";
+import type { GqlLocation } from "~/lib/types/graphql";
 
 /**
  * Location challenges on Signals (Exponential #836): an analyst files one for
@@ -35,6 +36,16 @@ export function canFileLocationChallenge(
   return isPlatformAdmin(globalRole) || activeTeamRole === TEAM_ANALYST;
 }
 
+/** Whether the reader decides Location challenges in the Inbox: a platform
+ *  admin, or a team admin (clear-api lists only their teams' challenges,
+ *  their own included). */
+export function canDecideLocationChallenges(
+  globalRole: string | null | undefined,
+  teamMemberships: { role: string }[] | null | undefined,
+): boolean {
+  return isPlatformAdmin(globalRole) || isTeamAdmin(teamMemberships);
+}
+
 /**
  * Whether a place (the admin area a point falls in, with its ancestors) is in
  * the team's area: one of the team's locations or anything under them. A team
@@ -64,12 +75,55 @@ type ChainLocation = {
  */
 export function locationChain(location: ChainLocation | null | undefined): string | null {
   if (!location) return null;
-  const parts = [location, ...(location.ancestors ?? [])]
+  return chainText([location, ...(location.ancestors ?? [])]);
+}
+
+function chainText(locations: { name: string; level: number }[]): string | null {
+  const parts = locations
     .slice()
     .sort((a, b) => b.level - a.level)
     .map((l) => l.name.trim())
     .filter((name, i, all) => name.length > 0 && name !== all[i - 1]);
   return parts.length > 0 ? parts.join(", ") : null;
+}
+
+/**
+ * Where a Signal's location is, as readable text. A point's own name shows
+ * only when the geoparser named it (landmark-geocoded); otherwise it is
+ * usually the Signal's title, so the chain starts at its district. The same
+ * rule as `resolveLocationName`.
+ */
+export function signalPlaceLabel(location: GqlLocation | null | undefined): string | null {
+  if (!location) return null;
+  const ownName = location.pointType === "landmark-geocoded" || location.level <= 2;
+  return chainText([
+    ...(ownName ? [location] : []),
+    ...(location.ancestors ?? []).filter((a) => a.level <= 2),
+  ]);
+}
+
+type SignalLocations = {
+  generalLocation: GqlLocation | null;
+  originLocation: GqlLocation | null;
+  destinationLocation: GqlLocation | null;
+};
+
+/** The location a Signal is pinned at: its general location, else its origin
+ *  or destination (the order the Signal page reads them in). */
+export function signalLocationOf(signal: SignalLocations): GqlLocation | null {
+  return signal.generalLocation ?? signal.originLocation ?? signal.destinationLocation ?? null;
+}
+
+/** The Signal's pin: the first of its locations that is a point, or null
+ *  when it is placed on an area only. */
+export function signalPin(signal: SignalLocations): { lat: number; lng: number } | null {
+  for (const location of [signal.generalLocation, signal.originLocation, signal.destinationLocation]) {
+    const geometry = location?.geometry;
+    if (geometry?.type !== "Point" || !Array.isArray(geometry.coordinates)) continue;
+    const [lng, lat] = geometry.coordinates as number[];
+    if (typeof lat === "number" && typeof lng === "number") return { lat, lng };
+  }
+  return null;
 }
 
 /** The place's own name from a geocoder label ("Haya, Red Sea, Sudan" -> "Haya"). */
@@ -107,5 +161,33 @@ export function challengeErrorKey(code: string | null | undefined): ChallengeErr
       return "errors.conflict";
     default:
       return "errors.submitFailed";
+  }
+}
+
+/** How a decider decides a Location challenge (clear-api
+ *  `SignalLocationChallengeDecision`). */
+export const LOCATION_CHALLENGE_DECISIONS = ["ACCEPT", "CORRECT", "DECLINE"] as const;
+export type LocationChallengeDecision = (typeof LOCATION_CHALLENGE_DECISIONS)[number];
+
+export type DecisionErrorKey =
+  | "location.errors.forbidden"
+  | "location.errors.outsideCoverage"
+  | "location.errors.conflict"
+  | "location.errors.failed";
+
+/** The `inbox` message for a failed decision, by the tRPC code clear-api's
+ *  error mapped to. CONFLICT: decided already, or replaced by a newer
+ *  challenge. NOT_FOUND: gone, the same to the decider. */
+export function decisionErrorKey(code: string | null | undefined): DecisionErrorKey {
+  switch (code) {
+    case "FORBIDDEN":
+      return "location.errors.forbidden";
+    case "BAD_REQUEST":
+      return "location.errors.outsideCoverage";
+    case "CONFLICT":
+    case "NOT_FOUND":
+      return "location.errors.conflict";
+    default:
+      return "location.errors.failed";
   }
 }

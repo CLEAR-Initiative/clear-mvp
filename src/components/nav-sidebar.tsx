@@ -45,7 +45,7 @@ import { isModifiedNavClick } from "~/components/page-transition-intent";
 import { mapNavHrefFromFocusSession, readMapFocusSession } from "~/lib/map-focus-session";
 import { NAV_COLLAPSED_W_PX, NAV_EXPANDED_W_PX } from "~/lib/is-map-path";
 import { setNavCollapsedCookie } from "~/lib/nav-collapsed-cookie";
-import { useInboxUnread } from "~/lib/inbox-badge";
+import { inboxBadgeLabel, useInboxUnread } from "~/lib/inbox-badge";
 import { NAV_ROUTES, type NavItemKey } from "~/lib/nav-routes";
 import { NotificationsBell } from "~/components/notifications-bell";
 import { SidebarCountryPicker } from "~/components/sidebar-country-picker";
@@ -196,17 +196,25 @@ export function NavSidebar({
   // Until the Inbox has measured that, it is the server queue (ids only;
   // capped at clear-api's page maximum, shown as "200+"). After that, the
   // measurement follows later polls: new proposals and other reviewers'
-  // decisions move the badge by the change in the server total.
+  // decisions move the badge by the change in the server total. Open
+  // Location challenges the reader decides add to it until decided.
   const proposedCount = api.tasks.reviewCount.useQuery(undefined, {
     enabled: reviewAccess.proposals,
     staleTime: 60_000,
     refetchInterval: 120_000,
   });
+  const locationCount = api.locationChallenge.toDecideCount.useQuery(undefined, {
+    enabled: reviewAccess.locations,
+    staleTime: 60_000,
+    refetchInterval: 120_000,
+  });
   const liveUnread = useInboxUnread(proposedCount.data?.count);
-  const inboxCount = liveUnread ?? proposedCount.data?.count;
-  const inboxBadge = reviewAccess.proposals && inboxCount != null && inboxCount > 0
-    ? `${inboxCount}${liveUnread == null && proposedCount.data?.capped ? "+" : ""}`
-    : undefined;
+  const inboxBadge = inboxBadgeLabel({
+    proposals: reviewAccess.proposals ? (liveUnread ?? proposedCount.data?.count) : undefined,
+    proposalsCapped: reviewAccess.proposals && liveUnread == null && !!proposedCount.data?.capped,
+    locations: reviewAccess.locations ? locationCount.data?.count : undefined,
+    locationsCapped: reviewAccess.locations && !!locationCount.data?.capped,
+  });
   const badges: Partial<Record<NavItemKey, string>> = { inbox: inboxBadge };
 
   // Publish overlay width before paint. Keep motion flag out of this cleanup —

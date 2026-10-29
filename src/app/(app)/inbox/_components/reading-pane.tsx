@@ -22,18 +22,22 @@ import {
   TRANSLATION_POLL_MS,
   attachmentKey,
   isCaseGroupEntry,
+  isLocationChallengeEntry,
   needsTranslation,
   shownTranslation,
   type CaseGroupEntry,
   type HotlineEntry,
   type InboxAttachment,
   type InboxEntry,
+  type LocationChallengeEntry,
   type RejectReason,
   type VoiceTranscript,
 } from "~/lib/hotline-inbox";
+import type { LocationChallengeDecision } from "~/lib/location-challenge";
 import type { GqlCaseProposal, GqlCaseProposalDecision, GqlReviewCaseProposal } from "~/lib/types/graphql";
 import { CaseProposalRow } from "~/components/impact-prior/case-proposal-row";
 import { InboxEntryPills } from "./classification-pill";
+import { LocationChallengePane } from "./location-challenge-pane";
 import { VoiceNote } from "./voice-note";
 import styles from "../inbox.module.css";
 
@@ -49,6 +53,11 @@ interface ReadingPaneProps {
   onCaseDecided?: (proposal: GqlReviewCaseProposal, decided: GqlCaseProposal, decision: GqlCaseProposalDecision) => void;
   /** clear-api answered CONFLICT / NOT_FOUND on a case: the copy is stale. */
   onCaseStale?: (proposal: GqlReviewCaseProposal) => void;
+  /** Location challenges: the reader may place a Signal beyond the team's
+   * area (a platform admin). */
+  canPlaceAnywhere?: boolean;
+  /** A Location challenge was decided from its pane. */
+  onLocationDecided?: (entry: LocationChallengeEntry, decision: LocationChallengeDecision) => void;
   busy: boolean;
   error: string | null;
   rejectOpen: boolean;
@@ -283,6 +292,17 @@ export function ReadingPane(props: ReadingPaneProps) {
         canDecide={!!props.canDecide}
         onCaseDecided={props.onCaseDecided}
         onCaseStale={props.onCaseStale}
+        onBack={props.onBack}
+      />
+    );
+  }
+  if (isLocationChallengeEntry(entry)) {
+    return (
+      <LocationChallengePane
+        key={entry.id}
+        entry={entry}
+        canPlaceAnywhere={!!props.canPlaceAnywhere}
+        onDecided={(decided, decision) => props.onLocationDecided?.(decided, decision)}
         onBack={props.onBack}
       />
     );

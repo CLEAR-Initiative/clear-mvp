@@ -84,18 +84,20 @@ _Avoid_: using Alert for any raw Signal; "notification" (product push/tagging is
 
 **Inbox**:
 The one queue of **Review items** a reader may act on (`/inbox`): hotline threads for
-platform admins (`hotline_inbox`), **Proposed signals** for deciders — admins and
-analysts (`impact_prior_review`, a flag key kept from before the rename). One access rule
-(`src/lib/inbox-access.ts`) gates the page and its nav entry; clear-api's guards are the
-enforcement.
+platform admins (`hotline_inbox`), **Proposed signals** for deciders, that is admins and
+analysts (`impact_prior_review`, a flag key kept from before the rename), and **Location
+challenges** for platform admins and the admins of the team each was filed for. One
+access rule (`src/lib/inbox-access.ts`) gates the page and its nav entry; clear-api's
+guards are the enforcement.
 _Avoid_: "hotline inbox" for the whole page — that is one kind of Review item.
 
 **Review item**:
 One thing in the **Inbox** waiting for a person's decision: a hotline thread (Add to
-CLEAR / Archive / Reject) or a **Proposed signal** (accept, or reject with a rationale). A
-Proposed signal is also decidable from its **Event** page — two doors, one decision. The
+CLEAR / Archive / Reject), a **Proposed signal** (accept, or reject with a rationale) or a
+**Location challenge** (accept the proposed point, place a different one, or decline). A
+Proposed signal is also decidable from its **Event** page: two doors, one decision. The
 Inbox groups an Event's Proposed signals into one entry and counts decisions waiting: one
-per thread or undecided Proposed signal. In product copy the filter and an Event's group
+per thread, undecided Proposed signal or open Location challenge. In product copy the filter and an Event's group
 read "Proposed signals"; a web request reads "Web search".
 _Avoid_: a whole ImpactPrior as a Review item — nothing proposes one any more (the
 **ImpactPrior** is computed).
@@ -145,47 +147,53 @@ _Avoid_: "notification" for an Alert or for the attention lifecycle.
 ### Location trust
 
 **Location challenge**:
-An analyst marks a **Signal** pin as untrusted (“this looks wrong”) without the system
-forcing alternate candidates. A challenge **does not require** a proposed fix. First
-wedge: **Signals only** — parent **Event** / **Alert** may show that a child Signal has
-an open challenge, but corrections do not attach to Event/Alert pins yet. **v1 entry:**
-Signal detail page **and** Signal **Marker detail panel** (same action, two doors).
-Optional **Location correction**: place-on-map primary, manual lat/lng secondary.
-**Persistence** is a **clear-api** concern
-([docs/clear-api-location-challenge.md](docs/clear-api-location-challenge.md)) — without
-it the UI is visual/session-only. **No Location admin** accept/decline in v1 and **not
-near-roadmap**; queue-only.
-_Avoid_: “top‑3 locations” as a required step; requiring a correction to file a
-challenge; challenging Event/Alert pins as the v1 model; map-only or detail-only entry;
-treating the FE ship as durable memory of challenges; shipping accept/reject “next”.
+An analyst proposes where a **Signal** should be instead, for their team, without the
+system forcing alternate candidates. **Product copy says "change"**: "Change location"
+files one and the **Inbox** tab is "Location changes"; clear-api and the code keep
+"challenge". The form shows where the Signal is now (its place and exact coordinates) and
+asks where it should be: its **Location correction**, required since 2026-10-29 (older
+challenges without a point still reach the **Inbox**). **Signals only**: a parent
+**Event** / **Alert** may show that a child Signal has an open challenge, but corrections
+do not attach to Event/Alert pins. **Entry:** the ⋯ menu at the top right of Signal
+detail **and** the Signal **Marker detail panel** (same action, two doors), for the
+active team's analysts and platform admins. The team's admin decides it in the
+**Inbox** (see **Consideration**). A Signal has at most one open challenge: filing again
+replaces it. clear-api persists challenges
+([docs/clear-api-location-challenge.md](docs/clear-api-location-challenge.md)).
+_Avoid_: “top‑3 locations” as a required step; "challenge" in product copy; challenging
+Event/Alert pins; map-only or detail-only entry; a challenge that moves the Signal by
+itself.
 
 **Location correction**:
-An optional proposed new **point** (lat/lng) for a challenged **Signal**, submitted for
-**consideration**. Place name / note may accompany it but are not required. Not applied
-as sole truth — there is **no** accept/reject path in v1 or the near roadmap; the point
-stays queued once clear-api persists it.
-_Avoid_: treating submit as immediate overwrite; requiring a gazetteer name pick;
-treating correction as mandatory whenever a challenge exists; assuming an admin review
-console is coming next.
+The proposed new **point** (lat/lng) for a challenged **Signal**, submitted for
+**consideration**: a place search, a click on the map (in the form, or on the Map page's
+own map), or typed lat/lng. Place name / note may accompany it but are not required.
+Filing it changes nothing on the Signal: the point is written only if the team's admin
+accepts it.
+_Avoid_: treating submit as immediate overwrite; requiring a gazetteer name pick.
 
 **Dual location display**:
 Only when a **Location correction** (proposed point) exists: the map shows **both** the
-source pin and the proposed pin (e.g. solid vs ghost) while queued. A bare **Location
-challenge** (no correction) keeps the source pin with a challenged affordance — no
-second pin.
+source pin and the proposed pin (e.g. solid vs ghost) while the challenge is open. A bare
+**Location challenge** (no correction) keeps the source pin with a challenged affordance,
+and no second pin. Once it is decided, the Signal has one pin again.
 _Avoid_: hiding the Signal until resolved; silently replacing the source pin; showing
 a ghost pin when no correction was submitted.
 
 **Consideration**:
-The review state for a **Location correction** before it becomes trusted geography.
-**v1:** corrections are queued only — no in-product accept/reject UI yet. **End-state:**
-a **Location admin** (gazetteer / naming reviewer — the “data admin group”) performs
-consideration; not the same as platform `admin` or Alert lifecycle.
-_Avoid_: shipping accept/reject in the first Location-trust wedge; conflating with
-**Alert** draft/published/archived; calling every org admin a Location admin.
+The open state of a **Location challenge** (clear-api status `consideration`) until the
+admin of the team it was filed for, or a platform admin, decides it in the **Inbox**:
+**accept** writes the proposed point onto the Signal, **place a different point** writes
+one the admin places instead (place-on-map primary, place search and manual lat/lng
+secondary), and **decline** leaves the Signal as it is. An admin may decide one they
+filed. A written point becomes the Signal's general location and survives later
+source revisions; which **Event** the Signal belongs to does not change. See
+[ADR-0007](docs/adr/0007-team-admins-decide-location-challenges.md).
+_Avoid_: conflating with **Alert** draft/published/archived.
 
 **Location admin**:
-The future reviewer role for locality naming and **Location correction** consideration.
+Not a role. The admin of the team a **Location challenge** was filed for decides it (see
+**Consideration**).
 _Avoid_: reusing platform `admin` as the gazetteer role by default.
 
 ### Invited-user onboarding
@@ -524,12 +532,12 @@ confidence as absence; sending **INFORM Severity** to the yearly window.
 - One or more **Signals** compose an **Event**
 - An **Event** may be raised into one or more **Alerts** (non-empty `event.alerts` =
   flagged as an alert)
-- A **Location challenge** may stand alone or be followed by an optional **Location
-  correction** (proposed point) queued for **consideration** — **v1 and near roadmap =
-  queue only**; **Location admin** accept/reject is explicitly deferred (not next)
+- A **Location challenge** carries a **Location correction** (proposed point; challenges
+  filed before 2026-10-29 may have none); it stays in **consideration** until the team's
+  admin accepts it, places a different point, or declines it
 - **Dual location display** applies only when a **Location correction** point exists
-- Remembering challenges across sessions requires **clear-api** persistence (FE alone
-  does not); improving precision from those queues is later
+- clear-api persists challenges; improving precision from accepted corrections (aliases,
+  ingest fixes) is later
 - **Welcome** precedes the **Product Tour**; both must complete before onboarding is done
 - The **Product Tour** (this cycle) is four stops: Alerts → Events → Map Layers → Map
   canvas (Finish); it does not visit Insights, Map filters, or Signals-as-a-stop
@@ -627,9 +635,9 @@ confidence as absence; sending **INFORM Severity** to the yearly window.
 > **Domain expert:** "No. **Dual location display** — source and proposed pins both
 > visible while the correction is queued."
 
-> **Dev:** "Ship accept/reject for corrections next week with team admin?"
-> **Domain expert:** "No. Queue only. **Location admin** accept/decline is **not near
-> roadmap** — do not schedule it with this wedge."
+> **Dev:** "Who accepts or declines a Location correction: a new Location admin?"
+> **Domain expert:** "No new role. The admin of the team it was filed for decides it in
+> the **Inbox**, or a platform admin; never the analyst who filed it."
 
 > **Dev:** "Does the FE Location challenge PR mean challenges persist?"
 > **Domain expert:** "No. clear-mvp can paint challenged / dual pins locally. **Durable
@@ -637,12 +645,12 @@ confidence as absence; sending **INFORM Severity** to the yearly window.
 > [docs/clear-api-location-challenge.md](docs/clear-api-location-challenge.md)."
 
 > **Dev:** "Must every challenge include a moved pin and a corrected name?"
-> **Domain expert:** "No. Challenge alone is enough. If they submit a correction, the
-> new **point** is required; name/note optional. Dual pins only when a point was proposed."
+> **Domain expert:** "A moved pin, yes (since 2026-10-29): it is a location *change*, so
+> the form asks where the Signal should be. Name and note stay optional."
 
 > **Dev:** "Challenge only from the map panel?"
-> **Domain expert:** "No. Same action on **Signal detail** and the Signal **Marker detail
-> panel**."
+> **Domain expert:** "No. Same action on **Signal detail** (its ⋯ menu) and the Signal
+> **Marker detail panel**."
 
 > **Dev:** "Add signal approval status alongside location challenge next week?"
 > **Domain expert:** "No. Defer. Don't overlap **Alert** status or **Consideration**."

@@ -646,8 +646,8 @@ export function MapMarkerDetail({
                   }}
                 >
                   {displayChallenge
-                    ? tChallenge("actions.updateChallenge")
-                    : tChallenge("actions.challengeLocation")}
+                    ? tChallenge("actions.editChange")
+                    : tChallenge("actions.changeLocation")}
                 </UnstyledButton>
               )}
               {displayChallenge && (
@@ -763,6 +763,7 @@ export function MapMarkerDetail({
           opened={challengeOpen}
           onClose={() => setChallengeOpen(false)}
           signalId={marker.eventId}
+          currentPlace={marker.region}
           sourceLat={marker.lat}
           sourceLng={marker.lng}
           existing={displayChallenge}

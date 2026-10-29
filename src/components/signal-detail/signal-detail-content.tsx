@@ -23,7 +23,6 @@ import {
   IconLayoutGridAdd,
   IconAlertTriangle,
   IconMapPin,
-  IconMapPinOff,
   IconClock,
   IconCalendar,
   IconDatabase,
@@ -42,9 +41,11 @@ import { CommentsSection } from "~/components/comments-section";
 import { FeedbackSection } from "~/components/feedback-section";
 import {
   LocationChallengeModal,
-  LocationChallengeStatus,
+  LocationChangeIndicator,
 } from "~/components/location-challenge";
 import { useLocationChallengeFiling } from "~/components/location-challenge/use-location-challenge-filing";
+import { SignalActionsMenu } from "~/components/signal-detail/signal-actions-menu";
+import { signalPlaceLabel } from "~/lib/location-challenge";
 import { severityColors } from "~/lib/constants/severity";
 import type { MapMarker } from "~/components/map/crisis-map";
 import { mapFocusHref } from "~/lib/map-focus-href";
@@ -177,7 +178,6 @@ export function SignalDetailContent({
   );
   const t = useTranslations("signalDetail");
   const tCommon = useTranslations("common");
-  const tChallenge = useTranslations("locationChallenge");
   const format = useFormatter();
   const isMobile = useMediaQuery("(max-width: 48em)") === true;
   const [challengeOpen, setChallengeOpen] = useState(false);
@@ -185,6 +185,10 @@ export function SignalDetailContent({
   const { canFile: canChallenge } = useLocationChallengeFiling();
 
   const challengeQuery = api.locationChallenge.getBySignal.useQuery(
+    { signalId: signal?.id ?? "" },
+    { enabled: !!signal?.id, staleTime: 30_000 },
+  );
+  const correctedAtQuery = api.locationChallenge.correctedAt.useQuery(
     { signalId: signal?.id ?? "" },
     { enabled: !!signal?.id, staleTime: 30_000 },
   );
@@ -476,7 +480,6 @@ export function SignalDetailContent({
             }}>
               {tCommon(`severities.${sev}`)}
             </span>
-            <LocationChallengeStatus challenge={challengeQuery.data} compact />
           </Group>
 
           <Group
@@ -503,6 +506,11 @@ export function SignalDetailContent({
               <Text size="xs" fw={500} c="var(--color-text-muted)">
                 {t("signalBadge")}
               </Text>
+              <SignalActionsMenu
+                canChangeLocation={canChallenge}
+                hasOpenChange={!!challengeQuery.data}
+                onChangeLocation={() => setChallengeOpen(true)}
+              />
             </Group>
           </Group>
 
@@ -549,6 +557,7 @@ export function SignalDetailContent({
                 <Text size="xs" c="var(--color-text-secondary)" fw={500}>
                   {locations.map((l) => resolveLocationName(l)).filter(Boolean).join(", ")}
                 </Text>
+                <LocationChangeIndicator challenge={challengeQuery.data} correctedAt={correctedAtQuery.data} />
               </Group>
             )}
             <Group gap={4}>
@@ -564,22 +573,6 @@ export function SignalDetailContent({
               </Text>
             </Group>
           </Group>
-
-          {isCompact && canChallenge && (
-            <Button
-              mt={12}
-              variant="light"
-              color="gray"
-              size="xs"
-              leftSection={<IconMapPinOff size={13} />}
-              onClick={() => setChallengeOpen(true)}
-              style={{ fontSize: 12 }}
-            >
-              {challengeQuery.data
-                ? tChallenge("actions.updateChallenge")
-                : tChallenge("actions.challengeLocation")}
-            </Button>
-          )}
         </SkeletonSlot>
       </Box>
 
@@ -888,21 +881,6 @@ export function SignalDetailContent({
                     >
                       Bookmark
                     </Button> */}
-                    {canChallenge && (
-                      <Button
-                        variant="light"
-                        color="gray"
-                        size="xs"
-                        leftSection={<IconMapPinOff size={13} />}
-                        fullWidth
-                        onClick={() => setChallengeOpen(true)}
-                        style={{ fontSize: 12 }}
-                      >
-                        {challengeQuery.data
-                          ? tChallenge("actions.updateChallenge")
-                          : tChallenge("actions.challengeLocation")}
-                      </Button>
-                    )}
                     <Button
                       variant="light"
                       color="gray"
@@ -996,6 +974,7 @@ export function SignalDetailContent({
         opened={challengeOpen}
         onClose={() => setChallengeOpen(false)}
         signalId={signal.id}
+        currentPlace={signalPlaceLabel(locations[0])}
         sourceLat={mapMarkers[0]?.lat}
         sourceLng={mapMarkers[0]?.lng}
         existing={challengeQuery.data}

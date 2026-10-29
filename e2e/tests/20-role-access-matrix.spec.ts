@@ -77,7 +77,7 @@ function resolve(page: Page, sel: string) {
  * generic absence check.
  */
 function absenceAssertable(sel: string): boolean {
-  return sel.startsWith("a[") || /^(tab|nav):/.test(sel) || /-(filter|tab)-(reports|community|proposals)$/.test(sel);
+  return sel.startsWith("a[") || /^(tab|nav):/.test(sel) || /-(filter|tab)-(reports|community|proposals|locations)$/.test(sel);
 }
 
 /**
@@ -148,9 +148,9 @@ test.describe("Role-access matrix (case 20)", () => {
   // lists load (a refused clear-api call shows the load error). The matrix
   // cases above only assert the hidden side.
   test.describe("inbox tabs", () => {
-    const EXPECTED: [Persona, ("community" | "proposals")[]][] = [
-      ["admin", ["community", "proposals"]],
-      ["team_admin", ["community", "proposals"]],
+    const EXPECTED: [Persona, ("community" | "proposals" | "locations")[]][] = [
+      ["admin", ["community", "proposals", "locations"]],
+      ["team_admin", ["community", "proposals", "locations"]],
       ["erm", ["community"]],
       ["analyst", ["proposals"]],
     ];
@@ -162,7 +162,7 @@ test.describe("Role-access matrix (case 20)", () => {
         try {
           await page.goto("/inbox", { waitUntil: "domcontentloaded" });
           await expect(page.getByTestId("inbox-page")).toBeVisible({ timeout: 20_000 });
-          for (const tab of ["community", "proposals"] as const) {
+          for (const tab of ["community", "proposals", "locations"] as const) {
             await expect(page.getByTestId(`inbox-tab-${tab}`)).toHaveCount(tabs.includes(tab) ? 1 : 0);
           }
           // The list footer is data-loading until every list this reader gets

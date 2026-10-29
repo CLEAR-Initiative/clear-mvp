@@ -107,7 +107,7 @@ describe("MapMarkerDetail mobile sheet (#506)", () => {
   });
 });
 
-describe("MapMarkerDetail Location challenge", () => {
+describe("MapMarkerDetail Change location", () => {
   const signalMarker: CrisisMarker = { ...marker, id: 2, markerKind: "signal", eventId: "sig_1" };
 
   function renderSignal() {
@@ -118,14 +118,14 @@ describe("MapMarkerDetail Location challenge", () => {
     );
   }
 
-  it("offers Challenge location to the active team's analysts", () => {
+  it("offers Change location to the active team's analysts", () => {
     canFile = true;
     renderSignal();
-    expect(screen.getByRole("button", { name: "actions.challengeLocation" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "actions.changeLocation" })).toBeTruthy();
   });
 
   it("hides it from readers who can't file", () => {
     renderSignal();
-    expect(screen.queryByRole("button", { name: "actions.challengeLocation" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "actions.changeLocation" })).toBeNull();
   });
 });

@@ -7,16 +7,17 @@ const teamAdminTeam = [{ role: "team_admin" }];
 
 describe("inboxAccess", () => {
   it.each([
-    ["admin with both flags", "admin", undefined, true, true, { hotline: true, proposals: true, any: true }],
-    ["admin, review off", "admin", undefined, true, false, { hotline: true, proposals: false, any: true }],
-    ["admin, hotline off", "admin", undefined, false, true, { hotline: false, proposals: true, any: true }],
-    ["team analyst with both flags", "member", analystTeam, true, true, { hotline: false, proposals: true, any: true }],
-    ["team analyst, review off", "member", analystTeam, true, false, { hotline: false, proposals: false, any: false }],
-    ["team admin with both flags", "member", teamAdminTeam, true, true, { hotline: true, proposals: true, any: true }],
-    ["team admin, review off", "member", teamAdminTeam, true, false, { hotline: true, proposals: false, any: true }],
-    ["team admin, hotline off", "member", teamAdminTeam, false, true, { hotline: false, proposals: true, any: true }],
-    ["member with both flags", "member", undefined, true, true, { hotline: false, proposals: false, any: false }],
-    ["no role", undefined, undefined, true, true, { hotline: false, proposals: false, any: false }],
+    ["admin with both flags", "admin", undefined, true, true, { hotline: true, proposals: true, locations: true, any: true }],
+    ["admin, review off", "admin", undefined, true, false, { hotline: true, proposals: false, locations: true, any: true }],
+    ["admin, hotline off", "admin", undefined, false, true, { hotline: false, proposals: true, locations: true, any: true }],
+    ["team analyst with both flags", "member", analystTeam, true, true, { hotline: false, proposals: true, locations: false, any: true }],
+    ["team analyst, review off", "member", analystTeam, true, false, { hotline: false, proposals: false, locations: false, any: false }],
+    ["team admin with both flags", "member", teamAdminTeam, true, true, { hotline: true, proposals: true, locations: true, any: true }],
+    ["team admin, review off", "member", teamAdminTeam, true, false, { hotline: true, proposals: false, locations: true, any: true }],
+    ["team admin, hotline off", "member", teamAdminTeam, false, true, { hotline: false, proposals: true, locations: true, any: true }],
+    ["team admin, both flags off (Location challenges only)", "member", teamAdminTeam, false, false, { hotline: false, proposals: false, locations: true, any: true }],
+    ["member with both flags", "member", undefined, true, true, { hotline: false, proposals: false, locations: false, any: false }],
+    ["no role", undefined, undefined, true, true, { hotline: false, proposals: false, locations: false, any: false }],
   ])("%s", (_label, role, teamMemberships, hotlineInbox, impactPriorReview, expected) => {
     expect(inboxAccess({ role, teamMemberships, hotlineInbox, impactPriorReview })).toEqual(expected);
   });
@@ -29,7 +30,7 @@ describe("inboxAccess", () => {
         hotlineInbox: true,
         impactPriorReview: false,
       });
-      expect(access).toEqual({ hotline: true, proposals: false, any: true });
+      expect(access).toEqual({ hotline: true, proposals: false, locations: false, any: true });
     });
 
     it("still does NOT get case proposals even with impact_prior_review on (ERMs don't decide proposals)", () => {
@@ -40,7 +41,7 @@ describe("inboxAccess", () => {
         impactPriorReview: true,
       });
       // clear-api requireCaseProposalInboxAccess admits admin, team analyst and team admin only.
-      expect(access).toEqual({ hotline: true, proposals: false, any: true });
+      expect(access).toEqual({ hotline: true, proposals: false, locations: false, any: true });
     });
 
     it("gets nothing when the hotline flag is off", () => {
