@@ -1,4 +1,5 @@
 import { test, expect } from "../support/test";
+import { ANALYST } from "../support/data";
 
 /**
  * Case 22 — usage analytics stay off unless configured. The e2e image is built
@@ -19,18 +20,35 @@ test.describe("Usage analytics (case 22)", () => {
     });
   });
 
-  test("signed in: no tracker, and the opt-out toggle persists", async ({ page }) => {
+  test("global admin: no tracker and no toggle", async ({ page }) => {
+    // Suite-wide storageState is the seeded ADMIN.
     await page.goto("/profile");
-    const toggle = page.getByRole("switch", { name: /Help improve CLEAR/ });
-    await expect(toggle).toBeChecked({ timeout: 30_000 });
+    await expect(page.getByText("Global admins are never tracked.")).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByRole("switch", { name: /Help improve CLEAR/ })).toHaveCount(0);
     await expect(page.locator(TRACKER)).toHaveCount(0);
-    await toggle.click({ force: true });
-    await expect(toggle).not.toBeChecked();
-    await page.reload();
-    await expect(page.getByRole("switch", { name: /Help improve CLEAR/ })).not.toBeChecked({ timeout: 30_000 });
+  });
 
-    await page.getByRole("link", { name: "How usage analytics works" }).click();
-    await expect(page.getByRole("heading", { name: "Usage analytics in CLEAR" })).toBeVisible();
-    await expect(page.locator(TRACKER)).toHaveCount(0);
+  test.describe("member", () => {
+    test.use({ storageState: { cookies: [], origins: [] } });
+    test("no tracker, and the opt-out toggle persists", async ({ page }) => {
+      await page.goto("/auth/login");
+      await page.getByLabel("Email").fill(ANALYST.email);
+      await page.getByLabel("Password").fill(ANALYST.password);
+      await page.getByRole("button", { name: "Sign In" }).click();
+      await page.waitForURL((url) => !url.pathname.startsWith("/auth"), { timeout: 45_000 });
+
+      await page.goto("/profile");
+      const toggle = page.getByRole("switch", { name: /Help improve CLEAR/ });
+      await expect(toggle).toBeChecked({ timeout: 30_000 });
+      await expect(page.locator(TRACKER)).toHaveCount(0);
+      await toggle.click({ force: true });
+      await expect(toggle).not.toBeChecked();
+      await page.reload();
+      await expect(page.getByRole("switch", { name: /Help improve CLEAR/ })).not.toBeChecked({ timeout: 30_000 });
+
+      await page.getByRole("link", { name: "How usage analytics works" }).click();
+      await expect(page.getByRole("heading", { name: "Usage analytics in CLEAR" })).toBeVisible();
+      await expect(page.locator(TRACKER)).toHaveCount(0);
+    });
   });
 });
