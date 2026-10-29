@@ -3013,6 +3013,7 @@
       "severityNull": "Sin evaluar: muy poca evidencia para calificar.",
       "inferred": "Calificado a partir de informes ajenos a este sector. Tómalo como indicativo.",
       "notAssessed": "Sin evaluar",
+      "reportingGrade": "Según los informes: {grade}",
       "noFigure": "Sin cifra de personas que necesitan ayuda"
     },
     "events": {

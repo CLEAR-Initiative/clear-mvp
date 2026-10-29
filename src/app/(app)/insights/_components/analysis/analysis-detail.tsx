@@ -289,7 +289,7 @@ export function AnalysisDetail({
           />
         )}
         {tab === "needs" && (
-          <AnalysisNeeds sectors={data.sectors} sources={data.sources} scopeName={name} figures={figures.data} />
+          <AnalysisNeeds sectors={data.sectors} sources={data.sources} scopeName={name} figures={figures.data} locationIds={locationIds} />
         )}
         {tab === "sources" && (
           <SimpleGrid cols={{ base: 1, lg: 2 }} spacing={16}>

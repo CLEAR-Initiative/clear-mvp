@@ -30,6 +30,12 @@ import {
   type AnalysisCadence,
 } from "~/lib/analysis-view";
 import { isPlatformAdmin } from "~/lib/roles";
+import {
+  aggregateScopeNeeds,
+  districtsInScope,
+  type AggregatedScopeNeeds,
+  type RawNeedsLocation,
+} from "~/lib/scope-needs";
 import type { GqlUserComment } from "~/lib/types/graphql";
 
 // Domain types live in the mapper; re-exported so existing imports keep compiling.
@@ -326,6 +332,47 @@ async function fetchLabelLocations(
     }
   }
   return out;
+}
+
+const NEEDS_LOCATION_FIELDS = `
+  id
+  level
+  population
+  ancestorIds
+  metadata { type data }
+  ancestors { id level population metadata { type data } }
+`;
+
+/** The scope's locations, with the metadata the needs table reads. */
+async function fetchNeedsLocations(ids: string[], headers: Record<string, string>): Promise<RawNeedsLocation[]> {
+  if (ids.length === 0) return [];
+  const out: RawNeedsLocation[] = [];
+  for (let offset = 0; offset < ids.length; offset += 30) {
+    const slice = ids.slice(offset, offset + 30);
+    const fields = slice.map((_, i) => `l${i}: location(id: $l${i}) { ${NEEDS_LOCATION_FIELDS} }`).join("\n");
+    const params = slice.map((_, i) => `$l${i}: String!`).join(", ");
+    const variables = Object.fromEntries(slice.map((id, i) => [`l${i}`, id]));
+    const data = await graphqlFetch<Record<string, RawNeedsLocation | null>>(
+      `query ScopeNeedsLocations(${params}) {\n${fields}\n}`,
+      variables,
+      headers,
+    );
+    for (let i = 0; i < slice.length; i++) {
+      const loc = data?.[`l${i}`];
+      if (loc?.id) out.push(loc);
+    }
+  }
+  return out;
+}
+
+/** Admin-2 ids only. Metadata is loaded afterwards, and only for districts inside the scope. */
+async function fetchAdmin2Index(headers: Record<string, string>): Promise<RawNeedsLocation[]> {
+  const data = await graphqlFetch<{ locations: RawNeedsLocation[] | null }>(
+    `query NeedsDistrictIndex { locations(level: 2) { id level population ancestorIds } }`,
+    undefined,
+    headers,
+  );
+  return data.locations ?? [];
 }
 
 type FrameInput = {
@@ -772,6 +819,28 @@ export const analysisRouter = createTRPCRouter({
         cookieHeaders(ctx),
       );
       return data.addComment;
+    }),
+
+  /**
+   * MSNA scores, district population and OCHA 3W for the scope's locations.
+   * A country or state expands to its admin-2 districts. People in need are
+   * summed and partners merged. Nothing is read from a crisis entity.
+   */
+  needs: protectedProcedure
+    .input(z.object({ locationIds: z.array(z.string().min(1)).min(1).max(MAX_CREATED_LOCATIONS) }))
+    .query(async ({ ctx, input }): Promise<AggregatedScopeNeeds> => {
+      const headers = cookieHeaders(ctx);
+      const scope = await fetchNeedsLocations(input.locationIds, headers);
+      const parents = scope.filter((loc) => loc.level < 2).map((loc) => loc.id);
+      let level2: RawNeedsLocation[] = [];
+      if (parents.length > 0) {
+        const index = await fetchAdmin2Index(headers);
+        const childIds = index
+          .filter((loc) => (loc.ancestorIds ?? []).some((id) => parents.includes(id)))
+          .map((loc) => loc.id);
+        level2 = await fetchNeedsLocations(childIds, headers);
+      }
+      return aggregateScopeNeeds(districtsInScope(scope, level2));
     }),
 
   /**
