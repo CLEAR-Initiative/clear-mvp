@@ -2,7 +2,12 @@ import React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MantineProvider } from "@mantine/core";
-import type { GqlCaseProposal, GqlHotlineInbox, GqlReviewCaseProposal } from "~/lib/types/graphql";
+import type {
+  GqlCaseProposal,
+  GqlHotlineInbox,
+  GqlLocationChallengeToDecide,
+  GqlReviewCaseProposal,
+} from "~/lib/types/graphql";
 
 /**
  * Page-level tests for the triage flow: role gate, filter/selection,
@@ -55,6 +60,28 @@ let caseMutation: { isPending: boolean; isError: boolean; error: { message: stri
 /** The Event's enrichment, as a case row refetches it after a CONFLICT. */
 let forEventCases: GqlCaseProposal[] = [];
 const forEventFetch = vi.fn(async () => ({ tasks: [], caseProposals: forEventCases }));
+/** Open Location challenges the reader decides. */
+let locationsData: GqlLocationChallengeToDecide[] = [];
+const locationsQuery = vi.fn((_input: unknown, opts: { enabled: boolean }) => ({
+  data: opts.enabled ? locationsData : undefined,
+  isFetching: false,
+  isLoading: false,
+  error: null,
+}));
+/** A decision succeeds unless a test makes it fail. */
+const decideLocationMutate = vi.fn((_input: unknown, opts?: { onSuccess?: () => void }) => opts?.onSuccess?.());
+const locationInvalidate = {
+  toDecide: vi.fn(async () => undefined),
+  toDecideCount: vi.fn(async () => undefined),
+  listForMap: vi.fn(async () => undefined),
+  getBySignal: vi.fn(async () => undefined),
+  correctedAt: vi.fn(async () => undefined),
+  signal: vi.fn(async () => undefined),
+  signalsForMap: vi.fn(async () => undefined),
+};
+vi.mock("~/components/location-challenge/location-challenge-map", () => ({
+  LocationChallengeMap: () => <div data-testid="location-challenge-map" />,
+}));
 
 vi.mock("~/trpc/react", () => ({
   api: {
@@ -69,6 +96,17 @@ vi.mock("~/trpc/react", () => ({
         reviewCount: { invalidate },
         forEvent: { invalidate, fetch: forEventFetch },
         computedPriors: { invalidate },
+      },
+      signals: {
+        get: { invalidate: locationInvalidate.signal },
+        forMap: { invalidate: locationInvalidate.signalsForMap },
+      },
+      locationChallenge: {
+        toDecide: { invalidate: locationInvalidate.toDecide },
+        toDecideCount: { invalidate: locationInvalidate.toDecideCount },
+        listForMap: { invalidate: locationInvalidate.listForMap },
+        getBySignal: { invalidate: locationInvalidate.getBySignal },
+        correctedAt: { invalidate: locationInvalidate.correctedAt },
       },
     }),
     auth: {
@@ -111,6 +149,11 @@ vi.mock("~/trpc/react", () => ({
       retryMessage: { useMutation: () => ({ mutateAsync: retryMutateAsync }) },
       requestTranslation: { useMutation: () => ({ mutate: vi.fn(), data: undefined, isError: false }) },
       translation: { useQuery: () => ({ data: undefined }) },
+    },
+    locationChallenge: {
+      toDecide: { useQuery: (input: unknown, opts: { enabled: boolean }) => locationsQuery(input, opts) },
+      decide: { useMutation: () => ({ mutate: decideLocationMutate, isPending: false }) },
+      placement: { useQuery: () => ({ data: null, isLoading: false, isSuccess: false }) },
     },
     subscriptions: {
       disasterTypes: { useQuery: () => ({ isLoading: false, data: [] }) },
@@ -209,6 +252,40 @@ function webCase(id: string, overrides: Partial<GqlReviewCaseProposal> = {}): Gq
   };
 }
 
+function locationChallenge(id: string): GqlLocationChallengeToDecide {
+  return {
+    id,
+    signalId: `sig-${id}`,
+    status: "consideration",
+    note: "Wrong town",
+    proposedLat: 12.0,
+    proposedLng: 24.95,
+    proposedName: "Kalma",
+    createdBy: "u-analyst",
+    createdByName: "Amira",
+    createdAt: "2026-10-28T09:00:00Z",
+    updatedAt: "2026-10-28T09:00:00Z",
+    hasProposedPoint: true,
+    teamId: "T1",
+    team: { id: "T1", name: "Sudan team", locations: [] },
+    signal: {
+      id: `sig-${id}`,
+      title: `Signal ${id}`,
+      generalLocation: {
+        id: "P1",
+        name: "Clashes near the market",
+        level: 4,
+        geometry: { type: "Point", coordinates: [24.88, 12.05] },
+        pointType: null,
+        ancestors: [{ id: "D1", name: "Nyala", level: 2 }],
+      },
+      originLocation: null,
+      destinationLocation: null,
+    },
+    proposedPlacement: { id: "D2", name: "Bielel", level: 2, ancestors: [] },
+  };
+}
+
 beforeEach(() => {
   flagEnabled = true;
   flags = {};
@@ -216,6 +293,7 @@ beforeEach(() => {
   authLoading = false;
   forEventCases = [];
   casesData = [];
+  locationsData = [];
   caseMutation = { isPending: false, isError: false, error: null };
   window.localStorage.clear();
   inboxData = {
@@ -253,10 +331,12 @@ describe("InboxPage access", () => {
     expect(screen.getByTestId("inbox-no-access")).toBeInTheDocument();
   });
 
-  it("blocks when both flags are off", () => {
+  it("keeps only the Location challenges for an admin when both flags are off", () => {
     flagEnabled = false;
     renderPage();
-    expect(screen.getByTestId("inbox-no-access")).toBeInTheDocument();
+    expect(screen.getByTestId("inbox-tab-locations")).toHaveAttribute("data-active", "true");
+    expect(screen.queryByTestId("inbox-tab-community")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("inbox-tab-proposals")).not.toBeInTheDocument();
   });
 
   it("admits an analyst to the Review items only: no hotline fetch, no hotline filters, proposed signals first", () => {
@@ -314,13 +394,15 @@ describe("InboxPage access", () => {
     expect(screen.queryByTestId("inbox-tab-proposals")).not.toBeInTheDocument();
   });
 
-  it("gives an admin and a team admin both tabs, community signals first", () => {
+  it("gives an admin and a team admin every tab, community signals first", () => {
     for (const r of ["admin", "team_admin"]) {
       role = r;
       renderPage();
       expect(casesQuery).toHaveBeenLastCalledWith(undefined, expect.objectContaining({ enabled: true }));
+      expect(locationsQuery).toHaveBeenLastCalledWith(undefined, expect.objectContaining({ enabled: true }));
       expect(screen.getByTestId("inbox-tab-community")).toHaveAttribute("data-active", "true");
       expect(screen.getByTestId("inbox-tab-proposals")).toHaveAttribute("data-active", "false");
+      expect(screen.getByTestId("inbox-tab-locations")).toHaveAttribute("data-active", "false");
       expect(screen.getAllByTestId("inbox-entry")).toHaveLength(2);
       cleanup();
     }
@@ -330,21 +412,24 @@ describe("InboxPage access", () => {
     renderPage();
     const community = screen.getByTestId("inbox-tab-community");
     const proposals = screen.getByTestId("inbox-tab-proposals");
-    expect([community.tabIndex, proposals.tabIndex]).toEqual([0, -1]);
+    const locations = screen.getByTestId("inbox-tab-locations");
+    expect([community.tabIndex, proposals.tabIndex, locations.tabIndex]).toEqual([0, -1, -1]);
     expect(screen.getByRole("tabpanel")).toHaveAttribute("aria-labelledby", "inbox-tab-community");
 
     fireEvent.keyDown(community, { key: "ArrowRight" });
     expect(proposals).toHaveAttribute("aria-selected", "true");
     expect(proposals).toHaveFocus();
-    expect([community.tabIndex, proposals.tabIndex]).toEqual([-1, 0]);
+    expect([community.tabIndex, proposals.tabIndex, locations.tabIndex]).toEqual([-1, 0, -1]);
     expect(screen.getByRole("tabpanel")).toHaveAttribute("aria-labelledby", "inbox-tab-proposals");
 
     // Wraps around, and Home goes back to the first tab.
     fireEvent.keyDown(proposals, { key: "ArrowRight" });
+    expect(locations).toHaveAttribute("aria-selected", "true");
+    fireEvent.keyDown(locations, { key: "ArrowRight" });
     expect(community).toHaveAttribute("aria-selected", "true");
     fireEvent.keyDown(community, { key: "End" });
-    expect(proposals).toHaveAttribute("aria-selected", "true");
-    fireEvent.keyDown(proposals, { key: "Home" });
+    expect(locations).toHaveAttribute("aria-selected", "true");
+    fireEvent.keyDown(locations, { key: "Home" });
     expect(community).toHaveFocus();
   });
 
@@ -353,8 +438,10 @@ describe("InboxPage access", () => {
     casesData = [webCase("cp-1")];
     renderPage();
     expect(casesQuery).toHaveBeenCalledWith(undefined, expect.objectContaining({ enabled: false }));
+    expect(locationsQuery).toHaveBeenCalledWith(undefined, expect.objectContaining({ enabled: false }));
     expect(screen.getByTestId("inbox-tab-community")).toHaveAttribute("data-active", "true");
     expect(screen.queryByTestId("inbox-tab-proposals")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("inbox-tab-locations")).not.toBeInTheDocument();
     expect(screen.getByTestId("inbox-filter-reports")).toHaveAttribute("data-active", "true");
   });
 
@@ -367,6 +454,55 @@ describe("InboxPage access", () => {
     ).toEqual(["inbox-filter-community", "inbox-filter-reports", "inbox-filter-unclassified", "inbox-filter-chatter"]);
     fireEvent.click(screen.getByTestId("inbox-filter-community"));
     expect(screen.getAllByTestId("inbox-entry")).toHaveLength(3);
+  });
+});
+
+describe("InboxPage Location challenges", () => {
+  it("lists a team admin's challenges under their own tab and in the awaiting line", () => {
+    role = "team_admin";
+    locationsData = [locationChallenge("lc-1"), locationChallenge("lc-2")];
+    renderPage();
+    // Three hotline threads and two challenges.
+    expect(screen.getByText('awaiting:{"count":5}')).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("inbox-tab-locations"));
+    expect(screen.getAllByTestId("inbox-entry").map((e) => e.getAttribute("data-kind"))).toEqual([
+      "location_challenge",
+      "location_challenge",
+    ]);
+    expect(screen.getByTestId("inbox-pane")).toHaveAttribute("data-kind", "location_challenge");
+    expect(screen.getByText("Signal lc-1", { selector: "[class*=paneTitle]" })).toBeInTheDocument();
+  });
+
+  it("hides them from an analyst, who files them", () => {
+    role = "analyst";
+    locationsData = [locationChallenge("lc-1")];
+    renderPage();
+    expect(locationsQuery).toHaveBeenCalledWith(undefined, expect.objectContaining({ enabled: false }));
+    expect(screen.queryByTestId("inbox-tab-locations")).not.toBeInTheDocument();
+  });
+
+  it("takes a decided challenge out of the queue, links its signal, and refreshes the badge and the map", () => {
+    role = "team_admin";
+    flagEnabled = false;
+    locationsData = [locationChallenge("lc-1"), locationChallenge("lc-2")];
+    renderPage();
+    fireEvent.click(screen.getByTestId("inbox-location-accept"));
+    expect(decideLocationMutate).toHaveBeenCalledWith(
+      { id: "lc-1", decision: "ACCEPT", point: undefined },
+      expect.objectContaining({ onSuccess: expect.any(Function) }),
+    );
+    const toast = screen.getByTestId("inbox-toast");
+    expect(toast).toHaveTextContent("location.toast.accepted");
+    expect(within(toast).getByRole("link")).toHaveAttribute("href", "/signal/sig-lc-1");
+    expect(screen.getAllByTestId("inbox-entry")).toHaveLength(1);
+    expect(screen.getByText("Signal lc-2", { selector: "[class*=paneTitle]" })).toBeInTheDocument();
+    expect(locationInvalidate.toDecide).toHaveBeenCalled();
+    expect(locationInvalidate.toDecideCount).toHaveBeenCalled();
+    expect(locationInvalidate.listForMap).toHaveBeenCalled();
+    expect(locationInvalidate.getBySignal).toHaveBeenCalledWith({ signalId: "sig-lc-1" });
+    expect(locationInvalidate.correctedAt).toHaveBeenCalledWith({ signalId: "sig-lc-1" });
+    expect(locationInvalidate.signal).toHaveBeenCalledWith({ id: "sig-lc-1" });
+    expect(locationInvalidate.signalsForMap).toHaveBeenCalled();
   });
 });
 

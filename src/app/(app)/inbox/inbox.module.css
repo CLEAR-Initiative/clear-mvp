@@ -764,3 +764,23 @@
     display: inline-flex;
   }
 }
+
+/* ─── Location challenge ─── */
+
+.placeMeta {
+  display: block;
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--color-text-muted);
+}
+
+.placePicker {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.placePicker .sectionLabel {
+  margin-bottom: 0;
+}

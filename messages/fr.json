@@ -2674,7 +2674,8 @@
     "actions": {
       "title": "Actions",
       "addToCrisis": "Ajouter à une crise",
-      "comingSoon": "bientôt disponible"
+      "comingSoon": "bientôt disponible",
+      "menu": "Actions du signal"
     },
     "details": {
       "title": "Détails",
@@ -2692,8 +2693,8 @@
   },
   "locationChallenge": {
     "actions": {
-      "challengeLocation": "Contester l’emplacement",
-      "updateChallenge": "Mettre à jour la contestation",
+      "changeLocation": "Modifier l’emplacement",
+      "editChange": "Modifier le changement d’emplacement",
       "challengeOnMap": "Contester l’emplacement",
       "updateOnMap": "Déplacer l’épingle corrigée",
       "showSignalsLayer": "Afficher la couche Signaux"
@@ -2706,36 +2707,58 @@
       "signalLayerHint": "Pour contester une épingle, ouvrez Couches, passez les données sur Signaux, puis ouvrez une épingle Signal."
     },
     "status": {
-      "challenged": "Emplacement contesté",
-      "correctionQueued": "Correction en file d’attente"
+      "challenged": "Changement d’emplacement demandé",
+      "correctionQueued": "Changement d’emplacement proposé"
+    },
+    "indicator": {
+      "requested": "Changement d’emplacement demandé : en attente de la décision d’un administrateur",
+      "requestedTo": "Changement vers {place} demandé : en attente de la décision d’un administrateur",
+      "changed": "Emplacement modifié par un administrateur le {date}"
     },
     "modal": {
-      "title": "Contester l’emplacement",
-      "intro": "Marquez l’épingle de ce Signal comme non fiable. Vous pouvez proposer un point corrigé pour examen — l’épingle source n’est pas écrasée.",
-      "noteLabel": "Pourquoi cela semble incorrect ? (facultatif)",
+      "title": "Modifier l’emplacement",
+      "current": "Emplacement actuel",
+      "noPlace": "Lieu sans nom",
+      "noPin": "Placé sur une zone, sans point exact.",
+      "changeTo": "Changer pour",
+      "orOnMap": "Ou cliquez sur la carte là où il devrait être.",
+      "placeOnMap": "Le choisir sur la carte",
+      "noteLabel": "Pourquoi ? (facultatif)",
       "notePlaceholder": "ex. Dataminr a placé ceci dans la mauvaise ville…",
-      "proposeCorrection": "Proposer un point corrigé (facultatif)",
-      "proposeCorrectionHint": "Facultatif. Saisissez latitude et longitude si vous les connaissez. Mis en file d’attente uniquement.",
-      "placeOnMap": "Placer l’épingle corrigée sur la carte",
-      "placeOnMapHint": "Revenez à la carte et cliquez où l’épingle doit être. Vous pouvez aussi saisir les coordonnées manuellement ci-dessous.",
       "enterCoordinatesManually": "Saisir les coordonnées manuellement",
       "hideManualCoordinates": "Masquer les champs de coordonnées",
       "lat": "Latitude",
       "lng": "Longitude",
       "placeName": "Nom du lieu (facultatif)",
       "placeNamePlaceholder": "Orthographe locale ou point de repère",
-      "submitChallenge": "Soumettre la contestation",
-      "submitCorrection": "Soumettre contestation + correction",
-      "successTitle": "Mis en file d’attente",
-      "successChallenge": "L’emplacement de ce Signal est marqué contesté. Pas de seconde épingle tant qu’aucun point corrigé n’est proposé.",
-      "successCorrection": "Les épingles source et proposée s’afficheront toutes deux sur la carte pendant l’examen.",
+      "submit": "Proposer le changement",
+      "successTitle": "Changement proposé",
+      "successBody": "Les deux épingles s’affichent sur la carte jusqu’à la décision de l’administrateur de votre équipe.",
       "sessionOnlyTitle": "Visible pour cette session seulement",
-      "sessionOnlyChallenge": "La carte affiche cette épingle comme contestée pour l’instant. Ce n’est pas encore enregistré — la persistance clear-api est encore en attente.",
-      "sessionOnlyCorrection": "Les épingles source et proposée s’affichent sur la carte pour cette session. L’enregistrement pour examen nécessite le support clear-api (encore en attente)."
+      "sessionOnlyCorrection": "Les épingles source et proposée s’affichent sur la carte pour cette session. L’enregistrement pour examen nécessite le support clear-api (encore en attente).",
+      "searchLabel": "Rechercher le lieu",
+      "searchPlaceholder": "Village, ville ou point de repère",
+      "noResults": "Aucun lieu trouvé. Essayez une autre orthographe.",
+      "placing": "Recherche de l’emplacement dans CLEAR…",
+      "landsIn": "Dans CLEAR : {chain}",
+      "outsideCoverage": "Ce lieu est hors des zones couvertes par CLEAR.",
+      "outsideTeamArea": "Ce lieu est hors de la zone de votre équipe. Un administrateur de la plateforme peut y placer le Signal.",
+      "changePick": "Choisir un autre lieu"
+    },
+    "map": {
+      "pins": {
+        "source": "Actuel",
+        "proposed": "Proposé",
+        "placed": "Votre point"
+      },
+      "unavailable": "La carte n’a pas pu se charger. Vous pouvez quand même rechercher le lieu ou saisir ses coordonnées."
     },
     "errors": {
-      "submitFailed": "Impossible de soumettre la contestation. Réessayez.",
-      "backendUnavailable": "La contestation d’emplacement n’est pas encore disponible — le support clear-api est en attente."
+      "submitFailed": "Impossible de proposer le changement d’emplacement. Réessayez.",
+      "forbidden": "Votre équipe ne peut pas corriger ce Signal à cet endroit : le Signal ou le lieu est hors de sa zone.",
+      "outsideCoverage": "Ce lieu est hors des zones couvertes par CLEAR.",
+      "conflict": "Quelqu’un a proposé un changement d’emplacement pour ce Signal au même moment. Réessayez.",
+      "backendUnavailable": "Le changement d’emplacement n’est pas encore disponible : le support clear-api est en attente."
     }
   },
   "verifyEmail": {
@@ -2758,14 +2781,16 @@
     "awaiting": "{count, plural, one {# en attente de revue} other {# en attente de revue}}",
     "tabs": {
       "community": "Signaux communautaires",
-      "proposals": "Signaux proposés"
+      "proposals": "Signaux proposés",
+      "locations": "Changements d’emplacement"
     },
     "filters": {
       "community": "Tous",
       "reports": "Rapports terrain",
       "unclassified": "Non classés",
       "chatter": "Bavardage",
-      "proposals": "Signaux proposés"
+      "proposals": "Signaux proposés",
+      "locations": "Changements d’emplacement"
     },
     "search": "Rechercher texte, réf. d'admission",
     "sort": {
@@ -2889,12 +2914,53 @@
       "partial": "Remis en file : {done} message(s) sur {total}. {error}"
     },
     "kinds": {
-      "cases": "Signaux proposés"
+      "cases": "Signaux proposés",
+      "location": "Emplacement"
     },
     "event": {
       "untitled": "Événement sans titre",
       "open": "Ouvrir l'événement",
       "proposedAt": "Proposé le {date}"
+    },
+    "location": {
+      "untitled": "Signal sans titre",
+      "preview": {
+        "proposed": "Point proposé : {place}",
+        "bare": "Épingle signalée comme fausse, aucun point proposé"
+      },
+      "filedBy": "Déposée par {name} · {date}",
+      "filed": "Déposée le {date}",
+      "openSignal": "Ouvrir le signal",
+      "now": "Emplacement actuel",
+      "noPlace": "Ce Signal n’a pas d’emplacement",
+      "noPin": "Placé sur une zone, il n’a donc pas d’épingle sur la carte.",
+      "proposed": "Emplacement proposé",
+      "noProposal": "Aucun point proposé : l’analyste indique que l’épingle est fausse, sans dire où elle devrait être.",
+      "landsIn": "Dans CLEAR : {chain}",
+      "outsideCoverage": "Hors des zones couvertes par CLEAR",
+      "note": "Note de l’analyste",
+      "team": "Équipe",
+      "placeTitle": "Placer le point",
+      "placeHint": "Cliquez sur la carte là où le Signal devrait être, ou recherchez le lieu. Vous pouvez aussi saisir ses coordonnées.",
+      "actions": {
+        "accept": "Accepter le point proposé",
+        "placeOther": "Placer un autre point",
+        "place": "Placer un point",
+        "decline": "Refuser",
+        "save": "Enregistrer ce point",
+        "cancel": "Annuler"
+      },
+      "toast": {
+        "accepted": "Emplacement corrigé au point proposé",
+        "corrected": "Emplacement corrigé à votre point",
+        "declined": "Changement refusé. L’épingle reste à sa place."
+      },
+      "errors": {
+        "forbidden": "Vous ne pouvez pas corriger ce Signal à cet endroit : le Signal ou le lieu est hors de la zone de l’équipe.",
+        "outsideCoverage": "Ce lieu est hors des zones couvertes par CLEAR.",
+        "conflict": "Ce changement a déjà été tranché, ou remplacé par un plus récent.",
+        "failed": "Impossible d’enregistrer la décision. Réessayez."
+      }
     },
     "cases": {
       "preview": "{count, plural, =0 {Tous les signaux proposés décidés} one {# signal proposé à examiner} other {# signaux proposés à examiner}} · {hazard}"

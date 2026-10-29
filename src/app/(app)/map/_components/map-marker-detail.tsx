@@ -17,6 +17,7 @@ import {
   LocationChallengeStatus,
   type LocationChallengeQueuePayload,
 } from "~/components/location-challenge";
+import { useLocationChallengeFiling } from "~/components/location-challenge/use-location-challenge-filing";
 import type { GqlSignalLocationChallenge } from "~/lib/types/graphql";
 import { api } from "~/trpc/react";
 import styles from "./map-marker-detail.module.css";
@@ -130,6 +131,9 @@ export function MapMarkerDetail({
     marker.locationPinRole !== "proposed" && marker.markerKind !== "crisis";
   const [challengeOpen, setChallengeOpen] = useState(false);
   const [challengeLinkHovered, setChallengeLinkHovered] = useState(false);
+  /** Only the active team's analysts (and platform admins) file; everyone
+   *  sees an open challenge's status. */
+  const { canFile } = useLocationChallengeFiling();
   const [localChallenge, setLocalChallenge] =
     useState<GqlSignalLocationChallenge | null>(null);
   const challengeQuery = api.locationChallenge.getBySignal.useQuery(
@@ -619,31 +623,33 @@ export function MapMarkerDetail({
               mono
             />
           )}
-          {showLocationChallengeSlot && isSignal && !locationCorrection && (
+          {showLocationChallengeSlot && isSignal && !locationCorrection && (canFile || displayChallenge) && (
             <Box pt={6} pb={2} style={{ display: "flex", flexDirection: "column", alignItems: "flex-end" }}>
-              <UnstyledButton
-                type="button"
-                onClick={() => setChallengeOpen(true)}
-                onMouseEnter={() => setChallengeLinkHovered(true)}
-                onMouseLeave={() => setChallengeLinkHovered(false)}
-                style={{
-                  display: "block",
-                  fontSize: 11,
-                  fontWeight: 500,
-                  lineHeight: 1.35,
-                  color: challengeLinkHovered
-                    ? "var(--color-accent)"
-                    : "var(--color-text-muted)",
-                  cursor: "pointer",
-                  transition: "color 120ms ease",
-                  textAlign: "end",
-                  padding: 0,
-                }}
-              >
-                {displayChallenge
-                  ? tChallenge("actions.updateChallenge")
-                  : tChallenge("actions.challengeLocation")}
-              </UnstyledButton>
+              {canFile && (
+                <UnstyledButton
+                  type="button"
+                  onClick={() => setChallengeOpen(true)}
+                  onMouseEnter={() => setChallengeLinkHovered(true)}
+                  onMouseLeave={() => setChallengeLinkHovered(false)}
+                  style={{
+                    display: "block",
+                    fontSize: 11,
+                    fontWeight: 500,
+                    lineHeight: 1.35,
+                    color: challengeLinkHovered
+                      ? "var(--color-accent)"
+                      : "var(--color-text-muted)",
+                    cursor: "pointer",
+                    transition: "color 120ms ease",
+                    textAlign: "end",
+                    padding: 0,
+                  }}
+                >
+                  {displayChallenge
+                    ? tChallenge("actions.editChange")
+                    : tChallenge("actions.changeLocation")}
+                </UnstyledButton>
+              )}
               {displayChallenge && (
                 <Box mt={4} style={{ width: "100%", display: "flex", justifyContent: "flex-end" }}>
                   <LocationChallengeStatus challenge={displayChallenge} compact />
@@ -757,8 +763,10 @@ export function MapMarkerDetail({
           opened={challengeOpen}
           onClose={() => setChallengeOpen(false)}
           signalId={marker.eventId}
+          currentPlace={marker.region}
           sourceLat={marker.lat}
           sourceLng={marker.lng}
+          existing={displayChallenge}
           onPlaceOnMap={
             onStartLocationCorrection
               ? (draft) => onStartLocationCorrection(draft)

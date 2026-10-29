@@ -2679,7 +2679,8 @@
     "actions": {
       "title": "Actions",
       "addToCrisis": "Add to Crisis",
-      "comingSoon": "coming soon"
+      "comingSoon": "coming soon",
+      "menu": "Signal actions"
     },
     "details": {
       "title": "Details",
@@ -2692,8 +2693,8 @@
   },
   "locationChallenge": {
     "actions": {
-      "challengeLocation": "Challenge location",
-      "updateChallenge": "Update location challenge",
+      "changeLocation": "Change location",
+      "editChange": "Edit location change",
       "challengeOnMap": "Challenge location",
       "updateOnMap": "Move corrected pin",
       "showSignalsLayer": "Show Signals layer"
@@ -2706,36 +2707,58 @@
       "signalLayerHint": "To challenge a pin, open Layers and switch Data to Signals, then open a Signal pin."
     },
     "status": {
-      "challenged": "Location challenged",
-      "correctionQueued": "Correction queued"
+      "challenged": "Location change requested",
+      "correctionQueued": "Location change proposed"
+    },
+    "indicator": {
+      "requested": "Location change requested: waiting for an admin to decide",
+      "requestedTo": "Change to {place} requested: waiting for an admin to decide",
+      "changed": "Location changed by an admin on {date}"
     },
     "modal": {
-      "title": "Challenge location",
-      "intro": "Mark this Signal pin as untrusted. You can optionally propose a corrected point for consideration — the source pin is not overwritten.",
-      "noteLabel": "Why does this look wrong? (optional)",
+      "title": "Change location",
+      "current": "Current location",
+      "noPlace": "No place name",
+      "noPin": "Placed on an area, with no exact point.",
+      "changeTo": "Change to",
+      "orOnMap": "Or click the map where it should be.",
+      "placeOnMap": "Pick it on the map",
+      "noteLabel": "Why? (optional)",
       "notePlaceholder": "e.g. Dataminr placed this in the wrong town…",
-      "proposeCorrection": "Propose a corrected point (optional)",
-      "proposeCorrectionHint": "Optional. Enter latitude and longitude if you know them. Queued for consideration only.",
-      "placeOnMap": "Place corrected pin on map",
-      "placeOnMapHint": "Return to the map and click where the pin should be. You can still enter coordinates manually below.",
       "enterCoordinatesManually": "Enter coordinates manually",
       "hideManualCoordinates": "Hide coordinate fields",
       "lat": "Latitude",
       "lng": "Longitude",
       "placeName": "Place name (optional)",
       "placeNamePlaceholder": "Local spelling or landmark",
-      "submitChallenge": "Submit challenge",
-      "submitCorrection": "Submit challenge + correction",
-      "successTitle": "Queued for consideration",
-      "successChallenge": "This Signal location is marked challenged. No second pin until a correction point is proposed.",
-      "successCorrection": "Source and proposed pins will both show on the map while the correction is queued.",
+      "submit": "Propose change",
+      "successTitle": "Change proposed",
+      "successBody": "Both pins show on the map until your team's admin decides.",
       "sessionOnlyTitle": "Shown this session only",
-      "sessionOnlyChallenge": "Map shows this pin as challenged for now. It is not saved yet — clear-api persistence is still pending.",
-      "sessionOnlyCorrection": "Source and proposed pins show on the map for this session. Saving for consideration needs clear-api support (still pending)."
+      "sessionOnlyCorrection": "Source and proposed pins show on the map for this session. Saving for consideration needs clear-api support (still pending).",
+      "searchLabel": "Search for the place",
+      "searchPlaceholder": "Village, town or landmark",
+      "noResults": "No places found. Try another spelling.",
+      "placing": "Finding where this is in CLEAR…",
+      "landsIn": "In CLEAR: {chain}",
+      "outsideCoverage": "This place is outside the areas CLEAR covers.",
+      "outsideTeamArea": "This place is outside your team's area. A platform admin can place the Signal there.",
+      "changePick": "Choose another place"
+    },
+    "map": {
+      "pins": {
+        "source": "Current",
+        "proposed": "Proposed",
+        "placed": "Your point"
+      },
+      "unavailable": "The map could not load. You can still search for the place or enter its coordinates."
     },
     "errors": {
-      "submitFailed": "Could not submit the location challenge. Try again.",
-      "backendUnavailable": "Location challenge is not available yet — clear-api support is still pending."
+      "submitFailed": "Could not propose the location change. Try again.",
+      "forbidden": "Your team can't correct this Signal there: the Signal or the place is outside your team's area.",
+      "outsideCoverage": "That place is outside the areas CLEAR covers.",
+      "conflict": "Someone proposed a location change for this Signal at the same moment. Try again.",
+      "backendUnavailable": "Location changes are not available yet: clear-api support is still pending."
     }
   },
   "verifyEmail": {
@@ -2758,14 +2781,16 @@
     "awaiting": "{count, plural, one {# awaiting review} other {# awaiting review}}",
     "tabs": {
       "community": "Community signals",
-      "proposals": "Proposed signals"
+      "proposals": "Proposed signals",
+      "locations": "Location changes"
     },
     "filters": {
       "community": "All",
       "reports": "Field reports",
       "unclassified": "Unclassified",
       "chatter": "Chatter",
-      "proposals": "Proposed signals"
+      "proposals": "Proposed signals",
+      "locations": "Location changes"
     },
     "search": "Search text, intake refs",
     "sort": {
@@ -2889,12 +2914,53 @@
       "partial": "Queued again: {done} of {total} messages. {error}"
     },
     "kinds": {
-      "cases": "Proposed signals"
+      "cases": "Proposed signals",
+      "location": "Location"
     },
     "event": {
       "untitled": "Untitled event",
       "open": "Open the event",
       "proposedAt": "Proposed {date}"
+    },
+    "location": {
+      "untitled": "Untitled signal",
+      "preview": {
+        "proposed": "Proposed: {place}",
+        "bare": "Pin marked as wrong, no point proposed"
+      },
+      "filedBy": "Filed by {name} · {date}",
+      "filed": "Filed {date}",
+      "openSignal": "Open the signal",
+      "now": "Current location",
+      "noPlace": "This Signal has no location",
+      "noPin": "Placed on an area, so it has no pin on the map.",
+      "proposed": "Proposed location",
+      "noProposal": "No point proposed: the analyst says the pin is wrong, not where it should be.",
+      "landsIn": "In CLEAR: {chain}",
+      "outsideCoverage": "Outside the areas CLEAR covers",
+      "note": "Analyst's note",
+      "team": "Team",
+      "placeTitle": "Place the point",
+      "placeHint": "Click the map where the Signal should be, or search for the place. You can also enter its coordinates.",
+      "actions": {
+        "accept": "Accept proposed point",
+        "placeOther": "Place a different point",
+        "place": "Place a point",
+        "decline": "Decline",
+        "save": "Save this point",
+        "cancel": "Cancel"
+      },
+      "toast": {
+        "accepted": "Location corrected to the proposed point",
+        "corrected": "Location corrected to your point",
+        "declined": "Change declined. The pin stays where it is."
+      },
+      "errors": {
+        "forbidden": "You can't correct this Signal there: the Signal or the place is outside the team's area.",
+        "outsideCoverage": "That place is outside the areas CLEAR covers.",
+        "conflict": "This change was already decided, or replaced by a newer one.",
+        "failed": "Could not save the decision. Try again."
+      }
     },
     "cases": {
       "preview": "{count, plural, =0 {All proposed signals decided} one {# proposed signal to review} other {# proposed signals to review}} · {hazard}"

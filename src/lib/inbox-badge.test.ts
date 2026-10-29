@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { act, renderHook } from "@testing-library/react";
 import {
   inboxBadgeCount,
+  inboxBadgeLabel,
   noteProposalDecided,
   proposalQueueMatchesServer,
   publishInboxUnread,
@@ -62,5 +63,23 @@ describe("inbox unread badge", () => {
     expect(inboxBadgeCount(4)).toBe(2);
     act(() => settleInboxUnread(4));
     expect(inboxBadgeCount(5)).toBe(3);
+  });
+});
+
+describe("inboxBadgeLabel", () => {
+  it("adds the open Location challenges to the proposed signals", () => {
+    expect(inboxBadgeLabel({ proposals: 3, locations: 2 })).toBe("5");
+    expect(inboxBadgeLabel({ locations: 1 })).toBe("1");
+    expect(inboxBadgeLabel({ proposals: 4 })).toBe("4");
+  });
+
+  it("shows nothing when nothing waits", () => {
+    expect(inboxBadgeLabel({ proposals: 0, locations: 0 })).toBeUndefined();
+    expect(inboxBadgeLabel({})).toBeUndefined();
+  });
+
+  it("marks a count stopped at its page cap", () => {
+    expect(inboxBadgeLabel({ proposals: 200, proposalsCapped: true, locations: 1 })).toBe("201+");
+    expect(inboxBadgeLabel({ locations: 200, locationsCapped: true })).toBe("200+");
   });
 });

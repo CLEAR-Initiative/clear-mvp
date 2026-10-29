@@ -256,6 +256,26 @@
       "note": "requireCaseProposalInboxAccess: admin (unscoped) + team analyst / team admin (team-scoped); ERM excluded"
     },
     {
+      "id": "inbox-locations",
+      "area": "inbox",
+      "action": "See Location changes tab + badge",
+      "route": "/inbox",
+      "selectors": [
+        "inbox-tab-locations"
+      ],
+      "flags": [],
+      "source": "location-challenge.ts:42",
+      "expect": {
+        "admin": "allow",
+        "analyst": "hidden",
+        "member": "hidden",
+        "erm": "hidden",
+        "pending": "hidden",
+        "team_admin": "allow"
+      },
+      "note": "decideSignalLocationChallenge: the team_admin of the team it was filed for, or a platform admin, the filer included; analysts file them"
+    },
+    {
       "id": "inbox-decide",
       "area": "inbox",
       "action": "Decide proposal Accept/Reject",
