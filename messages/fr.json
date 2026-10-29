@@ -19,46 +19,6 @@
       "firstEvent": "Premier événement : {date}",
       "lastUpdate": "Dernière mise à jour : {date}"
     },
-    "executiveSummary": {
-      "priorityAnalysis": "Analyse prioritaire",
-      "criticalBadge": "{count} critique(s)",
-      "activeBadge": "{count} active(s)",
-      "situationReport": "Rapport de situation - {country}",
-      "defaultReportTitle": "Crise de déplacement liée au conflit armé - {country}",
-      "activeAlerts": "Alertes actives",
-      "totalAlerts": "Total des alertes",
-      "trend": "Tendance",
-      "needs": {
-        "shelter": {
-          "label": "Abris",
-          "description": "Logement et déplacement"
-        },
-        "wash": {
-          "label": "WASH",
-          "description": "Eau et assainissement"
-        },
-        "protection": {
-          "label": "Protection",
-          "description": "Droits et sécurité"
-        },
-        "health": {
-          "label": "Santé",
-          "description": "Réponse médicale"
-        },
-        "foodSecurity": {
-          "label": "Sécurité alimentaire",
-          "description": "Accès à la nutrition"
-        }
-      },
-      "viewFullReport": "Voir le rapport complet",
-      "downloadPdf": "Télécharger le PDF",
-      "updatedAt": "Mise à jour {time}",
-      "updatedFallback": "Mise à jour il y a 2 heures",
-      "confidence": "Confiance : {pct} %",
-      "aiGeneratedAnalysis": "Analyse générée par IA",
-      "generating": "Génération d'une analyse complète à partir de {count} alertes actives...",
-      "generateFailed": "Échec de la génération de l'analyse. Veuillez réessayer."
-    },
     "insights": {
       "title": "Constats générés par IA",
       "subtitle": "Détection de tendances et recommandations",
@@ -1467,8 +1427,7 @@
       "alerts": "Alertes",
       "events": "Événements",
       "signals": "Signaux",
-      "history": "Historique",
-      "ground": "Renseignement terrain"
+      "history": "Historique"
     },
     "actions": {
       "createSignal": "Créer un signal"
@@ -1721,82 +1680,6 @@
         "critical": "5 - Critique"
       },
       "submit": "Créer l'alerte"
-    },
-    "groundIntel": {
-      "title": "Revue du renseignement terrain",
-      "count": "{count, plural, one {# message en attente} other {# messages en attente}}",
-      "privateTier": "Niveau privé — revue interne uniquement",
-      "classifications": {
-        "field_report": "Rapport de terrain",
-        "news_digest": "Revue de presse",
-        "operational": "Opérationnel",
-        "chatter": "Discussion",
-        "unclassified": "Non classé"
-      },
-      "sources": {
-        "all": "Toutes les sources"
-      },
-      "sourceKinds": {
-        "staff_group": "Groupe du personnel",
-        "partner_group": "Groupe partenaire",
-        "hotline": "Ligne d'assistance"
-      },
-      "columns": {
-        "sent": "Envoyé",
-        "sender": "Expéditeur",
-        "source": "Source",
-        "classification": "Classification",
-        "message": "Message",
-        "media": "Médias",
-        "thread": "Fil"
-      },
-      "lifecycle": {
-        "reported": "Signalé",
-        "updated": "Mis à jour",
-        "confirmed": "Confirmé",
-        "corrected": "Corrigé",
-        "retracted": "Rétracté"
-      },
-      "reviewStates": {
-        "unverified": "Non vérifié",
-        "approved_private": "Approuvé (privé)",
-        "approved_public": "Approuvé (public)",
-        "rejected": "Rejeté"
-      },
-      "thread": {
-        "untitled": "Fil sans titre",
-        "notFound": "Fil introuvable",
-        "reviewNote": "Note de revue",
-        "rejectReason": "Motif du rejet"
-      },
-      "review": {
-        "approvePrivate": "Approuver (privé)",
-        "approvePublic": "Approuver (public)",
-        "reject": "Rejeter",
-        "confirmPublish": "La publication est définitive — ce fil est promu et devient un signal dans le graphe des signaux.",
-        "confirm": "Confirmer la publication",
-        "cancel": "Annuler",
-        "finalNotice": "Approuvé public — ce fil est devenu un signal dans le graphe des signaux.",
-        "viewSignal": "Voir le signal promu",
-        "help": {
-          "approvePrivate": {
-            "title": "Vérifié, mais reste en interne.",
-            "body": "Le fil est marqué comme examiné et jugé crédible, mais il reste dans le niveau de préparation terrain : visible uniquement dans cet onglet Renseignement terrain, et uniquement pour les admins et les analystes. Aucun signal n'est créé — rien n'apparaît sur la carte ni dans les événements et alertes, et rien n'est exposé via l'API. C'est l'état prévu pour un contenu vrai mais sensible sur le plan opérationnel — déplacements du personnel, ou attribution qui pourrait mettre en danger la personne à l'origine du signalement. Il pourra encore être promu en public plus tard si les circonstances changent."
-          },
-          "approvePublic": {
-            "title": "Vérifié — diffusé dans CLEAR.",
-            "body": "C'est une promotion : le fil devient un vrai signal dans le graphe à cinq niveaux de CLEAR — source « whatsapp », visible dans les vues Signaux et Historique ainsi que sur la carte, éligible au regroupement en événements et à tout ce qui en découle — avec toute identité d'expéditeur structurellement supprimée : la charge utile de promotion ne contient aucun champ d'expéditeur, le nom de l'expéditeur ne peut donc physiquement pas l'accompagner. Cette action est définitive — une fois la promotion effectuée, le signal existe dans le graphe et le fil ne peut pas être dé-promu ; le serveur refuse toute modification ultérieure."
-          },
-          "reject": {
-            "title": "Non exploitable.",
-            "body": "Met le fil de côté. Contrairement à l'approbation publique, le rejet est réversible si quelqu'un change d'avis."
-          }
-        }
-      },
-      "empty": "Aucun message terrain en attente",
-      "noMatch": "Aucun message ne correspond au filtre actuel",
-      "noText": "Média sans légende",
-      "edited": "modifié"
     },
     "dataSources": {
       "title": "Sources de données connectées",
@@ -2873,13 +2756,16 @@
   "inbox": {
     "title": "Boîte de réception",
     "awaiting": "{count, plural, one {# en attente de revue} other {# en attente de revue}}",
+    "tabs": {
+      "community": "Signaux communautaires",
+      "proposals": "Signaux proposés"
+    },
     "filters": {
+      "community": "Tous",
       "reports": "Rapports terrain",
       "unclassified": "Non classés",
       "chatter": "Bavardage",
-      "proposals": "Signaux proposés",
-      "requests": "Mes demandes",
-      "all": "Tout"
+      "proposals": "Signaux proposés"
     },
     "search": "Rechercher texte, réf. d'admission",
     "sort": {
@@ -3003,20 +2889,12 @@
       "partial": "Remis en file : {done} message(s) sur {total}. {error}"
     },
     "kinds": {
-      "task": "Ma demande",
       "cases": "Signaux proposés"
     },
     "event": {
       "untitled": "Événement sans titre",
       "open": "Ouvrir l'événement",
       "proposedAt": "Proposé le {date}"
-    },
-    "requests": {
-      "requestedAt": "Demandé le {date}",
-      "awaitingReview": "Proposé, en attente d'examen",
-      "cancelFailed": "Cette demande n'a pas pu être annulée. Réessayez.",
-      "producedSeeEvent": "Proposition produite — voir l'événement",
-      "proposalLoadFailed": "La proposition n'a pas pu être chargée. Ouvrez l'événement pour la voir."
     },
     "cases": {
       "preview": "{count, plural, =0 {Tous les signaux proposés décidés} one {# signal proposé à examiner} other {# signaux proposés à examiner}} · {hazard}"
@@ -3635,6 +3513,35 @@
       "country": "Pays",
       "allCountries": "Tous les pays",
       "hint": "Les jours sont en UTC. Laissez les dates vides pour les 12 dernières semaines."
+    }
+  },
+  "usageAnalytics": {
+    "profile": {
+      "title": "Statistiques d'utilisation",
+      "toggleLabel": "Aider à améliorer CLEAR avec les statistiques d'utilisation",
+      "toggleDescription": "Enregistre les pages et fonctionnalités que vous utilisez. Désactivez pour l'arrêter complètement sur ce navigateur.",
+      "adminNote": "Les administrateurs globaux ne sont jamais suivis.",
+      "noticeLink": "Fonctionnement des statistiques d'utilisation",
+      "backToProfile": "Retour au profil"
+    },
+    "notice": {
+      "title": "Statistiques d'utilisation dans CLEAR",
+      "intro": "CLEAR enregistre l'utilisation de l'application pour que l'équipe voie ce qui aide les équipes de terrain et ce qui les freine.",
+      "whatTitle": "Ce que nous collectons",
+      "whatPages": "Les pages que vous ouvrez, en ne gardant que l'adresse de la page (le texte de recherche et les autres détails de requête sont supprimés).",
+      "whatActions": "Une liste fixe d'actions, comme ouvrir un événement ou terminer la visite guidée.",
+      "whatIdentity": "Votre identifiant utilisateur, rôle, organisation, équipe et langue.",
+      "whatNot": "Jamais votre nom, e-mail, texte de recherche, requêtes à l'Agent, titres ou tout ce que vous saisissez.",
+      "whyTitle": "Pourquoi",
+      "why": "Pour savoir quelles fonctionnalités sont utilisées, où les utilisateurs bloquent et quoi améliorer ensuite.",
+      "whoTitle": "Qui y a accès",
+      "who": "Uniquement l'équipe produit CLEAR, dans un outil auto-hébergé sur les serveurs de CLEAR. Rien n'est partagé avec des tiers ni utilisé à des fins publicitaires.",
+      "retentionTitle": "Durée de conservation",
+      "retention": "13 mois, puis les données sont supprimées.",
+      "optOutTitle": "Désactivation",
+      "optOut": "Vous pouvez désactiver les statistiques d'utilisation à tout moment dans votre profil. Une fois désactivées, le traceur n'est pas chargé du tout.",
+      "manageInProfile": "Gérer dans le profil",
+      "gotIt": "Compris"
     }
   }
 }

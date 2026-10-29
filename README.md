@@ -90,15 +90,33 @@ on specific features. [`.env.example`](./.env.example) documents each one.
 |---|---|---|
 | `API_URL` | Everything | clear-api base URL, used server-side. Defaults to `http://localhost:4000` in development; required in production. |
 | `GRAPHQL_URL` | — | Override the GraphQL endpoint. Defaults to `${API_URL}/graphql`. |
-| `GRAPHQL_API_KEY` | Server-to-server calls | Service-account key for GraphQL calls that carry no user session. |
-| `NEXT_PUBLIC_AUTH_URL` | Sign-in in production | Public clear-api URL the **browser** uses for auth. Must be reachable from the user's machine. |
 | `NEXT_PUBLIC_MAPBOX_TOKEN` | Maps | Mapbox public token. |
 | `CLEAR_AGENT_MODEL`, `ANTHROPIC_API_KEY`, `CLEAR_AGENT_API_KEY` | CLEAR Agent | Model string (e.g. `anthropic/...`), its provider key, and the Agent's clear-api key. |
 | `NRC_FIND_API_URL`, `NRC_FIND_API_TOKEN` | CLEAR Agent | NRC Find, NRC's internal knowledge base. |
 | `NEXT_PUBLIC_LOGIE_BLOCKAGES_URL` | Map access-constraints layer | See [`docs/clear-api-logie-ingest.md`](./docs/clear-api-logie-ingest.md). |
+| `NOTION_TOKEN`, `NOTION_FEEDBACK_DB_ID` | Feedback form | `/api/feedback` writes to this Notion database. |
+| `ACAPS_API_TOKEN` | INFORM Severity data | ACAPS API token. |
+| `SENTRY_DSN`, `SENTRY_ENV`, `NEXT_PUBLIC_SENTRY_DSN` | Error tracking | GlitchTip (Sentry-compatible). Leave unset locally. |
+| `NEXT_PUBLIC_UMAMI_HOST_URL`, `NEXT_PUBLIC_UMAMI_WEBSITE_ID`, `NEXT_PUBLIC_UMAMI_SRC` | Usage analytics | Self-hosted Umami. Unset = no tracker. Also needs the `usage_analytics` flag. See `src/lib/analytics`. |
 
 `NEXT_PUBLIC_*` variables are baked in at build time and shipped to the browser. Everything else
 stays on the server.
+
+#### Where the real values live
+
+The deployed environments (`dev.clearinitiative.io`, `app.clearinitiative.io`) run on VMs that
+the team manages in a private infrastructure repo, not on Vercel. Their server-side values are
+set there; their `NEXT_PUBLIC_*` values are baked into the Docker image at build time. Only
+`NEXT_PUBLIC_MAPBOX_TOKEN` and `NEXT_PUBLIC_SENTRY_DSN` (GitHub environment secrets on this
+repo), `NEXT_PUBLIC_UMAMI_HOST_URL` and `NEXT_PUBLIC_UMAMI_WEBSITE_ID` (GitHub environment
+variables, not secrets) and `NEXT_PUBLIC_SENTRY_ENV` (the environment name) are passed through. Any other, such as
+`NEXT_PUBLIC_LOGIE_BLOCKAGES_URL`, also needs a build arg in
+[`.github/actions/build-image`](./.github/actions/build-image/action.yml) and an `ARG`/`ENV` pair
+in the [`Dockerfile`](./Dockerfile); a secret alone does nothing.
+
+For a local `.env`, [`.env.example`](./.env.example) is prefilled with the dev config values and
+marks which values are secrets. The team shares those privately once you've registered; see
+[CONTRIBUTING.md](./CONTRIBUTING.md). For Mapbox, use your own free token.
 
 ## How the code is organised
 
@@ -158,7 +176,7 @@ bun dev               # dev server on :3000 (Turbopack)
 bun run build         # production build
 bun start             # serve the production build
 bun run typecheck     # tsc --noEmit
-bun run lint          # next lint
+bun run lint          # eslint (flat config: eslint.config.mjs)
 bun run i18n:check    # every locale has every message key
 bun run check         # lint + typecheck + i18n:check
 bun run test          # unit tests (Vitest)
@@ -167,22 +185,23 @@ bun run e2e           # end-to-end tests (Playwright; needs Docker and clear-api
 
 ## Contributing and deployment
 
-- Branch off **`dev`** and open pull requests against `dev`.
-- CI runs unit and end-to-end checks on every PR.
+See [CONTRIBUTING.md](./CONTRIBUTING.md) for how to get started, the checks to run and how pull
+requests are reviewed and merged.
+
 - A merge to **`dev`** tags a new version and builds the Docker image for the dev environment;
   a merge to **`prod`** does the same for production
   ([`.github/workflows/`](./.github/workflows/)). The image uses Next.js standalone output
-  ([`Dockerfile`](./Dockerfile)).
-- Work is tracked in [Exponential](https://www.exponential.im/w/clear/products/clear), not GitHub Issues.
-- Commit messages follow [Conventional Commits](https://www.conventionalcommits.org/).
+  ([`Dockerfile`](./Dockerfile)). It runs on VMs the team manages in a private infrastructure
+  repo (`dev.clearinitiative.io`, `app.clearinitiative.io`). This project no longer deploys to
+  Vercel.
 
 ## Troubleshooting
 
 - **"Auth service unavailable"** on any signed-in page — the server can't reach clear-api. Check
   `API_URL` and that clear-api is running.
-- **Signed in, but the session doesn't stick** — `NEXT_PUBLIC_AUTH_URL` must be the clear-api
-  address the browser actually uses; cross-domain cookies also need clear-api's `SameSite` set
-  correctly.
+- **Signed in, but the session doesn't stick** — the browser signs in through this app's
+  `/api/auth` proxy to clear-api (`API_URL`). Check clear-api's cookie settings (`SameSite`,
+  `Secure`) for the address you're serving the app from.
 - **"Waiting for Access" after sign-in** — your account isn't in an organisation yet. Ask an
   admin for an invitation.
 - **Blank map** — `NEXT_PUBLIC_MAPBOX_TOKEN` is missing or invalid.

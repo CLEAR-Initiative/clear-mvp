@@ -35,6 +35,22 @@ export function isTeamAnalyst(
 }
 
 /**
+ * Whether the user holds the ANALYSIS permission set on any team — a team
+ * `analyst`, OR an `emergency_response_manager` (granted the analyst's analysis
+ * powers on top of its own; clear-api's `TEAM_ANALYST_ROLES`). Use this for
+ * analysis chrome: managing analyses, raising/promoting alerts, add-to-crisis.
+ * NOT for case-proposal deciding, which stays `analyst`/`team_admin` only —
+ * an ERM is deliberately excluded there (see `canDecideCaseProposals`). The
+ * server is the real, location-scoped gate; this only decides which chrome to
+ * show.
+ */
+export function hasAnalysisPowers(
+  teamMemberships: { role: string }[] | null | undefined,
+): boolean {
+  return isTeamAnalyst(teamMemberships) || isEmergencyResponseManager(teamMemberships);
+}
+
+/**
  * Client twin of clear-api `addEventToCrisis` / `createAlert`
  * `requireRole(["admin", "analyst"])`. Use this for Add-to-crisis and
  * Raise-alert chrome — NOT `isPlatformAdmin`, which is admin-only and
@@ -52,7 +68,7 @@ export function canWriteCrisisEvents(
   role: string | null | undefined,
   teamMemberships?: { role: string }[] | null,
 ): boolean {
-  return isPlatformAdmin(role) || isTeamAnalyst(teamMemberships);
+  return isPlatformAdmin(role) || hasAnalysisPowers(teamMemberships);
 }
 
 /**
@@ -65,7 +81,7 @@ export function canManageAnalyses(
   role: string | null | undefined,
   teamMemberships?: { role: string }[] | null,
 ): boolean {
-  return isPlatformAdmin(role) || isTeamAnalyst(teamMemberships);
+  return isPlatformAdmin(role) || hasAnalysisPowers(teamMemberships);
 }
 
 /**
@@ -82,14 +98,30 @@ export function canReadContent(role: string | null | undefined): boolean {
 /**
  * Client twin of clear-api `decideCaseProposal` / `caseProposals`
  * `requireRole(["admin", "analyst"])`: who may decide a proposed signal
- * (a web case, clear-api CaseProposal). Admin OR a team analyst (optimistic —
- * the server is the real, location-scoped gate).
+ * (a web case, clear-api CaseProposal). Admin, a team analyst or a team admin
+ * (optimistic: the server is the real, team-scoped gate).
  */
 export function canDecideCaseProposals(
   role: string | null | undefined,
   teamMemberships?: { role: string }[] | null,
 ): boolean {
-  return isPlatformAdmin(role) || isTeamAnalyst(teamMemberships);
+  return isPlatformAdmin(role) || isTeamAnalyst(teamMemberships) || isTeamAdmin(teamMemberships);
+}
+
+/**
+ * The team role that administers a team, a value of
+ * `teamMemberships[].role`, mirroring clear-api's `TEAM_ADMIN_ROLE`. In the
+ * Inbox a team admin works every list: community signals and proposed
+ * signals.
+ */
+export const TEAM_ADMIN = "team_admin";
+
+/** Whether the user is a `team_admin` on any team (optimistic UI gate; the
+ * server scopes what they may do to their own teams). */
+export function isTeamAdmin(
+  teamMemberships: { role: string }[] | null | undefined,
+): boolean {
+  return !!teamMemberships?.some((m) => m.role === TEAM_ADMIN);
 }
 
 /**

@@ -2,13 +2,12 @@
 
 import type { CSSProperties } from "react";
 import { useTranslations } from "next-intl";
-import { IconAlertTriangle, IconSend, IconWorld } from "@tabler/icons-react";
+import { IconAlertTriangle, IconWorld } from "@tabler/icons-react";
 import type {
   CaseGroupEntry,
   HotlineEntry,
   InboxClassification,
   InboxFailure,
-  TaskEntry,
 } from "~/lib/hotline-inbox";
 
 const STYLES: Record<InboxClassification, { bg: string; color: string }> = {
@@ -106,41 +105,16 @@ export function InboxCasesPill() {
   );
 }
 
-/** The reader's own request: status, not a Review item. */
-export function InboxTaskPill() {
-  const t = useTranslations("inbox");
-  return (
-    <span
-      data-testid="inbox-kind-pill"
-      data-kind="task"
-      style={{
-        ...PILL,
-        display: "inline-flex",
-        alignItems: "center",
-        gap: 4,
-        padding: "1px 7px",
-        background: "var(--color-bg-muted)",
-        color: "var(--color-text-secondary)",
-      }}
-    >
-      <IconSend size={11} aria-hidden />
-      {t("kinds.task")}
-    </span>
-  );
-}
-
 type PillEntry =
   | Pick<HotlineEntry, "kind" | "classification" | "processing" | "failures">
-  | Pick<CaseGroupEntry, "kind">
-  | Pick<TaskEntry, "kind">;
+  | Pick<CaseGroupEntry, "kind">;
 
 /** An entry's pills, per kind. A hotline thread: its classification, plus
  * the failed pill when the pipeline gave up on a message ("Unclassified"
  * is dropped once the entry has failed: the failed pill says why it has no
- * label). A case group, a request: its kind. */
+ * label). A case group: its kind. */
 export function InboxEntryPills({ entry }: { entry: PillEntry }) {
   if (entry.kind === "cases") return <InboxCasesPill />;
-  if (entry.kind === "task") return <InboxTaskPill />;
   const failed = entry.processing === "failed";
   return (
     <>

@@ -111,9 +111,9 @@ const navSections: NavSection[] = [
         labelKey: "inbox",
         href: NAV_ROUTES.inbox,
         icon: IconInbox,
-        // The same rule as the page gate: hotline threads for admins,
-        // proposed signals for deciders, My requests for content readers,
-        // each behind its flag.
+        // The same rule as the page gate: community signals for admins,
+        // team admins and ERMs, proposed signals for deciders, each behind
+        // its flag.
         visibleWhen: ({ inbox }) => inbox.any,
       },
       { labelKey: "map", href: NAV_ROUTES.map, icon: IconMapPin, featureKey: "crisis_map" },
@@ -189,7 +189,6 @@ export function NavSidebar({
     isErm,
     hotlineInbox: flags.hotline_inbox ?? true,
     impactPriorReview: flags.impact_prior_review ?? true,
-    eventEnrichment: flags.event_enrichment ?? true,
   });
   const visibility: NavVisibility = { isAdmin, role, flags, inbox: reviewAccess };
 

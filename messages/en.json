@@ -19,46 +19,6 @@
       "firstEvent": "First event: {date}",
       "lastUpdate": "Last update: {date}"
     },
-    "executiveSummary": {
-      "priorityAnalysis": "Priority Analysis",
-      "criticalBadge": "{count} Critical",
-      "activeBadge": "{count} Active",
-      "situationReport": "Situation Report - {country}",
-      "defaultReportTitle": "Armed Conflict Displacement Crisis - {country}",
-      "activeAlerts": "Active Alerts",
-      "totalAlerts": "Total Alerts",
-      "trend": "Trend",
-      "needs": {
-        "shelter": {
-          "label": "Shelter",
-          "description": "Housing & displacement"
-        },
-        "wash": {
-          "label": "WASH",
-          "description": "Water & sanitation"
-        },
-        "protection": {
-          "label": "Protection",
-          "description": "Rights & safety"
-        },
-        "health": {
-          "label": "Health",
-          "description": "Medical response"
-        },
-        "foodSecurity": {
-          "label": "Food Security",
-          "description": "Nutrition access"
-        }
-      },
-      "viewFullReport": "View Full Report",
-      "downloadPdf": "Download PDF",
-      "updatedAt": "Updated {time}",
-      "updatedFallback": "Updated 2 hours ago",
-      "confidence": "Confidence: {pct}%",
-      "aiGeneratedAnalysis": "AI-Generated Analysis",
-      "generating": "Generating comprehensive analysis from {count} active alerts...",
-      "generateFailed": "Failed to generate analysis. Please try again."
-    },
     "insights": {
       "title": "AI-Generated Insights",
       "subtitle": "Pattern detection and recommendations",
@@ -1467,8 +1427,7 @@
       "alerts": "Alerts",
       "events": "Events",
       "signals": "Signals",
-      "history": "History",
-      "ground": "Ground Intel"
+      "history": "History"
     },
     "actions": {
       "createSignal": "Create Signal"
@@ -1721,82 +1680,6 @@
         "critical": "5 - Critical"
       },
       "submit": "Create Alert"
-    },
-    "groundIntel": {
-      "title": "Ground Intel Review",
-      "count": "{count, plural, one {# staged message} other {# staged messages}}",
-      "privateTier": "Private tier — internal review only",
-      "classifications": {
-        "field_report": "Field report",
-        "news_digest": "News digest",
-        "operational": "Operational",
-        "chatter": "Chatter",
-        "unclassified": "Unclassified"
-      },
-      "sources": {
-        "all": "All sources"
-      },
-      "sourceKinds": {
-        "staff_group": "Staff group",
-        "partner_group": "Partner group",
-        "hotline": "Hotline"
-      },
-      "columns": {
-        "sent": "Sent",
-        "sender": "Sender",
-        "source": "Source",
-        "classification": "Classification",
-        "message": "Message",
-        "media": "Media",
-        "thread": "Thread"
-      },
-      "lifecycle": {
-        "reported": "Reported",
-        "updated": "Updated",
-        "confirmed": "Confirmed",
-        "corrected": "Corrected",
-        "retracted": "Retracted"
-      },
-      "reviewStates": {
-        "unverified": "Unverified",
-        "approved_private": "Approved (private)",
-        "approved_public": "Approved (public)",
-        "rejected": "Rejected"
-      },
-      "thread": {
-        "untitled": "Untitled thread",
-        "notFound": "Thread not found",
-        "reviewNote": "Review note",
-        "rejectReason": "Reject reason"
-      },
-      "review": {
-        "approvePrivate": "Approve (private)",
-        "approvePublic": "Approve (public)",
-        "reject": "Reject",
-        "confirmPublish": "Publishing is final — this thread is promoted and becomes a signal in the signals graph.",
-        "confirm": "Confirm publish",
-        "cancel": "Cancel",
-        "finalNotice": "Approved public — this thread became a signal in the signals graph.",
-        "viewSignal": "View promoted signal",
-        "help": {
-          "approvePrivate": {
-            "title": "Verified, but stays inside the room.",
-            "body": "The thread is marked as reviewed and believed, but it stays in the ground staging tier: visible only in this Ground Intel tab, only to admins and team analysts. No signal is created — nothing appears on the map or in events and alerts, and nothing is exposed through the API. This is the state for content that is true but operationally sensitive — staff movements, or attribution that could endanger the reporter. It can still be promoted to public later if circumstances change."
-          },
-          "approvePublic": {
-            "title": "Verified — release it into CLEAR.",
-            "body": "This is promotion: the thread becomes a real signal in CLEAR's five-tier graph — source \"whatsapp\", visible in the Signals and History views and on the map, eligible for event clustering and everything downstream — with all sender identity structurally stripped: the promotion payload has no sender fields, so the sender's name physically cannot travel with it. This action is terminal — once promoted, the signal exists in the graph and the thread cannot be un-promoted; the server refuses any further changes."
-          },
-          "reject": {
-            "title": "Not actionable.",
-            "body": "Parks the thread. Unlike public approval, rejection is reversible if someone changes their mind."
-          }
-        }
-      },
-      "empty": "No staged ground messages yet",
-      "noMatch": "No messages match the current filter",
-      "noText": "Media without caption",
-      "edited": "edited"
     },
     "dataSources": {
       "title": "Connected Data Sources",
@@ -2873,13 +2756,16 @@
   "inbox": {
     "title": "Inbox",
     "awaiting": "{count, plural, one {# awaiting review} other {# awaiting review}}",
+    "tabs": {
+      "community": "Community signals",
+      "proposals": "Proposed signals"
+    },
     "filters": {
+      "community": "All",
       "reports": "Field reports",
       "unclassified": "Unclassified",
       "chatter": "Chatter",
-      "proposals": "Proposed signals",
-      "requests": "My requests",
-      "all": "Everything"
+      "proposals": "Proposed signals"
     },
     "search": "Search text, intake refs",
     "sort": {
@@ -3003,20 +2889,12 @@
       "partial": "Queued again: {done} of {total} messages. {error}"
     },
     "kinds": {
-      "task": "My request",
       "cases": "Proposed signals"
     },
     "event": {
       "untitled": "Untitled event",
       "open": "Open the event",
       "proposedAt": "Proposed {date}"
-    },
-    "requests": {
-      "requestedAt": "Requested {date}",
-      "awaitingReview": "Proposed, awaiting review",
-      "cancelFailed": "This request could not be cancelled. Try again.",
-      "producedSeeEvent": "Proposal produced — see the Event",
-      "proposalLoadFailed": "The proposal could not be loaded. Open the Event to see it."
     },
     "cases": {
       "preview": "{count, plural, =0 {All proposed signals decided} one {# proposed signal to review} other {# proposed signals to review}} · {hazard}"
@@ -3635,6 +3513,35 @@
       "country": "Country",
       "allCountries": "All countries",
       "hint": "Days are UTC. Leave the dates empty for the last 12 weeks."
+    }
+  },
+  "usageAnalytics": {
+    "profile": {
+      "title": "Usage analytics",
+      "toggleLabel": "Help improve CLEAR with usage analytics",
+      "toggleDescription": "Records which pages and features you use. Turn off to stop it completely on this browser.",
+      "adminNote": "Global admins are never tracked.",
+      "noticeLink": "How usage analytics works",
+      "backToProfile": "Back to Profile"
+    },
+    "notice": {
+      "title": "Usage analytics in CLEAR",
+      "intro": "CLEAR records how the app is used so the team can see what helps field teams and what gets in the way.",
+      "whatTitle": "What we collect",
+      "whatPages": "Which pages you open, keeping only the page address (search text and other query details are removed).",
+      "whatActions": "A fixed list of actions, such as opening an Event or finishing the tour.",
+      "whatIdentity": "Your user ID, role, organisation, team and language.",
+      "whatNot": "Never your name, email, search text, Agent prompts, titles or anything you type.",
+      "whyTitle": "Why",
+      "why": "To learn which features are used, where people get stuck, and what to improve next.",
+      "whoTitle": "Who sees it",
+      "who": "Only the CLEAR product team, in a self-hosted tool on CLEAR's own servers. It is not shared with third parties or used for advertising.",
+      "retentionTitle": "How long we keep it",
+      "retention": "13 months, then it is deleted.",
+      "optOutTitle": "Turning it off",
+      "optOut": "You can turn usage analytics off at any time in your Profile. When it is off, the tracker is not loaded at all.",
+      "manageInProfile": "Manage in Profile",
+      "gotIt": "Got it"
     }
   }
 }

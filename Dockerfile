@@ -50,8 +50,16 @@ ENV NEXT_PUBLIC_SENTRY_ENV=${NEXT_PUBLIC_SENTRY_ENV}
 ARG NEXT_PUBLIC_SENTRY_CLIENT=""
 ENV NEXT_PUBLIC_SENTRY_CLIENT=${NEXT_PUBLIC_SENTRY_CLIENT}
 
-# Hermetic Playwright stack only. Lets `/observe?noTeam=1` run against the
-# production Next image (NODE_ENV=production, no Vercel preview env).
+# Usage analytics (self-hosted Umami, src/lib/analytics). Empty = no tracker.
+ARG NEXT_PUBLIC_UMAMI_HOST_URL=""
+ENV NEXT_PUBLIC_UMAMI_HOST_URL=${NEXT_PUBLIC_UMAMI_HOST_URL}
+ARG NEXT_PUBLIC_UMAMI_WEBSITE_ID=""
+ENV NEXT_PUBLIC_UMAMI_WEBSITE_ID=${NEXT_PUBLIC_UMAMI_WEBSITE_ID}
+
+# Hermetic Playwright stack only (docker-compose.e2e.yml sets it to 1). No
+# code reads it today. The e2e image keeps NEXT_PUBLIC_SENTRY_ENV at its
+# default, so it is not a dev deploy (src/lib/deploy-env.ts) and dev-only tools
+# such as `/observe?noTeam=1` stay off; spec 12 mocks auth.me instead.
 ARG NEXT_PUBLIC_E2E=""
 ENV NEXT_PUBLIC_E2E=${NEXT_PUBLIC_E2E}
 

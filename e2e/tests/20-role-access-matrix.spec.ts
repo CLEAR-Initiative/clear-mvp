@@ -44,7 +44,7 @@ const matrix = JSON.parse(
   readFileSync(join(process.cwd(), "e2e/support/role-access/matrix.json"), "utf8"),
 ) as Matrix;
 
-const CORE: Persona[] = ["admin", "analyst", "member", "erm", "pending"];
+const CORE: Persona[] = ["admin", "analyst", "member", "erm", "pending", "team_admin"];
 
 /** First concrete, static route for a case ("*" → /dashboard; "a|b" → a). */
 function routeOf(route: string): { path: string; dynamic: boolean } {
@@ -71,13 +71,13 @@ function resolve(page: Page, sel: string) {
 
 /**
  * Selectors whose ABSENCE is a robust deny-side signal: nav links, tabs, and
- * inbox filter pills that render from access alone (no seeded record). Excludes
+ * inbox tabs / filter pills that render from access alone (no seeded record). Excludes
  * `inbox-no-access` on purpose — that's a NEGATIVE marker (shown WHEN access is
  * denied), so its presence is inverted vs a filter pill and would mislead a
  * generic absence check.
  */
 function absenceAssertable(sel: string): boolean {
-  return sel.startsWith("a[") || /^(tab|nav):/.test(sel) || /-filter-(reports|proposals)$/.test(sel);
+  return sel.startsWith("a[") || /^(tab|nav):/.test(sel) || /-(filter|tab)-(reports|community|proposals)$/.test(sel);
 }
 
 /**
@@ -143,6 +143,41 @@ test.describe("Role-access matrix (case 20)", () => {
       }
     });
   }
+
+  // Inbox tabs, positive side: each reader gets exactly their tabs and both
+  // lists load (a refused clear-api call shows the load error). The matrix
+  // cases above only assert the hidden side.
+  test.describe("inbox tabs", () => {
+    const EXPECTED: [Persona, ("community" | "proposals")[]][] = [
+      ["admin", ["community", "proposals"]],
+      ["team_admin", ["community", "proposals"]],
+      ["erm", ["community"]],
+      ["analyst", ["proposals"]],
+    ];
+    for (const [persona, tabs] of EXPECTED) {
+      test(`${persona} gets ${tabs.join(" + ")} and the lists load`, async ({ browser }) => {
+        const ctx = await contextFor(browser, persona);
+        test.skip(!ctx, `no credentials configured for persona "${persona}"`);
+        const page = await ctx!.newPage();
+        try {
+          await page.goto("/inbox", { waitUntil: "domcontentloaded" });
+          await expect(page.getByTestId("inbox-page")).toBeVisible({ timeout: 20_000 });
+          for (const tab of ["community", "proposals"] as const) {
+            await expect(page.getByTestId(`inbox-tab-${tab}`)).toHaveCount(tabs.includes(tab) ? 1 : 0);
+          }
+          // The list footer is data-loading until every list this reader gets
+          // has settled: loaded, or failed after React Query's retries. Only
+          // then is a missing load error meaningful.
+          await expect(page.getByTestId("inbox-list-footer")).toHaveAttribute("data-loading", "false", {
+            timeout: 45_000,
+          });
+          await expect(page.getByTestId("inbox-load-error")).toHaveCount(0);
+        } finally {
+          await ctx!.close();
+        }
+      });
+    }
+  });
 
   // Team & Org role cases — need seeded team/org users + Settings navigation.
   test.describe("team & org roles", () => {

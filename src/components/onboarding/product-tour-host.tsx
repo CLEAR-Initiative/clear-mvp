@@ -7,6 +7,7 @@ import { notifyOnboardingChange, useOnboardingState } from "~/hooks/use-onboardi
 import { shouldAutoStartTour } from "~/lib/onboarding/resolve-redirect";
 import type { TourCompleteOptions } from "~/lib/onboarding/types";
 import { api } from "~/trpc/react";
+import { ONBOARDING_FINISHED_EVENT } from "~/components/analytics/usage-notice";
 
 function ProductTourHostInner() {
   const router = useRouter();
@@ -48,6 +49,10 @@ function ProductTourHostInner() {
       onComplete={(options) => {
         closedRef.current = true;
         setTourActive(false);
+        // First finish of onboarding (not a replay): show the usage notice once.
+        if (tourParam !== "replay" && !onboardingState?.onboardingCompletedAt) {
+          window.dispatchEvent(new Event(ONBOARDING_FINISHED_EVENT));
+        }
         notifyOnboardingChange();
         if (options?.landOnMap !== false) {
           router.replace("/map");

@@ -22,7 +22,6 @@ import { useReportStaleCountryPick } from "~/lib/report-stale-country-pick";
 import type { MapMarker } from "~/components/map/crisis-map";
 import { parseDateFilter, resolveCountryConfig, staticCountryBounds } from "~/lib/constants/country-config";
 import { isoForCountryName } from "~/lib/constants/countries";
-import { isPlatformAdmin, isTeamAnalyst } from "~/lib/roles";
 import { scopeIsosMissingPaintableBoundaries } from "~/lib/geo/country-mask";
 import { useLocations } from "~/hooks/use-locations";
 import { useLastFocusedCountry } from "~/hooks/use-last-focused-country";
@@ -36,10 +35,8 @@ import {
   writeDetectionNavEventIds,
   writeDetectionNavSignalIds,
 } from "~/lib/detection-nav-context";
-import { useFeatureEnabled } from "~/components/feature-flags-provider";
 
 import { LiveAlertsTab, type AlertSortOrder } from "./_components/live-alerts-tab";
-import { GroundIntelTab } from "./_components/ground-intel-tab";
 import { HistoryTab, type HistorySortOrder } from "./_components/history-tab";
 import { EventsTab, type EventSortOrder } from "./_components/events-tab";
 import { SignalsTab, type SignalSortOrder } from "./_components/signals-tab";
@@ -83,7 +80,9 @@ const SIGNAL_ORDER_MAP: Record<SignalSortOrder, SignalOrderBy> = {
   "sev-asc":  "SEVERITY_ASC",
 };
 
-const CANONICAL_TABS = new Set(["alerts", "events", "signals", "history", "ground"]);
+/** Tab order drives the sliding indicator geometry: equal slots. */
+const DETECTION_TABS = ["alerts", "events", "signals", "history"];
+const CANONICAL_TABS = new Set(DETECTION_TABS);
 /** Legacy `live` slug → `alerts` (matches the Alerts label). */
 function normalizeDetectionTab(raw: string | null): string | null {
   if (!raw) return null;
@@ -325,43 +324,6 @@ function DetectionPageContent() {
     linkCountry ?? workingCountryName ?? pickedCountry,
     selectedCountry,
   );
-
-  // Ground intel is a PRIVATE staging tier (sender names, unvetted claims):
-  // clear-api rejects every ground query for roles other than admin or a team
-  // analyst (location-scoped server-side), so the tab is hidden for everyone
-  // else rather than rendering a surface that can only error. Mirrors
-  // event-detail's promote gating pattern. Additionally gated behind the
-  // `ground_intel` feature flag (admin Features tab) so the whole tab can be
-  // switched off for everyone, independent of role.
-  const groundIntelEnabled = useFeatureEnabled("ground_intel");
-  const { data: authData } = api.auth.me.useQuery(undefined, { staleTime: 60_000 });
-  const canSeeGround =
-    groundIntelEnabled &&
-    (isPlatformAdmin(authData?.user?.role) ||
-      isTeamAnalyst(authData?.user?.teamMemberships));
-
-  // Tab order drives the sliding indicator geometry - 4 or 5 equal slots
-  // depending on whether the ground tab is visible for this role.
-  const visibleTabs = useMemo(
-    () => ["alerts", "events", "signals", "history", ...(canSeeGround ? ["ground"] : [])],
-    [canSeeGround],
-  );
-
-  // An unauthorised deep link (?tab=ground) or a stale stored tab would
-  // otherwise strand the user on an empty panel: the tab button is hidden
-  // but activeTab still says "ground". Wait until the role is actually
-  // known (authData resolved) so admins aren't bounced mid-fetch, then
-  // fall back to the default tab.
-  useEffect(() => {
-    if (!authData || canSeeGround) return;
-    if (activeTab !== "ground" && indicatorTab !== "ground") return;
-    clearTabTimers();
-    pendingRouteTab.current = null;
-    setIndicatorTab("events");
-    setActiveTab("events");
-    setPendingTab(null);
-    commitTabRoute("events");
-  }, [authData, canSeeGround, activeTab, indicatorTab, clearTabTimers, commitTabRoute]);
 
   const [boundaryLevel, setBoundaryLevel] = useState<"none" | "A0" | "A1" | "A2">("A1");
 
@@ -795,7 +757,6 @@ function DetectionPageContent() {
     setEventsOffset(0);
     setEventsItems([]);
     setEventsVersion((v) => v + 1);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [eventsSort]);
 
   useEffect(() => {
@@ -811,7 +772,6 @@ function DetectionPageContent() {
     setAlertsOffset(0);
     setAlertsItems([]);
     setAlertsVersion((v) => v + 1);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [alertsSort]);
 
   useEffect(() => {
@@ -827,7 +787,6 @@ function DetectionPageContent() {
     setSignalsOffset(0);
     setSignalsItems([]);
     setSignalsVersion((v) => v + 1);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [signalsSort]);
 
   // ── Load-more callbacks ────────────────────────────────────────────────────
@@ -999,7 +958,6 @@ function DetectionPageContent() {
     setHistoryEventsItems([]);
     setHistorySignalsItems([]);
     setHistoryVersion((v) => v + 1);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [historySortOrder, historySources]);
 
   const historyHasMore = historyAlertsHasMore || historyEventsHasMore || historySignalsHasMore;
@@ -1076,9 +1034,6 @@ function DetectionPageContent() {
           historyEventsQuery.isLoading ||
           historySignalsQuery.isLoading
         );
-      case "ground":
-        // Self-fetching tab - it renders its own table loading state.
-        return false;
       default:
         return true;
     }
@@ -1188,7 +1143,8 @@ function DetectionPageContent() {
                         style={{ cursor: "pointer", textTransform: "capitalize" }}
                         onClick={() => setActiveSeverities((prev) => {
                           const next = new Set(prev);
-                          next.has(sev) ? next.delete(sev) : next.add(sev);
+                          if (next.has(sev)) next.delete(sev);
+                          else next.add(sev);
                           return next;
                         })}
                       >
@@ -1216,7 +1172,8 @@ function DetectionPageContent() {
                             onClick={() => setActiveSources((prev) => {
                               const base = prev ?? new Set(allSources);
                               const next = new Set(base);
-                              next.has(src) ? next.delete(src) : next.add(src);
+                              if (next.has(src)) next.delete(src);
+                              else next.add(src);
                               return next.size === allSources.length ? null : next;
                             })}
                           >
@@ -1259,14 +1216,13 @@ function DetectionPageContent() {
             <Tabs.Tab value="events" data-tour="detection-tab-events">{t("tabs.events")}</Tabs.Tab>
             <Tabs.Tab value="signals">{t("tabs.signals")}</Tabs.Tab>
             <Tabs.Tab value="history">{t("tabs.history")}</Tabs.Tab>
-            {canSeeGround && <Tabs.Tab value="ground">{t("tabs.ground")}</Tabs.Tab>}
             <Box
               className={detectionTabsStyles.indicator}
               style={{
                 // Equal slots; geometry follows the visible tab count so the
                 // underline stays aligned whether or not ground is shown.
-                width: `${100 / visibleTabs.length}%`,
-                left: `${(Math.max(visibleTabs.indexOf(indicatorTab ?? "alerts"), 0) * 100) / visibleTabs.length}%`,
+                width: `${100 / DETECTION_TABS.length}%`,
+                left: `${(Math.max(DETECTION_TABS.indexOf(indicatorTab ?? "alerts"), 0) * 100) / DETECTION_TABS.length}%`,
               }}
             />
           </Tabs.List>
@@ -1367,8 +1323,6 @@ function DetectionPageContent() {
                 activeSources={activeSources}
               />
             )}
-
-            {activeTab === "ground" && canSeeGround && <GroundIntelTab />}
 
             {activeTab === "history" && (
               <HistoryTab

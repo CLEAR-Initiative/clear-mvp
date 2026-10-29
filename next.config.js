@@ -18,6 +18,9 @@ const nextConfig = {
     ? { turbopack: { root: path.resolve(appDir, "..") } }
     : { outputFileTracingRoot: appDir }),
   devIndicators: false,
+  // Lint runs as its own CI gate (`bun run lint` in unit-tests.yml); skipping it
+  // here keeps Docker builds, which are already memory-tight, from paying for it twice.
+  eslint: { ignoreDuringBuilds: true },
   output: "standalone",
   // Force @sentry/nextjs and the instrumentation config files into the
   // standalone trace. Without this, Next.js's file tracer can miss them
@@ -68,10 +71,11 @@ export default withPWA({
   fallbacks: {
     document: "/offline.html",
   },
-  // Disabled in dev (PWA service worker caches aggressively, breaks HMR) and
-  // in Docker builds where memory headroom is tight - next-pwa + workbox
-  // generation can push peak build RSS past 5 GB and OOM-kill the container.
-  // Vercel / non-Docker builds keep PWA enabled.
+  // Disabled in dev (PWA service worker caches aggressively, breaks HMR).
+  // DISABLE_PWA=1 also skips it, for Docker builds where memory headroom is
+  // tight - next-pwa + workbox generation can push peak build RSS past 5 GB
+  // and OOM-kill the container. The deploy images don't set it, so they ship
+  // the PWA.
   disable:
     process.env.NODE_ENV === "development" || process.env.DISABLE_PWA === "1",
   workboxOptions: {
