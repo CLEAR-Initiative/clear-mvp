@@ -1,5 +1,6 @@
 "use client";
 
+import { eventHref } from "~/lib/analytics/event-source";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useFormatter, useNow, useTranslations } from "next-intl";
@@ -721,7 +722,7 @@ export function AnalysisOverview({
       ? cardsFromHighlights(timeline.highlights, (event) => ({
           kicker: format.dateTime(new Date(event.startedAt), { day: "numeric", month: "short" }),
           text: event.title ?? t("events.untitled"),
-          href: event.id.startsWith("preview-") ? undefined : `/event/${event.id}`,
+          href: event.id.startsWith("preview-") ? undefined : eventHref(event.id, "analysis"),
         }))
       : [];
   const axisMonths = story

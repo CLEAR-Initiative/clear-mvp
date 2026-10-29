@@ -399,7 +399,7 @@ describe("Insights > Analysis tab", () => {
     expect(screen.getByTestId("analysis-sources")).toHaveAttribute("data-surface", "card");
     expect(screen.getByTestId("analysis-events")).toHaveAttribute("data-surface", "page");
     const row = screen.getByTestId("analysis-event-row");
-    expect(row).toHaveAttribute("href", "/event/e1");
+    expect(row).toHaveAttribute("href", "/event/e1?from=analysis");
     expect(within(row).getByText("Shelling in El Fasher")).toBeInTheDocument();
   });
 

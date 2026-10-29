@@ -101,7 +101,7 @@ describe("Agent navigation", () => {
     act(() => agent.applyNavigation("nav-1", result));
     act(() => agent.applyNavigation("nav-1", result)); // a re-render must not move again
     expect(push).toHaveBeenCalledTimes(1);
-    expect(push).toHaveBeenCalledWith("/event/ev-1");
+    expect(push).toHaveBeenCalledWith("/event/ev-1?from=agent");
     land();
 
     // The page the user lands on rewrites the filters and the Map's view…
@@ -161,7 +161,7 @@ describe("Agent navigation", () => {
     act(() => {
       agent.chat.messages = [answer()];
     });
-    expect(push).toHaveBeenCalledWith("/event/ev-1");
+    expect(push).toHaveBeenCalledWith("/event/ev-1?from=agent");
   });
 
   it("never replays a move from a Thread opened from history, with the Thread on screen", () => {
@@ -188,7 +188,7 @@ describe("Agent navigation from the Agent page", () => {
     act(() => agent.applyNavigation("nav-1", result));
     expect(agent.open).toBe(true);
     expect(agent.threadId).toBe(threadId);
-    expect(push).toHaveBeenCalledWith("/event/ev-1");
+    expect(push).toHaveBeenCalledWith("/event/ev-1?from=agent");
 
     // On the new page the drawer shows that same Thread.
     pathname = "/event/ev-1";

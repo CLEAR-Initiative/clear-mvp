@@ -1,5 +1,6 @@
 "use client";
 
+import { eventHref } from "~/lib/analytics/event-source";
 import Link from "next/link";
 import { useFormatter, useTranslations } from "next-intl";
 import { severityColor } from "~/lib/types/graphql";
@@ -37,7 +38,7 @@ export function EventsList({
         <p className={styles.eventsEmpty}>{t("empty")}</p>
       ) : (
         items.map((e) => (
-          <Link key={e.id} href={`/event/${e.id}`} className={styles.eventRow} data-testid="analysis-event-row">
+          <Link key={e.id} href={eventHref(e.id, "analysis")} className={styles.eventRow} data-testid="analysis-event-row">
             <span
               style={{
                 width: 8,

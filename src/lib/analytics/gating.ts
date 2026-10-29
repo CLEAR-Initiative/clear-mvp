@@ -4,6 +4,7 @@
  */
 
 import { isPlatformAdmin } from "~/lib/roles";
+import { EVENT_FROM_VALUES } from "./event-source";
 
 /** Feature flag (clear-api `featureFlags`) that switches usage analytics on. */
 export const USAGE_ANALYTICS_FLAG = "usage_analytics";
@@ -73,7 +74,12 @@ export const KEPT_QUERY_VALUES = {
     "overview", "needs", "sources", // Analysis, Crisis
     "enrichment", "priors", "comments", // Event
   ],
-  from: ["map", "detection", "observe", "crisis", "dashboard", "notification", "agent", "inbox", "insights"],
+  /** Crisis left panel. */
+  panel: ["events", "demography", "sources", "confidence"],
+  from: [
+    ...EVENT_FROM_VALUES, // Event links (#1212)
+    "observe", "dashboard", "notification", "insights", // Signal, Crisis
+  ],
 } as const satisfies Record<string, readonly string[]>;
 
 /**
