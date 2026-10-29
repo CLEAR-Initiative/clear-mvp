@@ -23,8 +23,16 @@ test.describe("Regression catalog", () => {
 
     await page.reload({ waitUntil: "domcontentloaded" });
     await expect(chrome).toBeVisible();
-    // The old slide was a 200ms `left` transition. Sample across that window.
-    await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 400)));
+    // NavSidebar publishes the width in a layout effect. Visibility of the
+    // server-rendered bar is earlier than that, so wait for the inline
+    // variable, then through the 200ms left transition, before reading
+    // every sample taken since first paint.
+    await expect
+      .poll(() =>
+        page.evaluate(() => document.documentElement.style.getPropertyValue("--clear-nav-w")),
+      )
+      .not.toBe("");
+    await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 250)));
 
     const spread = await filterLeftSpread(page);
     expect(spread).toBeLessThan(SLIDE_PX);
