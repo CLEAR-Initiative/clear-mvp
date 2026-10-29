@@ -93,9 +93,9 @@ test.describe("Insights", () => {
     await expect(needs).toContainText("WASH");
     await expect(needs).toContainText(SEEDED_ANALYSIS.washPin);
     // The seed has no Food, Nutrition, or Agriculture grade, so those rows are absent.
-    // Presence and precision are crisis-detail columns; this table does not render them.
-    await expect(needs).not.toContainText("Op. Presence");
-    await expect(needs).not.toContainText("Precision");
+    // Partner coverage and precision are on this table. The seed has no OCHA row, so the headers are the check.
+    await expect(needs).toContainText("Op. Presence");
+    await expect(needs).toContainText("Precision");
     await expect(needs).not.toContainText("Food Security");
 
     await page.getByRole("tab", { name: "Sources & Events" }).click();

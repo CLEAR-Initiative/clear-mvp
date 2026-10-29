@@ -128,6 +128,7 @@ vi.mock("~/trpc/react", () => ({
       },
       events: { useQuery: (input: unknown) => (eventsQuery(input), eventsResult) },
       figures: { useQuery: () => ({ data: figuresResult }) },
+      needs: { useQuery: () => ({ data: undefined }) },
       create: { useMutation: (opts: typeof createOpts) => ((createOpts = opts), mutation(createMutate)) },
       remove: { useMutation: () => mutation(removeMutate) },
       refresh: { useMutation: () => mutation(vi.fn()) },

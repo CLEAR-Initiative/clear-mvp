@@ -51,7 +51,12 @@ function stockPin(figures: AnalysisFigures | undefined, sectorId: string): numbe
  * Needs rows for an analysis. People in need is the overview stock figure for
  * that sector. Severity is the analysis grade, untouched.
  */
-export function analysisNeedsRows(sectors: readonly SaSector[], figures: AnalysisFigures | undefined): AnalysisNeedsRow[] {
+export function analysisNeedsRows(
+  sectors: readonly SaSector[],
+  figures: AnalysisFigures | undefined,
+  /** Needs-table keys that have survey or partner data, even with no analysis sector. */
+  coveredKeys: readonly string[] = [],
+): AnalysisNeedsRow[] {
   const byId = new Map(sectors.map((sector) => [sector.id, sector]));
   // The pipeline grades "food"; the stock figure is keyed "food_security".
   const food = byId.get("food_security") ?? byId.get("food");
@@ -80,9 +85,12 @@ export function analysisNeedsRows(sectors: readonly SaSector[], figures: Analysi
       pin: stockPin(figures, sector.id),
       present: true,
     }));
+  const covered = new Set(coveredKeys);
   // A fixed row with no sector behind it is a placeholder. A sector the analysis
   // actually contains stays, including one that has findings but no grade and no figure.
+  // Survey or partner coverage keeps the row too, so a sector the analysis never
+  // graded is not dropped.
   return [...fixed, ...extra]
-    .filter((row) => row.present || row.pin != null)
+    .filter((row) => row.present || row.pin != null || covered.has(row.key))
     .map(({ present: _present, ...row }) => row);
 }

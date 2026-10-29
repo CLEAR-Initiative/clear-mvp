@@ -65,6 +65,7 @@ vi.mock("~/trpc/react", () => ({
       },
       events: { useQuery: () => ({ data: { totalCount: 0, items: [] } }) },
       figures: { useQuery: () => ({ data: undefined }) },
+      needs: { useQuery: () => ({ data: undefined }) },
       refresh: {
         useMutation: (opts: typeof refreshOpts) => {
           refreshOpts = opts;

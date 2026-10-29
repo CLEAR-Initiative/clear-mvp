@@ -3013,6 +3013,7 @@
       "severityNull": "Non évalué : trop peu d'éléments pour noter.",
       "inferred": "Évalué à partir de rapports hors de ce secteur. À considérer comme indicatif.",
       "notAssessed": "Non évalué",
+      "reportingGrade": "D'après les rapports : {grade}",
       "noFigure": "Pas de chiffre de personnes dans le besoin"
     },
     "events": {

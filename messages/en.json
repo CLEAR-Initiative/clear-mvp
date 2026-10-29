@@ -3013,6 +3013,7 @@
       "severityNull": "Not assessed: too little evidence to grade.",
       "inferred": "Graded from reporting outside this sector. Treat as indicative.",
       "notAssessed": "Not assessed",
+      "reportingGrade": "From reporting: {grade}",
       "noFigure": "No people-in-need figure"
     },
     "events": {
