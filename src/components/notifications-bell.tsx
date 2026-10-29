@@ -1,5 +1,6 @@
 "use client";
 
+import { tagEventPath } from "~/lib/analytics/event-source";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -91,7 +92,7 @@ export function NotificationsBell({ variant, collapsed = false, onNavigate }: No
     if (isUnread(n)) markRead.mutate({ id: n.id });
     const path = safeActionPath(n.actionUrl);
     onNavigate?.();
-    if (path) router.push(path);
+    if (path) router.push(tagEventPath(path, "inbox"));
   };
 
   const target = (
@@ -195,7 +196,8 @@ export function NotificationsBell({ variant, collapsed = false, onNavigate }: No
           </Text>
         ) : (
           rows.map((n) => {
-            const path = safeActionPath(n.actionUrl);
+            const actionPath = safeActionPath(n.actionUrl);
+            const path = actionPath && tagEventPath(actionPath, "inbox");
             const unreadRow = isUnread(n);
             const body = (
               <Box style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}>

@@ -257,10 +257,10 @@ describe("EnrichmentSection", () => {
       computed = [COMPUTED];
       renderSection();
       expect(screen.getAllByTestId("computed-prior-event").map((a) => a.getAttribute("href"))).toEqual([
-        "/event/evt-a",
-        "/event/evt-b",
-        "/event/evt-c",
-        "/event/evt-d",
+        "/event/evt-a?from=related_event",
+        "/event/evt-b?from=related_event",
+        "/event/evt-c?from=related_event",
+        "/event/evt-d?from=related_event",
       ]);
       expect(screen.queryByTestId("computed-prior-low-confidence")).toBeNull();
       // Nothing to decide on a computed prior.

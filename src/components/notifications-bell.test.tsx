@@ -125,7 +125,7 @@ describe("NotificationsBell", () => {
       expect.stringContaining("Message old"),
     ]);
     expect(items[0]).toHaveAttribute("data-unread", "true");
-    expect(items[0]).toHaveAttribute("href", "/event/evt-1");
+    expect(items[0]).toHaveAttribute("href", "/event/evt-1?from=inbox");
     expect(items[1]).toHaveAttribute("data-unread", "false");
     const menu = screen.getByTestId("notifications-menu");
     expect(menu).toHaveStyle({ overflowY: "auto", overscrollBehavior: "contain" });
@@ -151,7 +151,7 @@ describe("NotificationsBell", () => {
     fireEvent.click(screen.getByTestId("notifications-bell"));
     fireEvent.click(await screen.findByTestId("notification-row"));
     expect(markRead).toHaveBeenCalledWith({ id: "n1" });
-    expect(push).toHaveBeenCalledWith("/event/evt-1");
+    expect(push).toHaveBeenCalledWith("/event/evt-1?from=inbox");
     expect(onNavigate).toHaveBeenCalled();
   });
 
@@ -170,7 +170,7 @@ describe("NotificationsBell", () => {
     fireEvent.click(screen.getByTestId("notifications-bell"));
     fireEvent.click(await screen.findByTestId("notification-row"));
     expect(markRead).not.toHaveBeenCalled();
-    expect(push).toHaveBeenCalledWith("/event/evt-1");
+    expect(push).toHaveBeenCalledWith("/event/evt-1?from=inbox");
   });
 
   it("never links an actionUrl that is not an in-app path", async () => {

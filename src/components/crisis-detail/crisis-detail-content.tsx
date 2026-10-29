@@ -1,8 +1,10 @@
 "use client";
 
+import { eventHref } from "~/lib/analytics/event-source";
 import { useMemo, useState, useRef } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { readCrisisTabs, withCrisisTab } from "~/lib/crisis-tabs";
 import { useFormatter, useTranslations } from "next-intl";
 import {
   Box,
@@ -235,8 +237,22 @@ export function CrisisDetailContent({
   const tCommon = useTranslations("common");
   const format = useFormatter();
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<string | null>("overview");
-  const [leftPanelTab, setLeftPanelTab] = useState<string | null>("events");
+  // Page mode keeps the tabs in the URL (reload, deep links, page views);
+  // the drawer keeps them locally so it never rewrites the host page's URL.
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
+  const urlTabs = readCrisisTabs(searchParams);
+  const [localTab, setLocalTab] = useState<string | null>("overview");
+  const [localPanel, setLocalPanel] = useState<string | null>("events");
+  const inUrl = mode === "page";
+  const activeTab = inUrl ? urlTabs.tab : localTab;
+  const leftPanelTab = inUrl ? urlTabs.panel : localPanel;
+  const setUrlTab = (key: "tab" | "panel", value: string | null) => {
+    if (!value) return;
+    router.replace(`${pathname}${withCrisisTab(searchParams.toString(), key, value)}`, { scroll: false });
+  };
+  const setActiveTab = (value: string | null) => (inUrl ? setUrlTab("tab", value) : setLocalTab(value));
+  const setLeftPanelTab = (value: string | null) => (inUrl ? setUrlTab("panel", value) : setLocalPanel(value));
   const [confirmDeleteCrisis, setConfirmDeleteCrisis] = useState(false);
   const [editingTitle, setEditingTitle] = useState(false);
   const [editingMeta, setEditingMeta] = useState(false);
@@ -2116,7 +2132,7 @@ function TimelineRow({
       <Box py={6} style={{ flex: 1, minWidth: 0 }}>
         <Box style={{ position: "relative" }}>
           <Link
-            href={`/event/${event.id}`}
+            href={eventHref(event.id, "crisis")}
             style={{ textDecoration: "none", color: "inherit", display: "block" }}
           >
             <Box

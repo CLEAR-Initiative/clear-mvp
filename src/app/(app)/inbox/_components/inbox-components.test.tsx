@@ -414,7 +414,7 @@ describe("ReadingPane", () => {
     wrap(<ReadingPane {...baseProps} entry={entry} canDecide onCaseDecided={onCaseDecided} />);
     expect(screen.getByTestId("inbox-pane")).toHaveAttribute("data-kind", "cases");
     expect(screen.queryByTestId("inbox-action-bar")).not.toBeInTheDocument();
-    expect(screen.getByTestId("inbox-cases-event-link")).toHaveAttribute("href", "/event/evt-1");
+    expect(screen.getByTestId("inbox-cases-event-link")).toHaveAttribute("href", "/event/evt-1?from=inbox");
     expect(screen.getByTestId("case-proposal")).toHaveAttribute("data-state", "proposed");
     expect(screen.getByTestId("case-proposal-source")).toHaveAttribute("href", "https://example.test/floods");
 

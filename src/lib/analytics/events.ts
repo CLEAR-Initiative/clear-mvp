@@ -10,6 +10,8 @@
  * literal calls, at compile time).
  */
 
+import { EVENT_FROM_VALUES } from "./event-source";
+
 /** Marker for a property that holds a record id (cuid), never free text. */
 export const ID = "id" as const;
 
@@ -19,10 +21,12 @@ export const ANALYTICS_EVENTS = {
   /** The usage-analytics privacy notice was opened. */
   "privacy_notice.viewed": { from: ["profile", "onboarding"] },
 
-  // Pre-declared for the follow-up slices (#1212, #1214). Extend the value
+  // Pre-declared for the follow-up slice (#1214). Extend the value
   // lists there as the call sites land.
-  "event.opened": { from: ["map", "detection", "crisis", "dashboard", "notification", "agent", "link"] },
-  "event.section_seen": { section: ["summary", "signals", "map", "impact", "comments", "timeline"] },
+  /** An Event was opened (page or Detection drawer); `direct` when no known `from`. */
+  "event.opened": { from: [...EVENT_FROM_VALUES, "direct"] },
+  /** An Event section first scrolled into view (once per section per view). */
+  "event.section_seen": { section: ["enrichment", "feedback"] },
   "tour.started": { trigger: ["auto", "replay"] },
   "tour.completed": {},
   "tour.skipped": {},

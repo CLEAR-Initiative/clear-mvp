@@ -24,7 +24,7 @@ import {
   writeOptOutMirror,
   type OptOutCookie,
 } from "~/lib/analytics/opt-out";
-import { identify } from "~/lib/analytics/track";
+import { clearPendingEvents, flushPendingEvents, identify } from "~/lib/analytics/track";
 
 const BEFORE_SEND = "__clearUmamiBeforeSend";
 
@@ -180,6 +180,7 @@ export function UsageTracker() {
 
   useEffect(() => {
     window.__clearAnalyticsOff = !enabled;
+    if (!enabled) clearPendingEvents();
     window[BEFORE_SEND] = (_type, payload) => {
       // The opt-out mirror cookie is re-read per send so a toggle in another tab applies here too.
       if (window.__clearAnalyticsOff || readOptOut() || !isTrackablePath(window.location.pathname)) return false;
@@ -203,6 +204,7 @@ export function UsageTracker() {
       teamId: activeTeam?.id ?? null,
       language: locale,
     });
+    flushPendingEvents();
   }, [enabled, loaded, user, teamRole, activeTeam, locale]);
 
   if (!enabled || !config) return null;

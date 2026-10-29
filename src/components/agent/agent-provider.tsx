@@ -8,6 +8,7 @@
  * other nav contexts.
  */
 
+import { tagEventPath } from "~/lib/analytics/event-source";
 import {
   Fragment,
   Suspense,
@@ -271,7 +272,7 @@ export function AgentProvider({ children }: { children: ReactNode }) {
       // A fresh move: the page applies its deep link as new, where arriving
       // on the same URL later (Back, a reload) restores what it had.
       markAgentDeepLink(result.url);
-      router.push(result.url);
+      router.push(tagEventPath(result.url, "agent"));
     },
     [router, state, update],
   );
