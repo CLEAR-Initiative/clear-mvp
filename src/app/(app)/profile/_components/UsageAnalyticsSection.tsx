@@ -32,7 +32,7 @@ export function UsageAnalyticsSection({ role }: { role: string }) {
         <Switch
           checked={!optedOut}
           onChange={(e) => setOptedOut(!e.currentTarget.checked)}
-          disabled={!known}
+          disabled={!known || saving}
           label={t("toggleLabel")}
           description={t("toggleDescription")}
           color="orange"

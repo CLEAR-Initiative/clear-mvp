@@ -29,11 +29,13 @@ vi.mock("~/providers/team-provider", () => ({ useOptionalTeam: () => null }));
 const member = () => ({ authenticated: true, user: { id: "u1", role: "member", analyticsOptOut: false } });
 let me: unknown = member();
 const mutate = vi.fn();
+const invalidate = vi.fn();
+let dataUpdatedAt = Number.MAX_SAFE_INTEGER;
 vi.mock("~/trpc/react", () => ({
   api: {
-    useUtils: () => ({ auth: { me: { invalidate: vi.fn(), setData: vi.fn() } } }),
+    useUtils: () => ({ auth: { me: { invalidate, setData: vi.fn() } } }),
     auth: {
-      me: { useQuery: () => ({ data: me }) },
+      me: { useQuery: () => ({ data: me, dataUpdatedAt }) },
       setAnalyticsOptOut: { useMutation: () => ({ mutate, isPending: false }) },
     },
   },
@@ -54,6 +56,8 @@ beforeEach(() => {
   flagsLoading = false;
   me = member();
   mutate.mockClear();
+  invalidate.mockClear();
+  dataUpdatedAt = Number.MAX_SAFE_INTEGER;
   document.cookie = "clear_analytics_opt_out=; path=/; max-age=0";
 });
 afterEach(() => {
@@ -98,6 +102,15 @@ describe("UsageTracker", () => {
     expect(renderTracker()).toBeNull();
     expect(mutate).toHaveBeenCalledTimes(1);
     expect(mutate.mock.calls[0]?.[0]).toEqual({ optedOut: true });
+  });
+
+  it("refetches instead of clearing a mirror newer than the account value", () => {
+    // Another tab just opted out; this tab's cached account value predates it.
+    dataUpdatedAt = 0;
+    document.cookie = "clear_analytics_opt_out=2; path=/";
+    renderTracker();
+    expect(document.cookie).toContain("clear_analytics_opt_out=2");
+    expect(invalidate).toHaveBeenCalled();
   });
 
   it("clears a stale mirror cookie when the account is opted in", () => {

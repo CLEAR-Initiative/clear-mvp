@@ -87,9 +87,17 @@ export function useAnalyticsOptOut(): AnalyticsOptOutState {
   };
 }
 
+const MIGRATION_ATTEMPTS = 3;
+const MIGRATION_RETRY_MS = 30_000;
+
 /**
  * Keeps the local cookie in step with the account, and moves a legacy
  * per-browser opt-out onto the account once.
+ *
+ * The mirror is only cleared against an account value fetched after the
+ * cookie last changed: another tab may have just opted out, and this tab's
+ * cached `false` would otherwise undo it. Until then `beforeSend` keeps
+ * blocking, because any opt-out cookie stops sends.
  */
 function useOptOutSync(): void {
   const cookie = useOptOutCookie();
@@ -97,25 +105,50 @@ function useOptOutSync(): void {
   const account = me.data?.authenticated ? me.data.user?.analyticsOptOut : undefined;
   const { mutate } = api.auth.setAnalyticsOptOut.useMutation();
   const utils = api.useUtils();
-  const migrated = useRef(false);
+  const cookieChangedAt = useRef(0);
+  const lastCookie = useRef<OptOutCookie | undefined>(undefined);
+  if (lastCookie.current !== cookie) {
+    lastCookie.current = cookie;
+    cookieChangedAt.current = Date.now();
+  }
+  const migration = useRef({ inFlight: false, attempts: 0 });
+  const [retryTick, setRetryTick] = useState(0);
+
   useEffect(() => {
     if (typeof account !== "boolean") return;
     const action = syncAction(cookie, account);
     if (action === "migrate") {
-      if (migrated.current) return;
-      migrated.current = true;
+      const m = migration.current;
+      if (m.inFlight || m.attempts >= MIGRATION_ATTEMPTS) return;
+      m.inFlight = true;
+      m.attempts += 1;
       mutate(
         { optedOut: true },
         {
           onSuccess: () => {
+            // Account cache first, so the legacy block is never lifted
+            // while the cache still says opted in.
+            utils.auth.me.setData(undefined, (prev) =>
+              prev?.authenticated && prev.user ? { ...prev, user: { ...prev.user, analyticsOptOut: true } } : prev,
+            );
             writeOptOutMirror(true);
             void utils.auth.me.invalidate();
+          },
+          onError: () => {
+            // The legacy cookie still blocks locally; retry a bounded number of times.
+            if (m.attempts < MIGRATION_ATTEMPTS) setTimeout(() => setRetryTick((t) => t + 1), MIGRATION_RETRY_MS);
+          },
+          onSettled: () => {
+            m.inFlight = false;
           },
         },
       );
     } else if (action === "mirror-on") writeOptOutMirror(true);
-    else if (action === "mirror-off") writeOptOutMirror(false);
-  }, [cookie, account, mutate, utils]);
+    else if (action === "mirror-off") {
+      if (me.dataUpdatedAt > cookieChangedAt.current) writeOptOutMirror(false);
+      else void utils.auth.me.invalidate();
+    }
+  }, [cookie, account, mutate, utils, me.dataUpdatedAt, retryTick]);
 }
 
 /**
