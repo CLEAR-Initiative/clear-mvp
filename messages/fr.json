@@ -19,46 +19,6 @@
       "firstEvent": "Premier événement : {date}",
       "lastUpdate": "Dernière mise à jour : {date}"
     },
-    "executiveSummary": {
-      "priorityAnalysis": "Analyse prioritaire",
-      "criticalBadge": "{count} critique(s)",
-      "activeBadge": "{count} active(s)",
-      "situationReport": "Rapport de situation - {country}",
-      "defaultReportTitle": "Crise de déplacement liée au conflit armé - {country}",
-      "activeAlerts": "Alertes actives",
-      "totalAlerts": "Total des alertes",
-      "trend": "Tendance",
-      "needs": {
-        "shelter": {
-          "label": "Abris",
-          "description": "Logement et déplacement"
-        },
-        "wash": {
-          "label": "WASH",
-          "description": "Eau et assainissement"
-        },
-        "protection": {
-          "label": "Protection",
-          "description": "Droits et sécurité"
-        },
-        "health": {
-          "label": "Santé",
-          "description": "Réponse médicale"
-        },
-        "foodSecurity": {
-          "label": "Sécurité alimentaire",
-          "description": "Accès à la nutrition"
-        }
-      },
-      "viewFullReport": "Voir le rapport complet",
-      "downloadPdf": "Télécharger le PDF",
-      "updatedAt": "Mise à jour {time}",
-      "updatedFallback": "Mise à jour il y a 2 heures",
-      "confidence": "Confiance : {pct} %",
-      "aiGeneratedAnalysis": "Analyse générée par IA",
-      "generating": "Génération d'une analyse complète à partir de {count} alertes actives...",
-      "generateFailed": "Échec de la génération de l'analyse. Veuillez réessayer."
-    },
     "insights": {
       "title": "Constats générés par IA",
       "subtitle": "Détection de tendances et recommandations",

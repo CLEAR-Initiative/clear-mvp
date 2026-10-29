@@ -19,46 +19,6 @@
       "firstEvent": "First event: {date}",
       "lastUpdate": "Last update: {date}"
     },
-    "executiveSummary": {
-      "priorityAnalysis": "Priority Analysis",
-      "criticalBadge": "{count} Critical",
-      "activeBadge": "{count} Active",
-      "situationReport": "Situation Report - {country}",
-      "defaultReportTitle": "Armed Conflict Displacement Crisis - {country}",
-      "activeAlerts": "Active Alerts",
-      "totalAlerts": "Total Alerts",
-      "trend": "Trend",
-      "needs": {
-        "shelter": {
-          "label": "Shelter",
-          "description": "Housing & displacement"
-        },
-        "wash": {
-          "label": "WASH",
-          "description": "Water & sanitation"
-        },
-        "protection": {
-          "label": "Protection",
-          "description": "Rights & safety"
-        },
-        "health": {
-          "label": "Health",
-          "description": "Medical response"
-        },
-        "foodSecurity": {
-          "label": "Food Security",
-          "description": "Nutrition access"
-        }
-      },
-      "viewFullReport": "View Full Report",
-      "downloadPdf": "Download PDF",
-      "updatedAt": "Updated {time}",
-      "updatedFallback": "Updated 2 hours ago",
-      "confidence": "Confidence: {pct}%",
-      "aiGeneratedAnalysis": "AI-Generated Analysis",
-      "generating": "Generating comprehensive analysis from {count} active alerts...",
-      "generateFailed": "Failed to generate analysis. Please try again."
-    },
     "insights": {
       "title": "AI-Generated Insights",
       "subtitle": "Pattern detection and recommendations",
