@@ -2552,7 +2552,11 @@ export default function AdminPage() {
       <PageHeader
         title={t("header.title")}
         subtitle={t("header.subtitle")}
-      />
+      >
+        <Button component={Link} href="/admin/activity" variant="light" size="xs">
+          {t("header.activityLink")}
+        </Button>
+      </PageHeader>
 
       <Tabs
         defaultValue="users"
