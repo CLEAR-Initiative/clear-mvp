@@ -97,6 +97,7 @@ on specific features. [`.env.example`](./.env.example) documents each one.
 | `NOTION_TOKEN`, `NOTION_FEEDBACK_DB_ID` | Feedback form | `/api/feedback` writes to this Notion database. |
 | `ACAPS_API_TOKEN` | INFORM Severity data | ACAPS API token. |
 | `SENTRY_DSN`, `SENTRY_ENV`, `NEXT_PUBLIC_SENTRY_DSN` | Error tracking | GlitchTip (Sentry-compatible). Leave unset locally. |
+| `NEXT_PUBLIC_UMAMI_HOST_URL`, `NEXT_PUBLIC_UMAMI_WEBSITE_ID`, `NEXT_PUBLIC_UMAMI_SRC` | Usage analytics | Self-hosted Umami. Unset = no tracker. Also needs the `usage_analytics` flag. See `src/lib/analytics`. |
 
 `NEXT_PUBLIC_*` variables are baked in at build time and shipped to the browser. Everything else
 stays on the server.
@@ -107,7 +108,8 @@ The deployed environments (`dev.clearinitiative.io`, `app.clearinitiative.io`) r
 the team manages in a private infrastructure repo, not on Vercel. Their server-side values are
 set there; their `NEXT_PUBLIC_*` values are baked into the Docker image at build time. Only
 `NEXT_PUBLIC_MAPBOX_TOKEN` and `NEXT_PUBLIC_SENTRY_DSN` (GitHub environment secrets on this
-repo) and `NEXT_PUBLIC_SENTRY_ENV` (the environment name) are passed through. Any other, such as
+repo), `NEXT_PUBLIC_UMAMI_HOST_URL` and `NEXT_PUBLIC_UMAMI_WEBSITE_ID` (GitHub environment
+variables, not secrets) and `NEXT_PUBLIC_SENTRY_ENV` (the environment name) are passed through. Any other, such as
 `NEXT_PUBLIC_LOGIE_BLOCKAGES_URL`, also needs a build arg in
 [`.github/actions/build-image`](./.github/actions/build-image/action.yml) and an `ARG`/`ENV` pair
 in the [`Dockerfile`](./Dockerfile); a secret alone does nothing.

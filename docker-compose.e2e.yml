@@ -289,3 +289,31 @@ services:
       nrc-find:
         condition: service_healthy
     # Healthcheck is inherited from the image (wget http://127.0.0.1:3000/).
+
+  # ── Optional local Umami (usage analytics), off unless the profile is named ──
+  # docker compose -f docker-compose.e2e.yml --profile umami up -d umami
+  # UI at http://localhost:3300 (admin / umami). Prod runs Umami in clear-infra.
+  umami-db:
+    profiles: ["umami"]
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: umami
+      POSTGRES_USER: umami
+      POSTGRES_PASSWORD: umami
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U umami -d umami"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  umami:
+    profiles: ["umami"]
+    image: ghcr.io/umami-software/umami:3.4.1
+    environment:
+      DATABASE_URL: postgresql://umami:umami@umami-db:5432/umami
+      APP_SECRET: local-dev-only
+    ports:
+      - "127.0.0.1:3300:3000"
+    depends_on:
+      umami-db:
+        condition: service_healthy

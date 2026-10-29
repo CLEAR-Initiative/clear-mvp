@@ -45,6 +45,7 @@ import { useTeamCountry } from "~/hooks/use-team-country";
 import { COUNTRIES_BY_DIAL_LENGTH, COUNTRY_SELECT_DATA, getDialCode } from "~/lib/constants/countries";
 import { NotificationPreferencesSection } from "./_components/NotificationPreferencesSection";
 import { AlertSubscriptionsSection } from "./_components/AlertSubscriptionsSection";
+import { UsageAnalyticsSection } from "./_components/UsageAnalyticsSection";
 
 export default function ProfilePage() {
   const t = useTranslations("profile.page");
@@ -904,6 +905,8 @@ function SettingsContent({ user }: { user: ProfileUser }) {
               {tTour("replay")}
             </Button>
           </Card>
+
+          <UsageAnalyticsSection role={user.role} />
         </>
       )}
 
