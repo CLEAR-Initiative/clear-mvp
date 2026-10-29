@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import Script from "next/script";
 import { usePathname } from "next/navigation";
 import { useLocale } from "next-intl";
@@ -15,7 +15,15 @@ import {
   sanitizeReferrer,
   shouldLoadTracker,
 } from "~/lib/analytics/gating";
-import { OPT_OUT_CHANGE_EVENT, readOptOut } from "~/lib/analytics/opt-out";
+import {
+  OPT_OUT_CHANGE_EVENT,
+  readOptOut,
+  readOptOutCookie,
+  resolveOptOut,
+  syncAction,
+  writeOptOutMirror,
+  type OptOutCookie,
+} from "~/lib/analytics/opt-out";
 import { identify } from "~/lib/analytics/track";
 
 const BEFORE_SEND = "__clearUmamiBeforeSend";
@@ -33,14 +41,86 @@ function subscribeOptOut(cb: () => void) {
   return () => window.removeEventListener(OPT_OUT_CHANGE_EVENT, cb);
 }
 
-/** Opt-out cookie state; `true` during SSR so nothing renders before it's read. */
-export function useAnalyticsOptOut(): boolean {
-  return useSyncExternalStore(subscribeOptOut, readOptOut, () => true);
+/** Local opt-out cookie; `"mirror"` during SSR so nothing renders before it's read. */
+function useOptOutCookie(): OptOutCookie {
+  return useSyncExternalStore(subscribeOptOut, readOptOutCookie, () => "mirror");
+}
+
+export interface AnalyticsOptOutState {
+  /** Effective opt-out. `true` until the account value is known. */
+  optedOut: boolean;
+  /** Whether the account value (clear-api `User.analyticsOptOut`) has loaded. */
+  known: boolean;
+  /** Write the choice to the account; mirrors it locally at once. */
+  setOptedOut: (optedOut: boolean) => void;
+  saving: boolean;
 }
 
 /**
- * Loads self-hosted Umami for signed-in, non-admin users who haven't opted
- * out, when the env vars are set and the `usage_analytics` flag is on.
+ * The account-wide usage-analytics opt-out, read from `auth.me`, with the
+ * local cookie as a fast mirror (see `~/lib/analytics/opt-out`).
+ */
+export function useAnalyticsOptOut(): AnalyticsOptOutState {
+  const cookie = useOptOutCookie();
+  const utils = api.useUtils();
+  const me = api.auth.me.useQuery(undefined, { staleTime: 60_000 });
+  const user = me.data?.authenticated ? me.data.user : null;
+  const account = user?.analyticsOptOut;
+  const mutation = api.auth.setAnalyticsOptOut.useMutation({
+    // Flip the cached account value first, so the toggle and the cookie sync
+    // agree at once; the refetch on settle corrects it if the write failed.
+    onMutate: ({ optedOut }) => {
+      utils.auth.me.setData(undefined, (prev) =>
+        prev?.authenticated && prev.user ? { ...prev, user: { ...prev.user, analyticsOptOut: optedOut } } : prev,
+      );
+      writeOptOutMirror(optedOut);
+    },
+    onSettled: () => void utils.auth.me.invalidate(),
+  });
+  const { mutate } = mutation;
+  const setOptedOut = useCallback((optedOut: boolean) => mutate({ optedOut }), [mutate]);
+  return {
+    optedOut: resolveOptOut(cookie, account),
+    known: typeof account === "boolean",
+    setOptedOut,
+    saving: mutation.isPending,
+  };
+}
+
+/**
+ * Keeps the local cookie in step with the account, and moves a legacy
+ * per-browser opt-out onto the account once.
+ */
+function useOptOutSync(): void {
+  const cookie = useOptOutCookie();
+  const me = api.auth.me.useQuery(undefined, { staleTime: 60_000 });
+  const account = me.data?.authenticated ? me.data.user?.analyticsOptOut : undefined;
+  const { mutate } = api.auth.setAnalyticsOptOut.useMutation();
+  const utils = api.useUtils();
+  const migrated = useRef(false);
+  useEffect(() => {
+    if (typeof account !== "boolean") return;
+    const action = syncAction(cookie, account);
+    if (action === "migrate") {
+      if (migrated.current) return;
+      migrated.current = true;
+      mutate(
+        { optedOut: true },
+        {
+          onSuccess: () => {
+            writeOptOutMirror(true);
+            void utils.auth.me.invalidate();
+          },
+        },
+      );
+    } else if (action === "mirror-on") writeOptOutMirror(true);
+    else if (action === "mirror-off") writeOptOutMirror(false);
+  }, [cookie, account, mutate, utils]);
+}
+
+/**
+ * Loads self-hosted Umami for signed-in, non-admin users whose account
+ * opt-out is known and off, when the env vars are set and the `usage_analytics` flag is on.
  * Otherwise renders nothing and loads nothing. Page views keep only the
  * path plus `tab` / `from`.
  */
@@ -48,10 +128,11 @@ export function UsageTracker() {
   const config = readUmamiConfig();
   const pathname = usePathname() ?? "";
   const locale = useLocale();
-  const optedOut = useAnalyticsOptOut();
+  useOptOutSync();
+  const { optedOut } = useAnalyticsOptOut();
   const { flags, isLoading: flagsLoading } = useFeatureFlags();
   const team = useOptionalTeam();
-  const me = api.auth.me.useQuery(undefined, { staleTime: 60_000, enabled: config !== null });
+  const me = api.auth.me.useQuery(undefined, { staleTime: 60_000 });
   const [loaded, setLoaded] = useState(false);
 
   const user = me.data?.authenticated ? me.data.user : null;
@@ -67,7 +148,7 @@ export function UsageTracker() {
   useEffect(() => {
     window.__clearAnalyticsOff = !enabled;
     window[BEFORE_SEND] = (_type, payload) => {
-      // The opt-out cookie is re-read per send so a toggle in another tab applies here too.
+      // The opt-out mirror cookie is re-read per send so a toggle in another tab applies here too.
       if (window.__clearAnalyticsOff || readOptOut() || !isTrackablePath(window.location.pathname)) return false;
       return {
         ...payload,

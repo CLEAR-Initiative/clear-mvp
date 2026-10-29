@@ -68,6 +68,15 @@ const UPDATE_PROFILE = `
   }
 `;
 
+const SET_ANALYTICS_OPT_OUT = `
+  mutation SetAnalyticsOptOut($input: UpdateProfileInput!) {
+    updateProfile(input: $input) {
+      id
+      analyticsOptOut
+    }
+  }
+`;
+
 export const UPDATE_USER_ROLE = `
   mutation UpdateUserRole($userId: String!, $role: GlobalRole!) {
     updateUserRole(userId: $userId, role: $role) {
@@ -105,6 +114,7 @@ const GET_USER_DETAILS = `
 const ME_TEAM_MEMBERSHIPS = `
   query MeTeamMemberships {
     me {
+      analyticsOptOut
       teamMemberships {
         id
         role
@@ -155,20 +165,27 @@ export const authRouter = createTRPCRouter({
       // admins on the inbox loading screen). Non-fatal: on timeout or error
       // the user just isn't treated as an ERM this cycle.
       let teamMemberships = data.user.teamMemberships;
+      // Account-wide usage-analytics opt-out. Stays null when the lookup
+      // fails, which the tracker gate treats as "unknown — don't load".
+      let analyticsOptOut: boolean | null = null;
       const tmController = new AbortController();
       const tmTimer = setTimeout(() => tmController.abort(), SESSION_TIMEOUT_MS);
       try {
         const tm = await graphqlFetch<{
-          me: { teamMemberships: { id: string; role: string }[] } | null;
+          me: {
+            analyticsOptOut: boolean | null;
+            teamMemberships: { id: string; role: string }[];
+          } | null;
         }>(ME_TEAM_MEMBERSHIPS, undefined, { Cookie: cookie }, tmController.signal);
         teamMemberships = tm.me?.teamMemberships ?? [];
+        analyticsOptOut = tm.me?.analyticsOptOut ?? null;
       } catch (err) {
         console.error("Failed to load team memberships for me:", err);
       } finally {
         clearTimeout(tmTimer);
       }
 
-      return { authenticated: true, user: { ...data.user, teamMemberships } };
+      return { authenticated: true, user: { ...data.user, teamMemberships, analyticsOptOut } };
     } catch (err) {
       console.error("Auth session check failed:", err);
       return { authenticated: false, user: null };
@@ -241,6 +258,16 @@ export const authRouter = createTRPCRouter({
         updateProfile: { id: string; name: string };
       }>(UPDATE_PROFILE, { input }, cookieHeaders(ctx));
       return data.updateProfile;
+    }),
+
+  /** Account-wide usage-analytics opt-out (clear-api `User.analyticsOptOut`). */
+  setAnalyticsOptOut: protectedProcedure
+    .input(z.object({ optedOut: z.boolean() }))
+    .mutation(async ({ ctx, input }) => {
+      const data = await graphqlFetch<{
+        updateProfile: { id: string; analyticsOptOut: boolean | null };
+      }>(SET_ANALYTICS_OPT_OUT, { input: { analyticsOptOut: input.optedOut } }, cookieHeaders(ctx));
+      return { optedOut: data.updateProfile.analyticsOptOut ?? input.optedOut };
     }),
 
   // Admin-only on the clear-api side. We forward both Cookie and Authorization

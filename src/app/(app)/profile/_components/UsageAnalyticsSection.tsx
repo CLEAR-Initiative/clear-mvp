@@ -5,17 +5,17 @@ import { Anchor, Card, Group, Switch, Text } from "@mantine/core";
 import { IconChartBar } from "@tabler/icons-react";
 import { useTranslations } from "next-intl";
 import { useAnalyticsOptOut } from "~/components/analytics/usage-tracker";
-import { writeOptOut } from "~/lib/analytics/opt-out";
 import { isPlatformAdmin } from "~/lib/roles";
 
 /**
- * Profile toggle for usage analytics. Off sets the opt-out cookie; the
+ * Profile toggle for usage analytics. Off sets the account-wide opt-out
+ * (clear-api `User.analyticsOptOut`), so it holds in every browser; the
  * tracker then isn't loaded at all. Global admins are never tracked, so they
  * see a note instead of the toggle.
  */
 export function UsageAnalyticsSection({ role }: { role: string }) {
   const t = useTranslations("usageAnalytics.profile");
-  const optedOut = useAnalyticsOptOut();
+  const { optedOut, known, setOptedOut, saving } = useAnalyticsOptOut();
   const admin = isPlatformAdmin(role);
 
   return (
@@ -31,7 +31,8 @@ export function UsageAnalyticsSection({ role }: { role: string }) {
       ) : (
         <Switch
           checked={!optedOut}
-          onChange={(e) => writeOptOut(!e.currentTarget.checked)}
+          onChange={(e) => setOptedOut(!e.currentTarget.checked)}
+          disabled={!known}
           label={t("toggleLabel")}
           description={t("toggleDescription")}
           color="orange"

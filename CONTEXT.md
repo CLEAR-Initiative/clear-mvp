@@ -230,8 +230,11 @@ tokens in the URL). Page views keep only the path plus `tab` and `from`.
 `track()`. Properties are fixed values or record ids — never names, emails, search text,
 Agent prompts, titles or other free text. The tracker is identified with the user cuid,
 global role, team role, organisation id, team id and language.
-**Analytics opt-out**: the Profile toggle; a first-party cookie, so per browser (clear-api
-has no user field for it yet). Off means the tracker isn't loaded at all.
+**Analytics opt-out**: the Profile toggle; stored on the account (clear-api
+`User.analyticsOptOut`, read via `auth.me`), so it holds in every browser. Off means the
+tracker isn't loaded at all, and it doesn't load until the account value is known. A
+first-party cookie mirrors it so `beforeSend` stops sending in other open tabs at once; a
+legacy per-browser opt-out cookie is copied onto the account once.
 _Avoid_: calling this "telemetry" (that's clear-pipeline's LLM-call telemetry);
 adding an event property that can hold free text.
 

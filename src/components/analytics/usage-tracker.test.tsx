@@ -4,7 +4,8 @@ import { cleanup, render } from "@testing-library/react";
 
 /**
  * The tracker's load gate, end to end through the component: the Umami
- * script tag renders only for a signed-in non-admin who hasn't opted out,
+ * script tag renders only for a signed-in non-admin whose account opt-out is
+ * known and off,
  * with env vars set and the flag on, on a post-login path.
  */
 
@@ -25,9 +26,17 @@ vi.mock("~/components/feature-flags-provider", () => ({
 }));
 vi.mock("~/providers/team-provider", () => ({ useOptionalTeam: () => null }));
 
-let me: unknown = { authenticated: true, user: { id: "u1", role: "member" } };
+const member = () => ({ authenticated: true, user: { id: "u1", role: "member", analyticsOptOut: false } });
+let me: unknown = member();
+const mutate = vi.fn();
 vi.mock("~/trpc/react", () => ({
-  api: { auth: { me: { useQuery: () => ({ data: me }) } } },
+  api: {
+    useUtils: () => ({ auth: { me: { invalidate: vi.fn(), setData: vi.fn() } } }),
+    auth: {
+      me: { useQuery: () => ({ data: me }) },
+      setAnalyticsOptOut: { useMutation: () => ({ mutate, isPending: false }) },
+    },
+  },
 }));
 
 import { UsageTracker } from "./usage-tracker";
@@ -43,7 +52,8 @@ beforeEach(() => {
   pathname = "/detection";
   flags = { usage_analytics: true };
   flagsLoading = false;
-  me = { authenticated: true, user: { id: "u1", role: "member" } };
+  me = member();
+  mutate.mockClear();
   document.cookie = "clear_analytics_opt_out=; path=/; max-age=0";
 });
 afterEach(() => {
@@ -68,16 +78,40 @@ describe("UsageTracker", () => {
     expect(renderTracker()).toBeNull();
   });
 
-  it("loads nothing when the user opted out", () => {
+  it("loads nothing when the account is opted out, and mirrors it to the cookie", () => {
+    me = { authenticated: true, user: { id: "u1", role: "member", analyticsOptOut: true } };
+    expect(renderTracker()).toBeNull();
+    expect(document.cookie).toContain("clear_analytics_opt_out=2");
+    expect(mutate).not.toHaveBeenCalled();
+  });
+
+  it("loads nothing until the account opt-out is known", () => {
+    me = { authenticated: true, user: { id: "u1", role: "member", analyticsOptOut: null } };
+    expect(renderTracker()).toBeNull();
+    cleanup();
+    me = { authenticated: true, user: { id: "u1", role: "member" } };
+    expect(renderTracker()).toBeNull();
+  });
+
+  it("migrates a legacy cookie opt-out onto the account once, loading nothing", () => {
     document.cookie = "clear_analytics_opt_out=1; path=/";
     expect(renderTracker()).toBeNull();
+    expect(mutate).toHaveBeenCalledTimes(1);
+    expect(mutate.mock.calls[0]?.[0]).toEqual({ optedOut: true });
+  });
+
+  it("clears a stale mirror cookie when the account is opted in", () => {
+    document.cookie = "clear_analytics_opt_out=2; path=/";
+    expect(renderTracker()).not.toBeNull();
+    expect(document.cookie).not.toContain("clear_analytics_opt_out=2");
+    expect(mutate).not.toHaveBeenCalled();
   });
 
   it("loads nothing before sign-in or on pre-login pages", () => {
     me = { authenticated: false, user: null };
     expect(renderTracker()).toBeNull();
     cleanup();
-    me = { authenticated: true, user: { id: "u1", role: "member" } };
+    me = member();
     pathname = "/auth/login";
     expect(renderTracker()).toBeNull();
   });

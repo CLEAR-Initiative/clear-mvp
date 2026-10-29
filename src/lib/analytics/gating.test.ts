@@ -7,7 +7,7 @@ import {
   shouldLoadTracker,
   type TrackerGateInput,
 } from "./gating";
-import { parseOptOutCookie } from "./opt-out";
+import { parseOptOutCookie, parseOptOutCookieValue, resolveOptOut, syncAction } from "./opt-out";
 
 const config = readUmamiConfig({ hostUrl: "https://app.clearinitiative.io/ux/", websiteId: "site-1" });
 const base: TrackerGateInput = {
@@ -90,6 +90,28 @@ describe("parseOptOutCookie", () => {
   it("reads the opt-out cookie", () => {
     expect(parseOptOutCookie("a=1; clear_analytics_opt_out=1")).toBe(true);
     expect(parseOptOutCookie("clear_analytics_opt_out=")).toBe(false);
+    expect(parseOptOutCookieValue("clear_analytics_opt_out=1")).toBe("legacy");
+    expect(parseOptOutCookieValue("x=1; clear_analytics_opt_out=2")).toBe("mirror");
+    expect(parseOptOutCookieValue("")).toBeNull();
+  });
+
+  it("treats an unknown account value as opted out", () => {
+    expect(resolveOptOut(null, undefined)).toBe(true);
+    expect(resolveOptOut(null, null)).toBe(true);
+    expect(resolveOptOut(null, false)).toBe(false);
+    expect(resolveOptOut(null, true)).toBe(true);
+    // A legacy cookie holds until migrated; a mirror never overrides the account.
+    expect(resolveOptOut("legacy", false)).toBe(true);
+    expect(resolveOptOut("mirror", false)).toBe(false);
+  });
+
+  it("syncs the cookie to the account and migrates a legacy opt-out", () => {
+    expect(syncAction("legacy", false)).toBe("migrate");
+    expect(syncAction("legacy", true)).toBe("mirror-on");
+    expect(syncAction(null, true)).toBe("mirror-on");
+    expect(syncAction("mirror", true)).toBe("none");
+    expect(syncAction("mirror", false)).toBe("mirror-off");
+    expect(syncAction(null, false)).toBe("none");
     expect(parseOptOutCookie("")).toBe(false);
   });
 });
