@@ -205,7 +205,11 @@ export function mapFigures(data: Record<string, unknown> | null | undefined): An
     refugees: toFigure(d.refugees),
     returneeStock: toFigure(d.returnee_stock),
     overallPin: toFigure(d.overall_pin),
-    pinBySector: PIN_SECTORS.map((sector) => ({ sector, figure: toFigure(d[`pin_${sector}`]) }))
+    pinBySector: PIN_SECTORS.map((sector) => {
+      // The stock is usually `pin_food_security`. Some payloads still use `pin_food`.
+      const raw = d[`pin_${sector}`] ?? (sector === "food_security" ? d.pin_food : undefined);
+      return { sector, figure: toFigure(raw) };
+    })
       .filter((r): r is { sector: PinSector; figure: AnalysisFigure } => r.figure !== null)
       .sort((a, b) => b.figure.value - a.figure.value),
   };

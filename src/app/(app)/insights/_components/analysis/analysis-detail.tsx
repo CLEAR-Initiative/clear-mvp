@@ -17,7 +17,7 @@ import { RefreshButton, type RefreshFrame } from "./refresh-button";
 import { AnalysisCrumbs, AnalysisHeader, AnalysisOverview, AnalysisTitle } from "./dark/dark-analysis";
 import { AnalysisDesk } from "./analysis-desk";
 import { analysisStorageKey, readAnalysisTitle, writeAnalysisTitle } from "~/lib/analysis-collaboration";
-import { CHANGE_ANCHOR, changeChips, changeSessionKey, looseChangeNotes, type ChangeSection } from "./dark/change-notes";
+import { CHANGE_ANCHOR, changeChips, changeSessionKey, looseChangeNotes, notesWithoutFundingShares, type ChangeSection } from "./dark/change-notes";
 import styles from "./dark/analysis-dark.module.css";
 
 type Tab = "overview" | "needs" | "sources";
@@ -216,13 +216,17 @@ export function AnalysisDetail({
   const reportCitations = (data?.sources.length ?? 0) - eventCitations;
 
   let body: React.ReactNode;
+  // A failed poll is not a finished failure. While a first version is still
+  // expected, stay on the generating notice. Once a row is readable, keep it
+  // on screen even if a later refetch fails. Only a country with nothing to
+  // show uses the load error.
   if (analysis.isLoading) {
     body = (
       <Center mih="40vh">
         <Loader size="sm" />
       </Center>
     );
-  } else if (analysis.isError) {
+  } else if (isCountry && analysis.isError && !data) {
     body = <Notice text={t("error")} />;
   } else if (!data) {
     body = isCountry ? (
@@ -281,11 +285,11 @@ export function AnalysisDetail({
             areaIds={isCountry ? [] : locationIds}
             isCountry={isCountry}
             onOpenSources={openSources}
-            noteFor={(section) => changeChips(data.changes.notes).find((chip) => chip.section === section)?.note}
+            noteFor={(section) => changeChips(notesWithoutFundingShares(data.changes.notes)).find((chip) => chip.section === section)?.note}
           />
         )}
         {tab === "needs" && (
-          <AnalysisNeeds sectors={data.sectors} sources={data.sources} scopeName={name} figures={figures.data} />
+          <AnalysisNeeds sectors={data.sectors} sources={data.sources} scopeName={name} figures={figures.data} locationIds={locationIds} />
         )}
         {tab === "sources" && (
           <SimpleGrid cols={{ base: 1, lg: 2 }} spacing={16}>
@@ -295,16 +299,17 @@ export function AnalysisDetail({
             </Text>
             <SituationSources sources={data.sources} className={styles.sourcesCard} />
             </Box>
-            <EventsList events={events.data} />
+            <EventsList events={events.data} pending={events.isLoading} failed={events.isError} />
           </SimpleGrid>
         )}
       </>
     );
   }
 
-  const chips = data ? changeChips(data.changes.notes).filter((chip) => chip.section !== "forecast") : [];
-  const loose = data ? looseChangeNotes(data.changes.notes) : [];
-  const changesKey = data ? changeSessionKey(scopeKey(scope), data.changes.notes) : null;
+  const visibleNotes = data ? notesWithoutFundingShares(data.changes.notes) : null;
+  const chips = visibleNotes ? changeChips(visibleNotes).filter((chip) => chip.section !== "forecast") : [];
+  const loose = visibleNotes ? looseChangeNotes(visibleNotes) : [];
+  const changesKey = visibleNotes ? changeSessionKey(scopeKey(scope), visibleNotes) : null;
   useEffect(() => {
     if (!changesKey) return;
     try {

@@ -54,6 +54,30 @@ export interface ChangeChip {
   note: string;
 }
 
+const FUNDING_SHARE = /funding|funded|hrp/i;
+const PERCENT = /\d+(?:\.\d+)?\s*%/;
+
+/**
+ * Drop sentences that state a funding share. The card is the only funding
+ * figure, so a percentage that lives only in the write-up cannot disagree
+ * with "Not reported" or with the dollars on the card.
+ */
+export function withoutFundingShare(note: string): string {
+  const kept = note
+    .split(/(?<=[.!?])\s+/)
+    .filter((sentence) => !(FUNDING_SHARE.test(sentence) && PERCENT.test(sentence)));
+  return kept.join(" ").replace(/\s+/g, " ").trim();
+}
+
+export function notesWithoutFundingShares(notes: Record<string, string>): Record<string, string> {
+  const visible: Record<string, string> = {};
+  for (const [key, note] of Object.entries(notes)) {
+    const text = withoutFundingShare(note);
+    if (text) visible[key] = text;
+  }
+  return visible;
+}
+
 /** One chip per section that has a non-empty note. The first note wins. */
 export function changeChips(notes: Record<string, string>): ChangeChip[] {
   const by = new Map<ChangeSection, string>();

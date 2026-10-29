@@ -1,5 +1,6 @@
 "use client";
 
+import { eventHref } from "~/lib/analytics/event-source";
 import { useState, useMemo } from "react";
 import Link from "next/link";
 import { useFormatter, useTranslations } from "next-intl";
@@ -749,7 +750,7 @@ export function SignalDetailContent({
                   return (
                     <Link
                       key={ev.id}
-                      href={`/event/${ev.id}`}
+                      href={eventHref(ev.id, "signal")}
                       style={{ textDecoration: "none", color: "inherit" }}
                     >
                       <Box

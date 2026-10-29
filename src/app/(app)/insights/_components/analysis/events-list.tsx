@@ -1,15 +1,26 @@
 "use client";
 
+import { eventHref } from "~/lib/analytics/event-source";
 import Link from "next/link";
 import { useFormatter, useTranslations } from "next-intl";
 import { severityColor } from "~/lib/types/graphql";
 import type { AnalysisEvents } from "~/server/api/mappers/analysis";
 import styles from "./dark/analysis-dark.module.css";
 
-export function EventsList({ events }: { events: AnalysisEvents | undefined }) {
+export function EventsList({
+  events,
+  pending = false,
+  failed = false,
+}: {
+  events: AnalysisEvents | undefined;
+  /** True while the events query has not settled. Missing data is not an empty list. */
+  pending?: boolean;
+  failed?: boolean;
+}) {
   const t = useTranslations("analysis.events");
   const format = useFormatter();
   const items = events?.items ?? [];
+  const waiting = pending && !events;
 
   return (
     <div className={styles.eventsCard} data-testid="analysis-events" data-surface="page">
@@ -19,11 +30,15 @@ export function EventsList({ events }: { events: AnalysisEvents | undefined }) {
           <span className={styles.eventsMeta}>{t("count", { shown: items.length, total: events.totalCount })}</span>
         )}
       </div>
-      {items.length === 0 ? (
+      {waiting ? (
+        <p className={styles.eventsEmpty}>{t("loading")}</p>
+      ) : failed && items.length === 0 ? (
+        <p className={styles.eventsEmpty}>{t("error")}</p>
+      ) : items.length === 0 ? (
         <p className={styles.eventsEmpty}>{t("empty")}</p>
       ) : (
         items.map((e) => (
-          <Link key={e.id} href={`/event/${e.id}`} className={styles.eventRow} data-testid="analysis-event-row">
+          <Link key={e.id} href={eventHref(e.id, "analysis")} className={styles.eventRow} data-testid="analysis-event-row">
             <span
               style={{
                 width: 8,

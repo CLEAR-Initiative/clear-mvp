@@ -337,6 +337,67 @@ describe("analysis router", () => {
     expect(result.fundingRequired).toBeNull();
   });
 
+  it("loads needs from the scope's districts and does not expand a district scope", async () => {
+    graphqlFetch.mockResolvedValueOnce({
+      l0: {
+        id: "sheikan",
+        level: 2,
+        population: "100000",
+        ancestorIds: ["sdn"],
+        metadata: [{ type: "msna_severity_082025", data: { sectors: { WASH: { label: "Severe", score: 50 } } } }],
+        ancestors: [],
+      },
+      l1: {
+        id: "umrawaba",
+        level: 2,
+        population: "50000",
+        ancestorIds: ["sdn"],
+        metadata: [{ type: "msna_severity_082025", data: { sectors: { WASH: { label: "Catastrophic", score: 80 } } } }],
+        ancestors: [],
+      },
+    });
+    const result = await caller().analysis.needs({ locationIds: ["sheikan", "umrawaba"] });
+    expect(graphqlFetch).toHaveBeenCalledTimes(1);
+    expect(graphqlFetch.mock.calls[0]?.[0]).toContain("query ScopeNeedsLocations");
+    const wash = result.sectors.find((sector) => sector.key === "wash");
+    expect(wash).toMatchObject({ saf: "Catastrophic", pin: 90_000 });
+    expect(result.sectors.find((sector) => sector.key === "health")?.pin).toBeNull();
+  });
+
+  it("expands a country scope to admin-2 districts inside that country", async () => {
+    graphqlFetch.mockImplementation(async (query: string, vars?: Record<string, string>) => {
+      if (query.includes("NeedsDistrictIndex")) {
+        return {
+          locations: [
+            { id: "sheikan", level: 2, population: "10000", ancestorIds: ["sdn", "nk"] },
+            { id: "kabul", level: 2, population: "10000", ancestorIds: ["afg"] },
+          ],
+        };
+      }
+      if (vars?.l0 === "sdn") {
+        return { l0: { id: "sdn", level: 0, population: null, ancestorIds: [], metadata: [], ancestors: [] } };
+      }
+      if (vars?.l0 === "sheikan") {
+        return {
+          l0: {
+            id: "sheikan",
+            level: 2,
+            population: "10000",
+            ancestorIds: ["sdn", "nk"],
+            metadata: [{ type: "msna_severity_082025", data: { sectors: { Health: { label: "Extreme", score: 70 } } } }],
+            ancestors: [],
+          },
+        };
+      }
+      return {};
+    });
+    const result = await caller().analysis.needs({ locationIds: ["sdn"] });
+    const queries = graphqlFetch.mock.calls.map((call) => call[0] as string);
+    expect(queries.some((query) => query.includes("NeedsDistrictIndex"))).toBe(true);
+    expect(queries.filter((query) => query.includes("ScopeNeedsLocations"))).toHaveLength(2);
+    expect(result.sectors.find((sector) => sector.key === "health")).toMatchObject({ saf: "Extreme", pin: 7_000 });
+  });
+
   it("reads funding from the analysis window and not from the all-time tier", async () => {
     graphqlFetch.mockImplementation(async (query: string) => {
       if ((query as string).includes("AnalysisWindowFunding")) {
@@ -384,6 +445,13 @@ describe("analysis router", () => {
 
   it("maps a missing bucket to empty figures", () => {
     expect(mapFigures(null)).toEqual({ idpStock: null, refugees: null, returneeStock: null, overallPin: null, pinBySector: [] });
+  });
+
+  it("reads a food stock stored as pin_food", () => {
+    const figures = mapFigures({ pin_food: { value: 8_600_000 } });
+    expect(figures.pinBySector).toEqual([
+      expect.objectContaining({ sector: "food_security", figure: expect.objectContaining({ value: 8_600_000 }) }),
+    ]);
   });
 
   it("rejects unauthenticated callers", async () => {

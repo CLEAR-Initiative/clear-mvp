@@ -52,6 +52,26 @@ describe("Analysis event count labels", () => {
     expect(t("meta.builtFrom", { reports: 40, events: 115 })).toBe("40 reports, 115 cited events");
   });
 
+  it("does not call a loading list empty", () => {
+    render(
+      <NextIntlClientProvider locale="en" messages={en} timeZone="UTC">
+        <EventsList events={undefined} pending />
+      </NextIntlClientProvider>,
+    );
+    expect(screen.getByTestId("analysis-events")).toHaveTextContent("Loading events…");
+    expect(screen.getByTestId("analysis-events")).not.toHaveTextContent("No events recorded");
+  });
+
+  it("says the list failed instead of saying there are no events", () => {
+    render(
+      <NextIntlClientProvider locale="en" messages={en} timeZone="UTC">
+        <EventsList events={undefined} failed />
+      </NextIntlClientProvider>,
+    );
+    expect(screen.getByTestId("analysis-events")).toHaveTextContent("Events could not be loaded.");
+    expect(screen.getByTestId("analysis-events")).not.toHaveTextContent("No events recorded");
+  });
+
   it("names the list as a sample of the events it shows against the full total", () => {
     renderList(100, 4465);
     expect(screen.getByTestId("analysis-events")).toHaveTextContent("Sample: 100 of 4465");
@@ -65,13 +85,13 @@ describe("Analysis event count labels", () => {
     expect(map.textContent).not.toMatch(/\b0\b/);
   });
 
-  it("names the map total as events since the window", () => {
+  it("names the map total as events in this area since the window", () => {
     renderMap({
       totalCount: 4465,
       items: [{ ...event("e1"), point: [25.3, 13.6], locationName: "El Fasher", admin1: { id: "nd", name: "North Darfur" } }],
     });
     const map = screen.getByRole("region", { name: "Analysis area" });
-    expect(map).toHaveTextContent("events since Jan 1, 2026");
+    expect(map).toHaveTextContent("events in this area since Jan 1, 2026");
     expect(map.textContent?.replaceAll(",", "")).toContain("4465");
     expect(map).not.toHaveTextContent("Loading events…");
     expect(map).not.toHaveTextContent("No events recorded");

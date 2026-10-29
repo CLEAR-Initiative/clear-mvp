@@ -45,6 +45,11 @@ ENV NEXT_PUBLIC_SENTRY_DSN=${NEXT_PUBLIC_SENTRY_DSN}
 ARG NEXT_PUBLIC_SENTRY_ENV="development"
 ENV NEXT_PUBLIC_SENTRY_ENV=${NEXT_PUBLIC_SENTRY_ENV}
 
+# Browser reporting stays off unless this is "on". The public DSN can be set
+# and still be rejected by ingest; runtime env cannot change the client bundle.
+ARG NEXT_PUBLIC_SENTRY_CLIENT=""
+ENV NEXT_PUBLIC_SENTRY_CLIENT=${NEXT_PUBLIC_SENTRY_CLIENT}
+
 # Usage analytics (self-hosted Umami, src/lib/analytics). Empty = no tracker.
 ARG NEXT_PUBLIC_UMAMI_HOST_URL=""
 ENV NEXT_PUBLIC_UMAMI_HOST_URL=${NEXT_PUBLIC_UMAMI_HOST_URL}

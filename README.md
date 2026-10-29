@@ -55,7 +55,7 @@ decisions are recorded in [`docs/adr/`](./docs/adr/).
 | Detection | `/detection` | Live feed of Alerts, Events and Signals, with filters and history. |
 | Map | `/map` | Everything on a Mapbox map, with layers (e.g. access constraints, seismic activity). |
 | Inbox | `/inbox` | Items waiting on a person's decision — hotline threads, proposed signals. |
-| Analysis | `/analysis`, `/crisis/[id]` | Build and read situation analyses; open a crisis to see its Events, summary and scenarios; export to PDF. |
+| Insights | `/insights`, `/crisis/[id]` | Build and read situation analyses; open a crisis to see its Events, summary and scenarios; export to PDF. `/analysis` still opens `/insights`. |
 | Agent | `/agent` (and a drawer on every page) | Chat with the CLEAR Agent, which answers from CLEAR's data and NRC's knowledge base. |
 | Observe | `/observe` | Field officers report something they have seen as a new Signal. |
 | Admin | `/admin`, `/metrics` | Users, teams, invitations, data sources, platform metrics. |

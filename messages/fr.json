@@ -2967,7 +2967,7 @@
     "map": {
       "title": "Zone d'analyse",
       "events": "{count, plural, one {# événement} other {# événements}} depuis le {date}",
-      "eventsSince": "{count, plural, one {événement} other {événements}} depuis le {date}",
+      "eventsSince": "{count, plural, one {événement dans cette zone} other {événements dans cette zone}} depuis le {date}",
       "areas": "Où les événements ont eu lieu",
       "areaEvents": "{count, plural, one {# événement} other {# événements}}",
       "noEvents": "Aucun événement enregistré dans cette zone depuis le {date}.",
@@ -3014,11 +3014,14 @@
       "severityNull": "Non évalué : trop peu d'éléments pour noter.",
       "inferred": "Évalué à partir de rapports hors de ce secteur. À considérer comme indicatif.",
       "notAssessed": "Non évalué",
+      "reportingGrade": "D'après les rapports : {grade}",
       "noFigure": "Pas de chiffre de personnes dans le besoin"
     },
     "events": {
       "title": "Événements dans cette zone",
       "empty": "Aucun événement enregistré dans cette zone sur cette période.",
+      "loading": "Chargement des événements…",
+      "error": "Les événements n'ont pas pu être chargés.",
       "untitled": "Événement sans titre",
       "severity": "Gravité {value}",
       "count": "Échantillon : {shown} sur {total}"

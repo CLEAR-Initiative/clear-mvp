@@ -1,5 +1,7 @@
 "use client";
 
+import { normaliseEventFrom } from "~/lib/analytics/event-source";
+import { useTrackEventOpened } from "~/lib/analytics/use-once-per-view";
 import { Suspense, use, useCallback, useEffect, useMemo, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { keepPreviousData } from "@tanstack/react-query";
@@ -38,6 +40,7 @@ function EventDetailPageContent({
     routePrefix: "/event",
     searchParams,
   });
+  useTrackEventOpened(activeId, normaliseEventFrom(searchParams.get("from")));
 
   // List from committed id; chrome follows scrubId (GH #148 settle-to-commit).
   const listSource = referrer === "map" ? "map" : "detection";

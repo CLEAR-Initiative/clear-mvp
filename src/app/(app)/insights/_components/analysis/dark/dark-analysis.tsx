@@ -1,5 +1,6 @@
 "use client";
 
+import { eventHref } from "~/lib/analytics/event-source";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useFormatter, useNow, useTranslations } from "next-intl";
@@ -382,7 +383,7 @@ export function AnalysisHeader({
   );
 }
 
-/** CLEAR returns to the analysis list. Analysis opens the Analysis page. */
+/** CLEAR returns to the list. Insights opens the Insights page. */
 export function AnalysisCrumbs({ name, onHome }: { name: string; onHome: () => void }) {
   const t = useTranslations("analysis.layout");
   const tNav = useTranslations("nav.items");
@@ -392,8 +393,8 @@ export function AnalysisCrumbs({ name, onHome }: { name: string; onHome: () => v
         CLEAR
       </button>
       <span>/</span>
-      <Link href="/analysis" className={styles.crumbLink}>
-        {tNav("analysis")}
+      <Link href="/insights" className={styles.crumbLink}>
+        {tNav("insights")}
       </Link>
       <span>/</span>
       <span className={styles.crumbHere}>{name}</span>
@@ -721,7 +722,7 @@ export function AnalysisOverview({
       ? cardsFromHighlights(timeline.highlights, (event) => ({
           kicker: format.dateTime(new Date(event.startedAt), { day: "numeric", month: "short" }),
           text: event.title ?? t("events.untitled"),
-          href: event.id.startsWith("preview-") ? undefined : `/event/${event.id}`,
+          href: event.id.startsWith("preview-") ? undefined : eventHref(event.id, "analysis"),
         }))
       : [];
   const axisMonths = story

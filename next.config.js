@@ -50,6 +50,9 @@ const nextConfig = {
     // Optimize large icon/component libraries to prevent webpack JSON parse crash
     optimizePackageImports: ["@mantine/core", "@mantine/hooks", "@tabler/icons-react"],
   },
+  async rewrites() {
+    return [{ source: "/favicon.ico", destination: "/nrc-logo-square.svg" }];
+  },
 };
 
 export default withPWA({
