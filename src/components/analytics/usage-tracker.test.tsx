@@ -104,13 +104,23 @@ describe("UsageTracker", () => {
     expect(mutate.mock.calls[0]?.[0]).toEqual({ optedOut: true });
   });
 
-  it("refetches instead of clearing a mirror newer than the account value", () => {
-    // Another tab just opted out; this tab's cached account value predates it.
-    dataUpdatedAt = 0;
-    document.cookie = "clear_analytics_opt_out=2; path=/";
-    renderTracker();
-    expect(document.cookie).toContain("clear_analytics_opt_out=2");
-    expect(invalidate).toHaveBeenCalled();
+  it("refetches after the grace period instead of clearing a just-written mirror", () => {
+    vi.useFakeTimers();
+    try {
+      // Another tab just opted out; its save may not have reached the server,
+      // so this tab's fresh "opted in" fetch could still be stale.
+      const now = Date.now();
+      dataUpdatedAt = now;
+      document.cookie = `clear_analytics_opt_out=2.${now}; path=/`;
+      renderTracker();
+      expect(document.cookie).toContain("clear_analytics_opt_out=2");
+      expect(invalidate).not.toHaveBeenCalled();
+      vi.advanceTimersByTime(15_000);
+      expect(invalidate).toHaveBeenCalled();
+      expect(document.cookie).toContain("clear_analytics_opt_out=2");
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("clears a stale mirror cookie when the account is opted in", () => {

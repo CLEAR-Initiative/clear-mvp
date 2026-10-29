@@ -8,7 +8,9 @@
  *    been migrated onto the account.
  *
  * Cookie values: `1` = legacy per-browser opt-out, not yet on the account;
- * `2` = mirror of an account opt-out. Absent = not opted out locally.
+ * `2.<ms>` = mirror of an account opt-out, stamped with when it was written
+ * (a bare `2` from older builds counts as written at 0). Absent = not opted
+ * out locally.
  */
 
 export const ANALYTICS_OPT_OUT_COOKIE = "clear_analytics_opt_out";
@@ -22,9 +24,25 @@ export function parseOptOutCookieValue(cookieHeader: string): OptOutCookie {
   for (const part of cookieHeader.split(";")) {
     const trimmed = part.trim();
     if (trimmed === `${ANALYTICS_OPT_OUT_COOKIE}=1`) return "legacy";
-    if (trimmed === `${ANALYTICS_OPT_OUT_COOKIE}=2`) return "mirror";
+    if (MIRROR_RE.test(trimmed)) return "mirror";
   }
   return null;
+}
+
+const MIRROR_RE = new RegExp(`^${ANALYTICS_OPT_OUT_COOKIE}=2(?:\\.(\\d+))?$`);
+
+/** When the mirror cookie was written (ms), or `null` if there is no mirror. */
+export function parseMirrorWrittenAt(cookieHeader: string): number | null {
+  for (const part of cookieHeader.split(";")) {
+    const match = MIRROR_RE.exec(part.trim());
+    if (match) return match[1] ? Number(match[1]) : 0;
+  }
+  return null;
+}
+
+export function readMirrorWrittenAt(): number | null {
+  if (typeof document === "undefined") return null;
+  return parseMirrorWrittenAt(document.cookie);
 }
 
 export function parseOptOutCookie(cookieHeader: string): boolean {
@@ -44,7 +62,7 @@ export function readOptOut(): boolean {
 /** Write the local mirror of the account value and tell this tab's listeners. */
 export function writeOptOutMirror(optedOut: boolean): void {
   document.cookie = optedOut
-    ? `${ANALYTICS_OPT_OUT_COOKIE}=2; path=/; max-age=${ONE_YEAR}; samesite=lax`
+    ? `${ANALYTICS_OPT_OUT_COOKIE}=2.${Date.now()}; path=/; max-age=${ONE_YEAR}; samesite=lax`
     : `${ANALYTICS_OPT_OUT_COOKIE}=; path=/; max-age=0; samesite=lax`;
   window.dispatchEvent(new Event(OPT_OUT_CHANGE_EVENT));
 }
@@ -66,4 +84,26 @@ export function syncAction(
   if (account && cookie !== "mirror") return "mirror-on";
   if (!account && cookie === "mirror") return "mirror-off";
   return "none";
+}
+
+/**
+ * How long after a mirror is written an "opted in" account value must have
+ * been fetched before it may clear the mirror. Another tab writes the mirror
+ * before its save reaches the server, so a fetch soon after can still return
+ * the old value.
+ */
+export const MIRROR_CLEAR_GRACE_MS = 15_000;
+
+/**
+ * Whether an account value saying "opted in", fetched at `fetchedAt`, may
+ * clear a mirror written at `writtenAt`. Otherwise wait `retryInMs`, then refetch.
+ */
+export function mirrorClearDecision(
+  writtenAt: number,
+  fetchedAt: number,
+  now: number,
+): { clear: true } | { clear: false; retryInMs: number } {
+  const safeFrom = writtenAt + MIRROR_CLEAR_GRACE_MS;
+  if (fetchedAt >= safeFrom) return { clear: true };
+  return { clear: false, retryInMs: Math.max(0, safeFrom - now) };
 }

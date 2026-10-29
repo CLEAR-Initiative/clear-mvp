@@ -17,6 +17,8 @@ import {
 } from "~/lib/analytics/gating";
 import {
   OPT_OUT_CHANGE_EVENT,
+  mirrorClearDecision,
+  readMirrorWrittenAt,
   readOptOut,
   readOptOutCookie,
   resolveOptOut,
@@ -94,10 +96,11 @@ const MIGRATION_RETRY_MS = 30_000;
  * Keeps the local cookie in step with the account, and moves a legacy
  * per-browser opt-out onto the account once.
  *
- * The mirror is only cleared against an account value fetched after the
- * cookie last changed: another tab may have just opted out, and this tab's
- * cached `false` would otherwise undo it. Until then `beforeSend` keeps
- * blocking, because any opt-out cookie stops sends.
+ * The mirror is only cleared against an account value fetched well after the
+ * mirror was written (`mirrorClearDecision`): another tab may have just opted
+ * out, and its save may not have reached the server yet, so this tab's
+ * `false` could be stale. Until then `beforeSend` keeps blocking, because any
+ * opt-out cookie stops sends.
  */
 function useOptOutSync(): void {
   const cookie = useOptOutCookie();
@@ -105,12 +108,6 @@ function useOptOutSync(): void {
   const account = me.data?.authenticated ? me.data.user?.analyticsOptOut : undefined;
   const { mutate } = api.auth.setAnalyticsOptOut.useMutation();
   const utils = api.useUtils();
-  const cookieChangedAt = useRef(0);
-  const lastCookie = useRef<OptOutCookie | undefined>(undefined);
-  if (lastCookie.current !== cookie) {
-    lastCookie.current = cookie;
-    cookieChangedAt.current = Date.now();
-  }
   const migration = useRef({ inFlight: false, attempts: 0 });
   const [retryTick, setRetryTick] = useState(0);
 
@@ -145,8 +142,12 @@ function useOptOutSync(): void {
       );
     } else if (action === "mirror-on") writeOptOutMirror(true);
     else if (action === "mirror-off") {
-      if (me.dataUpdatedAt > cookieChangedAt.current) writeOptOutMirror(false);
-      else void utils.auth.me.invalidate();
+      const decision = mirrorClearDecision(readMirrorWrittenAt() ?? 0, me.dataUpdatedAt, Date.now());
+      if (decision.clear) writeOptOutMirror(false);
+      else {
+        const timer = setTimeout(() => void utils.auth.me.invalidate(), decision.retryInMs);
+        return () => clearTimeout(timer);
+      }
     }
   }, [cookie, account, mutate, utils, me.dataUpdatedAt, retryTick]);
 }
