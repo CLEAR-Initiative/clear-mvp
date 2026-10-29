@@ -44,6 +44,7 @@ const frameQuery = vi.fn();
 const refreshMutate = vi.fn();
 let refreshOpts: { onSuccess?: () => void; onError?: () => void } = {};
 const invalidateScopes = vi.fn();
+const recordExported = vi.fn();
 const utils = {
   locations: { getById: { fetch: async () => ({ geometry: null }) } },
   analysis: { scopes: { invalidate: invalidateScopes } },
@@ -82,6 +83,7 @@ vi.mock("~/trpc/react", () => ({
         }),
       },
       rename: { useMutation: () => ({ mutate: vi.fn(), isPending: false }) },
+      recordReportExported: { useMutation: () => ({ mutate: recordExported }) },
       comment: { useMutation: () => ({ mutateAsync: vi.fn(), isPending: false }) },
     },
     locations: { getById: { useQuery: () => ({ data: { geometry: null } }) } },
@@ -177,6 +179,57 @@ afterEach(async () => {
   sessionStorage.clear();
   localStorage.clear();
   await clearAnalysisFiles();
+});
+
+describe("AnalysisDetail usage tracking (#1214)", () => {
+  const umamiTrack = vi.fn();
+  beforeEach(() => {
+    window.umami = { track: umamiTrack, identify: vi.fn() };
+    Object.defineProperty(URL, "createObjectURL", { configurable: true, writable: true, value: () => "blob:x" });
+    Object.defineProperty(URL, "revokeObjectURL", { configurable: true, writable: true, value: () => {} });
+  });
+  afterEach(() => {
+    delete window.umami;
+  });
+  const sent = () => JSON.stringify(umamiTrack.mock.calls);
+
+  it("tracks a summary copy with no content", async () => {
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText: async () => undefined } });
+    renderDetail(COUNTRY);
+    fireEvent.click(screen.getByRole("button", { name: "analysis.layout.copySummary" }));
+    await vi.waitFor(() => expect(umamiTrack).toHaveBeenCalledWith("analysis.summary_copied", undefined));
+    expect(sent()).not.toContain("Summary.");
+  });
+
+  it("tracks an evidence preview and download with no file name", async () => {
+    renderDetail(COUNTRY);
+    fireEvent.change(screen.getByTestId("analysis-evidence-input"), {
+      target: { files: [new File(["%PDF-1.4"], "brief.pdf", { type: "application/pdf" })] },
+    });
+    fireEvent.click(await screen.findByRole("button", { name: /brief\.pdf/ }));
+    expect(umamiTrack).toHaveBeenCalledWith("analysis.evidence_previewed", undefined);
+    fireEvent.click(await screen.findByRole("link", { name: "analysis.layout.evidenceDownload" }));
+    expect(umamiTrack).toHaveBeenCalledWith("analysis.evidence_downloaded", undefined);
+    expect(sent()).not.toContain("brief");
+  });
+
+  it("records the report export with the analysis id once the PDF is built", async () => {
+    HTMLAnchorElement.prototype.click = () => {};
+    renderDetail(COUNTRY);
+    fireEvent.click(screen.getByTestId("analysis-create-report"));
+    fireEvent.click(await screen.findByTestId("report-builder-create"));
+    await vi.waitFor(() => expect(recordExported).toHaveBeenCalledWith({ analysisId: "a1" }));
+  });
+
+  it("doesn't record an export when the report fails", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    Object.defineProperty(URL, "createObjectURL", { configurable: true, writable: true, value: () => { throw new Error("no blob"); } });
+    renderDetail(COUNTRY);
+    fireEvent.click(screen.getByTestId("analysis-create-report"));
+    fireEvent.click(await screen.findByTestId("report-builder-create"));
+    await vi.waitFor(() => expect(notify).toHaveBeenCalled());
+    expect(recordExported).not.toHaveBeenCalled();
+  });
 });
 
 describe("AnalysisDetail collaboration", () => {

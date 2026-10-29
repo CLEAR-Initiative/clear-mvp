@@ -149,6 +149,19 @@ describe("AgentDrawer state", () => {
     expect(agent!.open).toBe(true);
   });
 
+  it("tracks agent.opened from the launcher with the route pattern only", () => {
+    const umamiTrack = vi.fn();
+    window.umami = { track: umamiTrack, identify: vi.fn() };
+    pathname = "/event/cmvtdzfl0000fl307lu5gzbq3";
+    try {
+      renderDrawer();
+      fireEvent.click(launcher()!);
+      expect(umamiTrack).toHaveBeenCalledWith("agent.opened", { surface: "drawer", from_route: "/event/:id" });
+    } finally {
+      delete window.umami;
+    }
+  });
+
   it("shares one chat for the active Thread and switches it on New thread", () => {
     renderDrawer();
     const first = agent!.chat;

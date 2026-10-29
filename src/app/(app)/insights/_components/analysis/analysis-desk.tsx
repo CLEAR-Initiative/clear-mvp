@@ -17,6 +17,7 @@ import {
 } from "~/lib/analysis-collaboration";
 import { readAnalysisFile, saveAnalysisFile } from "~/lib/analysis-file-store";
 import styles from "./dark/analysis-dark.module.css";
+import { track } from "~/lib/analytics/track";
 
 interface ShownComment {
   id: string;
@@ -165,6 +166,7 @@ export function AnalysisDesk({
   };
 
   const openFile = async (file: ShownFile) => {
+    track("analysis.evidence_previewed");
     if (ownedUrl.current) {
       URL.revokeObjectURL(ownedUrl.current);
       ownedUrl.current = null;
@@ -368,6 +370,7 @@ export function AnalysisDesk({
                     target="_blank"
                     rel="noopener"
                     aria-label={t("evidenceDownload")}
+                    onClick={() => track("analysis.evidence_downloaded")}
                   >
                     <IconDownload size={16} />
                   </a>

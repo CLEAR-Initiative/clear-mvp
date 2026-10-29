@@ -58,6 +58,7 @@ export function CreateReportButton({
   const format = useFormatter();
   const utils = api.useUtils();
   const me = api.auth.me.useQuery(undefined, { staleTime: 60_000 });
+  const recordExported = api.analysis.recordReportExported.useMutation();
   const [busy, setBusy] = useState(false);
   const [building, setBuilding] = useState(false);
   const eventTotal = events?.totalCount ?? 0;
@@ -156,6 +157,9 @@ export function CreateReportButton({
       a.click();
       setTimeout(() => URL.revokeObjectURL(url), 10_000);
       setBuilding(false);
+      // Activity log only: the id, never the report's content. The design
+      // sample isn't a stored analysis.
+      if (!data.id.startsWith("preview-")) recordExported.mutate({ analysisId: data.id });
     } catch (e) {
       console.error("[analysis] report generation failed", e);
       notifications.show({ color: "red", message: t("error") });

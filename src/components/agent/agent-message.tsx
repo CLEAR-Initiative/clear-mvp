@@ -16,6 +16,7 @@
  */
 
 import { tagEventPath } from "~/lib/analytics/event-source";
+import { track } from "~/lib/analytics/track";
 import { useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
@@ -235,7 +236,15 @@ function SourceRow({ group }: { group: SourceGroup }) {
         <Icon size={13} style={{ flexShrink: 0, marginTop: 3 }} color="var(--mantine-color-dimmed)" />
         <Box style={{ flex: 1, minWidth: 0 }}>
           {href ? (
-            <Anchor href={href} download size="sm" fw={500} lineClamp={1} title={t("download", { name: doc.title })}>
+            <Anchor
+              href={href}
+              download
+              size="sm"
+              fw={500}
+              lineClamp={1}
+              title={t("download", { name: doc.title })}
+              onClick={() => track("agent.source_opened")}
+            >
               {doc.title}
               <IconDownload size={12} style={{ marginInlineStart: 4, verticalAlign: "-1px" }} />
             </Anchor>

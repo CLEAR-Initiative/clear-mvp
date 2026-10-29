@@ -119,6 +119,20 @@ describe("Agent navigation", () => {
     expect(screen.queryByRole("button", { name: "Back" })).toBeNull();
   });
 
+  it("tracks agent.navigation_back when Back undoes a move", () => {
+    const umamiTrack = vi.fn();
+    window.umami = { track: umamiTrack, identify: vi.fn() };
+    try {
+      const { land } = renderWith(<AgentMessage message={answer()} />);
+      act(() => agent.applyNavigation("nav-1", result));
+      land();
+      fireEvent.click(screen.getByRole("button", { name: "Back" }));
+      expect(umamiTrack).toHaveBeenCalledWith("agent.navigation_back", undefined);
+    } finally {
+      delete window.umami;
+    }
+  });
+
   it("keeps the page unmounted until Back lands, then remounts it on the restored URL and state", () => {
     sessionStorage.setItem("detection-filters", '{"regionId":"loc-nd"}');
     const seen: Array<{ url: string; stored: string | null }> = [];

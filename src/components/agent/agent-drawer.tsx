@@ -41,6 +41,7 @@ import { useAgent } from "~/components/agent/agent-provider";
 import { AgentThread } from "~/components/agent/agent-thread";
 import { isLocale, localeDirection } from "~/i18n/config";
 import { api } from "~/trpc/react";
+import { trackAgentOpened } from "./agent-analytics";
 
 // ── Width ────────────────────────────────────────────────────────────────
 
@@ -106,7 +107,10 @@ export function AgentDrawer() {
               radius="xl"
               variant="filled"
               aria-label={t("drawer.open")}
-              onClick={() => setOpen(true)}
+              onClick={() => {
+                trackAgentOpened("drawer", pathname);
+                setOpen(true);
+              }}
             >
               <IconMessageCircle size={24} />
             </ActionIcon>

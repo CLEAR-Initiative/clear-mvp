@@ -1,3 +1,7 @@
+import type { ProductTourStepId } from "./product-tour-step-ids";
+
+export type { ProductTourStepId };
+
 export interface OnboardingTimestamps {
   onboardingStartedAt: string | null;
   onboardingProfileCompletedAt: string | null;
@@ -19,11 +23,6 @@ export type TourCompleteOptions = {
 
 export type TourPage = "detection" | "map";
 
-export type ProductTourStepId =
-  | "detectionAlerts"
-  | "detectionEvents"
-  | "mapLayers"
-  | "mapCanvas";
 
 export interface ProductTourStep {
   id: ProductTourStepId;

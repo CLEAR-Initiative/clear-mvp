@@ -143,6 +143,7 @@ vi.mock("~/trpc/react", () => ({
         }),
       },
       rename: { useMutation: () => mutation(vi.fn()) },
+      recordReportExported: { useMutation: () => mutation(vi.fn()) },
       comment: { useMutation: () => ({ mutateAsync: vi.fn(), isPending: false }) },
     },
     locations: {

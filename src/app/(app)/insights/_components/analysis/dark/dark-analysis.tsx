@@ -37,6 +37,7 @@ import styles from "./analysis-dark.module.css";
 import { CHANGE_ANCHOR, type ChangeSection } from "./change-notes";
 import { summaryCollapseAnchor, summaryScrollDelta } from "../summary-scroll";
 import { EventAxis, cardsFromHighlights, eventTone, type TimelineStory } from "./event-axis";
+import { track } from "~/lib/analytics/track";
 
 const PREVIEW = 4;
 
@@ -737,6 +738,7 @@ export function AnalysisOverview({
     try {
       await navigator.clipboard.writeText(summaryText);
       setCopied(true);
+      track("analysis.summary_copied");
     } catch {
       setCopied(false);
     }
