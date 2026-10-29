@@ -19,46 +19,6 @@
       "firstEvent": "Primer evento: {date}",
       "lastUpdate": "Última actualización: {date}"
     },
-    "executiveSummary": {
-      "priorityAnalysis": "Análisis prioritario",
-      "criticalBadge": "{count} crítica(s)",
-      "activeBadge": "{count} activa(s)",
-      "situationReport": "Informe de situación - {country}",
-      "defaultReportTitle": "Crisis de desplazamiento por conflicto armado - {country}",
-      "activeAlerts": "Alertas activas",
-      "totalAlerts": "Total de alertas",
-      "trend": "Tendencia",
-      "needs": {
-        "shelter": {
-          "label": "Alojamiento",
-          "description": "Vivienda y desplazamiento"
-        },
-        "wash": {
-          "label": "WASH",
-          "description": "Agua y saneamiento"
-        },
-        "protection": {
-          "label": "Protección",
-          "description": "Derechos y seguridad"
-        },
-        "health": {
-          "label": "Salud",
-          "description": "Respuesta médica"
-        },
-        "foodSecurity": {
-          "label": "Seguridad alimentaria",
-          "description": "Acceso a la nutrición"
-        }
-      },
-      "viewFullReport": "Ver informe completo",
-      "downloadPdf": "Descargar PDF",
-      "updatedAt": "Actualizado {time}",
-      "updatedFallback": "Actualizado hace 2 horas",
-      "confidence": "Confianza: {pct} %",
-      "aiGeneratedAnalysis": "Análisis generado por IA",
-      "generating": "Generando un análisis completo a partir de {count} alertas activas...",
-      "generateFailed": "No se pudo generar el análisis. Inténtelo de nuevo."
-    },
     "insights": {
       "title": "Hallazgos generados por IA",
       "subtitle": "Detección de patrones y recomendaciones",

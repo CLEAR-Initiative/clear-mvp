@@ -19,46 +19,6 @@
       "firstEvent": "أول حدث: {date}",
       "lastUpdate": "آخر تحديث: {date}"
     },
-    "executiveSummary": {
-      "priorityAnalysis": "تحليل الأولويات",
-      "criticalBadge": "{count} حرجة",
-      "activeBadge": "{count} نشطة",
-      "situationReport": "تقرير الوضع - {country}",
-      "defaultReportTitle": "أزمة نزوح النزاع المسلح - {country}",
-      "activeAlerts": "التنبيهات النشطة",
-      "totalAlerts": "إجمالي التنبيهات",
-      "trend": "الاتجاه",
-      "needs": {
-        "shelter": {
-          "label": "المأوى",
-          "description": "الإسكان والنزوح"
-        },
-        "wash": {
-          "label": "WASH",
-          "description": "المياه والصرف الصحي"
-        },
-        "protection": {
-          "label": "الحماية",
-          "description": "الحقوق والسلامة"
-        },
-        "health": {
-          "label": "الصحة",
-          "description": "الاستجابة الطبية"
-        },
-        "foodSecurity": {
-          "label": "الأمن الغذائي",
-          "description": "الحصول على التغذية"
-        }
-      },
-      "viewFullReport": "عرض التقرير الكامل",
-      "downloadPdf": "تنزيل PDF",
-      "updatedAt": "تم التحديث {time}",
-      "updatedFallback": "تم التحديث منذ ساعتين",
-      "confidence": "الثقة: {pct}%",
-      "aiGeneratedAnalysis": "تحليل بالذكاء الاصطناعي",
-      "generating": "جارٍ إنشاء التحليل الشامل من {count} تنبيهاً نشطاً...",
-      "generateFailed": "فشل إنشاء التحليل. يرجى المحاولة مجدداً."
-    },
     "insights": {
       "title": "رؤى مُنشأة بالذكاء الاصطناعي",
       "subtitle": "اكتشاف الأنماط والتوصيات",
