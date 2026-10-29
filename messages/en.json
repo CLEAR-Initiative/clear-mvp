@@ -319,7 +319,8 @@
   "admin": {
     "header": {
       "title": "Admin",
-      "subtitle": "Platform configuration, user and organisation management"
+      "subtitle": "Platform configuration, user and organisation management",
+      "activityLink": "Usage activity"
     },
     "tabs": {
       "users": "Users",
@@ -3540,6 +3541,49 @@
       "optOut": "You can turn usage analytics off at any time in your Profile. When it is off, the tracker is not loaded at all.",
       "manageInProfile": "Manage in Profile",
       "gotIt": "Got it"
+    }
+  },
+  "adminActivity": {
+    "page": {
+      "title": "Usage activity",
+      "breadcrumb": "Activity",
+      "breadcrumbAdmin": "Admin"
+    },
+    "window": {
+      "label": "Time window",
+      "days": "Last {days} days"
+    },
+    "error": {
+      "title": "Could not load activity"
+    },
+    "unavailable": {
+      "title": "Activity not available yet",
+      "body": "The CLEAR API does not serve activity statistics yet. Try again after the next API release."
+    },
+    "loading": "Loading activity",
+    "actions": {
+      "title": "Actions",
+      "action": "Action",
+      "count": "Count",
+      "total": "Total",
+      "empty": "No actions recorded in this window."
+    },
+    "agent": {
+      "title": "Agent usage",
+      "turns": "Turns",
+      "distinctUsers": "Distinct users",
+      "answers": "Answers",
+      "cost": "Cost (USD)",
+      "tokens": "Tokens",
+      "tokensSplit": "{input} in / {output} out",
+      "byRoute": "By route",
+      "route": "Route",
+      "empty": "No agent usage in this window."
+    },
+    "export": {
+      "title": "NRC aggregate export",
+      "note": "Monthly totals for the last 12 months by organisation, team and role. Groups of fewer than 5 people and platform admins are excluded.",
+      "button": "Download NRC export (CSV)"
     }
   }
 }

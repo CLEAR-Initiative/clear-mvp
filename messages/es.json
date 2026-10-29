@@ -319,7 +319,8 @@
   "admin": {
     "header": {
       "title": "Admin",
-      "subtitle": "Configuración de la plataforma, gestión de usuarios y organizaciones"
+      "subtitle": "Configuración de la plataforma, gestión de usuarios y organizaciones",
+      "activityLink": "Actividad de uso"
     },
     "tabs": {
       "users": "Usuarios",
@@ -3540,6 +3541,49 @@
       "optOut": "Puede desactivar las estadísticas de uso en cualquier momento en su perfil. Cuando están desactivadas, el rastreador no se carga en absoluto.",
       "manageInProfile": "Gestionar en el perfil",
       "gotIt": "Entendido"
+    }
+  },
+  "adminActivity": {
+    "page": {
+      "title": "Actividad de uso",
+      "breadcrumb": "Actividad",
+      "breadcrumbAdmin": "Administración"
+    },
+    "window": {
+      "label": "Periodo",
+      "days": "Últimos {days} días"
+    },
+    "error": {
+      "title": "No se pudo cargar la actividad"
+    },
+    "unavailable": {
+      "title": "La actividad aún no está disponible",
+      "body": "La API de CLEAR todavía no ofrece estadísticas de actividad. Vuelve a intentarlo tras la próxima versión de la API."
+    },
+    "loading": "Cargando actividad",
+    "actions": {
+      "title": "Acciones",
+      "action": "Acción",
+      "count": "Cantidad",
+      "total": "Total",
+      "empty": "No se registraron acciones en este periodo."
+    },
+    "agent": {
+      "title": "Uso del agente",
+      "turns": "Turnos",
+      "distinctUsers": "Usuarios distintos",
+      "answers": "Respuestas",
+      "cost": "Coste (USD)",
+      "tokens": "Tokens",
+      "tokensSplit": "{input} de entrada / {output} de salida",
+      "byRoute": "Por ruta",
+      "route": "Ruta",
+      "empty": "No hubo uso del agente en este periodo."
+    },
+    "export": {
+      "title": "Exportación agregada para NRC",
+      "note": "Totales mensuales de los últimos 12 meses por organización, equipo y rol. Se excluyen los grupos de menos de 5 personas y los administradores de la plataforma.",
+      "button": "Descargar exportación NRC (CSV)"
     }
   }
 }

@@ -319,7 +319,8 @@
   "admin": {
     "header": {
       "title": "Administration",
-      "subtitle": "Configuration de la plateforme, gestion des utilisateurs et des organisations"
+      "subtitle": "Configuration de la plateforme, gestion des utilisateurs et des organisations",
+      "activityLink": "Activité d'utilisation"
     },
     "tabs": {
       "users": "Utilisateurs",
@@ -3540,6 +3541,49 @@
       "optOut": "Vous pouvez désactiver les statistiques d'utilisation à tout moment dans votre profil. Une fois désactivées, le traceur n'est pas chargé du tout.",
       "manageInProfile": "Gérer dans le profil",
       "gotIt": "Compris"
+    }
+  },
+  "adminActivity": {
+    "page": {
+      "title": "Activité d'utilisation",
+      "breadcrumb": "Activité",
+      "breadcrumbAdmin": "Administration"
+    },
+    "window": {
+      "label": "Période",
+      "days": "{days} derniers jours"
+    },
+    "error": {
+      "title": "Impossible de charger l'activité"
+    },
+    "unavailable": {
+      "title": "Activité pas encore disponible",
+      "body": "L'API CLEAR ne fournit pas encore les statistiques d'activité. Réessayez après la prochaine version de l'API."
+    },
+    "loading": "Chargement de l'activité",
+    "actions": {
+      "title": "Actions",
+      "action": "Action",
+      "count": "Nombre",
+      "total": "Total",
+      "empty": "Aucune action enregistrée sur cette période."
+    },
+    "agent": {
+      "title": "Utilisation de l'agent",
+      "turns": "Échanges",
+      "distinctUsers": "Utilisateurs distincts",
+      "answers": "Réponses",
+      "cost": "Coût (USD)",
+      "tokens": "Jetons",
+      "tokensSplit": "{input} en entrée / {output} en sortie",
+      "byRoute": "Par page",
+      "route": "Page",
+      "empty": "Aucune utilisation de l'agent sur cette période."
+    },
+    "export": {
+      "title": "Export agrégé NRC",
+      "note": "Totaux mensuels des 12 derniers mois par organisation, équipe et rôle. Les groupes de moins de 5 personnes et les administrateurs de la plateforme sont exclus.",
+      "button": "Télécharger l'export NRC (CSV)"
     }
   }
 }
