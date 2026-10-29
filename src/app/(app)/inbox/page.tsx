@@ -333,7 +333,7 @@ export default function InboxPage() {
   );
 
   /** A Location challenge was decided: it leaves the queue, the nav badge,
-   * the map's challenged pins and the Signal's location mark follow. */
+   * the map's pins, the Signal's place and its location mark follow. */
   const locationDecided = useCallback(
     (entry: LocationChallengeEntry, decision: LocationChallengeDecision) => {
       dismiss(entry.id, { message: t(LOCATION_DECIDED_TOAST[decision]), signalId: entry.challenge.signalId });
@@ -342,6 +342,11 @@ export default function InboxPage() {
       void utils.locationChallenge.listForMap.invalidate();
       void utils.locationChallenge.getBySignal.invalidate({ signalId: entry.challenge.signalId });
       void utils.locationChallenge.correctedAt.invalidate({ signalId: entry.challenge.signalId });
+      // The Signal's own place and pin change with an accepted or placed point.
+      if (decision !== "DECLINE") {
+        void utils.signals.get.invalidate({ id: entry.challenge.signalId });
+        void utils.signals.forMap.invalidate();
+      }
     },
     [dismiss, utils, t],
   );

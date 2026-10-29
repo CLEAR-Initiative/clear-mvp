@@ -76,6 +76,8 @@ const locationInvalidate = {
   listForMap: vi.fn(async () => undefined),
   getBySignal: vi.fn(async () => undefined),
   correctedAt: vi.fn(async () => undefined),
+  signal: vi.fn(async () => undefined),
+  signalsForMap: vi.fn(async () => undefined),
 };
 vi.mock("~/components/location-challenge/location-challenge-map", () => ({
   LocationChallengeMap: () => <div data-testid="location-challenge-map" />,
@@ -94,6 +96,10 @@ vi.mock("~/trpc/react", () => ({
         reviewCount: { invalidate },
         forEvent: { invalidate, fetch: forEventFetch },
         computedPriors: { invalidate },
+      },
+      signals: {
+        get: { invalidate: locationInvalidate.signal },
+        forMap: { invalidate: locationInvalidate.signalsForMap },
       },
       locationChallenge: {
         toDecide: { invalidate: locationInvalidate.toDecide },
@@ -495,6 +501,8 @@ describe("InboxPage Location challenges", () => {
     expect(locationInvalidate.listForMap).toHaveBeenCalled();
     expect(locationInvalidate.getBySignal).toHaveBeenCalledWith({ signalId: "sig-lc-1" });
     expect(locationInvalidate.correctedAt).toHaveBeenCalledWith({ signalId: "sig-lc-1" });
+    expect(locationInvalidate.signal).toHaveBeenCalledWith({ id: "sig-lc-1" });
+    expect(locationInvalidate.signalsForMap).toHaveBeenCalled();
   });
 });
 
