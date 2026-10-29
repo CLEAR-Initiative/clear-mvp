@@ -88,7 +88,8 @@
   width: 100%;
   min-height: 100%;
   box-sizing: border-box;
-  padding: 28px 40px 96px;
+  /* Clears the chat button (48px tall, 88px off the bottom, plus the safe area). */
+  padding: 28px 40px calc(152px + env(safe-area-inset-bottom, 0px));
 }
 
 .frame {
@@ -100,7 +101,7 @@
 @media (max-width: 48em) {
   .shell {
     /* Clear the fixed chat button (48px, sitting 88px off the bottom). */
-    padding: 16px 16px 160px;
+    padding: 16px 16px calc(168px + env(safe-area-inset-bottom, 0px));
   }
 
   .title {

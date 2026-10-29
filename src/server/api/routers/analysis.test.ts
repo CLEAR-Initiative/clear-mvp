@@ -386,6 +386,13 @@ describe("analysis router", () => {
     expect(mapFigures(null)).toEqual({ idpStock: null, refugees: null, returneeStock: null, overallPin: null, pinBySector: [] });
   });
 
+  it("reads a food stock stored as pin_food", () => {
+    const figures = mapFigures({ pin_food: { value: 8_600_000 } });
+    expect(figures.pinBySector).toEqual([
+      expect.objectContaining({ sector: "food_security", figure: expect.objectContaining({ value: 8_600_000 }) }),
+    ]);
+  });
+
   it("rejects unauthenticated callers", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => new Response("null", { status: 200 })));
     await expect(caller().analysis.current({ countryLocationId: "sdn", countryName: "Sudan" })).rejects.toThrow();

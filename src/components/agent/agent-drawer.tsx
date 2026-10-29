@@ -93,7 +93,13 @@ export function AgentDrawer() {
   return (
     <>
       {!onAgentPage && !open && (
-        <Affix position={{ bottom: 88, [endSide]: 24 }} zIndex={150}>
+        <Affix
+          position={{
+            bottom: "calc(88px + env(safe-area-inset-bottom, 0px))",
+            [endSide]: 24,
+          }}
+          zIndex={150}
+        >
           <Tooltip label={t("drawer.launcherTooltip")} position={rtl ? "right" : "left"}>
             <ActionIcon
               size={48}

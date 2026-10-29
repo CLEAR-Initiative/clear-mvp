@@ -39,6 +39,7 @@ export async function generateMetadata(): Promise<Metadata> {
     description: t("description"),
     manifest: "/manifest.webmanifest",
     icons: {
+      icon: "/nrc-logo-square.svg",
       apple: "/apple-touch-icon.png",
     },
     appleWebApp: {

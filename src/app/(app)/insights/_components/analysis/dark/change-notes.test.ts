@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { changeChips, changeSessionKey, looseChangeNotes, sectionForChangeKey } from "./change-notes";
+import { changeChips, changeSessionKey, looseChangeNotes, notesWithoutFundingShares, sectionForChangeKey, withoutFundingShare } from "./change-notes";
 
 describe("sectionForChangeKey", () => {
   it("places known pipeline keys", () => {
@@ -42,6 +42,22 @@ describe("changeSessionKey", () => {
     expect(a).toBe(b);
     expect(c).not.toBe(a);
     expect(changeSessionKey("created:1", { summary: "Revised" })).not.toBe(a);
+  });
+});
+
+describe("withoutFundingShare", () => {
+  it("drops a funding percentage and keeps the rest of the note", () => {
+    expect(
+      withoutFundingShare("People in need rose. Funding coverage moved from 41% to 31%."),
+    ).toBe("People in need rose.");
+  });
+
+  it("keeps a funding sentence that states no share", () => {
+    expect(withoutFundingShare("Funding requirements were revised.")).toBe("Funding requirements were revised.");
+  });
+
+  it("removes a note that is only a funding share", () => {
+    expect(notesWithoutFundingShares({ funding_received: "41% of requirements are funded." })).toEqual({});
   });
 });
 

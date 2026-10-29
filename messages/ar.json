@@ -2966,7 +2966,7 @@
     "map": {
       "title": "منطقة التحليل",
       "events": "{count, plural, one {حدث واحد} other {# أحداث}} منذ {date}",
-      "eventsSince": "{count, plural, one {حدث} two {حدثان} few {أحداث} many {حدثًا} other {حدث}} منذ {date}",
+      "eventsSince": "{count, plural, one {حدث في هذه المنطقة} two {حدثان في هذه المنطقة} few {أحداث في هذه المنطقة} many {حدثًا في هذه المنطقة} other {حدث في هذه المنطقة}} منذ {date}",
       "areas": "أين وقعت الأحداث",
       "areaEvents": "{count, plural, one {حدث واحد} other {# أحداث}}",
       "noEvents": "لم تُسجَّل أي أحداث في هذه المنطقة منذ {date}.",
@@ -3018,6 +3018,8 @@
     "events": {
       "title": "الأحداث في هذه المنطقة",
       "empty": "لم تُسجَّل أي أحداث في هذه المنطقة خلال هذه الفترة.",
+      "loading": "جارٍ تحميل الأحداث…",
+      "error": "تعذر تحميل الأحداث.",
       "untitled": "حدث بلا عنوان",
       "severity": "الخطورة {value}",
       "count": "عينة: {shown} من {total}"

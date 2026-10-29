@@ -42,6 +42,8 @@ describe("NeedsAssessmentPanel (crisis adapter)", () => {
     expect(screen.getByText("needs.saf.catastrophic")).toBeInTheDocument();
     expect(screen.getByText("needs.saf.severe")).toBeInTheDocument();
     expect(screen.getByText("Needs are acute.")).toBeInTheDocument();
+    expect(screen.getByText("needs.columns.presence")).toBeInTheDocument();
+    expect(screen.getByText("needs.columns.precision")).toBeInTheDocument();
 
     fireEvent.click(screen.getByText("needs.sectors.health"));
     expect(screen.getByText("Hospitals closed.")).toBeInTheDocument();

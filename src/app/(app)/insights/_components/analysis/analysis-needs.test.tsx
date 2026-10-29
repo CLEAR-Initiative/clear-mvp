@@ -61,5 +61,34 @@ describe("AnalysisNeeds", () => {
     expect(screen.getByText("Nutrition", { exact: true })).toBeInTheDocument();
     expect(screen.getByText("common.severities.critical")).toBeInTheDocument();
     expect(screen.getByText("common.severities.high")).toBeInTheDocument();
+    expect(screen.getByText("analysis.needs.noFigure")).toBeInTheDocument();
+    expect(screen.queryByText("crisisDetail.needs.columns.presence")).not.toBeInTheDocument();
+    expect(screen.queryByText("crisisDetail.needs.columns.precision")).not.toBeInTheDocument();
+  });
+
+  it("shows stock figures for Food, Nutrition, and Agriculture", () => {
+    render(
+      <MantineProvider>
+        <AnalysisNeeds
+          scopeName="Sudan"
+          sources={[]}
+          sectors={[
+            sector("food", "critical", "Food"),
+            sector("nutrition", "critical", "Nutrition"),
+            sector("agriculture", "critical", "Agriculture"),
+          ]}
+          figures={figures([
+            { sector: "food_security", value: 8_600_000 },
+            { sector: "nutrition", value: 4_200_000 },
+            { sector: "agriculture", value: 3_100_000 },
+          ])}
+        />
+      </MantineProvider>,
+    );
+
+    expect(screen.getByText("8.6M", { exact: true })).toBeInTheDocument();
+    expect(screen.getByText("4.2M", { exact: true })).toBeInTheDocument();
+    expect(screen.getByText("3.1M", { exact: true })).toBeInTheDocument();
+    expect(screen.queryByText("analysis.needs.noFigure")).not.toBeInTheDocument();
   });
 });
