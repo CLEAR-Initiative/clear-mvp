@@ -11,8 +11,8 @@
  *   so a failed save leaves the editor unsaved.
  * - Each save's success and failure handling runs inside the work handed to
  *   `track`, so whoever waits on the tracker sees its outcome.
- * - Only the newest save's answer reaches `onSaved` as the latest; an older,
- *   slower answer never overwrites newer text in a cache.
+ * - Saves succeed in queue order, so `onSaved` sees confirmed values oldest
+ *   first; `latest` says whether a newer save is queued behind.
  */
 
 export interface OrderedSaverOptions<V, R> {

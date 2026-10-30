@@ -49,10 +49,20 @@ export function useBriefAutosave(brief: Brief, { track, setDirty, registerFlush 
         const patch = textPatch(value, confirmed);
         return patch ? deps.current.update.mutateAsync({ id: briefId, ...patch }) : null;
       },
-      onSaved: (row, _value, latest) => {
-        if (!row || !latest) return;
+      // Saves succeed in order, so writing each confirmed value leaves the
+      // cache on the newest saved text, even when the last save had nothing
+      // left to send. Copy and PDF read the cache.
+      onSaved: (row, value) => {
         deps.current.utils.briefs.get.setData({ id: briefId }, (old) =>
-          old ? { ...old, title: row.title, summary: row.summary, closingNotes: row.closingNotes, updatedAt: row.updatedAt } : old,
+          old
+            ? {
+                ...old,
+                ...(value.title.trim() ? { title: value.title } : {}),
+                summary: value.summary,
+                closingNotes: value.closingNotes,
+                ...(row ? { updatedAt: row.updatedAt } : {}),
+              }
+            : old,
         );
       },
       onError: (err) =>

@@ -144,6 +144,46 @@ describe("createOrderedSaver", () => {
     expect(confirmedSeen).toEqual(["a", "b"]);
   });
 
+  it("reports every confirmed value in order, the newest last, even when its save had nothing to send", async () => {
+    // A, then B, C, B queued behind a slow first save; C fails.
+    const t = tracker();
+    const done: { value: string; result: string | null }[] = [];
+    const pending: { value: string; d: ReturnType<typeof deferred> | null }[] = [];
+    const saver = createOrderedSaver<string, string | null>({
+      initial: "A",
+      same: (x, y) => x === y,
+      save: (value, confirmed) => {
+        if (value === confirmed) {
+          pending.push({ value, d: null });
+          return Promise.resolve(null);
+        }
+        const d = deferred();
+        pending.push({ value, d });
+        return d.promise;
+      },
+      onSaved: (result, value) => done.push({ value, result }),
+      onError: () => {},
+      track: t.track,
+      setDirty: () => {},
+    });
+    for (const v of ["B", "C", "B"]) {
+      saver.set(v);
+      saver.flush();
+    }
+    await tick();
+    pending[0]!.d!.resolve("saved B");
+    await tick();
+    pending[1]!.d!.reject(new Error("refused"));
+    await t.drain();
+    expect(pending.map((p) => [p.value, p.d === null])).toEqual([
+      ["B", false],
+      ["C", false],
+      ["B", true],
+    ]);
+    expect(done.at(-1)).toEqual({ value: "B", result: null });
+    expect(saver.isDirty()).toBe(false);
+  });
+
   it("doesn't queue a value already saved or queued", async () => {
     const { saver, saves } = setup();
     saver.flush();
