@@ -966,6 +966,18 @@ function DetectionPageContent() {
   const historyTotalCount = historyAlertsTotalCount + historyEventsTotalCount + historySignalsTotalCount;
   const historyIsFetching = historyAlertsQuery.isFetching || historyEventsQuery.isFetching || historySignalsQuery.isFetching;
 
+  // Every page of a feed is its own React Query cache key (offset is part of
+  // it), so `isLoading` flips to true again for each lazy-loaded page. Only
+  // the first page should drive the header spinner, the "..." count and the
+  // list skeleton; otherwise a client-side search that keeps the sentinel in
+  // view makes the whole page blink on every appended page.
+  const eventsInitialLoading = eventsQuery.isLoading && eventsOffset === 0;
+  const alertsInitialLoading = alertsQuery.isLoading && alertsOffset === 0;
+  const signalsInitialLoading = signalsQuery.isLoading && signalsOffset === 0;
+  const historyInitialLoading =
+    (historyAlertsQuery.isLoading || historyEventsQuery.isLoading || historySignalsQuery.isLoading) &&
+    historyOffset === 0;
+
   const loadMoreHistory = useCallback(() => {
     if (!historyHasMore || historyIsFetching) return;
     historyAppending.current = true;
@@ -1025,17 +1037,13 @@ function DetectionPageContent() {
     if (!locationsReady) return true;
     switch (tab) {
       case "alerts":
-        return alertsQuery.isLoading;
+        return alertsInitialLoading;
       case "events":
-        return eventsQuery.isLoading;
+        return eventsInitialLoading;
       case "signals":
-        return signalsQuery.isLoading;
+        return signalsInitialLoading;
       case "history":
-        return (
-          historyAlertsQuery.isLoading ||
-          historyEventsQuery.isLoading ||
-          historySignalsQuery.isLoading
-        );
+        return historyInitialLoading;
       default:
         return true;
     }
@@ -1043,13 +1051,13 @@ function DetectionPageContent() {
 
   const pendingTabLoading =
     pendingTab === "alerts"
-      ? alertsQuery.isLoading
+      ? alertsInitialLoading
       : pendingTab === "events"
-        ? eventsQuery.isLoading
+        ? eventsInitialLoading
         : pendingTab === "signals"
-          ? signalsQuery.isLoading
+          ? signalsInitialLoading
           : pendingTab === "history"
-            ? historyAlertsQuery.isLoading || historyEventsQuery.isLoading || historySignalsQuery.isLoading
+            ? historyInitialLoading
             : false;
 
   // Phase 3 - hand off skeleton → real panel when data is ready (URL already updated in phase 2).
@@ -1085,7 +1093,7 @@ function DetectionPageContent() {
         title={t("header.title")}
         subtitle={t("header.title")}
         breadcrumbs={["CLEAR", t("header.breadcrumb")]}
-        loading={eventsQuery.isLoading || alertsQuery.isLoading}
+        loading={eventsInitialLoading || alertsInitialLoading}
       >
         <Box data-tour="detection-filters">
         <FilterBar
@@ -1237,7 +1245,7 @@ function DetectionPageContent() {
             {activeTab === "alerts" && (
               <LiveAlertsTab
                 alerts={alertsItems}
-                alertsLoading={alertsQuery.isLoading}
+                alertsLoading={alertsInitialLoading}
                 isFetchingMore={alertsQuery.isFetching && alertsAppending.current}
                 hasMore={alertsHasMore}
                 totalCount={alertsTotalCount}
@@ -1268,7 +1276,7 @@ function DetectionPageContent() {
             {activeTab === "events" && (
               <EventsTab
                 events={eventsItems}
-                loading={eventsQuery.isLoading}
+                loading={eventsInitialLoading}
                 isFetchingMore={eventsQuery.isFetching && eventsAppending.current}
                 hasMore={eventsHasMore}
                 totalCount={eventsTotalCount}
@@ -1299,7 +1307,7 @@ function DetectionPageContent() {
             {activeTab === "signals" && (
               <SignalsTab
                 signals={signalsItems}
-                loading={signalsQuery.isLoading}
+                loading={signalsInitialLoading}
                 isFetchingMore={signalsQuery.isFetching && signalsAppending.current}
                 hasMore={signalsHasMore}
                 totalCount={signalsTotalCount}
@@ -1331,7 +1339,7 @@ function DetectionPageContent() {
                 alerts={historyAlertsItems}
                 events={historyEventsItems}
                 signals={historySignalsItems}
-                loading={historyAlertsQuery.isLoading || historyEventsQuery.isLoading || historySignalsQuery.isLoading}
+                loading={historyInitialLoading}
                 hasMore={historyHasMore}
                 isFetchingMore={historyIsFetching && historyAppending.current}
                 totalCount={historyTotalCount}
