@@ -9,7 +9,10 @@ import { api } from "~/trpc/react";
 import { BRIEF_ITEM_KINDS, type Brief } from "~/lib/brief/types";
 import type { BriefItemsApi, TrackSave } from "../_hooks/use-brief-items";
 import type { BriefText } from "../_hooks/use-brief-autosave";
+import { toCountRow } from "~/lib/brief/view";
+import { useBriefViewLabels } from "../_hooks/use-brief-view-labels";
 import { MarkdownLite } from "./markdown-lite";
+import { BriefCounts } from "./brief-counts";
 
 export interface BriefComposerProps {
   brief: Brief;
@@ -30,7 +33,9 @@ export function BriefComposer({ brief, text, onTextChange, track }: BriefCompose
   const utils = api.useUtils();
   const refresh = api.briefs.refreshWindow.useMutation();
   const editable = brief.status === "draft";
+  const labels = useBriefViewLabels();
   const when = (iso: string) => format.dateTime(new Date(iso), { dateStyle: "medium", timeStyle: "short" });
+  const countRows = BRIEF_ITEM_KINDS.map((kind) => toCountRow(kind, brief.counts[kind], labels));
 
   const refreshToNow = () =>
     void track(refresh.mutateAsync({ id: brief.id }))
@@ -93,7 +98,11 @@ export function BriefComposer({ brief, text, onTextChange, track }: BriefCompose
           />
         </Section>
 
-        <Section n={2} title={t("sections.items")}>
+        <Section n={2} title={t("sections.counts")}>
+          <BriefCounts rows={countRows} />
+        </Section>
+
+        <Section n={3} title={t("sections.items")}>
           {BRIEF_ITEM_KINDS.map((kind) => {
             const group = brief.items.filter((i) => i.kind === kind).sort((a, b) => a.position - b.position);
             return (
@@ -117,7 +126,7 @@ export function BriefComposer({ brief, text, onTextChange, track }: BriefCompose
           })}
         </Section>
 
-        <Section n={3} title={t("sections.closingNotes")}>
+        <Section n={4} title={t("sections.closingNotes")}>
           <MarkdownField
             value={text.closingNotes}
             onChange={editable ? (v) => onTextChange("closingNotes", v) : undefined}

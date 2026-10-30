@@ -3686,7 +3686,8 @@
     "items": {
       "emptyGroup": "لم يتم اختيار أي شيء بعد.",
       "addError": "تعذّرت إضافة العنصر: {message}",
-      "removeError": "تعذّرت إزالة العنصر: {message}"
+      "removeError": "تعذّرت إزالة العنصر: {message}",
+      "earlier": "من {date}"
     },
     "send": {
       "test": "أرسل نسخة تجريبية إليّ",
@@ -3746,6 +3747,12 @@
       "saving": "جارٍ الحفظ…",
       "saved": "تم الحفظ",
       "error": "لم يُحفظ"
+    },
+    "counts": {
+      "none": "لا شيء في هذه الفترة.",
+      "byType": "الأنواع",
+      "bySource": "المصادر",
+      "more": "+{count} أخرى"
     }
   }
 }

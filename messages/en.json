@@ -3686,7 +3686,8 @@
     "items": {
       "emptyGroup": "Nothing picked yet.",
       "addError": "Couldn't add the item: {message}",
-      "removeError": "Couldn't remove the item: {message}"
+      "removeError": "Couldn't remove the item: {message}",
+      "earlier": "from {date}"
     },
     "send": {
       "test": "Send test to me",
@@ -3746,6 +3747,12 @@
       "saving": "Saving…",
       "saved": "Saved",
       "error": "Not saved"
+    },
+    "counts": {
+      "none": "None in this window.",
+      "byType": "Types",
+      "bySource": "Sources",
+      "more": "+{count} more"
     }
   }
 }

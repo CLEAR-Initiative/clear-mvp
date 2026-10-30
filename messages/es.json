@@ -3686,7 +3686,8 @@
     "items": {
       "emptyGroup": "Nada seleccionado todavía.",
       "addError": "No se pudo añadir el elemento: {message}",
-      "removeError": "No se pudo quitar el elemento: {message}"
+      "removeError": "No se pudo quitar el elemento: {message}",
+      "earlier": "del {date}"
     },
     "send": {
       "test": "Enviarme una prueba",
@@ -3746,6 +3747,12 @@
       "saving": "Guardando…",
       "saved": "Guardado",
       "error": "Sin guardar"
+    },
+    "counts": {
+      "none": "Ninguno en este periodo.",
+      "byType": "Tipos",
+      "bySource": "Fuentes",
+      "more": "+{count} más"
     }
   }
 }

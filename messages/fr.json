@@ -3686,7 +3686,8 @@
     "items": {
       "emptyGroup": "Rien de sélectionné pour l'instant.",
       "addError": "Impossible d'ajouter l'élément : {message}",
-      "removeError": "Impossible de retirer l'élément : {message}"
+      "removeError": "Impossible de retirer l'élément : {message}",
+      "earlier": "du {date}"
     },
     "send": {
       "test": "M'envoyer un test",
@@ -3746,6 +3747,12 @@
       "saving": "Enregistrement…",
       "saved": "Enregistré",
       "error": "Non enregistré"
+    },
+    "counts": {
+      "none": "Aucun sur cette période.",
+      "byType": "Types",
+      "bySource": "Sources",
+      "more": "+{count} de plus"
     }
   }
 }
