@@ -3687,7 +3687,15 @@
       "emptyGroup": "Nothing picked yet.",
       "addError": "Couldn't add the item: {message}",
       "removeError": "Couldn't remove the item: {message}",
-      "earlier": "from {date}"
+      "earlier": "from {date}",
+      "noneSent": "None.",
+      "drag": "Drag to reorder {title}",
+      "remove": "Remove from the Brief",
+      "removeLabel": "Remove {title} from the Brief",
+      "notePlaceholder": "Add a note (optional)",
+      "noteLabel": "Note on {title}",
+      "noteError": "Couldn't save the note: {message}",
+      "reorderError": "Couldn't reorder: {message}"
     },
     "send": {
       "test": "Send test to me",
@@ -3753,6 +3761,15 @@
       "byType": "Types",
       "bySource": "Sources",
       "more": "+{count} more"
+    },
+    "picker": {
+      "dateBrief": "Brief window",
+      "date24h": "Last 24 hours",
+      "date7d": "Last 7 days",
+      "date30d": "Last 30 days",
+      "dateCustom": "Custom range",
+      "from": "From",
+      "to": "To"
     }
   }
 }

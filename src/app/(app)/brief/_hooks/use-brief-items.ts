@@ -36,6 +36,15 @@ export interface BriefItemsApi {
    */
   addItem: (kind: BriefItemKind, entityId: string, preview?: BriefItemSnapshot) => void;
   removeItem: (item: BriefItem) => void;
+  /** Save an item's note; blank clears it. Resolves once clear-api has it. */
+  updateNote: (item: BriefItem, note: string) => Promise<void>;
+  /** Move an item within its kind group, from one index to another. */
+  reorder: (kind: BriefItemKind, from: number, to: number) => void;
+}
+
+/** A kind's items in their Brief order. */
+export function groupItems(items: BriefItem[], kind: BriefItemKind): BriefItem[] {
+  return items.filter((i) => i.kind === kind).sort((a, b) => a.position - b.position);
 }
 
 /**
@@ -49,6 +58,8 @@ export function useBriefItems(brief: Brief, { track = untracked }: { track?: Tra
   const utils = api.useUtils();
   const add = api.briefs.addItem.useMutation();
   const remove = api.briefs.removeItem.useMutation();
+  const saveNote = api.briefs.updateItemNote.useMutation();
+  const reorderItems = api.briefs.reorderItems.useMutation();
   const briefId = brief.id;
   // Keys whose add or remove is still in flight: a second click waits.
   const inFlight = useRef(new Set<string>());
@@ -119,7 +130,45 @@ export function useBriefItems(brief: Brief, { track = untracked }: { track?: Tra
     [brief.items, addItem, removeItem, tHistory],
   );
 
-  return { pickedKeys, toggle, addItem, removeItem };
+  const updateNote = useCallback(
+    async (item: BriefItem, note: string) => {
+      // A removed item's note has nowhere to go.
+      const stillPicked = utils.briefs.get.getData({ id: briefId })?.items.some((i) => i.id === item.id);
+      if (isPendingItem(item) || !stillPicked) return;
+      try {
+        const saved = await track(saveNote.mutateAsync({ itemId: item.id, note: note.trim() ? note : null }));
+        setItems((items) => items.map((i) => (i.id === saved.id ? { ...i, note: saved.note, updatedAt: saved.updatedAt } : i)));
+      } catch (err) {
+        notifications.show({ color: "red", message: t("items.noteError", { message: errorMessage(err) }) });
+        throw err;
+      }
+    },
+    [briefId, saveNote, setItems, t, track, utils],
+  );
+
+  const reorder = useCallback(
+    (kind: BriefItemKind, from: number, to: number) => {
+      if (from === to) return;
+      const group = groupItems(brief.items, kind);
+      // clear-api wants the whole group: wait until every add in it has landed.
+      if (group.some(isPendingItem) || !group[from]) return;
+      const moved = [...group];
+      const [item] = moved.splice(from, 1);
+      moved.splice(to, 0, item!);
+      const before = new Map(group.map((i) => [i.id, i.position]));
+      const apply = (position: (i: BriefItem) => number) =>
+        setItems((items) => items.map((i) => (i.kind === kind ? { ...i, position: position(i) } : i)));
+      const order = new Map(moved.map((i, index) => [i.id, index]));
+      apply((i) => order.get(i.id) ?? i.position);
+      void track(reorderItems.mutateAsync({ briefId, kind, itemIds: moved.map((i) => i.id) })).catch((err: unknown) => {
+        apply((i) => before.get(i.id) ?? i.position);
+        notifications.show({ color: "red", message: t("items.reorderError", { message: errorMessage(err) }) });
+      });
+    },
+    [brief.items, briefId, reorderItems, setItems, t, track],
+  );
+
+  return { pickedKeys, toggle, addItem, removeItem, updateNote, reorder };
 }
 
 function errorMessage(err: unknown): string {

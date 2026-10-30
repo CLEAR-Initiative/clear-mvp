@@ -3687,7 +3687,15 @@
       "emptyGroup": "لم يتم اختيار أي شيء بعد.",
       "addError": "تعذّرت إضافة العنصر: {message}",
       "removeError": "تعذّرت إزالة العنصر: {message}",
-      "earlier": "من {date}"
+      "earlier": "من {date}",
+      "noneSent": "لا شيء.",
+      "drag": "اسحب لإعادة ترتيب {title}",
+      "remove": "إزالة من الموجز",
+      "removeLabel": "إزالة {title} من الموجز",
+      "notePlaceholder": "أضف ملاحظة (اختياري)",
+      "noteLabel": "ملاحظة على {title}",
+      "noteError": "تعذّر حفظ الملاحظة: {message}",
+      "reorderError": "تعذّرت إعادة الترتيب: {message}"
     },
     "send": {
       "test": "أرسل نسخة تجريبية إليّ",
@@ -3753,6 +3761,15 @@
       "byType": "الأنواع",
       "bySource": "المصادر",
       "more": "+{count} أخرى"
+    },
+    "picker": {
+      "dateBrief": "فترة الموجز",
+      "date24h": "آخر 24 ساعة",
+      "date7d": "آخر 7 أيام",
+      "date30d": "آخر 30 يومًا",
+      "dateCustom": "نطاق مخصص",
+      "from": "من",
+      "to": "إلى"
     }
   }
 }

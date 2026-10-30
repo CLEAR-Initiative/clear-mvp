@@ -3687,7 +3687,15 @@
       "emptyGroup": "Rien de sélectionné pour l'instant.",
       "addError": "Impossible d'ajouter l'élément : {message}",
       "removeError": "Impossible de retirer l'élément : {message}",
-      "earlier": "du {date}"
+      "earlier": "du {date}",
+      "noneSent": "Aucun.",
+      "drag": "Faire glisser pour réordonner {title}",
+      "remove": "Retirer du Brief",
+      "removeLabel": "Retirer {title} du Brief",
+      "notePlaceholder": "Ajouter une note (facultatif)",
+      "noteLabel": "Note sur {title}",
+      "noteError": "Impossible d'enregistrer la note : {message}",
+      "reorderError": "Impossible de réordonner : {message}"
     },
     "send": {
       "test": "M'envoyer un test",
@@ -3753,6 +3761,15 @@
       "byType": "Types",
       "bySource": "Sources",
       "more": "+{count} de plus"
+    },
+    "picker": {
+      "dateBrief": "Période du Brief",
+      "date24h": "Dernières 24 heures",
+      "date7d": "7 derniers jours",
+      "date30d": "30 derniers jours",
+      "dateCustom": "Période personnalisée",
+      "from": "Du",
+      "to": "Au"
     }
   }
 }

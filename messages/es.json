@@ -3687,7 +3687,15 @@
       "emptyGroup": "Nada seleccionado todavía.",
       "addError": "No se pudo añadir el elemento: {message}",
       "removeError": "No se pudo quitar el elemento: {message}",
-      "earlier": "del {date}"
+      "earlier": "del {date}",
+      "noneSent": "Ninguno.",
+      "drag": "Arrastra para reordenar {title}",
+      "remove": "Quitar del Brief",
+      "removeLabel": "Quitar {title} del Brief",
+      "notePlaceholder": "Añade una nota (opcional)",
+      "noteLabel": "Nota sobre {title}",
+      "noteError": "No se pudo guardar la nota: {message}",
+      "reorderError": "No se pudo reordenar: {message}"
     },
     "send": {
       "test": "Enviarme una prueba",
@@ -3753,6 +3761,15 @@
       "byType": "Tipos",
       "bySource": "Fuentes",
       "more": "+{count} más"
+    },
+    "picker": {
+      "dateBrief": "Periodo del Brief",
+      "date24h": "Últimas 24 horas",
+      "date7d": "Últimos 7 días",
+      "date30d": "Últimos 30 días",
+      "dateCustom": "Rango personalizado",
+      "from": "Desde",
+      "to": "Hasta"
     }
   }
 }

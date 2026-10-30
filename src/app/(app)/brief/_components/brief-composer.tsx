@@ -6,13 +6,15 @@ import { Button, Card, Group, Stack, Text, Textarea, TextInput } from "@mantine/
 import { notifications } from "@mantine/notifications";
 import { IconRefresh } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
-import { BRIEF_ITEM_KINDS, type Brief } from "~/lib/brief/types";
+import type { Brief } from "~/lib/brief/types";
 import type { BriefItemsApi, TrackSave } from "../_hooks/use-brief-items";
 import type { BriefText } from "../_hooks/use-brief-autosave";
-import { toCountRow } from "~/lib/brief/view";
+import { toBriefView } from "~/lib/brief/view";
 import { useBriefViewLabels } from "../_hooks/use-brief-view-labels";
 import { MarkdownLite } from "./markdown-lite";
 import { BriefCounts } from "./brief-counts";
+import { BriefItems } from "./brief-items";
+import type { PreviewTarget } from "../_lib/preview-target";
 
 export interface BriefComposerProps {
   brief: Brief;
@@ -21,13 +23,14 @@ export interface BriefComposerProps {
   text: BriefText;
   onTextChange: (field: keyof BriefText, value: string) => void;
   track: TrackSave;
+  onPreview: (target: PreviewTarget) => void;
 }
 
 /**
  * The left half of the composer: the Brief itself, in fixed sections. A sent
  * Brief renders read-only.
  */
-export function BriefComposer({ brief, text, onTextChange, track }: BriefComposerProps) {
+export function BriefComposer({ brief, items, text, onTextChange, track, onPreview }: BriefComposerProps) {
   const t = useTranslations("brief");
   const format = useFormatter();
   const utils = api.useUtils();
@@ -35,7 +38,7 @@ export function BriefComposer({ brief, text, onTextChange, track }: BriefCompose
   const editable = brief.status === "draft";
   const labels = useBriefViewLabels();
   const when = (iso: string) => format.dateTime(new Date(iso), { dateStyle: "medium", timeStyle: "short" });
-  const countRows = BRIEF_ITEM_KINDS.map((kind) => toCountRow(kind, brief.counts[kind], labels));
+  const view = toBriefView(brief, labels);
 
   const refreshToNow = () =>
     void track(refresh.mutateAsync({ id: brief.id }))
@@ -99,31 +102,17 @@ export function BriefComposer({ brief, text, onTextChange, track }: BriefCompose
         </Section>
 
         <Section n={2} title={t("sections.counts")}>
-          <BriefCounts rows={countRows} />
+          <BriefCounts rows={view.counts} />
         </Section>
 
         <Section n={3} title={t("sections.items")}>
-          {BRIEF_ITEM_KINDS.map((kind) => {
-            const group = brief.items.filter((i) => i.kind === kind).sort((a, b) => a.position - b.position);
-            return (
-              <Stack key={kind} gap={4} data-testid={`brief-group-${kind}`}>
-                <Text size="xs" fw={700} tt="uppercase" c="var(--color-text-muted)">
-                  {t(`groups.${kind}`)} ({group.length})
-                </Text>
-                {group.length === 0 ? (
-                  <Text size="sm" c="var(--color-text-muted)">
-                    {t("items.emptyGroup")}
-                  </Text>
-                ) : (
-                  group.map((item) => (
-                    <Text key={item.id} size="sm" c="var(--color-text-primary)" data-testid="brief-item-title">
-                      {item.snapshot.title}
-                    </Text>
-                  ))
-                )}
-              </Stack>
-            );
-          })}
+          <BriefItems
+            groups={view.groups}
+            items={items}
+            rawItems={brief.items}
+            editable={editable}
+            onPreview={onPreview}
+          />
         </Section>
 
         <Section n={4} title={t("sections.closingNotes")}>

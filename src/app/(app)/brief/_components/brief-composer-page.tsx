@@ -1,5 +1,6 @@
 "use client";
 
+import { useCallback, useState } from "react";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { Box, Button, Center, Grid, Group, Loader, Stack, Text } from "@mantine/core";
@@ -14,6 +15,8 @@ import { useSaveTracker, type SaveStatus } from "../_hooks/use-save-tracker";
 import { BriefStatusBadge } from "./brief-status-badge";
 import { BriefComposer } from "./brief-composer";
 import { BriefPicker } from "./brief-picker";
+import { EventDetailDrawer } from "~/components/event-detail";
+import type { PreviewTarget } from "../_lib/preview-target";
 
 const NO_RETRY = new Set(["BAD_REQUEST", "FORBIDDEN", "UNAUTHORIZED", "NOT_FOUND"]);
 
@@ -57,6 +60,13 @@ function Composer({ brief }: { brief: Brief }) {
   const items = useBriefItems(brief, { track });
   const { text, setField } = useBriefAutosave(brief, track);
   const editable = brief.status === "draft";
+  // Events open in the drawer so the Brief stays on screen; Signals have no
+  // drawer and open their page in a new tab.
+  const [previewEventId, setPreviewEventId] = useState<string | null>(null);
+  const onPreview = useCallback((target: PreviewTarget) => {
+    if (target.kind === "event") setPreviewEventId(target.eventId);
+    else window.open(`/signal/${encodeURIComponent(target.signalId)}`, "_blank", "noopener");
+  }, []);
   const sendTest = api.briefs.sendTest.useMutation({
     onSuccess: (accepted) =>
       notifications.show(
@@ -85,12 +95,20 @@ function Composer({ brief }: { brief: Brief }) {
       </PageHeader>
       <Grid p={{ base: 16, sm: 24 }} gutter={24}>
         <Grid.Col span={{ base: 12, md: 5 }}>
-          <BriefComposer brief={brief} items={items} text={text} onTextChange={setField} track={track} />
+          <BriefComposer
+            brief={brief}
+            items={items}
+            text={text}
+            onTextChange={setField}
+            track={track}
+            onPreview={onPreview}
+          />
         </Grid.Col>
         <Grid.Col span={{ base: 12, md: 7 }}>
-          <BriefPicker brief={brief} items={items} />
+          <BriefPicker brief={brief} items={items} onPreview={onPreview} />
         </Grid.Col>
       </Grid>
+      <EventDetailDrawer eventId={previewEventId} opened={previewEventId !== null} onClose={() => setPreviewEventId(null)} />
     </Box>
   );
 }

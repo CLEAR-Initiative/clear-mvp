@@ -9,6 +9,8 @@ import { DetectionFilterPopover } from "../../detection/_components/detection-fi
 import { useDetectionFilters } from "../../detection/_hooks/use-detection-filters";
 import { useHistoryFeed } from "../../detection/_hooks/use-history-feed";
 import type { BriefItemsApi } from "../_hooks/use-brief-items";
+import { rowPreviewTarget, type PreviewTarget } from "../_lib/preview-target";
+import { BriefDateFilter } from "./brief-date-filter";
 
 /** Where /brief keeps its list filters, apart from /detection's. */
 export const BRIEF_FILTERS_STORAGE_KEY = "brief-filters";
@@ -20,7 +22,15 @@ const NO_SOURCES: string[] = [];
  * and Signals merged) with its filters, starting on the Brief's area and
  * window, and a checkbox on every row that picks it into the Brief.
  */
-export function BriefPicker({ brief, items }: { brief: Brief; items: BriefItemsApi }) {
+export function BriefPicker({
+  brief,
+  items,
+  onPreview,
+}: {
+  brief: Brief;
+  items: BriefItemsApi;
+  onPreview: (target: PreviewTarget) => void;
+}) {
   const t = useTranslations("detection");
   const readOnly = brief.status === "sent";
   const filters = useDetectionFilters({
@@ -49,6 +59,7 @@ export function BriefPicker({ brief, items }: { brief: Brief; items: BriefItemsA
           />
         }
       >
+        <BriefDateFilter filters={filters} windowStart={brief.windowStart} windowEnd={brief.windowEnd} />
         <DetectionFilterPopover
           severities={filters.severities}
           onSeveritiesChange={filters.setSeverities}
@@ -65,6 +76,7 @@ export function BriefPicker({ brief, items }: { brief: Brief; items: BriefItemsA
         <HistoryTab
           {...feed}
           selection={readOnly ? undefined : { selectedKeys: items.pickedKeys, onToggle: items.toggle }}
+          onOpenRow={(row) => onPreview(rowPreviewTarget(row))}
         />
       </Box>
     </Stack>
