@@ -37,10 +37,12 @@ import {
 } from "~/lib/detection-nav-context";
 
 import { LiveAlertsTab, type AlertSortOrder } from "./_components/live-alerts-tab";
-import { HistoryTab, type HistorySortOrder } from "./_components/history-tab";
+import { HistoryTab } from "./_components/history-tab";
 import { EventsTab, type EventSortOrder } from "./_components/events-tab";
 import { SignalsTab, type SignalSortOrder } from "./_components/signals-tab";
 import { CreateSignalModal } from "~/components/create-signal-modal";
+import { useHistoryFeed } from "./_hooks/use-history-feed";
+import { ALERT_ORDER_MAP, DETECTION_PAGE_SIZE, EVENT_ORDER_MAP, SIGNAL_ORDER_MAP } from "./_lib/feed-order";
 import detectionTabsStyles from "./detection-tabs.module.css";
 import { detectionFiltersForAgent, useAgentCurrentView } from "~/lib/agent-current-view";
 import {
@@ -52,35 +54,7 @@ import {
 } from "~/lib/agent-deep-link";
 import { useAgentDeepLink } from "~/components/agent/use-agent-deep-link";
 
-const PAGE_SIZE = 25;
-// History fires alerts, events and signals pages in parallel and waits on all
-// three, so each page stays the same size as the single-feed tabs.
-const HISTORY_PAGE_SIZE = PAGE_SIZE;
-
-// Map UI sort labels to API orderBy enum values.
-// Types must match the z.enum() definitions in alerts.ts router exactly.
-type EventOrderBy = "LAST_SIGNAL_DESC" | "LAST_SIGNAL_ASC" | "CREATED_DESC" | "CREATED_ASC" | "SEVERITY_DESC" | "SEVERITY_ASC";
-type AlertOrderBy = "CREATED_DESC" | "CREATED_ASC" | "SEVERITY_DESC" | "SEVERITY_ASC";
-type SignalOrderBy = "PUBLISHED_DESC" | "PUBLISHED_ASC" | "SEVERITY_DESC" | "SEVERITY_ASC";
-
-const EVENT_ORDER_MAP: Record<EventSortOrder, EventOrderBy> = {
-  "sev-desc": "SEVERITY_DESC",
-  "sev-asc":  "SEVERITY_ASC",
-  "newest":   "LAST_SIGNAL_DESC",
-  "oldest":   "LAST_SIGNAL_ASC",
-};
-const ALERT_ORDER_MAP: Record<AlertSortOrder, AlertOrderBy> = {
-  "sev-desc": "SEVERITY_DESC",
-  "sev-asc":  "SEVERITY_ASC",
-  "newest":   "CREATED_DESC",
-  "oldest":   "CREATED_ASC",
-};
-const SIGNAL_ORDER_MAP: Record<SignalSortOrder, SignalOrderBy> = {
-  "newest":   "PUBLISHED_DESC",
-  "oldest":   "PUBLISHED_ASC",
-  "sev-desc": "SEVERITY_DESC",
-  "sev-asc":  "SEVERITY_ASC",
-};
+const PAGE_SIZE = DETECTION_PAGE_SIZE;
 
 /** Tab order drives the sliding indicator geometry: equal slots. */
 const DETECTION_TABS = ["alerts", "events", "signals", "history"];
@@ -544,11 +518,6 @@ function DetectionPageContent() {
   const [eventsSort, setEventsSort] = useState<EventSortOrder>("newest");
   const [alertsSort, setAlertsSort] = useState<AlertSortOrder>("newest");
   const [signalsSort, setSignalsSort] = useState<SignalSortOrder>("newest");
-  const [historySortOrder, setHistorySortOrder] = useState<HistorySortOrder>("newest");
-  // History's source filter lives here (not in HistoryTab) so it can narrow
-  // the paginated signals query server-side — otherwise a source with no
-  // rows on the first page could never be filtered to. null = all sources.
-  const [historySources, setHistorySources] = useState<Set<string> | null>(null);
 
   // Write detection nav context for event/signal page prev/next navigation.
   // Wait until locationId is resolved - writing null would make detail arrow
@@ -634,20 +603,6 @@ function DetectionPageContent() {
       writeDetectionNavSignalIds(signalsItems.map((s) => s.id));
     }
   }, [activeTab, signalsItems]);
-
-  // History tab accumulation - same pattern as feeds, HISTORY_PAGE_SIZE per source
-  const [historyAlertsItems, setHistoryAlertsItems] = useState<GqlAlert[]>([]);
-  const [historyEventsItems, setHistoryEventsItems] = useState<GqlEvent[]>([]);
-  const [historySignalsItems, setHistorySignalsItems] = useState<GqlSignal[]>([]);
-  const [historyOffset, setHistoryOffset] = useState(0);
-  const [historyAlertsTotalCount, setHistoryAlertsTotalCount] = useState(0);
-  const [historyEventsTotalCount, setHistoryEventsTotalCount] = useState(0);
-  const [historySignalsTotalCount, setHistorySignalsTotalCount] = useState(0);
-  const [historyAlertsHasMore, setHistoryAlertsHasMore] = useState(false);
-  const [historyEventsHasMore, setHistoryEventsHasMore] = useState(false);
-  const [historySignalsHasMore, setHistorySignalsHasMore] = useState(false);
-  const historyAppending = useRef(false);
-  const [historyVersion, setHistoryVersion] = useState(0);
 
   const sharedFilter = {
     teamId: activeTeamId,
@@ -886,85 +841,11 @@ function DetectionPageContent() {
   const signalsNewCount = signalsNewQuery.data?.totalCount ?? 0;
 
   // ── History tab - paginated per source, all three sources accumulated ──────
-  const historyAlertsQuery = api.alerts.alertsPage.useQuery(
-    { ...sharedFilter, orderBy: ALERT_ORDER_MAP[historySortOrder], limit: HISTORY_PAGE_SIZE, offset: historyOffset, _v: historyVersion },
-    { enabled: locationsReady && activeTab === "history", staleTime: Infinity },
-  );
-  const historyEventsQuery = api.alerts.eventsPage.useQuery(
-    { ...sharedFilter, orderBy: EVENT_ORDER_MAP[historySortOrder], limit: HISTORY_PAGE_SIZE, offset: historyOffset, _v: historyVersion },
-    { enabled: locationsReady && activeTab === "history", staleTime: Infinity },
-  );
-  const historySignalsQuery = api.signals.signalsPage.useQuery(
-    { teamId: activeTeamId, locationId: selectedLocationId ?? undefined, from: fromIso, to: effectiveTo, severityMin, severityMax, sourceNames: historySources ? [...historySources] : undefined, orderBy: SIGNAL_ORDER_MAP[historySortOrder], limit: HISTORY_PAGE_SIZE, offset: historyOffset, _v: historyVersion },
-    { enabled: locationsReady && activeTab === "history", staleTime: Infinity },
-  );
-  const historySourceNamesQuery = api.signals.pushFeedSourceNames.useQuery(undefined, {
-    enabled: activeTab === "history",
-    staleTime: Infinity,
+  const historyFeed = useHistoryFeed(sharedFilter, {
+    enabled: locationsReady && activeTab === "history",
+    resetKey: toIso,
   });
-
-  // ── History accumulation effects ───────────────────────────────────────────
-  useEffect(() => {
-    if (!historyAlertsQuery.data) return;
-    const { items, totalCount, hasMore } = historyAlertsQuery.data;
-    setHistoryAlertsTotalCount(totalCount);
-    setHistoryAlertsHasMore(hasMore);
-    if (historyAppending.current) {
-      setHistoryAlertsItems((prev) => [...prev, ...items]);
-    } else {
-      setHistoryAlertsItems(items);
-    }
-  }, [historyAlertsQuery.data]);
-
-  useEffect(() => {
-    if (!historyEventsQuery.data) return;
-    const { items, totalCount, hasMore } = historyEventsQuery.data;
-    setHistoryEventsTotalCount(totalCount);
-    setHistoryEventsHasMore(hasMore);
-    if (historyAppending.current) {
-      setHistoryEventsItems((prev) => [...prev, ...items]);
-    } else {
-      setHistoryEventsItems(items);
-    }
-  }, [historyEventsQuery.data]);
-
-  useEffect(() => {
-    if (!historySignalsQuery.data) return;
-    const { items, totalCount, hasMore } = historySignalsQuery.data;
-    setHistorySignalsTotalCount(totalCount);
-    setHistorySignalsHasMore(hasMore);
-    if (historyAppending.current) {
-      setHistorySignalsItems((prev) => [...prev, ...items]);
-      historyAppending.current = false;
-    } else {
-      setHistorySignalsItems(items);
-    }
-  }, [historySignalsQuery.data]);
-
-  // Reset history on filter change
-  useEffect(() => {
-    historyAppending.current = false;
-    setHistoryOffset(0);
-    setHistoryAlertsItems([]);
-    setHistoryEventsItems([]);
-    setHistorySignalsItems([]);
-    setHistoryVersion((v) => v + 1);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [...FILTER_DEPS]);
-
-  // Reset history on sort or source-filter change
-  useEffect(() => {
-    historyAppending.current = false;
-    setHistoryOffset(0);
-    setHistoryAlertsItems([]);
-    setHistoryEventsItems([]);
-    setHistorySignalsItems([]);
-    setHistoryVersion((v) => v + 1);
-  }, [historySortOrder, historySources]);
-
-  const historyHasMore = historyAlertsHasMore || historyEventsHasMore || historySignalsHasMore;
-  const historyTotalCount = historyAlertsTotalCount + historyEventsTotalCount + historySignalsTotalCount;
-  const historyIsFetching = historyAlertsQuery.isFetching || historyEventsQuery.isFetching || historySignalsQuery.isFetching;
+  const historyInitialLoading = historyFeed.loading;
 
   // Every page of a feed is its own React Query cache key (offset is part of
   // it), so `isLoading` flips to true again for each lazy-loaded page. Only
@@ -974,15 +855,6 @@ function DetectionPageContent() {
   const eventsInitialLoading = eventsQuery.isLoading && eventsOffset === 0;
   const alertsInitialLoading = alertsQuery.isLoading && alertsOffset === 0;
   const signalsInitialLoading = signalsQuery.isLoading && signalsOffset === 0;
-  const historyInitialLoading =
-    (historyAlertsQuery.isLoading || historyEventsQuery.isLoading || historySignalsQuery.isLoading) &&
-    historyOffset === 0;
-
-  const loadMoreHistory = useCallback(() => {
-    if (!historyHasMore || historyIsFetching) return;
-    historyAppending.current = true;
-    setHistoryOffset((prev) => prev + HISTORY_PAGE_SIZE);
-  }, [historyHasMore, historyIsFetching]);
 
   const allSources = useMemo(() => {
     const s = new Set<string>();
@@ -1335,21 +1207,7 @@ function DetectionPageContent() {
             )}
 
             {activeTab === "history" && (
-              <HistoryTab
-                alerts={historyAlertsItems}
-                events={historyEventsItems}
-                signals={historySignalsItems}
-                loading={historyInitialLoading}
-                hasMore={historyHasMore}
-                isFetchingMore={historyIsFetching && historyAppending.current}
-                totalCount={historyTotalCount}
-                onLoadMore={loadMoreHistory}
-                sortOrder={historySortOrder}
-                onSortChange={setHistorySortOrder}
-                activeSources={historySources}
-                onActiveSourcesChange={setHistorySources}
-                sourceOptions={historySourceNamesQuery.data}
-              />
+              <HistoryTab {...historyFeed} />
             )}
           </>
         )}

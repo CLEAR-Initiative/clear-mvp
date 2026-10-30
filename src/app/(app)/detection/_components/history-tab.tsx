@@ -102,7 +102,7 @@ function rowSeverity(row: HistoryRow): ReturnType<typeof mapSeverity> {
   return mapSeverity(row.data.severity ?? 0);
 }
 
-interface HistoryTabProps {
+export interface HistoryTabProps {
   alerts: GqlAlert[];
   events: GqlEvent[];
   signals: GqlSignal[];
