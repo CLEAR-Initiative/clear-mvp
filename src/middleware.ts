@@ -106,6 +106,11 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL("/no-access", request.url));
   }
 
+  // Briefs are a hidden, admin-only page; clear-api's FORBIDDEN is the real gate.
+  if ((pathname === "/brief" || pathname.startsWith("/brief/")) && !isPlatformAdmin(result.role)) {
+    return NextResponse.redirect(new URL("/no-access", request.url));
+  }
+
   const response = nextWithPathname(request, pathname);
 
   // Seed the locale cookie from the user's persisted language preference

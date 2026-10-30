@@ -3658,5 +3658,176 @@
       "note": "Monthly totals for the last 12 months by organisation, team and role. Groups of fewer than 5 people and platform admins are excluded.",
       "button": "Download NRC export (CSV)"
     }
+  },
+  "brief": {
+    "page": {
+      "title": "Briefs",
+      "breadcrumb": "Briefs"
+    },
+    "composer": {
+      "window": "Covers {start} → {end}",
+      "notFound": "This Brief doesn't exist or was deleted.",
+      "loadError": "Couldn't load this Brief.",
+      "back": "All Briefs",
+      "titleLabel": "Brief title",
+      "titleRequired": "The title can't be empty; the last one is kept.",
+      "refresh": "Refresh to now",
+      "refreshError": "Couldn't refresh the window: {message}",
+      "markdownHint": "**bold**, *italic*, - bullets, [link](https://…)",
+      "preview": "Preview",
+      "empty": "—",
+      "saveError": "Couldn't save: {message}",
+      "unsaved": "An edit couldn't be saved, so nothing went out. Check the Brief and try again.",
+      "leaveConfirm": "Your last edit to this Brief hasn't saved yet. Leave anyway?"
+    },
+    "groups": {
+      "alert": "Alerts",
+      "event": "Events",
+      "signal": "Signals"
+    },
+    "items": {
+      "emptyGroup": "Nothing picked yet.",
+      "addError": "Couldn't add the item: {message}",
+      "removeError": "Couldn't remove the item: {message}",
+      "earlier": "from {date}",
+      "noneSent": "None.",
+      "drag": "Drag to reorder {title}",
+      "remove": "Remove from the Brief",
+      "removeLabel": "Remove {title} from the Brief",
+      "notePlaceholder": "Add a note (optional)",
+      "noteLabel": "Note on {title}",
+      "noteError": "Couldn't save the note: {message}",
+      "reorderError": "Couldn't reorder: {message}"
+    },
+    "send": {
+      "test": "Send test to me",
+      "testSent": "Test sent to your email address.",
+      "testRefused": "The email provider refused the test.",
+      "testError": "Couldn't send the test: {message}",
+      "open": "Send…",
+      "title": "Send Brief",
+      "list": "Recipient list",
+      "listPlaceholder": "Choose a list",
+      "listOption": "{name} ({count, plural, one {# recipient} other {# recipients}})",
+      "noLists": "No list with recipients yet.",
+      "manageLists": "Manage Recipient lists",
+      "cancel": "Cancel",
+      "next": "Next",
+      "back": "Back",
+      "confirm": "Send to {list} ({count, plural, one {# recipient} other {# recipients}})?",
+      "freezes": "Sending freezes the Brief: it can't be edited afterwards.",
+      "send": "Send",
+      "error": "Couldn't send: {message}",
+      "result": "Sent to {sent}, failed {failed}.",
+      "partial": "Failed emails are not retried.",
+      "done": "Done",
+      "unknownList": "a deleted list",
+      "sentNotice": "Sent {date} to {list}: {sent} sent, {failed} failed.",
+      "frozen": "A sent Brief is frozen: its items keep what they showed when it was sent."
+    },
+    "list": {
+      "new": "New Brief",
+      "empty": "No Briefs yet. Start one with New Brief.",
+      "loadError": "Couldn't load the Briefs.",
+      "delete": "Delete draft",
+      "deleteConfirm": "Delete the draft “{title}”? This can't be undone.",
+      "deleteError": "Couldn't delete the draft: {message}",
+      "columns": {
+        "title": "Brief",
+        "area": "Area",
+        "window": "Window",
+        "status": "Status",
+        "sentAt": "Sent"
+      },
+      "loadMore": "Load more"
+    },
+    "cadence": {
+      "daily": "Daily",
+      "weekly": "Weekly",
+      "monthly": "Monthly"
+    },
+    "status": {
+      "draft": "Draft",
+      "sent": "Sent"
+    },
+    "new": {
+      "title": {
+        "daily": "New Daily Brief",
+        "weekly": "New Weekly Brief",
+        "monthly": "New Monthly Brief"
+      },
+      "window": {
+        "daily": "Covers the last 24 hours, ending now.",
+        "weekly": "Covers the last 7 days, ending now.",
+        "monthly": "Covers the last 30 days, ending now."
+      },
+      "country": "Country",
+      "countryPlaceholder": "Pick a country",
+      "region": "State or district (optional)",
+      "cancel": "Cancel",
+      "submit": "Start Brief",
+      "error": "Couldn't start the Brief: {message}"
+    },
+    "sections": {
+      "summary": "Summary",
+      "counts": "Counts",
+      "items": "Picked items",
+      "closingNotes": "Closing notes"
+    },
+    "save": {
+      "saving": "Saving…",
+      "saved": "Saved",
+      "error": "Not saved"
+    },
+    "counts": {
+      "none": "None in this window.",
+      "byType": "Types",
+      "bySource": "Sources",
+      "more": "+{count} more"
+    },
+    "picker": {
+      "dateBrief": "Brief window",
+      "date24h": "Last 24 hours",
+      "date7d": "Last 7 days",
+      "date30d": "Last 30 days",
+      "dateCustom": "Custom range",
+      "from": "From",
+      "to": "To"
+    },
+    "lists": {
+      "open": "Recipient lists",
+      "title": "Recipient lists",
+      "intro": "Named sets of email addresses a Brief can be sent to. Addresses don't need a CLEAR account; every email carries an unsubscribe link.",
+      "newName": "New list name",
+      "create": "Create",
+      "loading": "Loading lists…",
+      "loadError": "Couldn't load the lists.",
+      "empty": "No lists yet.",
+      "recipients": "{count, plural, one {# recipient} other {# recipients}}",
+      "unsubscribed": "Unsubscribed",
+      "remove": "Remove address",
+      "removeLabel": "Remove {email}",
+      "removeError": "Couldn't remove the address: {message}",
+      "addEmail": "name@example.org",
+      "addEmailLabel": "Add an address to {list}",
+      "add": "Add"
+    },
+    "pdf": {
+      "button": "Download PDF",
+      "eyebrow": "{cadence} Brief",
+      "org": "Norwegian Refugee Council · CLEAR",
+      "classification": "Internal use and private sharing only",
+      "footer": "CLEAR · {title}",
+      "generated": "PDF created {date} in CLEAR ({status}).",
+      "page": "Page {n} of {total}",
+      "error": "The PDF could not be created. Please try again.",
+      "unsupportedLocale": "PDFs can't be created in Arabic yet. Switch the language to English, French or Spanish to create one."
+    },
+    "copy": {
+      "button": "Copy",
+      "done": "Copied",
+      "plainOnly": "This browser copied plain text only.",
+      "error": "Couldn't copy the Brief."
+    }
   }
 }

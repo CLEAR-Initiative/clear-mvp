@@ -3658,5 +3658,176 @@
       "note": "Totales mensuales de los últimos 12 meses por organización, equipo y rol. Se excluyen los grupos de menos de 5 personas y los administradores de la plataforma.",
       "button": "Descargar exportación NRC (CSV)"
     }
+  },
+  "brief": {
+    "page": {
+      "title": "Briefs",
+      "breadcrumb": "Briefs"
+    },
+    "composer": {
+      "window": "Cubre {start} → {end}",
+      "notFound": "Este Brief no existe o se eliminó.",
+      "loadError": "No se pudo cargar este Brief.",
+      "back": "Todos los Briefs",
+      "titleLabel": "Título del Brief",
+      "titleRequired": "El título no puede estar vacío; se mantiene el anterior.",
+      "refresh": "Actualizar hasta ahora",
+      "refreshError": "No se pudo actualizar el periodo: {message}",
+      "markdownHint": "**negrita**, *cursiva*, - viñetas, [enlace](https://…)",
+      "preview": "Vista previa",
+      "empty": "—",
+      "saveError": "No se pudo guardar: {message}",
+      "unsaved": "No se pudo guardar un cambio, así que no se envió nada. Revisa el Brief e inténtalo de nuevo.",
+      "leaveConfirm": "Tu último cambio en este Brief aún no se ha guardado. ¿Salir de todos modos?"
+    },
+    "groups": {
+      "alert": "Alertas",
+      "event": "Eventos",
+      "signal": "Señales"
+    },
+    "items": {
+      "emptyGroup": "Nada seleccionado todavía.",
+      "addError": "No se pudo añadir el elemento: {message}",
+      "removeError": "No se pudo quitar el elemento: {message}",
+      "earlier": "del {date}",
+      "noneSent": "Ninguno.",
+      "drag": "Arrastra para reordenar {title}",
+      "remove": "Quitar del Brief",
+      "removeLabel": "Quitar {title} del Brief",
+      "notePlaceholder": "Añade una nota (opcional)",
+      "noteLabel": "Nota sobre {title}",
+      "noteError": "No se pudo guardar la nota: {message}",
+      "reorderError": "No se pudo reordenar: {message}"
+    },
+    "send": {
+      "test": "Enviarme una prueba",
+      "testSent": "Prueba enviada a tu correo electrónico.",
+      "testRefused": "El proveedor de correo rechazó la prueba.",
+      "testError": "No se pudo enviar la prueba: {message}",
+      "open": "Enviar…",
+      "title": "Enviar Brief",
+      "list": "Lista de destinatarios",
+      "listPlaceholder": "Elige una lista",
+      "listOption": "{name} ({count, plural, one {# destinatario} other {# destinatarios}})",
+      "noLists": "Todavía no hay ninguna lista con destinatarios.",
+      "manageLists": "Gestionar listas de destinatarios",
+      "cancel": "Cancelar",
+      "next": "Siguiente",
+      "back": "Atrás",
+      "confirm": "¿Enviar a {list} ({count, plural, one {# destinatario} other {# destinatarios}})?",
+      "freezes": "Enviar congela el Brief: después no se puede editar.",
+      "send": "Enviar",
+      "error": "No se pudo enviar: {message}",
+      "result": "Enviado a {sent}, fallidos {failed}.",
+      "partial": "Los correos fallidos no se reintentan.",
+      "done": "Hecho",
+      "unknownList": "una lista eliminada",
+      "sentNotice": "Enviado el {date} a {list}: {sent} enviados, {failed} fallidos.",
+      "frozen": "Un Brief enviado está congelado: sus elementos conservan lo que mostraban al enviarse."
+    },
+    "list": {
+      "new": "Nuevo Brief",
+      "empty": "Todavía no hay Briefs. Empieza uno con Nuevo Brief.",
+      "loadError": "No se pudieron cargar los Briefs.",
+      "delete": "Eliminar borrador",
+      "deleteConfirm": "¿Eliminar el borrador «{title}»? No se puede deshacer.",
+      "deleteError": "No se pudo eliminar el borrador: {message}",
+      "columns": {
+        "title": "Brief",
+        "area": "Zona",
+        "window": "Periodo",
+        "status": "Estado",
+        "sentAt": "Enviado"
+      },
+      "loadMore": "Cargar más"
+    },
+    "cadence": {
+      "daily": "Diario",
+      "weekly": "Semanal",
+      "monthly": "Mensual"
+    },
+    "status": {
+      "draft": "Borrador",
+      "sent": "Enviado"
+    },
+    "new": {
+      "title": {
+        "daily": "Nuevo Brief diario",
+        "weekly": "Nuevo Brief semanal",
+        "monthly": "Nuevo Brief mensual"
+      },
+      "window": {
+        "daily": "Cubre las últimas 24 horas, hasta ahora.",
+        "weekly": "Cubre los últimos 7 días, hasta ahora.",
+        "monthly": "Cubre los últimos 30 días, hasta ahora."
+      },
+      "country": "País",
+      "countryPlaceholder": "Elige un país",
+      "region": "Estado o distrito (opcional)",
+      "cancel": "Cancelar",
+      "submit": "Empezar Brief",
+      "error": "No se pudo empezar el Brief: {message}"
+    },
+    "sections": {
+      "summary": "Resumen",
+      "counts": "Recuentos",
+      "items": "Elementos seleccionados",
+      "closingNotes": "Notas finales"
+    },
+    "save": {
+      "saving": "Guardando…",
+      "saved": "Guardado",
+      "error": "Sin guardar"
+    },
+    "counts": {
+      "none": "Ninguno en este periodo.",
+      "byType": "Tipos",
+      "bySource": "Fuentes",
+      "more": "+{count} más"
+    },
+    "picker": {
+      "dateBrief": "Periodo del Brief",
+      "date24h": "Últimas 24 horas",
+      "date7d": "Últimos 7 días",
+      "date30d": "Últimos 30 días",
+      "dateCustom": "Rango personalizado",
+      "from": "Desde",
+      "to": "Hasta"
+    },
+    "lists": {
+      "open": "Listas de destinatarios",
+      "title": "Listas de destinatarios",
+      "intro": "Conjuntos con nombre de direcciones de correo a las que se puede enviar un Brief. Las direcciones no necesitan una cuenta de CLEAR; cada correo incluye un enlace para darse de baja.",
+      "newName": "Nombre de la nueva lista",
+      "create": "Crear",
+      "loading": "Cargando listas…",
+      "loadError": "No se pudieron cargar las listas.",
+      "empty": "Todavía no hay listas.",
+      "recipients": "{count, plural, one {# destinatario} other {# destinatarios}}",
+      "unsubscribed": "Dado de baja",
+      "remove": "Quitar dirección",
+      "removeLabel": "Quitar {email}",
+      "removeError": "No se pudo quitar la dirección: {message}",
+      "addEmail": "nombre@ejemplo.org",
+      "addEmailLabel": "Añadir una dirección a {list}",
+      "add": "Añadir"
+    },
+    "pdf": {
+      "button": "Descargar PDF",
+      "eyebrow": "Brief {cadence}",
+      "org": "Consejo Noruego para Refugiados · CLEAR",
+      "classification": "Solo para uso interno y difusión privada",
+      "footer": "CLEAR · {title}",
+      "generated": "PDF creado el {date} en CLEAR ({status}).",
+      "page": "Página {n} de {total}",
+      "error": "No se pudo crear el PDF. Inténtalo de nuevo.",
+      "unsupportedLocale": "Todavía no se pueden crear PDF en árabe. Cambia el idioma a inglés, francés o español para crear uno."
+    },
+    "copy": {
+      "button": "Copiar",
+      "done": "Copiado",
+      "plainOnly": "Este navegador solo copió texto sin formato.",
+      "error": "No se pudo copiar el Brief."
+    }
   }
 }

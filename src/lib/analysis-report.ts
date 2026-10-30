@@ -168,7 +168,7 @@ export function withDeadline<T>(work: Promise<T>, ms: number): Promise<T> {
 }
 
 /** "sitrep-sheikan-north-kordofan-sudan-2026-09-29.pdf" */
-export function reportFileName(scopeName: string, at: Date): string {
+export function reportFileName(scopeName: string, at: Date, prefix = "sitrep"): string {
   const slug = scopeName
     .normalize("NFKD")
     .replace(/\p{M}/gu, "")
@@ -176,7 +176,7 @@ export function reportFileName(scopeName: string, at: Date): string {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "")
     .slice(0, 80);
-  return `sitrep-${slug || "analysis"}-${at.toISOString().slice(0, 10)}.pdf`;
+  return `${prefix}-${slug || "analysis"}-${at.toISOString().slice(0, 10)}.pdf`;
 }
 
 /** Report sections in their default order. Provenance and page numbers are always included. */

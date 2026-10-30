@@ -86,6 +86,7 @@ for the area you are changing:
 | Location challenges, changing a signal's location | Location trust |
 | Invite acceptance, first-run welcome flow | Invited-user onboarding |
 | Usage tracking and the account-wide opt-out | Usage analytics |
+| `/brief`, Briefs and Recipient lists | Brief |
 | Moving between detections on the detail pages | Detection detail navigation |
 | Basemap, terrain, markers, marker panels | Map foundation, Map marker panels |
 | Country scope and framing on the map | Country framing |
