@@ -1511,6 +1511,7 @@
       "loadMore": "Charger plus",
       "sortByTime": "Trier par date",
       "untitled": "Sans titre",
+      "selectRow": "Sélectionner {title}",
       "columns": {
         "title": "Titre",
         "class": "Classe",

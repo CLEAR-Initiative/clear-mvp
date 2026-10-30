@@ -15,6 +15,7 @@ import {
   Button,
   Divider,
   UnstyledButton,
+  Checkbox,
 } from "@mantine/core";
 import { IconArrowDown, IconArrowUp, IconArrowsSort, IconFilter, IconX } from "@tabler/icons-react";
 import { mapSeverity } from "~/lib/types/graphql";
@@ -79,10 +80,15 @@ export const HISTORY_SORT_LABEL_KEYS: Record<HistorySortOrder, "sevDesc" | "sevA
 };
 
 // Discriminated union for a unified history row
-type HistoryRow =
+export type HistoryRow =
   | { kind: "alert"; id: string; data: GqlAlert }
   | { kind: "event"; id: string; data: GqlEvent }
   | { kind: "signal"; id: string; data: GqlSignal };
+
+/** A row's identity across the three merged feeds, e.g. `alert:<id>`. */
+export function historyRowKey(row: Pick<HistoryRow, "kind" | "id">): string {
+  return `${row.kind}:${row.id}`;
+}
 
 function rowDate(row: HistoryRow): number {
   if (row.kind === "alert") return new Date(row.data.event.firstSignalCreatedAt).getTime();
@@ -119,6 +125,13 @@ export interface HistoryTabProps {
   onActiveSourcesChange: (sources: Set<string> | null) => void;
   /** Push-feed sources to offer even when none of their rows are loaded. */
   sourceOptions?: string[];
+  /** Adds a leading checkbox column. `selectedKeys` holds `historyRowKey`s. */
+  selection?: {
+    selectedKeys: Set<string>;
+    onToggle: (row: HistoryRow) => void;
+  };
+  /** When set, the title opens the row through this instead of linking to its page. */
+  onOpenRow?: (row: HistoryRow) => void;
 }
 
 const CLASS_STYLES: Record<string, { bg: string; color: string }> = {
@@ -136,7 +149,7 @@ const TIME_COLUMNS = new Set<(typeof COLUMN_KEYS)[number]>(["date", "age"]);
 type HistoryClass = HistoryRow["kind"];
 const ALL_CLASSES: readonly HistoryClass[] = ["alert", "event", "signal"];
 
-export function HistoryTab({ alerts, events, signals, loading, hasMore, isFetchingMore, totalCount, onLoadMore, sortOrder, onSortChange, activeSources, onActiveSourcesChange, sourceOptions }: HistoryTabProps) {
+export function HistoryTab({ alerts, events, signals, loading, hasMore, isFetchingMore, totalCount, onLoadMore, sortOrder, onSortChange, activeSources, onActiveSourcesChange, sourceOptions, selection, onOpenRow }: HistoryTabProps) {
   const t = useTranslations("detection");
   const format = useFormatter();
   // Re-render each minute so the Age column stays current.
@@ -480,27 +493,30 @@ export function HistoryTab({ alerts, events, signals, loading, hasMore, isFetchi
             <Box style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
               <Box style={{ minWidth: 760 }}>
                 <DataTable
-                  columns={COLUMN_KEYS.map((k) => {
-                    const label = t(`history.columns.${k}`);
-                    if (!TIME_COLUMNS.has(k)) return { label };
-                    const isTimeSort = sortOrder === "newest" || sortOrder === "oldest";
-                    // Age runs opposite to date: newest first = smallest age.
-                    const ascending = k === "date" ? sortOrder === "oldest" : sortOrder === "newest";
-                    const SortIcon = !isTimeSort ? IconArrowsSort : ascending ? IconArrowUp : IconArrowDown;
-                    return {
-                      label,
-                      header: (
-                        <UnstyledButton
-                          onClick={() => onSortChange(sortOrder === "newest" ? "oldest" : "newest")}
-                          title={t("history.sortByTime")}
-                          style={{ display: "inline-flex", alignItems: "center", gap: 4, font: "inherit", color: "inherit", textTransform: "inherit", letterSpacing: "inherit" }}
-                        >
-                          {label}
-                          <SortIcon size={12} color={isTimeSort ? "var(--color-accent)" : "var(--color-text-muted)"} />
-                        </UnstyledButton>
-                      ),
-                    };
-                  })}
+                  columns={[
+                    ...(selection ? [{ label: "", width: 36 }] : []),
+                    ...COLUMN_KEYS.map((k) => {
+                      const label = t(`history.columns.${k}`);
+                      if (!TIME_COLUMNS.has(k)) return { label };
+                      const isTimeSort = sortOrder === "newest" || sortOrder === "oldest";
+                      // Age runs opposite to date: newest first = smallest age.
+                      const ascending = k === "date" ? sortOrder === "oldest" : sortOrder === "newest";
+                      const SortIcon = !isTimeSort ? IconArrowsSort : ascending ? IconArrowUp : IconArrowDown;
+                      return {
+                        label,
+                        header: (
+                          <UnstyledButton
+                            onClick={() => onSortChange(sortOrder === "newest" ? "oldest" : "newest")}
+                            title={t("history.sortByTime")}
+                            style={{ display: "inline-flex", alignItems: "center", gap: 4, font: "inherit", color: "inherit", textTransform: "inherit", letterSpacing: "inherit" }}
+                          >
+                            {label}
+                            <SortIcon size={12} color={isTimeSort ? "var(--color-accent)" : "var(--color-text-muted)"} />
+                          </UnstyledButton>
+                        ),
+                      };
+                    }),
+                  ]}
                   data={filtered}
                   loading={false}
                   emptyMessage={loadedCount === 0 ? t("history.empty") : t("history.noMatch")}
@@ -541,15 +557,34 @@ export function HistoryTab({ alerts, events, signals, loading, hasMore, isFetchi
             }
 
             const disasterPills = getDisasterPills(types);
+            const titleText = (
+              <Text fw={600} lineClamp={2} style={{ fontSize: 13, color: "var(--color-text-primary)", lineHeight: 1.4 }}>
+                {title}
+              </Text>
+            );
 
             return (
               <Table.Tr key={row.id}>
+                {selection && (
+                  <Table.Td style={{ width: 36 }}>
+                    <Checkbox
+                      size="xs"
+                      checked={selection.selectedKeys.has(historyRowKey(row))}
+                      onChange={() => selection.onToggle(row)}
+                      aria-label={t("history.selectRow", { title })}
+                    />
+                  </Table.Td>
+                )}
                 <Table.Td style={{ minWidth: 180, maxWidth: 280 }}>
-                  <Link href={href} style={{ textDecoration: "none" }}>
-                    <Text fw={600} lineClamp={2} style={{ fontSize: 13, color: "var(--color-text-primary)", lineHeight: 1.4 }}>
-                      {title}
-                    </Text>
-                  </Link>
+                  {onOpenRow ? (
+                    <UnstyledButton onClick={() => onOpenRow(row)} style={{ textAlign: "start" }}>
+                      {titleText}
+                    </UnstyledButton>
+                  ) : (
+                    <Link href={href} style={{ textDecoration: "none" }}>
+                      {titleText}
+                    </Link>
+                  )}
                 </Table.Td>
                 <Table.Td style={{ whiteSpace: "nowrap" }}>
                   <span style={{

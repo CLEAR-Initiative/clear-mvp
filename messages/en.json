@@ -1511,6 +1511,7 @@
       "loadMore": "Load more",
       "sortByTime": "Sort by time",
       "untitled": "Untitled",
+      "selectRow": "Select {title}",
       "columns": {
         "title": "Title",
         "class": "Class",

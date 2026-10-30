@@ -1511,6 +1511,7 @@
       "loadMore": "تحميل المزيد",
       "sortByTime": "الترتيب حسب الوقت",
       "untitled": "بلا عنوان",
+      "selectRow": "تحديد {title}",
       "columns": {
         "title": "العنوان",
         "class": "الفئة",
