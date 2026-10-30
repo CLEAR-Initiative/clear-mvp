@@ -3676,7 +3676,9 @@
       "markdownHint": "**negrita**, *cursiva*, - viñetas, [enlace](https://…)",
       "preview": "Vista previa",
       "empty": "—",
-      "saveError": "No se pudo guardar: {message}"
+      "saveError": "No se pudo guardar: {message}",
+      "unsaved": "No se pudo guardar un cambio, así que no se envió nada. Revisa el Brief e inténtalo de nuevo.",
+      "leaveConfirm": "Tu último cambio en este Brief aún no se ha guardado. ¿Salir de todos modos?"
     },
     "groups": {
       "alert": "Alertas",
@@ -3736,7 +3738,8 @@
         "window": "Periodo",
         "status": "Estado",
         "sentAt": "Enviado"
-      }
+      },
+      "loadMore": "Cargar más"
     },
     "cadence": {
       "daily": "Diario",

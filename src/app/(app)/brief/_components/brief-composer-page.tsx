@@ -62,23 +62,45 @@ function Composer({ brief }: { brief: Brief }) {
   const { status: saveStatus, track, setDirty, hasUnsaved, settled } = useSaveTracker();
   const items = useBriefItems(brief, { track });
   const { text, setField, flush } = useBriefAutosave(brief, track, setDirty);
-  // Reloading or closing the tab before the last edit is sent asks first
-  // (and starts the text save, in case the reader stays).
+  // Leaving before the last edit has saved asks first, for a reload or a
+  // closed tab (beforeunload) and for in-app links, which never fire it.
+  // Either way the text save starts at once, in case the reader stays.
   useEffect(() => {
     const onBeforeUnload = (e: BeforeUnloadEvent) => {
       if (!hasUnsaved()) return;
       void flush();
       e.preventDefault();
     };
+    const onClick = (e: MouseEvent) => {
+      if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+      const link = (e.target as Element | null)?.closest?.("a[href]");
+      if (!(link instanceof HTMLAnchorElement) || link.target === "_blank" || link.hasAttribute("download")) return;
+      const to = new URL(link.href, window.location.href);
+      if (to.origin !== window.location.origin || to.pathname === window.location.pathname) return;
+      if (!hasUnsaved()) return;
+      void flush();
+      if (!window.confirm(t("composer.leaveConfirm"))) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    };
     window.addEventListener("beforeunload", onBeforeUnload);
-    return () => window.removeEventListener("beforeunload", onBeforeUnload);
-  }, [flush, hasUnsaved]);
+    document.addEventListener("click", onClick, true);
+    return () => {
+      window.removeEventListener("beforeunload", onBeforeUnload);
+      document.removeEventListener("click", onClick, true);
+    };
+  }, [flush, hasUnsaved, t]);
   const [sending, setSending] = useState(false);
-  // Whatever is still being typed goes into the email.
-  const saveAll = useCallback(async () => {
-    flush();
-    await settled();
-  }, [flush, settled]);
+  // Whatever is still being typed goes into the email, the PDF and the copy.
+  // False, with a notice, when an edit couldn't be saved: nothing then goes
+  // out with older content.
+  const saveAll = useCallback(async (): Promise<boolean> => {
+    await flush();
+    const ok = await settled();
+    if (!ok) notifications.show({ color: "red", message: t("composer.unsaved") });
+    return ok;
+  }, [flush, settled, t]);
   const editable = brief.status === "draft";
   // Events open in the drawer so the Brief stays on screen; Signals have no
   // drawer and open their page in a new tab.
@@ -109,7 +131,7 @@ function Composer({ brief }: { brief: Brief }) {
           variant="default"
           leftSection={<IconMailForward size={14} />}
           loading={sendTest.isPending}
-          onClick={() => void saveAll().then(() => sendTest.mutate({ id: brief.id }))}
+          onClick={() => void saveAll().then((ok) => ok && sendTest.mutate({ id: brief.id }))}
           data-testid="brief-send-test"
         >
           {t("send.test")}

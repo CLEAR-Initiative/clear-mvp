@@ -15,8 +15,12 @@ export interface SaveTracker {
   setDirty: SetDirty;
   /** Whether leaving now would lose something. */
   hasUnsaved: () => boolean;
-  /** Resolves once no write is in flight, so a send can wait for the last edit to land. */
-  settled: () => Promise<void>;
+  /**
+   * Resolves once no write is in flight: true when every one of them
+   * succeeded and nothing is left typed-but-unsent, so a send can refuse to
+   * go out with older content.
+   */
+  settled: () => Promise<boolean>;
 }
 
 /** One save state for every write the composer makes. */
@@ -26,7 +30,9 @@ export function useSaveTracker(): SaveTracker {
   const running = useRef(0);
   const failed = useRef(false);
   const dirty = useRef(new Set<string>());
-  const waiters = useRef<(() => void)[]>([]);
+  const waiters = useRef<((ok: boolean) => void)[]>([]);
+  // Whether the writes since the tracker last went idle all succeeded.
+  const lastOk = useRef(true);
 
   const track = useCallback<TrackSave>((work) => {
     running.current += 1;
@@ -35,9 +41,10 @@ export function useSaveTracker(): SaveTracker {
       running.current -= 1;
       if (!ok) failed.current = true;
       if (running.current === 0) {
+        lastOk.current = !failed.current;
         setStatus(failed.current ? "error" : "saved");
         failed.current = false;
-        for (const resolve of waiters.current.splice(0)) resolve();
+        for (const resolve of waiters.current.splice(0)) resolve(lastOk.current && dirty.current.size === 0);
       }
     };
     work.then(
@@ -56,7 +63,10 @@ export function useSaveTracker(): SaveTracker {
   const hasUnsaved = useCallback(() => dirty.current.size > 0 || running.current > 0, []);
 
   const settled = useCallback(
-    () => (running.current === 0 ? Promise.resolve() : new Promise<void>((resolve) => waiters.current.push(resolve))),
+    () =>
+      running.current === 0
+        ? Promise.resolve(lastOk.current && dirty.current.size === 0)
+        : new Promise<boolean>((resolve) => waiters.current.push(resolve)),
     [],
   );
 

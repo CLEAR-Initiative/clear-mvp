@@ -3676,7 +3676,9 @@
       "markdownHint": "**gras**, *italique*, - puces, [lien](https://…)",
       "preview": "Aperçu",
       "empty": "—",
-      "saveError": "Impossible d'enregistrer : {message}"
+      "saveError": "Impossible d'enregistrer : {message}",
+      "unsaved": "Une modification n'a pas pu être enregistrée, rien n'a donc été envoyé. Vérifiez le Brief et réessayez.",
+      "leaveConfirm": "Votre dernière modification de ce Brief n'est pas encore enregistrée. Quitter quand même ?"
     },
     "groups": {
       "alert": "Alertes",
@@ -3736,7 +3738,8 @@
         "window": "Période",
         "status": "Statut",
         "sentAt": "Envoyé"
-      }
+      },
+      "loadMore": "Charger plus"
     },
     "cadence": {
       "daily": "Quotidien",

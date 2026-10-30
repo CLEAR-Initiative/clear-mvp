@@ -12,7 +12,7 @@ import { copyBrief } from "~/lib/brief/clipboard";
 import { useBriefTextLabels, useBriefViewLabels } from "../_hooks/use-brief-view-labels";
 
 /** "Copy": the Brief on the clipboard as rich text, to paste into an email or a document. */
-export function BriefCopyButton({ brief: shown, beforeCopy }: { brief: Brief; beforeCopy: () => Promise<void> }) {
+export function BriefCopyButton({ brief: shown, beforeCopy }: { brief: Brief; beforeCopy: () => Promise<boolean> }) {
   const t = useTranslations("brief.copy");
   const viewLabels = useBriefViewLabels();
   const textLabels = useBriefTextLabels();
@@ -21,7 +21,7 @@ export function BriefCopyButton({ brief: shown, beforeCopy }: { brief: Brief; be
 
   async function copy() {
     try {
-      await beforeCopy();
+      if (!(await beforeCopy())) return;
       const brief = utils.briefs.get.getData({ id: shown.id }) ?? shown;
       const how = await copyBrief(toBriefView(brief, viewLabels), textLabels);
       setCopied(true);

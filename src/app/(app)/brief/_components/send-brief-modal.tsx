@@ -22,8 +22,8 @@ export function SendBriefModal({
   briefId: string;
   opened: boolean;
   onClose: () => void;
-  /** Saves anything still being typed, so the email carries it. */
-  beforeSend: () => Promise<void>;
+  /** Saves anything still being typed, so the email carries it; false when an edit couldn't be saved. */
+  beforeSend: () => Promise<boolean>;
 }) {
   const t = useTranslations("brief.send");
   const utils = api.useUtils();
@@ -86,7 +86,7 @@ export function SendBriefModal({
               <Button
                 loading={send.isPending}
                 onClick={async () => {
-                  await beforeSend();
+                  if (!(await beforeSend())) return;
                   send.mutate({ id: briefId, recipientListId: list.id });
                 }}
                 data-testid="brief-send-submit"

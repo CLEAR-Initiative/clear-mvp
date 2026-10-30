@@ -16,7 +16,7 @@ import type { BriefDocumentLabels } from "./brief-document";
 const UNSUPPORTED_LOCALES = new Set(["ar"]);
 
 /** "Download PDF": the Brief on screen, built in the browser like the Insights report. */
-export function BriefPdfButton({ brief: shown, beforeBuild }: { brief: Brief; beforeBuild: () => Promise<void> }) {
+export function BriefPdfButton({ brief: shown, beforeBuild }: { brief: Brief; beforeBuild: () => Promise<boolean> }) {
   const t = useTranslations("brief");
   const format = useFormatter();
   const locale = useLocale();
@@ -29,7 +29,7 @@ export function BriefPdfButton({ brief: shown, beforeBuild }: { brief: Brief; be
   async function download() {
     setBusy(true);
     try {
-      await beforeBuild();
+      if (!(await beforeBuild())) return;
       // What was just saved, not what was on screen when the click came.
       const brief = utils.briefs.get.getData({ id: shown.id }) ?? shown;
       const now = new Date();

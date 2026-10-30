@@ -3676,7 +3676,9 @@
       "markdownHint": "**bold**, *italic*, - bullets, [link](https://…)",
       "preview": "Preview",
       "empty": "—",
-      "saveError": "Couldn't save: {message}"
+      "saveError": "Couldn't save: {message}",
+      "unsaved": "An edit couldn't be saved, so nothing went out. Check the Brief and try again.",
+      "leaveConfirm": "Your last edit to this Brief hasn't saved yet. Leave anyway?"
     },
     "groups": {
       "alert": "Alerts",
@@ -3736,7 +3738,8 @@
         "window": "Window",
         "status": "Status",
         "sentAt": "Sent"
-      }
+      },
+      "loadMore": "Load more"
     },
     "cadence": {
       "daily": "Daily",
