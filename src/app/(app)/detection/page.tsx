@@ -53,7 +53,9 @@ import {
 import { useAgentDeepLink } from "~/components/agent/use-agent-deep-link";
 
 const PAGE_SIZE = 25;
-const HISTORY_PAGE_SIZE = 100;
+// History fires alerts, events and signals pages in parallel and waits on all
+// three, so each page stays the same size as the single-feed tabs.
+const HISTORY_PAGE_SIZE = PAGE_SIZE;
 
 // Map UI sort labels to API orderBy enum values.
 // Types must match the z.enum() definitions in alerts.ts router exactly.
@@ -633,7 +635,7 @@ function DetectionPageContent() {
     }
   }, [activeTab, signalsItems]);
 
-  // History tab accumulation - same pattern as feeds but HISTORY_PAGE_SIZE = 100
+  // History tab accumulation - same pattern as feeds, HISTORY_PAGE_SIZE per source
   const [historyAlertsItems, setHistoryAlertsItems] = useState<GqlAlert[]>([]);
   const [historyEventsItems, setHistoryEventsItems] = useState<GqlEvent[]>([]);
   const [historySignalsItems, setHistorySignalsItems] = useState<GqlSignal[]>([]);
@@ -883,7 +885,7 @@ function DetectionPageContent() {
   const alertsNewCount = alertsNewQuery.data?.totalCount ?? 0;
   const signalsNewCount = signalsNewQuery.data?.totalCount ?? 0;
 
-  // ── History tab - paginated, 100 per page, all three sources accumulated ──────
+  // ── History tab - paginated per source, all three sources accumulated ──────
   const historyAlertsQuery = api.alerts.alertsPage.useQuery(
     { ...sharedFilter, orderBy: ALERT_ORDER_MAP[historySortOrder], limit: HISTORY_PAGE_SIZE, offset: historyOffset, _v: historyVersion },
     { enabled: locationsReady && activeTab === "history", staleTime: Infinity },

@@ -128,3 +128,36 @@ export function sanitizeLocationGeometry<T extends { geometry?: unknown }>(
   
   return location;
 }
+
+type LocationSlot = { geometry?: unknown } | null | undefined;
+
+interface SignalLocations {
+  generalLocation?: LocationSlot;
+  originLocation?: LocationSlot;
+  destinationLocation?: LocationSlot;
+}
+
+interface EventLocations extends SignalLocations {
+  representativePoint?: LocationSlot;
+  signals?: SignalLocations[] | null;
+}
+
+/**
+ * Point-only geometry for a list-row signal. clear-api returns the full admin
+ * polygon for country/state tags, repeated on every row; list views only
+ * paint a marker, and the client centroids polygons the same way anyway.
+ */
+export function sanitizeSignalListGeometry<T extends SignalLocations>(signal: T): T {
+  sanitizeLocationGeometry(signal.generalLocation);
+  sanitizeLocationGeometry(signal.originLocation);
+  sanitizeLocationGeometry(signal.destinationLocation);
+  return signal;
+}
+
+/** Point-only geometry for a list-row event, including any nested signals. */
+export function sanitizeEventListGeometry<T extends EventLocations>(event: T): T {
+  sanitizeSignalListGeometry(event);
+  sanitizeLocationGeometry(event.representativePoint);
+  for (const signal of event.signals ?? []) sanitizeSignalListGeometry(signal);
+  return event;
+}

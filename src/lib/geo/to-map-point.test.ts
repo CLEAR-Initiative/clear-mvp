@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { toMapPointGeometry, sanitizeLocationGeometry } from "./to-map-point";
+import { toMapPointGeometry, sanitizeLocationGeometry, sanitizeEventListGeometry } from "./to-map-point";
 
 describe("toMapPointGeometry", () => {
   it("passes through Point geometries unchanged", () => {
@@ -164,5 +164,32 @@ describe("sanitizeLocationGeometry", () => {
   it("returns null for null input", () => {
     expect(sanitizeLocationGeometry(null)).toBeNull();
     expect(sanitizeLocationGeometry(undefined)).toBeNull();
+  });
+});
+
+describe("sanitizeEventListGeometry", () => {
+  const polygon = {
+    type: "Polygon",
+    coordinates: [[[30, 10], [40, 10], [40, 20], [30, 20], [30, 10]]],
+  };
+
+  it("cuts event, representative point and nested signal locations to Points", () => {
+    const event = {
+      generalLocation: { geometry: structuredClone(polygon) },
+      originLocation: null,
+      representativePoint: { geometry: structuredClone(polygon) },
+      signals: [{ generalLocation: { geometry: structuredClone(polygon) } }],
+    };
+
+    sanitizeEventListGeometry(event);
+
+    expect(event.generalLocation.geometry).toEqual({ type: "Point", coordinates: [34, 14] });
+    expect(event.representativePoint.geometry).toEqual({ type: "Point", coordinates: [34, 14] });
+    expect(event.signals[0]!.generalLocation.geometry).toEqual({ type: "Point", coordinates: [34, 14] });
+  });
+
+  it("tolerates events whose nested signals carry no locations", () => {
+    const event = { generalLocation: null, signals: [{ generalLocation: undefined }] };
+    expect(() => sanitizeEventListGeometry(event)).not.toThrow();
   });
 });
