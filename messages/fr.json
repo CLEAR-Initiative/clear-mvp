@@ -3088,16 +3088,14 @@
       "noFigure": "Pas de chiffre de personnes dans le besoin"
     },
     "events": {
-      "title": "Événements dans cette zone",
-      "empty": "Aucun événement enregistré dans cette zone sur cette période.",
-      "loading": "Chargement des événements…",
-      "error": "Les événements n'ont pas pu être chargés.",
+      "title": "Événements cités",
+      "empty": "Cette analyse ne cite aucun événement.",
       "untitled": "Événement sans titre",
       "severity": "Gravité {value}",
-      "count": "Échantillon : {shown} sur {total}"
+      "count": "{count, plural, one {# événement} other {# événements}}"
     },
     "sources": {
-      "title": "Sources citées"
+      "title": "Rapports cités"
     },
     "contexts": {
       "title": "Risques contextuels",

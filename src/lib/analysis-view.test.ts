@@ -61,6 +61,7 @@ function analysisDisplaced(displaced: number | null): Analysis {
     scenarios: null,
     keyFindings: [],
     eventSourceIds: [],
+    citedEvents: [],
   };
 }
 

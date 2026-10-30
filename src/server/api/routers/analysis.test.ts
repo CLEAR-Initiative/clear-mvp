@@ -115,6 +115,7 @@ describe("analysis router", () => {
       ["event:e1", "Shelling in El Fasher", "/event/e1", "CLEAR"],
     ]);
     expect(result?.eventSourceIds).toEqual(["event:e1"]);
+    expect(result?.citedEvents.map((e) => [e.id, e.title])).toEqual([["e1", "Shelling in El Fasher"]]);
     expect(result?.summaryRefs).toEqual([1, 3]);
     expect(result?.scenarios?.mostLikely).toBe("More fighting.");
     expect(result?.scenarios?.refs).toEqual([3]);

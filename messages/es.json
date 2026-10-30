@@ -3088,16 +3088,14 @@
       "noFigure": "Sin cifra de personas que necesitan ayuda"
     },
     "events": {
-      "title": "Eventos en esta área",
-      "empty": "No hay eventos registrados en esta área en este período.",
-      "loading": "Cargando eventos…",
-      "error": "No se pudieron cargar los eventos.",
+      "title": "Eventos citados",
+      "empty": "Este análisis no cita ningún evento.",
       "untitled": "Evento sin título",
       "severity": "Gravedad {value}",
-      "count": "Muestra: {shown} de {total}"
+      "count": "{count, plural, one {# evento} other {# eventos}}"
     },
     "sources": {
-      "title": "Fuentes citadas"
+      "title": "Informes citados"
     },
     "contexts": {
       "title": "Riesgos de contexto",

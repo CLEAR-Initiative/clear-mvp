@@ -3088,16 +3088,14 @@
       "noFigure": "No people-in-need figure"
     },
     "events": {
-      "title": "Events in this area",
-      "empty": "No events recorded in this area in this period.",
-      "loading": "Loading events…",
-      "error": "Events could not be loaded.",
+      "title": "Events cited",
+      "empty": "This analysis cites no events.",
       "untitled": "Untitled event",
       "severity": "Severity {value}",
-      "count": "Sample: {shown} of {total}"
+      "count": "{count, plural, one {# event} other {# events}}"
     },
     "sources": {
-      "title": "Sources cited"
+      "title": "Reports cited"
     },
     "contexts": {
       "title": "Context risks",

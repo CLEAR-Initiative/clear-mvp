@@ -138,6 +138,7 @@ function analysis(overrides: Partial<Analysis["crisis"]> = {}, scope: Partial<An
     changes: { comparedTo: null, notes: {} },
     scenarios: { description: null, mostLikely: null, bestCase: null, worstCase: null, refs: [] },
     eventSourceIds: [],
+    citedEvents: [],
     keyFindings: [],
   };
 }

@@ -79,6 +79,9 @@ export interface Analysis extends SituationAnalysis {
   keyFindings: SaBullet[];
   /** Source ids (as in `sources[].id`) that are events, not reports. */
   eventSourceIds: string[];
+  /** The cited events' details, for the Sources tab. An event whose lookup
+   * failed is missing here; its `sources` entry still lists it. */
+  citedEvents: AnalysisEvent[];
 }
 
 function clean(s: string | null | undefined): string | null {
@@ -135,6 +138,7 @@ export function mapAnalysis(row: AnalysisRow, scopeName: string): Analysis {
       .map((f) => ({ text: clean(f.description) ?? "", refs: refsFrom(f.source_report_ids) }))
       .filter((f) => f.text),
     eventSourceIds: base.sources.map((s) => s.id).filter((id) => eventIdFromCitation(id) !== null),
+    citedEvents: [],
   };
 }
 

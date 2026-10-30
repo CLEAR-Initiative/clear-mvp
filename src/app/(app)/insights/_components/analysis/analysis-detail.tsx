@@ -7,10 +7,10 @@ import { Alert, Box, Center, Loader, SimpleGrid, Stack, Tabs, Text } from "@mant
 import { api } from "~/trpc/react";
 import { useTeam } from "~/providers/team-provider";
 import { generationOverdue, isStale } from "~/lib/analysis-view";
-import type { CreatedAnalysis } from "~/server/api/mappers/analysis";
+import { eventIdFromCitation, type CreatedAnalysis } from "~/server/api/mappers/analysis";
 import { SituationSources } from "../situation/situation-sources";
 import { AnalysisNeeds } from "./analysis-needs";
-import { EventsList } from "./events-list";
+import { CitedEvents } from "./cited-events";
 import { Notice } from "./notice";
 import { CreateReportButton } from "./create-report-button";
 import { RefreshButton, type RefreshFrame } from "./refresh-button";
@@ -297,9 +297,13 @@ export function AnalysisDetail({
             <Text fw={600} c="var(--sa-text)" mb={12} style={{ fontSize: 14 }}>
               {t("sources.title")}
             </Text>
-            <SituationSources sources={data.sources} className={styles.sourcesCard} />
+            <SituationSources
+              sources={data.sources}
+              include={(s) => eventIdFromCitation(s.id) === null}
+              className={styles.sourcesCard}
+            />
             </Box>
-            <EventsList events={events.data} pending={events.isLoading} failed={events.isError} />
+            <CitedEvents sources={data.sources} events={data.citedEvents} />
           </SimpleGrid>
         )}
       </>

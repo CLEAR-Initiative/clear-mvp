@@ -235,6 +235,7 @@ function analysis(overrides: Partial<Analysis> = {}): Analysis {
     changes: { comparedTo: null, notes: {} },
     scenarios: { description: null, mostLikely: "Fighting continues.", bestCase: null, worstCase: null, refs: [2] },
     eventSourceIds: ["event:e1"],
+    citedEvents: events.items,
     keyFindings: [],
     ...overrides,
   };
@@ -393,14 +394,17 @@ describe("Insights > Analysis tab", () => {
     expect(screen.getByText("Hospitals struck.")).toBeInTheDocument();
   });
 
-  it("lists cited sources and the scope's events on the sources tab", () => {
+  it("lists cited reports on the left and cited events on the right of the sources tab", () => {
     renderPage();
     fireEvent.click(screen.getByRole("tab", { name: "analysis.tabs.sources" }));
-    expect(screen.getByText("OCHA update")).toBeInTheDocument();
-    expect(screen.getByTestId("analysis-sources")).toHaveAttribute("data-surface", "card");
+    const sources = screen.getByTestId("analysis-sources");
+    expect(sources).toHaveAttribute("data-surface", "card");
+    expect(within(sources).getByText("OCHA update")).toBeInTheDocument();
+    expect(sources).not.toHaveTextContent("Shelling");
     expect(screen.getByTestId("analysis-events")).toHaveAttribute("data-surface", "page");
     const row = screen.getByTestId("analysis-event-row");
     expect(row).toHaveAttribute("href", "/event/e1?from=analysis");
+    expect(row).toHaveTextContent("2.");
     expect(within(row).getByText("Shelling in El Fasher")).toBeInTheDocument();
   });
 

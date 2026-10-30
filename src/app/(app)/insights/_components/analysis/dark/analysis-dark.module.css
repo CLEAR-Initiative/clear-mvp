@@ -678,6 +678,17 @@
   background: var(--sa-hover);
 }
 
+.eventRef {
+  min-width: 28px;
+  flex-shrink: 0;
+  text-align: right;
+  font-family: var(--mantine-font-family-monospace, monospace);
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--sa-muted);
+}
+
 .eventWhen {
   width: 80px;
   flex-shrink: 0;
