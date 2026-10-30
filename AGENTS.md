@@ -21,9 +21,10 @@ bun run test                    # unit tests (Vitest); single file: bun run test
 bun run e2e                     # Playwright suite against a Docker stack; needs ../clear-api
 ```
 
-CI on a pull request to `dev` runs, in order: `bunx vitest run`, `bunx tsc --noEmit`,
-`node scripts/check-messages.mjs`, `bun run lint`, then the E2E smoke suite. Run `bun run check`
-and `bun run test` before pushing. Run `bun run e2e` when you touched a page flow, auth, or the
+On a pull request to `dev`, two workflows start in parallel. The unit workflow runs
+`bunx vitest run`, `bunx tsc --noEmit`, `node scripts/check-messages.mjs`, then `bun run lint`.
+The E2E workflow runs the Playwright smoke suite on its own and does not wait for the unit
+workflow. Run `bun run check` and `bun run test` before pushing. Run `bun run e2e` when you touched a page flow, auth, or the
 compose files.
 
 ## Gotchas
@@ -102,8 +103,11 @@ you make a decision that a future reader would otherwise reverse, add an ADR.
 
 - New user-facing strings go in `messages/en.json` and every other locale. `bun run i18n:check`
   fails CI otherwise.
-- Severity and disaster-type labels and colours come from `src/lib/types/graphql.ts` and
-  `src/lib/disaster-types.ts`. Don't hand-roll thresholds.
+- Severity thresholds come from `mapSeverity` in `src/lib/types/graphql.ts`. Severity labels
+  and theme-aware colours for components come from `src/lib/constants/severity.ts`; the
+  `severityColor` helper next to `mapSeverity` returns fixed hex and does not follow the theme.
+  Disaster-type labels and colours come from `src/lib/disaster-types.ts`. Don't hand-roll
+  thresholds.
 - New server-side env vars are read through `src/server/env.ts` and documented in
   `.env.example` and the README table.
 - Keep tRPC procedures thin. Business rules belong in clear-api; this app shapes data for the UI.
