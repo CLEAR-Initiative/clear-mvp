@@ -228,8 +228,15 @@ export function LiveAlertsTab({
             {hasMore && filtered.length > 0 && <div ref={sentinelRef} style={{ height: 1 }} />}
 
             {isFetchingMore && (
-              <Box py={12} style={{ display: "flex", justifyContent: "center" }}>
+              <Box py={12} style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 8 }}>
                 <Loader size="xs" />
+                {/* A client-side search keeps the sentinel in view until every page is
+                    loaded, so say what the spinner is doing instead of looking stuck. */}
+                {search.trim() !== "" && (
+                  <Text size="xs" c="var(--color-text-muted)">
+                    {t("feed.alerts.scanning", { loaded: format.number(alerts.length), total: format.number(totalCount) })}
+                  </Text>
+                )}
               </Box>
             )}
 

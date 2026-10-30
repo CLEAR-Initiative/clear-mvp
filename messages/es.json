@@ -1483,21 +1483,24 @@
         "empty": "No hay alertas activas en este momento.",
         "noMatch": "Ninguna alerta coincide con sus filtros.",
         "untitled": "Alerta sin título",
-        "allLoaded": "Las {count, plural, one {# alerta} other {# alertas}} cargadas"
+        "allLoaded": "Las {count, plural, one {# alerta} other {# alertas}} cargadas",
+        "scanning": "Buscando en alertas anteriores, {loaded} de {total} revisadas"
       },
       "events": {
         "title": "Eventos",
         "empty": "No se encontraron eventos.",
         "noMatch": "Ningún evento coincide con sus filtros.",
         "untitled": "Evento sin título",
-        "allLoaded": "Los {count, plural, one {# evento} other {# eventos}} cargados"
+        "allLoaded": "Los {count, plural, one {# evento} other {# eventos}} cargados",
+        "scanning": "Buscando en eventos anteriores, {loaded} de {total} revisados"
       },
       "signals": {
         "title": "Señales",
         "empty": "No se encontraron señales.",
         "noMatch": "Ninguna señal coincide con sus filtros.",
         "untitled": "Señal sin título",
-        "allLoaded": "Las {count, plural, one {# señal} other {# señales}} cargadas"
+        "allLoaded": "Las {count, plural, one {# señal} other {# señales}} cargadas",
+        "scanning": "Buscando en señales anteriores, {loaded} de {total} revisadas"
       }
     },
     "history": {
