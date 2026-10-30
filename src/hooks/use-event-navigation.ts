@@ -218,7 +218,7 @@ export function useSignalNavigation(
 ): DetailNavigationResult<GqlSignal> {
   const listSource = options?.listSource ?? "detection";
   const fromMap = listSource === "map";
-  const { activeTeamId } = useTeam();
+  const { activeTeamId, teams, isLoading: teamsLoading } = useTeam();
   const { getLocationId } = useLocations();
 
   const navContext = useMemo(
@@ -232,7 +232,17 @@ export function useSignalNavigation(
   const hasLocationFilter = !!navContext.locationId;
   const mapQueryReady = isMapNavQueryReady(mapNavContext);
   const mapWindow = useMemo(() => defaultMapNavTimeWindow(), []);
+  const storedIds = useMemo(
+    () => (fromMap ? readMapNavSignalIds() : readDetectionNavSignalIds()),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- sessionStorage, not React state
+    [fromMap, currentSignalId],
+  );
+  const hasStoredIds = !!storedIds && storedIds.length > 0;
+  // See useEventNavigation: wait for the team so the list isn't fetched twice.
+  const teamResolved = !!activeTeamId || (!teamsLoading && !teams?.length);
 
+  // Only needed when the Detection feed left no id list behind; stored ids
+  // always win in resolveDetailNavIds.
   const detectionQuery = api.signals.signalsPage.useQuery(
     {
       teamId: navContext.teamId ?? undefined,
@@ -246,7 +256,7 @@ export function useSignalNavigation(
       limit: 500,
       offset: 0,
     },
-    { enabled: !fromMap && hasLocationFilter },
+    { enabled: !fromMap && hasLocationFilter && !hasStoredIds && teamResolved },
   );
 
   const mapQuery = api.signals.forMap.useQuery(
@@ -271,11 +281,6 @@ export function useSignalNavigation(
     [fromMap, mapQuery.data, detectionQuery.data?.items],
   );
   const queriedIds = useMemo(() => items.map((s) => s.id), [items]);
-  const storedIds = useMemo(
-    () => (fromMap ? readMapNavSignalIds() : readDetectionNavSignalIds()),
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- sessionStorage, not React state
-    [fromMap, currentSignalId],
-  );
   const orderedIds = useMemo(
     () => resolveDetailNavIds(storedIds, queriedIds),
     [storedIds, queriedIds],
@@ -284,8 +289,6 @@ export function useSignalNavigation(
     () => getListNavigation(orderedIds, currentSignalId),
     [orderedIds, currentSignalId],
   );
-
-  const hasStoredIds = !!storedIds && storedIds.length > 0;
 
   return {
     ...nav,
@@ -296,7 +299,7 @@ export function useSignalNavigation(
         : !mapQueryReady || mapQuery.isLoading
       : hasStoredIds
         ? false
-        : !hasLocationFilter || detectionQuery.isLoading,
+        : !hasLocationFilter || !teamResolved || detectionQuery.isLoading,
     listItems: items,
   };
 }

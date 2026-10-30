@@ -61,19 +61,9 @@ function SignalDetailPageContent({
     void utils.comments.list.prefetch({ entityId: activeId, entityType: "signal" });
   }, [activeId, utils]);
 
-  // Prefetch ±1 around the *committed* id only — never the scrub cursor (GH #148).
-  const committedNeighbors = useMemo(
-    () => getListNavigation(orderedIds, activeId),
-    [orderedIds, activeId],
-  );
-  useEffect(() => {
-    for (const id of [committedNeighbors.prevId, committedNeighbors.nextId]) {
-      if (!id || prefetchedRef.current.has(id)) continue;
-      prefetchedRef.current.add(id);
-      prefetchDetail(id);
-    }
-  }, [committedNeighbors.prevId, committedNeighbors.nextId, prefetchDetail]);
-
+  // Own request rather than the shared batch: a batch resolves only when its
+  // slowest procedure does, and the first one also carries the locations
+  // tree and team lookups.
   const signalQuery = api.signals.get.useQuery(
     { id: activeId },
     {
@@ -81,15 +71,39 @@ function SignalDetailPageContent({
       staleTime: Infinity,
       retry: false,
       placeholderData: keepPreviousData,
+      trpc: { context: { skipBatch: true } },
     },
   );
+  const signalLoaded = signalQuery.data?.id === activeId;
+
+  // Prefetch ±1 around the *committed* id only — never the scrub cursor (GH #148).
+  // Waits for the current signal so the prefetches never compete with it.
+  const committedNeighbors = useMemo(
+    () => getListNavigation(orderedIds, activeId),
+    [orderedIds, activeId],
+  );
+  useEffect(() => {
+    if (!signalLoaded) return;
+    for (const id of [committedNeighbors.prevId, committedNeighbors.nextId]) {
+      if (!id || prefetchedRef.current.has(id)) continue;
+      prefetchedRef.current.add(id);
+      prefetchDetail(id);
+    }
+  }, [signalLoaded, committedNeighbors.prevId, committedNeighbors.nextId, prefetchDetail]);
 
   const isPending = deriveEntityPending(activeId, signalQuery.data);
 
+  // Fly the minimap as soon as the id changes. The nav list is usually not
+  // fetched (stored Detection ids win), so fall back to the signal itself:
+  // the live query once it matches, else the prefetched copy while pending.
   const navigationMapCenter = useMemo(() => {
-    const item = navigation.listItems.find((s) => s.id === activeId);
+    const item =
+      navigation.listItems.find((s) => s.id === activeId) ??
+      (signalQuery.data?.id === activeId
+        ? signalQuery.data
+        : utils.signals.get.getData({ id: activeId }));
     return item ? getSignalMapCenter(item) ?? undefined : undefined;
-  }, [activeId, navigation.listItems]);
+  }, [activeId, navigation.listItems, signalQuery.data, utils]);
 
   const navigatePrev = useCallback(() => {
     if (navigation.prevId) navigateTo(navigation.prevId);
