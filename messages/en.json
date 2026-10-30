@@ -3808,6 +3808,17 @@
       "addEmail": "name@example.org",
       "addEmailLabel": "Add an address to {list}",
       "add": "Add"
+    },
+    "pdf": {
+      "button": "Download PDF",
+      "eyebrow": "{cadence} Brief",
+      "org": "Norwegian Refugee Council · CLEAR",
+      "classification": "Internal use and private sharing only",
+      "footer": "CLEAR · {title}",
+      "generated": "PDF created {date} in CLEAR ({status}).",
+      "page": "Page {n} of {total}",
+      "error": "The PDF could not be created. Please try again.",
+      "unsupportedLocale": "PDFs can't be created in Arabic yet. Switch the language to English, French or Spanish to create one."
     }
   }
 }

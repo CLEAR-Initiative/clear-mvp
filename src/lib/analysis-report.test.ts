@@ -60,6 +60,12 @@ describe("analysis report helpers", () => {
       "sitrep-bara-um-dam-haj-ahmed-and-gharb-bara-north-kordofan-sudan-2026-09-29.pdf",
     );
   });
+
+  it("takes another prefix for other documents", () => {
+    expect(reportFileName("Daily Brief, Sudan", new Date("2026-10-30T08:00:00Z"), "brief")).toBe(
+      "brief-daily-brief-sudan-2026-10-30.pdf",
+    );
+  });
 });
 
 describe("report sections", () => {

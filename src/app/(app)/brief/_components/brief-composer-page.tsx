@@ -18,6 +18,7 @@ import { BriefPicker } from "./brief-picker";
 import { EventDetailDrawer } from "~/components/event-detail";
 import type { PreviewTarget } from "../_lib/preview-target";
 import { SendBriefModal } from "./send-brief-modal";
+import { BriefPdfButton } from "./brief-pdf-button";
 
 const NO_RETRY = new Set(["BAD_REQUEST", "FORBIDDEN", "UNAUTHORIZED", "NOT_FOUND"]);
 
@@ -89,6 +90,7 @@ function Composer({ brief }: { brief: Brief }) {
       <PageHeader title={text.title.trim() || brief.title} breadcrumbs={["CLEAR", t("page.breadcrumb")]}>
         <BriefStatusBadge status={brief.status} />
         {editable && <SaveIndicator status={saveStatus} />}
+        <BriefPdfButton brief={brief} beforeBuild={saveAll} />
         <Button
           size="xs"
           variant="default"

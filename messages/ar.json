@@ -3808,6 +3808,17 @@
       "addEmail": "name@example.org",
       "addEmailLabel": "إضافة عنوان إلى {list}",
       "add": "إضافة"
+    },
+    "pdf": {
+      "button": "تنزيل PDF",
+      "eyebrow": "موجز {cadence}",
+      "org": "المجلس النرويجي للاجئين · CLEAR",
+      "classification": "للاستخدام الداخلي والمشاركة الخاصة فقط",
+      "footer": "CLEAR · {title}",
+      "generated": "أُنشئ ملف PDF في {date} في CLEAR ({status}).",
+      "page": "الصفحة {n} من {total}",
+      "error": "تعذّر إنشاء ملف PDF. يُرجى المحاولة مرة أخرى.",
+      "unsupportedLocale": "لا يمكن إنشاء ملفات PDF باللغة العربية بعد. غيّر اللغة إلى الإنجليزية أو الفرنسية أو الإسبانية لإنشاء ملف."
     }
   }
 }

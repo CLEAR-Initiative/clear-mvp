@@ -3808,6 +3808,17 @@
       "addEmail": "nombre@ejemplo.org",
       "addEmailLabel": "Añadir una dirección a {list}",
       "add": "Añadir"
+    },
+    "pdf": {
+      "button": "Descargar PDF",
+      "eyebrow": "Brief {cadence}",
+      "org": "Consejo Noruego para Refugiados · CLEAR",
+      "classification": "Solo para uso interno y difusión privada",
+      "footer": "CLEAR · {title}",
+      "generated": "PDF creado el {date} en CLEAR ({status}).",
+      "page": "Página {n} de {total}",
+      "error": "No se pudo crear el PDF. Inténtalo de nuevo.",
+      "unsupportedLocale": "Todavía no se pueden crear PDF en árabe. Cambia el idioma a inglés, francés o español para crear uno."
     }
   }
 }
