@@ -38,6 +38,7 @@ vi.mock("~/components/map/minimap-card", () => ({
 const notify = vi.fn();
 vi.mock("@mantine/notifications", () => ({ notifications: { show: (o: unknown) => notify(o) } }));
 
+let threadData: { title: string | null; comments: unknown[]; documents: unknown[] } | undefined;
 let analysisResult: { data: Analysis | null | undefined; isLoading: boolean; isError: boolean };
 const currentQuery = vi.fn();
 const frameQuery = vi.fn();
@@ -75,11 +76,11 @@ vi.mock("~/trpc/react", () => ({
       },
       thread: {
         useQuery: () => ({
-          data: undefined,
-          isSuccess: false,
+          data: threadData,
+          isSuccess: threadData !== undefined,
           isError: false,
           isLoading: false,
-          refetch: async () => ({ data: undefined }),
+          refetch: async () => ({ data: threadData }),
         }),
       },
       rename: { useMutation: () => ({ mutate: vi.fn(), isPending: false }) },
@@ -172,10 +173,13 @@ beforeEach(() => {
   role = "analyst";
   activeTeamId = "team-1";
   analysisResult = { data: analysis(), isLoading: false, isError: false };
+  threadData = undefined;
   refreshOpts = {};
 });
 afterEach(async () => {
   cleanup();
+  vi.unstubAllGlobals();
+  vi.stubGlobal("ResizeObserver", ResizeObserverStub);
   vi.clearAllMocks();
   sessionStorage.clear();
   localStorage.clear();
@@ -564,5 +568,75 @@ describe("Analysis detail layout", () => {
     expect(screen.queryByText(/31%/)).not.toBeInTheDocument();
     expect(screen.queryByTitle(/41%/)).not.toBeInTheDocument();
     expect(screen.getByText("analysis.kpis.funding").closest("article")).toHaveTextContent("analysis.kpis.notReported");
+  });
+});
+
+describe("AnalysisDetail evidence journey", () => {
+  const source = (id: string) => ({ id, title: id, url: null, publishedAt: null, publisher: null });
+  const doc = (createdAt: string) => ({
+    id: "doc-1",
+    fileName: "brief.pdf",
+    reportId: "manual:abc",
+    s3Key: "k",
+    createdAt,
+    url: "https://files.example/brief.pdf",
+  });
+  const journey = () => screen.getByTestId("evidence-journey");
+  const card = () => screen.getByTestId("analysis-evidence-file");
+
+  beforeEach(() => {
+    Object.defineProperty(URL, "createObjectURL", { configurable: true, writable: true, value: () => "blob:x" });
+    Object.defineProperty(URL, "revokeObjectURL", { configurable: true, writable: true, value: () => {} });
+  });
+
+  it("shows nothing for a country analysis, which keeps files on this browser", async () => {
+    renderDetail(COUNTRY);
+    fireEvent.change(screen.getByTestId("analysis-evidence-input"), {
+      target: { files: [new File(["%PDF-1.4"], "brief.pdf", { type: "application/pdf" })] },
+    });
+    await screen.findByRole("button", { name: /brief\.pdf/ });
+    expect(screen.queryByTestId("evidence-journey")).toBeNull();
+  });
+
+  it("says the upload failed, then processes the file after a retry", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(new Response("{}", { status: 400 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ reportId: "manual:abc" }), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    renderDetail(createdScope(created()));
+    fireEvent.change(screen.getByTestId("analysis-evidence-input"), {
+      target: { files: [new File(["%PDF-1.4"], "brief.pdf", { type: "application/pdf" })] },
+    });
+    await vi.waitFor(() => expect(journey()).toHaveAttribute("data-stage", "failed"));
+    expect(card()).toHaveTextContent("analysis.layout.evidenceNotUploaded");
+    expect(card()).not.toHaveTextContent("analysis.layout.evidenceNew");
+
+    fireEvent.click(screen.getByRole("button", { name: "analysis.layout.journey.retry" }));
+    await vi.waitFor(() => expect(journey()).toHaveAttribute("data-stage", "processing"));
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(card()).toHaveTextContent("analysis.layout.evidenceNew");
+  });
+
+  it("shows the citation number and drops NEW once the analysis cites the file", () => {
+    threadData = { title: null, comments: [], documents: [doc("2026-09-27T05:00:00Z")] };
+    analysisResult = { data: { ...analysis(), sources: [source("r1"), source("manual:abc")] }, isLoading: false, isError: false };
+    renderDetail(createdScope(created()));
+    expect(journey()).toHaveAttribute("data-stage", "cited");
+    expect(card()).not.toHaveTextContent("analysis.layout.evidenceNew");
+    fireEvent.click(screen.getByRole("button", { name: 'analysis.layout.journey.cited:{"n":2}' }));
+    expect(replace).toHaveBeenCalledWith(expect.stringContaining("tab=sources"), expect.anything());
+  });
+
+  it("says when an update after the upload left the file out", () => {
+    threadData = { title: null, comments: [], documents: [doc("2026-09-27T05:00:00Z")] };
+    renderDetail(createdScope(created()));
+    expect(journey()).toHaveAttribute("data-stage", "notInUpdate");
+  });
+
+  it("is processing while no update has run since the upload", () => {
+    threadData = { title: null, comments: [], documents: [doc("2026-09-27T07:00:00Z")] };
+    renderDetail(createdScope(created()));
+    expect(journey()).toHaveAttribute("data-stage", "processing");
   });
 });

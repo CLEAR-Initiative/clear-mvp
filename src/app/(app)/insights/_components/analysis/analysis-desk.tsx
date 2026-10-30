@@ -16,7 +16,9 @@ import {
   type StoredFile,
 } from "~/lib/analysis-collaboration";
 import { readAnalysisFile, saveAnalysisFile } from "~/lib/analysis-file-store";
+import { evidenceJourney, type AnalysisCitations } from "~/lib/evidence-journey";
 import styles from "./dark/analysis-dark.module.css";
+import { EvidenceJourney } from "./evidence-journey";
 import { track } from "~/lib/analytics/track";
 
 interface ShownComment {
@@ -32,6 +34,8 @@ interface ShownFile {
   addedAt: string;
   url?: string;
   reportId?: string;
+  /** Kept on this browser, not yet confirmed by the server. */
+  pending?: boolean;
   /** This browser has no bytes and the knowledge base has no link yet. */
   missing?: boolean;
 }
@@ -47,16 +51,22 @@ function isPdf(file: File): boolean {
 /**
  * Add evidence and the discussion, side by side. Comments and files are kept
  * on this browser immediately. When the analysis has an automation, they are
- * also stored for the team and that copy replaces the local one.
+ * also stored for the team and that copy replaces the local one. Each
+ * uploaded file shows where it is on its way into the analysis.
  */
 export function AnalysisDesk({
   storageKey,
   automationId,
   teamId,
+  citations,
+  onOpenSources,
 }: {
   storageKey: string;
   automationId: string | null;
   teamId: string | null;
+  /** The shown analysis version's sources, to tell whether it cites a file. */
+  citations: AnalysisCitations | null;
+  onOpenSources?: () => void;
 }) {
   const t = useTranslations("analysis.layout");
   const format = useFormatter();
@@ -78,6 +88,8 @@ export function AnalysisDesk({
   const commentsRef = useRef<StoredComment[]>([]);
   const filesRef = useRef<StoredFile[]>([]);
   const sessionUrls = useRef(new Map<string, string>());
+  const [uploading, setUploading] = useState<ReadonlySet<string>>(new Set());
+  const [lostBytes, setLostBytes] = useState<ReadonlySet<string>>(new Set());
 
   useEffect(() => {
     const comments = readAnalysisComments(storageKey);
@@ -211,31 +223,56 @@ export function AnalysisDesk({
       added.push({ id, name: file.name, addedAt: new Date().toISOString(), pending: true });
     }
     rememberFiles((current) => [...current, ...added]);
-    if (!automationId) return;
     for (const [index, file] of pdfs.entries()) {
       const local = added[index];
-      if (!local) continue;
-      try {
-        const body = new FormData();
-        body.append("file", file);
-        body.append("automationId", automationId);
-        if (teamId) body.append("teamId", teamId);
-        const res = await fetch("/api/analysis/evidence", { method: "POST", body });
-        if (!res.ok) continue;
-        const uploaded = (await res.json()) as { reportId?: string | null };
-        if (uploaded.reportId) {
-          await saveAnalysisFile(storageKey, uploaded.reportId, file);
-          rememberFiles((current) =>
-            current.map((row) => (row.id === local.id ? { ...row, reportId: uploaded.reportId ?? undefined } : row)),
-          );
-        }
-        const fresh = await thread.refetch();
-        const saved = fresh.data?.documents.find((item) => item.fileName === local.name && item.url);
-        if (saved) rememberFiles((current) => dropConfirmed(current, new Set([local.id])));
-      } catch {
-        // The name and the bytes stay in the local list.
-      }
+      if (local) await upload(local, file);
     }
+  };
+
+  const setUploadingId = (id: string, on: boolean) =>
+    setUploading((current) => {
+      const next = new Set(current);
+      if (on) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+
+  /** Send one local file to the team's knowledge base. On failure the name and
+   * the bytes stay in the local list, and the card offers a retry. */
+  const upload = async (local: Pick<StoredFile, "id" | "name">, file: Blob) => {
+    if (!automationId) return;
+    setUploadingId(local.id, true);
+    try {
+      const body = new FormData();
+      body.append("file", file, local.name);
+      body.append("automationId", automationId);
+      if (teamId) body.append("teamId", teamId);
+      const res = await fetch("/api/analysis/evidence", { method: "POST", body });
+      if (!res.ok) return;
+      const uploaded = (await res.json()) as { reportId?: string | null };
+      if (uploaded.reportId) {
+        await saveAnalysisFile(storageKey, uploaded.reportId, file);
+        rememberFiles((current) =>
+          current.map((row) => (row.id === local.id ? { ...row, reportId: uploaded.reportId ?? undefined } : row)),
+        );
+      }
+      const fresh = await thread.refetch();
+      const saved = fresh.data?.documents.find((item) => item.fileName === local.name && item.url);
+      if (saved) rememberFiles((current) => dropConfirmed(current, new Set([local.id])));
+    } catch {
+      // The name and the bytes stay in the local list.
+    } finally {
+      setUploadingId(local.id, false);
+    }
+  };
+
+  const retry = async (file: ShownFile) => {
+    const bytes = await readAnalysisFile(storageKey, file.id);
+    if (!bytes) {
+      setLostBytes((current) => new Set(current).add(file.id));
+      return;
+    }
+    await upload(file, bytes);
   };
 
   return (
@@ -279,25 +316,57 @@ export function AnalysisDesk({
         {files.length > 0 && (
           <div className={styles.fileList}>
             {files.map((file) => {
-              const body = (
-                <>
+              const journey =
+                automationId && citations
+                  ? evidenceJourney(
+                      {
+                        uploading: uploading.has(file.id),
+                        failed: !!file.pending && !file.reportId && !uploading.has(file.id),
+                        reportId: file.reportId,
+                        addedAt: file.addedAt,
+                      },
+                      citations,
+                    )
+                  : null;
+              const when = format.relativeTime(new Date(file.addedAt));
+              const sub = !journey
+                ? t("evidenceUploadedKind")
+                : journey.stage === "failed"
+                  ? lostBytes.has(file.id)
+                    ? t("evidenceUnavailable")
+                    : t("evidenceNotUploaded")
+                  : journey.stage === "uploading"
+                    ? t("evidenceAddedAt", { time: when })
+                    : t("evidenceUploadedAt", { time: when });
+              return (
+                <div key={file.id} className={styles.fileCard} data-testid="analysis-evidence-file">
                   <span className={styles.fileMark}>PDF</span>
                   <span className={styles.fileBody}>
                     <span className={styles.fileNameRow}>
-                      <span className={styles.fileName}>{file.name}</span>
+                      <button type="button" className={styles.fileOpen} onClick={() => void openFile(file)}>
+                        {file.name}
+                      </button>
                     </span>
-                    <span className={styles.fileSub}>{t("evidenceUploadedKind")}</span>
-                    <span className={styles.fileStatus}>
-                      <span className={styles.pillOk}>{t("evidenceNew")}</span>
-                      <span className={styles.fileClass}>{t("evidenceInternal")}</span>
+                    <span className={styles.fileSub}>{sub}</span>
+                    <span className={styles.fileFoot}>
+                      <span className={styles.fileStatus}>
+                        {journey?.stage !== "cited" && journey?.stage !== "failed" && (
+                          <span className={styles.pillOk}>{t("evidenceNew")}</span>
+                        )}
+                        <span className={styles.fileClass}>{t("evidenceInternal")}</span>
+                      </span>
+                      {journey && (
+                        <EvidenceJourney
+                          journey={journey}
+                          addedAt={file.addedAt}
+                          generatedAt={citations?.generatedAt ?? null}
+                          onRetry={lostBytes.has(file.id) ? undefined : () => void retry(file)}
+                          onOpenSources={onOpenSources}
+                        />
+                      )}
                     </span>
                   </span>
-                </>
-              );
-              return (
-                <button key={file.id} type="button" className={styles.fileButton} onClick={() => void openFile(file)}>
-                  {body}
-                </button>
+                </div>
               );
             })}
           </div>

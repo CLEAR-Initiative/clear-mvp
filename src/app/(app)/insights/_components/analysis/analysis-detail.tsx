@@ -420,6 +420,8 @@ export function AnalysisDetail({
           storageKey={storedKey}
           automationId={automationId}
           teamId={isCountry ? null : activeTeamId}
+          citations={data ? { sourceIds: data.sources.map((s) => s.id), generatedAt: data.crisis.generatedAt } : null}
+          onOpenSources={openSources}
         />
       )}
     </Box>
