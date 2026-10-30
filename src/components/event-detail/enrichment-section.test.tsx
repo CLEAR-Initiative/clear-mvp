@@ -15,6 +15,7 @@ vi.mock("next-intl", () => ({
   useTranslations: () => (key: string, vars?: Record<string, unknown>) =>
     vars ? `${key}:${JSON.stringify(vars)}` : key,
   useFormatter: () => ({ dateTime: () => "10 Aug 2021", relativeTime: () => "2 hours ago", number: (n: number, o?: Intl.NumberFormatOptions) => n.toLocaleString("en", o) }),
+  useNow: () => new Date("2021-08-10T12:00:00Z"),
 }));
 
 /** `event_enrichment`; `flags` overrides per key (impact_prior_review). */

@@ -1,6 +1,6 @@
 "use client";
 
-import { useFormatter, useTranslations } from "next-intl";
+import { useFormatter, useNow, useTranslations } from "next-intl";
 import { IconPaperclip, IconSearch } from "@tabler/icons-react";
 import {
   isCaseGroupEntry,
@@ -36,12 +36,13 @@ interface EntryListProps {
 function HotlineRow({ entry }: { entry: HotlineEntry }) {
   const t = useTranslations("inbox");
   const format = useFormatter();
+  const now = useNow({ updateInterval: 60_000 });
   const mediaCount = entry.attachments.length + entry.omittedMediaCount;
   return (
     <span className={styles.entryBody}>
       <span className={styles.entryLine1}>
         <span className={styles.entryTitle}>{entry.title || t("pane.noText")}</span>
-        <span className={styles.entryTime}>{format.relativeTime(new Date(entry.sentAt))}</span>
+        <span className={styles.entryTime}>{format.relativeTime(new Date(entry.sentAt), now)}</span>
       </span>
       <span className={styles.entryPreview}>
         {entry.text.length > 0 ? entry.text.split("\n\n")[0] : t("pane.noText")}
@@ -67,12 +68,13 @@ function HotlineRow({ entry }: { entry: HotlineEntry }) {
 function CaseGroupRow({ entry }: { entry: CaseGroupEntry }) {
   const t = useTranslations("inbox");
   const format = useFormatter();
+  const now = useNow({ updateInterval: 60_000 });
   const hazards = [...new Set(entry.cases.map((c) => getHazardName(c.hazardType)))].join(", ");
   return (
     <span className={styles.entryBody}>
       <span className={styles.entryLine1}>
         <span className={styles.entryTitle}>{entry.eventTitle ?? t("event.untitled")}</span>
-        <span className={styles.entryTime}>{format.relativeTime(new Date(entry.sentAt))}</span>
+        <span className={styles.entryTime}>{format.relativeTime(new Date(entry.sentAt), now)}</span>
       </span>
       <span className={styles.entryPreview}>
         {t("cases.preview", { count: entry.undecided, hazard: hazards })}
@@ -89,6 +91,7 @@ function CaseGroupRow({ entry }: { entry: CaseGroupEntry }) {
 function LocationChallengeRow({ entry }: { entry: LocationChallengeEntry }) {
   const t = useTranslations("inbox");
   const format = useFormatter();
+  const now = useNow({ updateInterval: 60_000 });
   const c = entry.challenge;
   const place =
     c.proposedName?.trim() ||
@@ -98,7 +101,7 @@ function LocationChallengeRow({ entry }: { entry: LocationChallengeEntry }) {
     <span className={styles.entryBody}>
       <span className={styles.entryLine1}>
         <span className={styles.entryTitle}>{entry.signalTitle ?? t("location.untitled")}</span>
-        <span className={styles.entryTime}>{format.relativeTime(new Date(entry.sentAt))}</span>
+        <span className={styles.entryTime}>{format.relativeTime(new Date(entry.sentAt), now)}</span>
       </span>
       <span className={styles.entryPreview}>
         {place ? t("location.preview.proposed", { place }) : t("location.preview.bare")}

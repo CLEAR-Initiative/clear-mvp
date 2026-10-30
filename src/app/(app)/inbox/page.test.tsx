@@ -20,6 +20,7 @@ vi.mock("next-intl", () => ({
   useTranslations: () => (key: string, vars?: Record<string, unknown>) =>
     vars ? `${key}:${JSON.stringify(vars)}` : key,
   useFormatter: () => ({ dateTime: () => "15 Sep 2026", relativeTime: () => "1 month ago", number: (n: number) => n.toLocaleString("en") }),
+  useNow: () => new Date("2026-10-15T12:00:00Z"),
   useLocale: () => "en",
 }));
 vi.mock("next/link", () => ({

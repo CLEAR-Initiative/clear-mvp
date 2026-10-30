@@ -4,7 +4,7 @@ import { tagEventPath } from "~/lib/analytics/event-source";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { useFormatter, useTranslations } from "next-intl";
+import { useFormatter, useNow, useTranslations } from "next-intl";
 import { Badge, Box, Menu, Text, Tooltip, UnstyledButton } from "@mantine/core";
 import { IconBell } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
@@ -40,6 +40,7 @@ export function NotificationsBell({ variant, collapsed = false, onNavigate }: No
   const enabled = flagOn && canReadContent(authData?.user?.role);
   const t = useTranslations("nav.notifications");
   const format = useFormatter();
+  const now = useNow({ updateInterval: 60_000 });
   const router = useRouter();
   const utils = api.useUtils();
 
@@ -205,7 +206,7 @@ export function NotificationsBell({ variant, collapsed = false, onNavigate }: No
                   {n.message}
                 </Text>
                 <Text size="xs" c="var(--color-text-muted)">
-                  {format.relativeTime(new Date(n.createdAt))}
+                  {format.relativeTime(new Date(n.createdAt), now)}
                   {path && n.actionText ? ` · ${n.actionText}` : ""}
                 </Text>
               </Box>
