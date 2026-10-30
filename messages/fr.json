@@ -3088,16 +3088,14 @@
       "noFigure": "Pas de chiffre de personnes dans le besoin"
     },
     "events": {
-      "title": "Événements dans cette zone",
-      "empty": "Aucun événement enregistré dans cette zone sur cette période.",
-      "loading": "Chargement des événements…",
-      "error": "Les événements n'ont pas pu être chargés.",
+      "title": "Événements cités",
+      "empty": "Cette analyse ne cite aucun événement.",
       "untitled": "Événement sans titre",
       "severity": "Gravité {value}",
-      "count": "Échantillon : {shown} sur {total}"
+      "count": "{count, plural, one {# événement} other {# événements}}"
     },
     "sources": {
-      "title": "Sources citées"
+      "title": "Rapports cités"
     },
     "contexts": {
       "title": "Risques contextuels",
@@ -3277,6 +3275,25 @@
       "evidenceSitrepNote": "Plus de 30 jours : conservé, non utilisé dans les chiffres ni le résumé",
       "evidenceUploadedKind": "Ajouté à l'instant",
       "evidenceUploadedNote": "Conservé. Pas encore lu dans cette page.",
+      "evidenceNotUploaded": "Non envoyé. Il est seulement sur ce navigateur.",
+      "evidenceAddedAt": "Ajouté {time}",
+      "evidenceUploadedAt": "Envoyé {time}",
+      "journey": {
+        "uploading": "Envoi",
+        "uploaded": "Envoyé",
+        "failed": "Échec de l'envoi",
+        "failedDetail": "Le serveur n'a pas accepté le fichier. Il est seulement sur ce navigateur.",
+        "retry": "Réessayer",
+        "processing": "Traitement",
+        "processingDetail": "Lecture du texte, des lieux et des dates. La prochaine mise à jour de cette analyse pourra l'utiliser.",
+        "processed": "Traité",
+        "analysis": "Analyse",
+        "cited": "Cité en {n}",
+        "citedStep": "Cité dans cette analyse",
+        "citedDetail": "Source {n}",
+        "notInUpdate": "Absent de la dernière mise à jour",
+        "notInUpdateDetail": "Cette analyse a été mise à jour après l'envoi sans citer le fichier."
+      },
       "discussionTitle": "Discussion",
       "discussionComments": "{count, plural, one {# commentaire} other {# commentaires}}",
       "discussionEmpty": "Pas encore de commentaires. Lancez la discussion.",

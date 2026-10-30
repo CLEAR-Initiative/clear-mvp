@@ -3088,16 +3088,14 @@
       "noFigure": "Sin cifra de personas que necesitan ayuda"
     },
     "events": {
-      "title": "Eventos en esta área",
-      "empty": "No hay eventos registrados en esta área en este período.",
-      "loading": "Cargando eventos…",
-      "error": "No se pudieron cargar los eventos.",
+      "title": "Eventos citados",
+      "empty": "Este análisis no cita ningún evento.",
       "untitled": "Evento sin título",
       "severity": "Gravedad {value}",
-      "count": "Muestra: {shown} de {total}"
+      "count": "{count, plural, one {# evento} other {# eventos}}"
     },
     "sources": {
-      "title": "Fuentes citadas"
+      "title": "Informes citados"
     },
     "contexts": {
       "title": "Riesgos de contexto",
@@ -3277,6 +3275,25 @@
       "evidenceSitrepNote": "Más de 30 días: se conserva en el archivo y no se usa en las cifras ni en el resumen",
       "evidenceUploadedKind": "Subido ahora",
       "evidenceUploadedNote": "En el archivo. Aún no se ha leído en esta página.",
+      "evidenceNotUploaded": "No subido. Solo está en este navegador.",
+      "evidenceAddedAt": "Añadido {time}",
+      "evidenceUploadedAt": "Subido {time}",
+      "journey": {
+        "uploading": "Subiendo",
+        "uploaded": "Subido",
+        "failed": "Error al subir",
+        "failedDetail": "El servidor no aceptó el archivo. Solo está en este navegador.",
+        "retry": "Reintentar",
+        "processing": "Procesando",
+        "processingDetail": "Leyendo texto, lugares y fechas. La próxima actualización de este análisis podrá usarlo.",
+        "processed": "Procesado",
+        "analysis": "Análisis",
+        "cited": "Citado como {n}",
+        "citedStep": "Citado en este análisis",
+        "citedDetail": "Fuente {n}",
+        "notInUpdate": "No está en la última actualización",
+        "notInUpdateDetail": "Este análisis se actualizó después de la subida sin citar el archivo."
+      },
       "discussionTitle": "Discusión",
       "discussionComments": "{count, plural, one {# comentario} other {# comentarios}}",
       "discussionEmpty": "Aún no hay comentarios. Empiece la discusión.",

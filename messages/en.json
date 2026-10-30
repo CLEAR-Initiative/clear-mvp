@@ -3088,16 +3088,14 @@
       "noFigure": "No people-in-need figure"
     },
     "events": {
-      "title": "Events in this area",
-      "empty": "No events recorded in this area in this period.",
-      "loading": "Loading events…",
-      "error": "Events could not be loaded.",
+      "title": "Events cited",
+      "empty": "This analysis cites no events.",
       "untitled": "Untitled event",
       "severity": "Severity {value}",
-      "count": "Sample: {shown} of {total}"
+      "count": "{count, plural, one {# event} other {# events}}"
     },
     "sources": {
-      "title": "Sources cited"
+      "title": "Reports cited"
     },
     "contexts": {
       "title": "Context risks",
@@ -3277,6 +3275,25 @@
       "evidenceSitrepNote": "Older than 30 days: kept on file, not used in figures or summary",
       "evidenceUploadedKind": "Uploaded just now",
       "evidenceUploadedNote": "On file. Not read into this page yet.",
+      "evidenceNotUploaded": "Not uploaded. It is only in this browser.",
+      "evidenceAddedAt": "Added {time}",
+      "evidenceUploadedAt": "Uploaded {time}",
+      "journey": {
+        "uploading": "Uploading",
+        "uploaded": "Uploaded",
+        "failed": "Upload failed",
+        "failedDetail": "The server did not take the file. It is only in this browser.",
+        "retry": "Retry",
+        "processing": "Processing",
+        "processingDetail": "Reading text, places and dates. The next update of this analysis can use it.",
+        "processed": "Processed",
+        "analysis": "Analysis",
+        "cited": "Cited as {n}",
+        "citedStep": "Cited in this analysis",
+        "citedDetail": "Source {n}",
+        "notInUpdate": "Not in the latest update",
+        "notInUpdateDetail": "This analysis updated after the upload without citing the file."
+      },
       "discussionTitle": "Discussion",
       "discussionComments": "{count, plural, one {# comment} other {# comments}}",
       "discussionEmpty": "No comments yet. Start the discussion.",

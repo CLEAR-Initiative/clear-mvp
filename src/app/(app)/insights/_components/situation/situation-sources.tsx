@@ -13,17 +13,29 @@ import { distinctHeadings, readablePublisher } from "./source-heading";
  * dozens of reports, and a reference list scans far better at that volume. The
  * number on each entry is the SAME citation index used by the in-text `[n]`
  * chips elsewhere (the mapper builds one index off this ordered list), so a
- * reader following a citation lands on the matching reference.
+ * reader following a citation lands on the matching reference. `include`
+ * lists only some of them, each still under its own number.
  */
-export function SituationSources({ sources, className }: { sources: SaSource[]; className?: string }) {
+export function SituationSources({
+  sources,
+  className,
+  include,
+}: {
+  sources: SaSource[];
+  className?: string;
+  include?: (source: SaSource) => boolean;
+}) {
   const t = useTranslations("insights.situation");
   const format = useFormatter();
   const headingLabels = { event: t("sources.eventLabel"), hapiFigure: t("sources.hapiFigure") };
   const headings = distinctHeadings(sources, headingLabels, (iso) =>
     format.dateTime(new Date(iso), { year: "numeric", month: "short", day: "numeric" }),
   );
+  const shown = sources
+    .map((source, i) => ({ source, n: i + 1, heading: headings[i] ?? "" }))
+    .filter((r) => !include || include(r.source));
 
-  if (sources.length === 0) {
+  if (shown.length === 0) {
     return (
       <Text c="var(--color-text-muted)" style={{ fontSize: 13 }}>
         {t("sources.empty")}
@@ -40,7 +52,7 @@ export function SituationSources({ sources, className }: { sources: SaSource[]; 
         mb={12}
         style={{ fontSize: 11, letterSpacing: "0.06em" }}
       >
-        {t("sources.count", { count: sources.length })}
+        {t("sources.count", { count: shown.length })}
       </Text>
 
       <Box
@@ -61,10 +73,10 @@ export function SituationSources({ sources, className }: { sources: SaSource[]; 
               }
         }
       >
-        {sources.map((s, i) => (
+        {shown.map(({ source: s, n, heading }, i) => (
           <Reference
             key={s.id}
-            n={i + 1}
+            n={n}
             source={s}
             first={i === 0}
             publishedLabel={
@@ -77,7 +89,7 @@ export function SituationSources({ sources, className }: { sources: SaSource[]; 
                 : null
             }
             visitLabel={t("sources.visit")}
-            heading={headings[i] ?? ""}
+            heading={heading}
           />
         ))}
       </Box>

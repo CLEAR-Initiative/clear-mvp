@@ -88,7 +88,7 @@ export const SEEDED_ANALYSIS = {
   sourceTitle: "OCHA Sudan humanitarian update",
   /** An event citation id that is not a seeded event, so it cannot resolve to a title. */
   unresolvedEventCitation: "event:e2e-cited",
-  eventLabel: "Event",
+  untitledEvent: "Untitled event",
   /** 25_000_000 stock people in need on the WASH sector. */
   washPin: "25M",
   /** One leading range, not two figures. */

@@ -63,6 +63,7 @@ function analysis(item = "8.58 / \u20138.6 million people are displaced"): Analy
     changes: { comparedTo: null, notes: {} },
     scenarios: null,
     eventSourceIds: [],
+    citedEvents: [],
     keyFindings: [],
   };
 }

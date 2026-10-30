@@ -3088,16 +3088,14 @@
       "noFigure": "لا يوجد رقم للأشخاص المحتاجين"
     },
     "events": {
-      "title": "الأحداث في هذه المنطقة",
-      "empty": "لم تُسجَّل أي أحداث في هذه المنطقة خلال هذه الفترة.",
-      "loading": "جارٍ تحميل الأحداث…",
-      "error": "تعذر تحميل الأحداث.",
+      "title": "الأحداث المستشهد بها",
+      "empty": "لا يستشهد هذا التحليل بأي أحداث.",
       "untitled": "حدث بلا عنوان",
       "severity": "الخطورة {value}",
-      "count": "عينة: {shown} من {total}"
+      "count": "{count, plural, zero {لا أحداث} one {حدث واحد} two {حدثان} few {# أحداث} many {# حدثاً} other {# حدث}}"
     },
     "sources": {
-      "title": "المصادر المستشهد بها"
+      "title": "التقارير المستشهد بها"
     },
     "contexts": {
       "title": "المخاطر السياقية",
@@ -3277,6 +3275,25 @@
       "evidenceSitrepNote": "أقدم من 30 يومًا: يُحفظ في الملف ولا يُستخدم في الأرقام أو الملخص",
       "evidenceUploadedKind": "تم الرفع الآن",
       "evidenceUploadedNote": "محفوظ في الملف. لم يُقرأ في هذه الصفحة بعد.",
+      "evidenceNotUploaded": "لم يُرفع. إنه موجود على هذا المتصفح فقط.",
+      "evidenceAddedAt": "أُضيف {time}",
+      "evidenceUploadedAt": "رُفع {time}",
+      "journey": {
+        "uploading": "جارٍ الرفع",
+        "uploaded": "تم الرفع",
+        "failed": "فشل الرفع",
+        "failedDetail": "لم يقبل الخادم الملف. إنه موجود على هذا المتصفح فقط.",
+        "retry": "إعادة المحاولة",
+        "processing": "قيد المعالجة",
+        "processingDetail": "قراءة النص والأماكن والتواريخ. يمكن للتحديث التالي لهذا التحليل استخدامه.",
+        "processed": "تمت المعالجة",
+        "analysis": "التحليل",
+        "cited": "مذكور كمصدر {n}",
+        "citedStep": "مذكور في هذا التحليل",
+        "citedDetail": "المصدر {n}",
+        "notInUpdate": "ليس في آخر تحديث",
+        "notInUpdateDetail": "تم تحديث هذا التحليل بعد الرفع دون ذكر الملف."
+      },
       "discussionTitle": "النقاش",
       "discussionComments": "{count, plural, one {تعليق واحد} other {# تعليقات}}",
       "discussionEmpty": "لا تعليقات بعد. ابدأ النقاش.",
