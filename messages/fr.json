@@ -3819,6 +3819,12 @@
       "page": "Page {n} sur {total}",
       "error": "Le PDF n'a pas pu être créé. Veuillez réessayer.",
       "unsupportedLocale": "Les PDF ne peuvent pas encore être créés en arabe. Passez en anglais, français ou espagnol pour en créer un."
+    },
+    "copy": {
+      "button": "Copier",
+      "done": "Copié",
+      "plainOnly": "Ce navigateur n'a copié que du texte brut.",
+      "error": "Impossible de copier le Brief."
     }
   }
 }

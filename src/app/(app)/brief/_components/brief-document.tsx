@@ -2,6 +2,7 @@ import { Document, Link, Page, StyleSheet, Text, View } from "@react-pdf/rendere
 import { pdfSafe } from "~/lib/analysis-report";
 import { parseMarkdownLite, type InlineSpan } from "~/lib/brief/markdown-lite";
 import type { BriefView, CountRow, SeverityKey, ViewItem } from "~/lib/brief/view";
+import type { BriefTextLabels } from "~/lib/brief/clipboard";
 
 /**
  * The PDF can't read the app's CSS variables, so this mirrors the light-theme
@@ -60,21 +61,12 @@ const s = StyleSheet.create({
   footer: { position: "absolute", bottom: 20, left: 40, right: 40, height: 12, flexDirection: "row", justifyContent: "space-between", fontSize: 7, color: C.muted },
 });
 
-export interface BriefDocumentLabels {
+/** The section wording shared with the clipboard copy, plus the PDF's own chrome. */
+export interface BriefDocumentLabels extends BriefTextLabels {
   /** "Daily Brief". */
   eyebrow: string;
   org: string;
   classification: string;
-  summary: string;
-  counts: string;
-  items: string;
-  closingNotes: string;
-  /** Shown for an empty section or group. */
-  none: string;
-  types: string;
-  sources: string;
-  /** "+n more" types. */
-  more: (count: number) => string;
   footer: string;
   generated: string;
   page: (n: number, total: number) => string;

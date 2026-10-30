@@ -9,7 +9,7 @@ import { api } from "~/trpc/react";
 import { REPORT_BUILD_TIMEOUT_MS, reportFileName, withDeadline } from "~/lib/analysis-report";
 import type { Brief } from "~/lib/brief/types";
 import { toBriefView } from "~/lib/brief/view";
-import { useBriefViewLabels } from "../_hooks/use-brief-view-labels";
+import { useBriefTextLabels, useBriefViewLabels } from "../_hooks/use-brief-view-labels";
 import type { BriefDocumentLabels } from "./brief-document";
 
 /** Scripts the PDF's built-in font and layout engine can't set (no shaping / bidi), as for the Insights report. */
@@ -21,6 +21,7 @@ export function BriefPdfButton({ brief: shown, beforeBuild }: { brief: Brief; be
   const format = useFormatter();
   const locale = useLocale();
   const viewLabels = useBriefViewLabels();
+  const textLabels = useBriefTextLabels();
   const utils = api.useUtils();
   const [busy, setBusy] = useState(false);
   const unsupported = UNSUPPORTED_LOCALES.has(locale);
@@ -37,14 +38,7 @@ export function BriefPdfButton({ brief: shown, beforeBuild }: { brief: Brief; be
         eyebrow: t("pdf.eyebrow", { cadence: t(`cadence.${brief.cadence}`) }),
         org: t("pdf.org"),
         classification: t("pdf.classification"),
-        summary: t("sections.summary"),
-        counts: t("sections.counts"),
-        items: t("sections.items"),
-        closingNotes: t("sections.closingNotes"),
-        none: t("composer.empty"),
-        types: t("counts.byType"),
-        sources: t("counts.bySource"),
-        more: (count) => t("counts.more", { count }),
+        ...textLabels,
         footer: t("pdf.footer", { title: brief.title }),
         generated: t("pdf.generated", {
           date: format.dateTime(now, { dateStyle: "medium", timeStyle: "short" }),
