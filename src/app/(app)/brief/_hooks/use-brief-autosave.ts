@@ -11,6 +11,8 @@ import type { Saver } from "./use-save-tracker";
 
 export type { BriefText };
 
+type SavedText = Pick<Brief, "title" | "summary" | "closingNotes" | "updatedAt">;
+
 /** How long typing must pause before a draft's text is saved. */
 export const AUTOSAVE_DELAY_MS = 800;
 
@@ -18,9 +20,11 @@ export const AUTOSAVE_DELAY_MS = 800;
  * The Brief's title, summary and closing notes as the composer edits them,
  * saved to clear-api 800 ms after typing stops, when the page asks
  * (`flushAll`) and on leaving. Saves are ordered and only a success marks
- * the text saved (see `createOrderedSaver`). Responses don't touch the
- * `briefs.get` cache: whatever goes out (send, PDF, copy) is built from a
- * fresh server copy fetched after `saveAll()` drains.
+ * the text saved (see `createOrderedSaver`). Each success writes clear-api's
+ * text into the `briefs.get` cache, so coming back to the Brief opens on
+ * what was saved; saves succeed in queue order, so the cache only moves
+ * forward. Whatever goes out (send, PDF, copy) is built from a separate
+ * server read after `saveAll()` drains, not from this cache.
  */
 export function useBriefAutosave(brief: Brief, { track, setDirty, registerFlush }: Saver) {
   const t = useTranslations("brief");
@@ -39,7 +43,7 @@ export function useBriefAutosave(brief: Brief, { track, setDirty, registerFlush 
   deps.current = { track, setDirty, update, utils, t };
 
   const [saver] = useState<OrderedSaver<BriefText>>(() =>
-    createOrderedSaver<BriefText, unknown>({
+    createOrderedSaver<BriefText, SavedText | null>({
       initial: text,
       // A blank title is never sent (clear-api refuses it), so it counts as unchanged.
       same: (a, b) => textPatch(a, b) === null,
@@ -48,6 +52,14 @@ export function useBriefAutosave(brief: Brief, { track, setDirty, registerFlush 
       save: async (value, confirmed) => {
         const patch = textPatch(value, confirmed);
         return patch ? deps.current.update.mutateAsync({ id: briefId, ...patch }) : null;
+      },
+      onSaved: (saved) => {
+        if (!saved) return;
+        deps.current.utils.briefs.get.setData({ id: briefId }, (old) =>
+          old
+            ? { ...old, title: saved.title, summary: saved.summary, closingNotes: saved.closingNotes, updatedAt: saved.updatedAt }
+            : old,
+        );
       },
       onError: (err) =>
         notifications.show({
