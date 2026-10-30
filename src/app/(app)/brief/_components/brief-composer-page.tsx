@@ -93,14 +93,21 @@ function Composer({ brief }: { brief: Brief }) {
     };
   }, [flushAll, hasUnsaved, t]);
   const [sending, setSending] = useState(false);
-  // Whatever is still being typed goes into the email, the PDF and the copy.
-  // False, with a notice, when an edit couldn't be saved: nothing then goes
-  // out with older content.
-  const saveAll = useCallback(async (): Promise<boolean> => {
+  // Whatever is still being typed goes into the email, the PDF and the copy:
+  // every editor saves, the queue drains, and then the Brief is read back
+  // from clear-api, so the PDF and the copy are built from the server's own
+  // copy, never from cache entries patched by individual responses. False,
+  // with a notice, when an edit couldn't be saved: nothing then goes out
+  // with older content.
+  const utils = api.useUtils();
+  const saveAll = useCallback(async (): Promise<Brief | null> => {
     const ok = await saver.saveAll();
-    if (!ok) notifications.show({ color: "red", message: t("composer.unsaved") });
-    return ok;
-  }, [saver, t]);
+    if (!ok) {
+      notifications.show({ color: "red", message: t("composer.unsaved") });
+      return null;
+    }
+    return utils.briefs.get.fetch({ id: brief.id }, { staleTime: 0 });
+  }, [saver, t, utils, brief.id]);
   const editable = brief.status === "draft";
   // Events open in the drawer so the Brief stays on screen; Signals have no
   // drawer and open their page in a new tab.
@@ -124,14 +131,14 @@ function Composer({ brief }: { brief: Brief }) {
       <PageHeader title={text.title.trim() || brief.title} breadcrumbs={["CLEAR", t("page.breadcrumb")]}>
         <BriefStatusBadge status={brief.status} />
         {editable && <SaveIndicator status={saveStatus} />}
-        <BriefCopyButton brief={brief} beforeCopy={saveAll} />
-        <BriefPdfButton brief={brief} beforeBuild={saveAll} />
+        <BriefCopyButton beforeCopy={saveAll} />
+        <BriefPdfButton beforeBuild={saveAll} />
         <Button
           size="xs"
           variant="default"
           leftSection={<IconMailForward size={14} />}
           loading={sendTest.isPending}
-          onClick={() => void saveAll().then((ok) => ok && sendTest.mutate({ id: brief.id }))}
+          onClick={() => void saveAll().then((saved) => saved && sendTest.mutate({ id: brief.id }))}
           data-testid="brief-send-test"
         >
           {t("send.test")}

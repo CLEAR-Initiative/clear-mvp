@@ -5,24 +5,23 @@ import { useTranslations } from "next-intl";
 import { Button } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import { IconCheck, IconCopy } from "@tabler/icons-react";
-import { api } from "~/trpc/react";
 import type { Brief } from "~/lib/brief/types";
 import { toBriefView } from "~/lib/brief/view";
 import { copyBrief } from "~/lib/brief/clipboard";
 import { useBriefTextLabels, useBriefViewLabels } from "../_hooks/use-brief-view-labels";
 
 /** "Copy": the Brief on the clipboard as rich text, to paste into an email or a document. */
-export function BriefCopyButton({ brief: shown, beforeCopy }: { brief: Brief; beforeCopy: () => Promise<boolean> }) {
+export function BriefCopyButton({ beforeCopy }: { beforeCopy: () => Promise<Brief | null> }) {
   const t = useTranslations("brief.copy");
   const viewLabels = useBriefViewLabels();
   const textLabels = useBriefTextLabels();
-  const utils = api.useUtils();
   const [copied, setCopied] = useState(false);
 
   async function copy() {
     try {
-      if (!(await beforeCopy())) return;
-      const brief = utils.briefs.get.getData({ id: shown.id }) ?? shown;
+      // The server's copy, read back after every edit saved.
+      const brief = await beforeCopy();
+      if (!brief) return;
       const how = await copyBrief(toBriefView(brief, viewLabels), textLabels);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { Anchor, Button, Group, Modal, Select, Stack, Text } from "@mantine/core";
 import { api } from "~/trpc/react";
-import type { BriefSendResult } from "~/lib/brief/types";
+import type { Brief, BriefSendResult } from "~/lib/brief/types";
 
 /**
  * Send a draft Brief to a Recipient list: choose the list, confirm against
@@ -22,8 +22,8 @@ export function SendBriefModal({
   briefId: string;
   opened: boolean;
   onClose: () => void;
-  /** Saves anything still being typed, so the email carries it; false when an edit couldn't be saved. */
-  beforeSend: () => Promise<boolean>;
+  /** Saves anything still being typed, so the email carries it; null when an edit couldn't be saved. */
+  beforeSend: () => Promise<Brief | null>;
 }) {
   const t = useTranslations("brief.send");
   const utils = api.useUtils();

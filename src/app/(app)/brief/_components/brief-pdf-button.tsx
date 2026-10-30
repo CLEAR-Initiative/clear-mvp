@@ -5,7 +5,6 @@ import { useFormatter, useLocale, useTranslations } from "next-intl";
 import { Button, Tooltip } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import { IconFileDownload } from "@tabler/icons-react";
-import { api } from "~/trpc/react";
 import { REPORT_BUILD_TIMEOUT_MS, reportFileName, withDeadline } from "~/lib/analysis-report";
 import type { Brief } from "~/lib/brief/types";
 import { toBriefView } from "~/lib/brief/view";
@@ -16,22 +15,21 @@ import type { BriefDocumentLabels } from "./brief-document";
 const UNSUPPORTED_LOCALES = new Set(["ar"]);
 
 /** "Download PDF": the Brief on screen, built in the browser like the Insights report. */
-export function BriefPdfButton({ brief: shown, beforeBuild }: { brief: Brief; beforeBuild: () => Promise<boolean> }) {
+export function BriefPdfButton({ beforeBuild }: { beforeBuild: () => Promise<Brief | null> }) {
   const t = useTranslations("brief");
   const format = useFormatter();
   const locale = useLocale();
   const viewLabels = useBriefViewLabels();
   const textLabels = useBriefTextLabels();
-  const utils = api.useUtils();
   const [busy, setBusy] = useState(false);
   const unsupported = UNSUPPORTED_LOCALES.has(locale);
 
   async function download() {
     setBusy(true);
     try {
-      if (!(await beforeBuild())) return;
-      // What was just saved, not what was on screen when the click came.
-      const brief = utils.briefs.get.getData({ id: shown.id }) ?? shown;
+      // The server's copy, read back after every edit saved.
+      const brief = await beforeBuild();
+      if (!brief) return;
       const now = new Date();
       const view = toBriefView(brief, viewLabels);
       const labels: BriefDocumentLabels = {

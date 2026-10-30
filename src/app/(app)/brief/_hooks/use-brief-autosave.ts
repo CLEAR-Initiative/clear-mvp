@@ -14,13 +14,13 @@ export type { BriefText };
 /** How long typing must pause before a draft's text is saved. */
 export const AUTOSAVE_DELAY_MS = 800;
 
-type SavedText = BriefText & { updatedAt: string };
-
 /**
  * The Brief's title, summary and closing notes as the composer edits them,
  * saved to clear-api 800 ms after typing stops, when the page asks
  * (`flushAll`) and on leaving. Saves are ordered and only a success marks
- * the text saved (see `createOrderedSaver`).
+ * the text saved (see `createOrderedSaver`). Responses don't touch the
+ * `briefs.get` cache: whatever goes out (send, PDF, copy) is built from a
+ * fresh server copy fetched after `saveAll()` drains.
  */
 export function useBriefAutosave(brief: Brief, { track, setDirty, registerFlush }: Saver) {
   const t = useTranslations("brief");
@@ -39,7 +39,7 @@ export function useBriefAutosave(brief: Brief, { track, setDirty, registerFlush 
   deps.current = { track, setDirty, update, utils, t };
 
   const [saver] = useState<OrderedSaver<BriefText>>(() =>
-    createOrderedSaver<BriefText, SavedText | null>({
+    createOrderedSaver<BriefText, unknown>({
       initial: text,
       // A blank title is never sent (clear-api refuses it), so it counts as unchanged.
       same: (a, b) => textPatch(a, b) === null,
@@ -48,22 +48,6 @@ export function useBriefAutosave(brief: Brief, { track, setDirty, registerFlush 
       save: async (value, confirmed) => {
         const patch = textPatch(value, confirmed);
         return patch ? deps.current.update.mutateAsync({ id: briefId, ...patch }) : null;
-      },
-      // Saves succeed in order, so writing each confirmed value leaves the
-      // cache on the newest saved text, even when the last save had nothing
-      // left to send. Copy and PDF read the cache.
-      onSaved: (row, value) => {
-        deps.current.utils.briefs.get.setData({ id: briefId }, (old) =>
-          old
-            ? {
-                ...old,
-                ...(value.title.trim() ? { title: value.title } : {}),
-                summary: value.summary,
-                closingNotes: value.closingNotes,
-                ...(row ? { updatedAt: row.updatedAt } : {}),
-              }
-            : old,
-        );
       },
       onError: (err) =>
         notifications.show({
