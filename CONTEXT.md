@@ -250,6 +250,28 @@ legacy per-browser opt-out cookie is copied onto the account once.
 _Avoid_: calling this "telemetry" (that's clear-pipeline's LLM-call telemetry);
 adding an event property that can hold free text.
 
+### Brief
+
+**Brief**:
+A platform admin's hand-picked summary of one area over one **Brief window**, emailed to a
+**Recipient list**. Fixed sections: title and window, summary, counts, picked items
+(Alerts → Events → Signals, each with an optional analyst note) and closing notes. Built on
+the hidden, admin-only `/brief` page: the Brief on the left, Detection's History list with
+checkboxes on the right. A **draft** autosaves in clear-api; **sending** freezes it, and each
+picked item keeps the snapshot (title, severity, location, types, time) it was sent with.
+One area per Brief: a country, state or district. Cadence is daily, weekly or monthly.
+**Brief window**: the rolling 24 hours, 7 days or 30 days ending when the Brief was started
+(or last **Refreshed to now**). Alerts and Events fall in it by their first Signal, Signals by
+publication, the same as the History list and `entityStats`. A picked item from before the
+window is marked "from <date>".
+**Recipient list**: a named set of email addresses a Brief is sent to, managed on `/brief`.
+Addresses need not belong to CLEAR users; each email carries an unsubscribe link.
+**Alert Digest**: clear-api's automatic email of Alert titles to daily/weekly/monthly
+alert subscribers (`notifyAlertDigest`). Nothing calls it yet; a Brief is the hand-made
+counterpart, not a replacement.
+_Avoid_: "report" (collides with ReliefWeb reports, LogIE PAC reports and the Insights
+analysis PDF) and "digest" for a Brief; sending a Brief to alert subscribers.
+
 ### Detection detail navigation
 
 **Quick Navigation**:

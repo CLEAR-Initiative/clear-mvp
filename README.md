@@ -58,7 +58,7 @@ decisions are recorded in [`docs/adr/`](./docs/adr/).
 | Insights | `/insights`, `/crisis/[id]` | Build and read situation analyses; open a crisis to see its Events, summary and scenarios; export to PDF. `/analysis` still opens `/insights`. |
 | Agent | `/agent` (and a drawer on every page) | Chat with the CLEAR Agent, which answers from CLEAR's data and NRC's knowledge base. |
 | Observe | `/observe` | Field officers report something they have seen as a new Signal. |
-| Admin | `/admin`, `/metrics` | Users, teams, invitations, data sources, platform metrics. |
+| Admin | `/admin`, `/metrics`, `/brief` | Users, teams, invitations, data sources, platform metrics, hand-picked Briefs (hidden, admin-only). |
 
 The UI is available in English, French, Spanish and Arabic ([`messages/`](./messages/)), and is
 an installable PWA with an offline fallback page.

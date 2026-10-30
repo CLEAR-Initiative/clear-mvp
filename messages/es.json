@@ -3658,5 +3658,33 @@
       "note": "Totales mensuales de los últimos 12 meses por organización, equipo y rol. Se excluyen los grupos de menos de 5 personas y los administradores de la plataforma.",
       "button": "Descargar exportación NRC (CSV)"
     }
+  },
+  "brief": {
+    "page": {
+      "title": "Briefs",
+      "breadcrumb": "Briefs"
+    },
+    "composer": {
+      "window": "Cubre {start} → {end}",
+      "notFound": "Este Brief no existe o se eliminó.",
+      "loadError": "No se pudo cargar este Brief.",
+      "back": "Todos los Briefs"
+    },
+    "groups": {
+      "alert": "Alertas",
+      "event": "Eventos",
+      "signal": "Señales"
+    },
+    "items": {
+      "emptyGroup": "Nada seleccionado todavía.",
+      "addError": "No se pudo añadir el elemento: {message}",
+      "removeError": "No se pudo quitar el elemento: {message}"
+    },
+    "send": {
+      "test": "Enviarme una prueba",
+      "testSent": "Prueba enviada a tu correo electrónico.",
+      "testRefused": "El proveedor de correo rechazó la prueba.",
+      "testError": "No se pudo enviar la prueba: {message}"
+    }
   }
 }

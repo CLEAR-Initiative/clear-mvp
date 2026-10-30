@@ -3658,5 +3658,33 @@
       "note": "Totaux mensuels des 12 derniers mois par organisation, équipe et rôle. Les groupes de moins de 5 personnes et les administrateurs de la plateforme sont exclus.",
       "button": "Télécharger l'export NRC (CSV)"
     }
+  },
+  "brief": {
+    "page": {
+      "title": "Briefs",
+      "breadcrumb": "Briefs"
+    },
+    "composer": {
+      "window": "Période du {start} au {end}",
+      "notFound": "Ce Brief n'existe pas ou a été supprimé.",
+      "loadError": "Impossible de charger ce Brief.",
+      "back": "Tous les Briefs"
+    },
+    "groups": {
+      "alert": "Alertes",
+      "event": "Événements",
+      "signal": "Signaux"
+    },
+    "items": {
+      "emptyGroup": "Rien de sélectionné pour l'instant.",
+      "addError": "Impossible d'ajouter l'élément : {message}",
+      "removeError": "Impossible de retirer l'élément : {message}"
+    },
+    "send": {
+      "test": "M'envoyer un test",
+      "testSent": "Test envoyé à votre adresse e-mail.",
+      "testRefused": "Le fournisseur d'e-mail a refusé le test.",
+      "testError": "Impossible d'envoyer le test : {message}"
+    }
   }
 }

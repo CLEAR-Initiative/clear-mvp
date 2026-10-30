@@ -3658,5 +3658,33 @@
       "note": "Monthly totals for the last 12 months by organisation, team and role. Groups of fewer than 5 people and platform admins are excluded.",
       "button": "Download NRC export (CSV)"
     }
+  },
+  "brief": {
+    "page": {
+      "title": "Briefs",
+      "breadcrumb": "Briefs"
+    },
+    "composer": {
+      "window": "Covers {start} → {end}",
+      "notFound": "This Brief doesn't exist or was deleted.",
+      "loadError": "Couldn't load this Brief.",
+      "back": "All Briefs"
+    },
+    "groups": {
+      "alert": "Alerts",
+      "event": "Events",
+      "signal": "Signals"
+    },
+    "items": {
+      "emptyGroup": "Nothing picked yet.",
+      "addError": "Couldn't add the item: {message}",
+      "removeError": "Couldn't remove the item: {message}"
+    },
+    "send": {
+      "test": "Send test to me",
+      "testSent": "Test sent to your email address.",
+      "testRefused": "The email provider refused the test.",
+      "testError": "Couldn't send the test: {message}"
+    }
   }
 }

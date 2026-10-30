@@ -5,6 +5,7 @@ import { commentsRouter } from "~/server/api/routers/comments";
 import { feedbackRouter } from "~/server/api/routers/feedback";
 import { featureFlagsRouter } from "~/server/api/routers/featureFlags";
 import { authRouter } from "~/server/api/routers/auth";
+import { briefsRouter } from "~/server/api/routers/briefs";
 import { groundRouter } from "~/server/api/routers/ground";
 import { eventsRouter } from "~/server/api/routers/events";
 import { hapiRouter } from "~/server/api/routers/hapi";
@@ -29,6 +30,7 @@ export const appRouter = createTRPCRouter({
   alerts: alertsRouter,
   analysis: analysisRouter,
   auth: authRouter,
+  briefs: briefsRouter,
   comments: commentsRouter,
   feedback: feedbackRouter,
   events: eventsRouter,
