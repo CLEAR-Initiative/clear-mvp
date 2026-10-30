@@ -3,13 +3,14 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useFormatter, useTranslations } from "next-intl";
-import { ActionIcon, Badge, Box, Button, Card, Menu, Text, Tooltip } from "@mantine/core";
+import { ActionIcon, Box, Button, Card, Menu, Text, Tooltip } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import { IconChevronDown, IconPlus, IconTrash } from "@tabler/icons-react";
 import { DataTable, PageHeader, Table } from "~/components/ui";
 import { api } from "~/trpc/react";
 import { BRIEF_CADENCES, type BriefCadence, type BriefSummary } from "~/lib/brief/types";
 import { NewBriefModal } from "./new-brief-modal";
+import { BriefStatusBadge } from "./brief-status-badge";
 
 const NO_RETRY = new Set(["BAD_REQUEST", "FORBIDDEN", "UNAUTHORIZED"]);
 
@@ -125,21 +126,5 @@ export function BriefListPage() {
 
       <NewBriefModal cadence={cadence} onClose={() => setCadence(null)} />
     </Box>
-  );
-}
-
-/** Draft or sent, in theme tokens. */
-export function BriefStatusBadge({ status }: { status: BriefSummary["status"] }) {
-  const t = useTranslations("brief");
-  const tone = status === "sent" ? "success" : "warning";
-  return (
-    <Badge
-      size="sm"
-      variant="light"
-      style={{ background: `var(--color-${tone}-light)`, color: `var(--color-${tone})` }}
-      data-testid="brief-status"
-    >
-      {t(`status.${status}`)}
-    </Badge>
   );
 }

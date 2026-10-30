@@ -2,13 +2,16 @@
 
 import { useTranslations } from "next-intl";
 import Link from "next/link";
-import { Box, Button, Center, Grid, Loader, Stack, Text } from "@mantine/core";
+import { Box, Button, Center, Grid, Group, Loader, Stack, Text } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import { IconMailForward } from "@tabler/icons-react";
 import { PageHeader } from "~/components/ui";
 import { api } from "~/trpc/react";
 import type { Brief } from "~/lib/brief/types";
 import { useBriefItems } from "../_hooks/use-brief-items";
+import { useBriefAutosave } from "../_hooks/use-brief-autosave";
+import { useSaveTracker, type SaveStatus } from "../_hooks/use-save-tracker";
+import { BriefStatusBadge } from "./brief-status-badge";
 import { BriefComposer } from "./brief-composer";
 import { BriefPicker } from "./brief-picker";
 
@@ -50,7 +53,10 @@ export function BriefComposerPage({ briefId }: { briefId: string }) {
 
 function Composer({ brief }: { brief: Brief }) {
   const t = useTranslations("brief");
-  const items = useBriefItems(brief);
+  const { status: saveStatus, track } = useSaveTracker();
+  const items = useBriefItems(brief, { track });
+  const { text, setField } = useBriefAutosave(brief, track);
+  const editable = brief.status === "draft";
   const sendTest = api.briefs.sendTest.useMutation({
     onSuccess: (accepted) =>
       notifications.show(
@@ -63,7 +69,9 @@ function Composer({ brief }: { brief: Brief }) {
 
   return (
     <Box>
-      <PageHeader title={brief.title} breadcrumbs={["CLEAR", t("page.breadcrumb")]}>
+      <PageHeader title={text.title.trim() || brief.title} breadcrumbs={["CLEAR", t("page.breadcrumb")]}>
+        <BriefStatusBadge status={brief.status} />
+        {editable && <SaveIndicator status={saveStatus} />}
         <Button
           size="xs"
           variant="default"
@@ -77,12 +85,27 @@ function Composer({ brief }: { brief: Brief }) {
       </PageHeader>
       <Grid p={{ base: 16, sm: 24 }} gutter={24}>
         <Grid.Col span={{ base: 12, md: 5 }}>
-          <BriefComposer brief={brief} items={items} />
+          <BriefComposer brief={brief} items={items} text={text} onTextChange={setField} track={track} />
         </Grid.Col>
         <Grid.Col span={{ base: 12, md: 7 }}>
           <BriefPicker brief={brief} items={items} />
         </Grid.Col>
       </Grid>
     </Box>
+  );
+}
+
+/** "Saving…", "Saved" or "Not saved" for the composer's writes. */
+function SaveIndicator({ status }: { status: SaveStatus }) {
+  const t = useTranslations("brief");
+  if (status === "idle") return null;
+  const tone = status === "error" ? "var(--color-critical)" : "var(--color-text-muted)";
+  return (
+    <Group gap={6} data-testid="brief-save-status" data-status={status}>
+      {status === "saving" && <Loader size={10} color="gray" />}
+      <Text size="xs" c={tone}>
+        {t(`save.${status}`)}
+      </Text>
+    </Group>
   );
 }

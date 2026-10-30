@@ -3668,7 +3668,15 @@
       "window": "Covers {start} → {end}",
       "notFound": "This Brief doesn't exist or was deleted.",
       "loadError": "Couldn't load this Brief.",
-      "back": "All Briefs"
+      "back": "All Briefs",
+      "titleLabel": "Brief title",
+      "titleRequired": "The title can't be empty; the last one is kept.",
+      "refresh": "Refresh to now",
+      "refreshError": "Couldn't refresh the window: {message}",
+      "markdownHint": "**bold**, *italic*, - bullets, [link](https://…)",
+      "preview": "Preview",
+      "empty": "—",
+      "saveError": "Couldn't save: {message}"
     },
     "groups": {
       "alert": "Alerts",
@@ -3727,6 +3735,17 @@
       "cancel": "Cancel",
       "submit": "Start Brief",
       "error": "Couldn't start the Brief: {message}"
+    },
+    "sections": {
+      "summary": "Summary",
+      "counts": "Counts",
+      "items": "Picked items",
+      "closingNotes": "Closing notes"
+    },
+    "save": {
+      "saving": "Saving…",
+      "saved": "Saved",
+      "error": "Not saved"
     }
   }
 }

@@ -3668,7 +3668,15 @@
       "window": "Cubre {start} → {end}",
       "notFound": "Este Brief no existe o se eliminó.",
       "loadError": "No se pudo cargar este Brief.",
-      "back": "Todos los Briefs"
+      "back": "Todos los Briefs",
+      "titleLabel": "Título del Brief",
+      "titleRequired": "El título no puede estar vacío; se mantiene el anterior.",
+      "refresh": "Actualizar hasta ahora",
+      "refreshError": "No se pudo actualizar el periodo: {message}",
+      "markdownHint": "**negrita**, *cursiva*, - viñetas, [enlace](https://…)",
+      "preview": "Vista previa",
+      "empty": "—",
+      "saveError": "No se pudo guardar: {message}"
     },
     "groups": {
       "alert": "Alertas",
@@ -3727,6 +3735,17 @@
       "cancel": "Cancelar",
       "submit": "Empezar Brief",
       "error": "No se pudo empezar el Brief: {message}"
+    },
+    "sections": {
+      "summary": "Resumen",
+      "counts": "Recuentos",
+      "items": "Elementos seleccionados",
+      "closingNotes": "Notas finales"
+    },
+    "save": {
+      "saving": "Guardando…",
+      "saved": "Guardado",
+      "error": "Sin guardar"
     }
   }
 }

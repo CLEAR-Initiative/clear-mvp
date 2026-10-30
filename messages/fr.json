@@ -3668,7 +3668,15 @@
       "window": "Période du {start} au {end}",
       "notFound": "Ce Brief n'existe pas ou a été supprimé.",
       "loadError": "Impossible de charger ce Brief.",
-      "back": "Tous les Briefs"
+      "back": "Tous les Briefs",
+      "titleLabel": "Titre du Brief",
+      "titleRequired": "Le titre ne peut pas être vide ; le précédent est conservé.",
+      "refresh": "Actualiser jusqu'à maintenant",
+      "refreshError": "Impossible d'actualiser la période : {message}",
+      "markdownHint": "**gras**, *italique*, - puces, [lien](https://…)",
+      "preview": "Aperçu",
+      "empty": "—",
+      "saveError": "Impossible d'enregistrer : {message}"
     },
     "groups": {
       "alert": "Alertes",
@@ -3727,6 +3735,17 @@
       "cancel": "Annuler",
       "submit": "Commencer le Brief",
       "error": "Impossible de commencer le Brief : {message}"
+    },
+    "sections": {
+      "summary": "Résumé",
+      "counts": "Décomptes",
+      "items": "Éléments sélectionnés",
+      "closingNotes": "Notes de clôture"
+    },
+    "save": {
+      "saving": "Enregistrement…",
+      "saved": "Enregistré",
+      "error": "Non enregistré"
     }
   }
 }
