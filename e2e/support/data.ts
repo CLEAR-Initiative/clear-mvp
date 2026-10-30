@@ -77,3 +77,20 @@ export const SEEDED_EVENTS = {
   darfurConflict: "North Darfur Conflict Escalation",
   foodSecurity: "North Darfur Food Security Emergency",
 } as const;
+
+/**
+ * Synthetic Sudan analysis inserted by e2e/support/analysis-seed.ts.
+ * The hermetic seed has countries and events, and no analysis document.
+ * Keep these strings identical to that script.
+ */
+export const SEEDED_ANALYSIS = {
+  countryName: "Sudan",
+  sourceTitle: "OCHA Sudan humanitarian update",
+  /** An event citation id that is not a seeded event, so it cannot resolve to a title. */
+  unresolvedEventCitation: "event:e2e-cited",
+  eventLabel: "Event",
+  /** 25_000_000 stock people in need on the WASH sector. */
+  washPin: "25M",
+  /** One leading range, not two figures. */
+  leadingRange: "2–3 million",
+} as const;

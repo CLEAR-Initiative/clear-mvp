@@ -1,9 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { eventHref } from "~/lib/analytics/event-source";
+import { useTrackSectionSeen } from "~/lib/analytics/use-once-per-view";
+import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useFormatter, useTranslations } from "next-intl";
+import { useFormatter, useNow, useTranslations } from "next-intl";
 import { useMediaQuery } from "@mantine/hooks";
 import {
   Box,
@@ -75,6 +77,9 @@ import {
 } from "~/components/ui/detail-navigation-skeletons";
 import { useAgentCurrentView } from "~/lib/agent-current-view";
 
+/** An event counts as active while its last signal is at most this old. */
+const ACTIVE_WINDOW_MS = 14 * 24 * 60 * 60 * 1000;
+
 function bigIntStrToNumber(s: string | null | undefined): number | null {
   if (s === null || s === undefined) return null;
   const n = Number(s);
@@ -134,6 +139,10 @@ export function EventDetailContent({
     agentViewId ? { entity: { kind: "event", id: agentViewId, label: event?.title ?? undefined } } : null,
   );
   const isMobile = useMediaQuery("(max-width: 48em)") === true;
+  const enrichmentRef = useRef<HTMLDivElement>(null);
+  const feedbackRef = useRef<HTMLDivElement>(null);
+  useTrackSectionSeen(enrichmentRef, "enrichment", event?.id);
+  useTrackSectionSeen(feedbackRef, "feedback", event?.id);
 
   // TODO: after Prisma migration use event.title directly; remove this fallback
   // TODO: after Prisma migration use event.types (list) instead of eventType
@@ -141,6 +150,7 @@ export function EventDetailContent({
   const t = useTranslations("eventDetail");
   const tCommon = useTranslations("common");
   const format = useFormatter();
+  const now = useNow({ updateInterval: 60_000 });
   const router = useRouter();
   const isAlready = (event?.alerts?.length ?? 0) > 0;
   const [promoted, setPromoted] = useState(false);
@@ -332,8 +342,11 @@ export function EventDetailContent({
     );
   }
 
+  // Active while signals keep arriving. Alert status can't drive this: most
+  // events have no alert, and the pipeline archives stale/suppressed ones.
+  const isActive =
+    Date.now() - new Date(event.lastSignalCreatedAt).getTime() <= ACTIVE_WINDOW_MS;
   // Field mappings from old schema to current GqlEvent schema
-  const eventStatus = event.alerts[0]?.status ?? "active";
   // event.firstSignalCreatedAt replaces event.createdAt
   // event.lastSignalCreatedAt replaces event.updatedAt
   const eventCreatedAt = event.firstSignalCreatedAt;
@@ -511,7 +524,7 @@ export function EventDetailContent({
                 width: 7,
                 height: 7,
                 borderRadius: "50%",
-                background: eventStatus === "published" ? "#059669" : "#A3A3A3",
+                background: isActive ? "#059669" : "#A3A3A3",
                 flexShrink: 0,
                 marginTop: 1,
               }}
@@ -519,9 +532,9 @@ export function EventDetailContent({
             <Text
               size="xs"
               fw={500}
-              c={eventStatus === "published" ? "#059669" : "#737373"}
+              c={isActive ? "#059669" : "#737373"}
             >
-              {eventStatus === "published" ? t("status.active") : t("status.resolved")}
+              {isActive ? t("status.active") : t("status.inactive")}
             </Text>
           </Group>
         </Group>
@@ -584,7 +597,7 @@ export function EventDetailContent({
           </Group>
           <Group gap={4}>
             <IconClock size={13} color="var(--color-text-muted)" />
-            <Text size="xs" c="var(--color-text-muted)">{format.relativeTime(new Date(detectedAt))}</Text>
+            <Text size="xs" c="var(--color-text-muted)">{format.relativeTime(new Date(detectedAt), now)}</Text>
           </Group>
           <Box style={{ width: 1, height: 12, background: "var(--color-border)", alignSelf: "center" }} />
           <Group gap={4}>
@@ -762,7 +775,7 @@ export function EventDetailContent({
                                 {t("signals.sourceLink")}
                               </a>
                             )}
-                            <Text size="xs" c="var(--color-text-muted)">{format.relativeTime(new Date(sig.publishedAt))}</Text>
+                            <Text size="xs" c="var(--color-text-muted)">{format.relativeTime(new Date(sig.publishedAt), now)}</Text>
                           </Group>
                         </Group>
                         <Text fw={500} size="sm" c="var(--color-text-primary)" lineClamp={2} style={{ lineHeight: 1.4 }} mb={sigLocation ? 2 : 0}>
@@ -819,12 +832,12 @@ export function EventDetailContent({
                   : null;
                 const relDateLabel =
                   relDate && !Number.isNaN(relDate.getTime())
-                    ? format.relativeTime(relDate)
+                    ? format.relativeTime(relDate, now)
                     : "-";
                 return (
                   <Link
                     key={related.id}
-                    href={`/event/${related.id}`}
+                    href={eventHref(related.id, "related_event")}
                     style={{ textDecoration: "none", color: "inherit" }}
                   >
                     <Box
@@ -868,7 +881,11 @@ export function EventDetailContent({
 
           {/* Enrichment results - requested from the Actions card in the sidebar,
               shown here where the cited cases have room to breathe. */}
-          {!isCompact && <EnrichmentSection eventId={event.id} />}
+          {!isCompact && (
+            <div ref={enrichmentRef}>
+              <EnrichmentSection eventId={event.id} />
+            </div>
+          )}
         </Box>
 
         {/* Right sidebar - full-width under main column on phone */}
@@ -890,7 +907,9 @@ export function EventDetailContent({
 
               <SkeletonSlot pending={showPending} skeleton={<FeedbackCardSkeleton />}>
               <Card p={0} style={{ border: "1px solid var(--color-border)" }}>
-                <FeedbackSection entityId={event.id} entityType="event" />
+                <div ref={feedbackRef}>
+                  <FeedbackSection entityId={event.id} entityType="event" />
+                </div>
               </Card>
               </SkeletonSlot>
 

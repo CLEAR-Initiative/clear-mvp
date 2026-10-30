@@ -16,4 +16,11 @@ describe("navItemForRoute", () => {
       expect(enMessages.nav.items).toHaveProperty(key);
     }
   });
+
+  it("opens Insights at /insights", () => {
+    expect(NAV_ROUTES.insights).toBe("/insights");
+    expect(enMessages.nav.items.insights).toBe("Insights");
+    expect(navItemForRoute("/insights")).toBe("insights");
+    expect(navItemForRoute("/analysis")).toBeUndefined();
+  });
 });

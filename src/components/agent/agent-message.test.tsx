@@ -1,5 +1,5 @@
 import React from "react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { MantineProvider } from "@mantine/core";
 import { NextIntlClientProvider } from "next-intl";
@@ -89,7 +89,7 @@ describe("AgentMessage", () => {
     );
     expect(screen.getByRole("heading", { name: "Sudan" })).toBeInTheDocument();
     const event = screen.getByRole("link", { name: "El Obeid" });
-    expect(event).toHaveAttribute("href", "/event/ev_1");
+    expect(event).toHaveAttribute("href", "/event/ev_1?from=agent");
     expect(event).not.toHaveAttribute("target");
     expect(screen.getByRole("link", { name: "Sudan on the Map" })).toHaveAttribute("href", "/map?countryId=loc1");
     expect(screen.getAllByTestId("agent-app-link")).toHaveLength(2);
@@ -158,6 +158,28 @@ describe("AgentMessage", () => {
     expect(within(rows[1]!).getByText("CLEAR event")).toBeInTheDocument();
     expect(within(rows[1]!).queryByRole("link")).toBeNull();
     expect(within(rows[2]!).queryByRole("link")).toBeNull();
+  });
+
+  it("tracks agent.source_opened with no props (never the Source title)", () => {
+    const umamiTrack = vi.fn();
+    window.umami = { track: umamiTrack, identify: vi.fn() };
+    try {
+      renderMessage(
+        answer([
+          findCall("output-available", {
+            answer: "x",
+            sourceDocuments: [
+              { title: "Secret plan", sourceId: "7", sourceName: "NRC", fileId: "e29e1fb446e29d6ed894ffc6c07fcd7f", content: "p" },
+            ],
+          }),
+        ]),
+      );
+      fireEvent.click(screen.getByRole("link", { name: /Secret plan/ }));
+      expect(umamiTrack).toHaveBeenCalledWith("agent.source_opened", undefined);
+      expect(JSON.stringify(umamiTrack.mock.calls)).not.toContain("Secret plan");
+    } finally {
+      delete window.umami;
+    }
   });
 
   it("shows a tool that failed as unavailable, with no sources", () => {

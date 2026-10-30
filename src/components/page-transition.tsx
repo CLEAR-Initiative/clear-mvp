@@ -15,7 +15,6 @@ import { usePathname } from "next/navigation";
 import { Box } from "@mantine/core";
 import { MapOptimisticShell } from "~/app/(app)/map/_components/map-loading-overlay";
 import { DetectionPageSkeleton } from "~/components/ui/detection-page-skeleton";
-import { InsightsPageSkeleton } from "~/components/ui/insights-page-skeleton";
 import { OperationsPageSkeleton } from "~/components/ui/operations-page-skeleton";
 import { SkeletonBone, SkeletonPulseStyles } from "~/components/ui/skeleton-bone";
 import {
@@ -32,7 +31,7 @@ interface PageTransitionState {
 
 const PageTransitionContext = createContext<PageTransitionState | null>(null);
 
-/** Keep optimistic chrome visible long enough to read on fast routes (Insights). */
+/** Keep optimistic chrome visible long enough to read on fast routes. */
 const MIN_VISIBLE_MS = 220;
 const HANDOFF_MS = 40;
 const SAFETY_MS = 1600;
@@ -64,8 +63,6 @@ function OptimisticDestination({ segment }: { segment: string }) {
   switch (segment) {
     case "detection":
       return <DetectionPageSkeleton />;
-    case "insights":
-      return <InsightsPageSkeleton />;
     case "operations":
       return <OperationsPageSkeleton />;
     case "map":

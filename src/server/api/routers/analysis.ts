@@ -7,6 +7,7 @@ import {
   eventIdFromCitation,
   mapAnalysis,
   mapFigures,
+  mapWindowFunding,
   countryFrame,
   toAnalysisEvent,
   toCreatedAnalysis,
@@ -29,6 +30,13 @@ import {
   type AnalysisCadence,
 } from "~/lib/analysis-view";
 import { isPlatformAdmin } from "~/lib/roles";
+import {
+  aggregateScopeNeeds,
+  districtsInScope,
+  type AggregatedScopeNeeds,
+  type RawNeedsLocation,
+} from "~/lib/scope-needs";
+import type { GqlUserComment } from "~/lib/types/graphql";
 
 // Domain types live in the mapper; re-exported so existing imports keep compiling.
 /**
@@ -93,6 +101,25 @@ const FIGURES_QUERY = `
     }
   }
 `;
+
+/** Funding for the analysis window. Yearly hits the country cache; anything else is computed for that window. */
+const WINDOW_FUNDING_QUERY = `
+  query AnalysisWindowFunding($locationId: String, $windowStart: DateTime!, $windowEnd: DateTime!, $windowKind: String!) {
+    aggregatedDatapoint(
+      locationId: $locationId
+      windowStart: $windowStart
+      windowEnd: $windowEnd
+      windowKind: $windowKind
+    ) {
+      data
+    }
+  }
+`;
+
+/** A calendar-year start matches the stored yearly country bucket. */
+function fundingWindowKind(windowStart: string): "yearly" | "window" {
+  return /^\d{4}-01-01T00:00:00/.test(windowStart) ? "yearly" : "window";
+}
 
 /** clear-api clamps `eventsPage.limit` to 100. */
 const EVENTS_LIMIT = 100;
@@ -173,6 +200,44 @@ const DELETE_AUTOMATION_MUTATION = `
     deleteAnalysisAutomation(id: $id)
   }
 `;
+
+const THREAD_QUERY = `
+  query AnalysisThread($id: String!) {
+    analysisAutomation(id: $id) {
+      title
+      comments {
+        id
+        comment
+        createdAt
+        isCommentReply
+        repliedToCommentId
+        user { id name image }
+        tags { user { id name image } }
+      }
+      documents { id fileName reportId createdAt url }
+    }
+  }
+`;
+
+const RENAME_AUTOMATION_MUTATION = `
+  mutation RenameAnalysis($id: String!, $input: UpdateAnalysisAutomationInput!) {
+    updateAnalysisAutomation(id: $id, input: $input) { id }
+  }
+`;
+
+const ADD_ANALYSIS_COMMENT = `
+  mutation AddAnalysisComment($input: AddCommentInput!) {
+    addComment(input: $input) { id comment createdAt }
+  }
+`;
+
+interface AnalysisDocumentRow {
+  id: string;
+  fileName: string;
+  reportId: string | null;
+  createdAt: string;
+  url: string | null;
+}
 
 type Caller = { user: { role: string } };
 
@@ -269,6 +334,47 @@ async function fetchLabelLocations(
   return out;
 }
 
+const NEEDS_LOCATION_FIELDS = `
+  id
+  level
+  population
+  ancestorIds
+  metadata { type data }
+  ancestors { id level population metadata { type data } }
+`;
+
+/** The scope's locations, with the metadata the needs table reads. */
+async function fetchNeedsLocations(ids: string[], headers: Record<string, string>): Promise<RawNeedsLocation[]> {
+  if (ids.length === 0) return [];
+  const out: RawNeedsLocation[] = [];
+  for (let offset = 0; offset < ids.length; offset += 30) {
+    const slice = ids.slice(offset, offset + 30);
+    const fields = slice.map((_, i) => `l${i}: location(id: $l${i}) { ${NEEDS_LOCATION_FIELDS} }`).join("\n");
+    const params = slice.map((_, i) => `$l${i}: String!`).join(", ");
+    const variables = Object.fromEntries(slice.map((id, i) => [`l${i}`, id]));
+    const data = await graphqlFetch<Record<string, RawNeedsLocation | null>>(
+      `query ScopeNeedsLocations(${params}) {\n${fields}\n}`,
+      variables,
+      headers,
+    );
+    for (let i = 0; i < slice.length; i++) {
+      const loc = data?.[`l${i}`];
+      if (loc?.id) out.push(loc);
+    }
+  }
+  return out;
+}
+
+/** Admin-2 ids only. Metadata is loaded afterwards, and only for districts inside the scope. */
+async function fetchAdmin2Index(headers: Record<string, string>): Promise<RawNeedsLocation[]> {
+  const data = await graphqlFetch<{ locations: RawNeedsLocation[] | null }>(
+    `query NeedsDistrictIndex { locations(level: 2) { id level population ancestorIds } }`,
+    undefined,
+    headers,
+  );
+  return data.locations ?? [];
+}
+
 type FrameInput = {
   locationIds: string[];
   eventTypes?: string[];
@@ -339,19 +445,37 @@ async function hydrateAnalysis(
   const missingEvents = missing
     .map((id) => [id, eventIdFromCitation(id)] as const)
     .filter((p): p is readonly [string, string] => p[1] !== null);
-  const reportIds = [...listedIds, ...missing.filter((id) => eventIdFromCitation(id) === null)].filter(
-    (id): id is string => !!id,
+  // A listed row can still carry the raw `event:` id as its title. Look those
+  // up too, so a resolved event keeps its title instead of the citation id.
+  const listedEvents = listed
+    .map((r) => [r.report_id, r.report_id ? eventIdFromCitation(r.report_id) : null] as const)
+    .filter((p): p is readonly [string, string] => p[1] !== null);
+  const eventIds = [...new Set([...listedEvents, ...missingEvents].map(([, eventId]) => eventId))];
+  const reportIds = [...listedIds, ...missing].filter(
+    (id): id is string => !!id && eventIdFromCitation(id) === null,
   );
 
   const [reportMeta, eventMeta] = await Promise.all([
     fetchReportMeta(reportIds, headers),
-    fetchEventMeta(
-      missingEvents.map(([, eventId]) => eventId),
-      headers,
-    ),
+    fetchEventMeta(eventIds, headers),
   ]);
 
   const withPublisher = listed.map((r) => {
+    const eventId = r.report_id ? eventIdFromCitation(r.report_id) : null;
+    if (eventId) {
+      const ev = eventMeta.get(eventId);
+      const resolvedTitle = ev?.title?.trim();
+      if (ev && resolvedTitle) {
+        return {
+          ...r,
+          report_title: resolvedTitle,
+          source_url: r.source_url || `/event/${eventId}`,
+          published_at: r.published_at ?? ev.firstSignalCreatedAt,
+          publisher: "CLEAR",
+        };
+      }
+      return r;
+    }
     const name = r.report_id ? reportMeta.get(r.report_id)?.source?.name : undefined;
     return name ? { ...r, publisher: name } : r;
   });
@@ -392,7 +516,33 @@ async function hydrateAnalysis(
   );
 }
 
+export const RECORD_REPORT_EXPORTED_MUTATION = `
+  mutation RecordReportExported($analysisId: String!) {
+    recordReportExported(analysisId: $analysisId)
+  }
+`;
+
 export const analysisRouter = createTRPCRouter({
+  /**
+   * Records `analysis.report_exported` in clear-api's activity log once a
+   * report PDF is built. Best-effort: a failure only loses the log entry.
+   */
+  recordReportExported: protectedProcedure
+    .input(z.object({ analysisId: z.string().min(1) }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        const data = await graphqlFetch<{ recordReportExported: boolean }>(
+          RECORD_REPORT_EXPORTED_MUTATION,
+          { analysisId: input.analysisId },
+          cookieHeaders(ctx),
+        );
+        return data.recordReportExported === true;
+      } catch (err) {
+        console.error("recordReportExported failed:", err);
+        return false;
+      }
+    }),
+
   /**
    * The current analysis for a country (the country-default scope). Tries the
    * current year's frame, then last year's for the days after New Year before
@@ -652,13 +802,89 @@ export const analysisRouter = createTRPCRouter({
     }),
 
   /**
+   * Title, discussion, and uploaded files for one analysis automation.
+   * Empty when the automation is gone. The page keeps a local copy when this
+   * call cannot be served yet.
+   */
+  thread: protectedProcedure
+    .input(z.object({ id: z.string().min(1) }))
+    .query(async ({ ctx, input }) => {
+      const data = await graphqlFetch<{
+        analysisAutomation: {
+          title: string | null;
+          comments: GqlUserComment[];
+          documents: AnalysisDocumentRow[];
+        } | null;
+      }>(THREAD_QUERY, { id: input.id }, cookieHeaders(ctx));
+      return (
+        data.analysisAutomation ?? {
+          title: null,
+          comments: [] as GqlUserComment[],
+          documents: [] as AnalysisDocumentRow[],
+        }
+      );
+    }),
+
+  /** Store the display name on the automation. Blank is rejected here. */
+  rename: protectedProcedure
+    .input(z.object({ id: z.string().min(1), teamId: z.string().min(1), title: z.string().trim().min(1).max(120) }))
+    .mutation(async ({ ctx, input }) => {
+      const headers = cookieHeaders(ctx);
+      await requireTeamAutomation(ctx, input.teamId, input.id, headers);
+      await graphqlFetch(RENAME_AUTOMATION_MUTATION, { id: input.id, input: { title: input.title } }, headers);
+      return { id: input.id, title: input.title };
+    }),
+
+  /** Add a discussion comment on the automation. The thread is shared. */
+  comment: protectedProcedure
+    .input(z.object({ id: z.string().min(1), comment: z.string().trim().min(1).max(4000) }))
+    .mutation(async ({ ctx, input }) => {
+      const data = await graphqlFetch<{ addComment: { id: string; comment: string; createdAt: string } }>(
+        ADD_ANALYSIS_COMMENT,
+        { input: { analysisAutomationId: input.id, comment: input.comment } },
+        cookieHeaders(ctx),
+      );
+      return data.addComment;
+    }),
+
+  /**
+   * MSNA scores, district population and OCHA 3W for the scope's locations.
+   * A country or state expands to its admin-2 districts. People in need are
+   * summed and partners merged. Nothing is read from a crisis entity.
+   */
+  needs: protectedProcedure
+    .input(z.object({ locationIds: z.array(z.string().min(1)).min(1).max(MAX_CREATED_LOCATIONS) }))
+    .query(async ({ ctx, input }): Promise<AggregatedScopeNeeds> => {
+      const headers = cookieHeaders(ctx);
+      const scope = await fetchNeedsLocations(input.locationIds, headers);
+      const parents = scope.filter((loc) => loc.level < 2).map((loc) => loc.id);
+      let level2: RawNeedsLocation[] = [];
+      if (parents.length > 0) {
+        const index = await fetchAdmin2Index(headers);
+        const childIds = index
+          .filter((loc) => (loc.ancestorIds ?? []).some((id) => parents.includes(id)))
+          .map((loc) => loc.id);
+        level2 = await fetchNeedsLocations(childIds, headers);
+      }
+      return aggregateScopeNeeds(districtsInScope(scope, level2));
+    }),
+
+  /**
    * Breakdown figures for the KPI cards (inside vs abroad, people in need by
-   * sector) from the scope's all-time aggregation. Null-safe: missing fields
-   * come back null and the card hides that subsection.
+   * sector) from the scope's all-time aggregation. Funding, when a window is
+   * given, comes from that window's bucket — never the all-time tier, which
+   * sums funding across years. Missing fields come back null.
    */
   figures: protectedProcedure
-    .input(z.object({ locationId: z.string().min(1) }))
+    .input(
+      z.object({
+        locationId: z.string().min(1),
+        windowStart: z.string().min(1).optional(),
+        windowEnd: z.string().min(1).nullable().optional(),
+      }),
+    )
     .query(async ({ ctx, input }): Promise<AnalysisFigures> => {
+      const headers = cookieHeaders(ctx);
       const res = await graphqlFetch<{ aggregatedDatapoint: { data: Record<string, unknown> } | null }>(
         FIGURES_QUERY,
         {
@@ -666,9 +892,21 @@ export const analysisRouter = createTRPCRouter({
           windowStart: "1970-01-01T00:00:00Z",
           windowEnd: new Date().toISOString(),
         },
-        cookieHeaders(ctx),
+        headers,
       );
-      return mapFigures(res.aggregatedDatapoint?.data);
+      const stocks = mapFigures(res.aggregatedDatapoint?.data);
+      if (!input.windowStart) return { ...stocks, fundingReceived: null, fundingRequired: null };
+      const funding = await graphqlFetch<{ aggregatedDatapoint: { data: Record<string, unknown> } | null }>(
+        WINDOW_FUNDING_QUERY,
+        {
+          locationId: input.locationId,
+          windowStart: input.windowStart,
+          windowEnd: input.windowEnd ?? new Date().toISOString(),
+          windowKind: fundingWindowKind(input.windowStart),
+        },
+        headers,
+      );
+      return { ...stocks, ...mapWindowFunding(funding.aggregatedDatapoint?.data) };
     }),
 
   /**
@@ -677,27 +915,59 @@ export const analysisRouter = createTRPCRouter({
    * scope is fetched per district and merged.
    */
   events: protectedProcedure
-    .input(z.object({ locationIds: z.array(z.string().min(1)).min(1).max(MAX_CREATED_LOCATIONS), from: z.string().datetime() }))
+    .input(
+      z.object({
+        locationIds: z.array(z.string().min(1)).min(1).max(MAX_CREATED_LOCATIONS),
+        from: z.string().datetime(),
+        eventTypes: z.array(z.string()).optional(),
+        /**
+         * `event:<id>` citations from the analysis. Used only when the scope
+         * query is empty. The lookup itself stays at EVENTS_LIMIT; a longer
+         * list must not reject the whole events request.
+         */
+        citedIds: z.array(z.string()).max(2_000).optional(),
+      }),
+    )
     .query(async ({ ctx, input }): Promise<AnalysisEvents> => {
       const headers = cookieHeaders(ctx);
+      const types = input.eventTypes?.filter(Boolean) ?? [];
       const pages = await Promise.all(
         input.locationIds.map((locationId) =>
           graphqlFetch<{ eventsPage: { totalCount: number; items: GqlAnalysisEvent[] } }>(
             EVENTS_PAGE_QUERY,
-            { input: { locationId, from: input.from, orderBy: "CREATED_DESC", limit: EVENTS_LIMIT } },
+            {
+              input: {
+                locationId,
+                from: input.from,
+                orderBy: "CREATED_DESC",
+                limit: EVENTS_LIMIT,
+                ...(types.length > 0 ? { eventTypes: types } : {}),
+              },
+            },
             headers,
           ),
         ),
       );
       const seen = new Set<string>();
-      const items = pages
+      const pageItems = pages
         .flatMap((p) => p.eventsPage.items)
-        .filter((e) => (seen.has(e.id) ? false : (seen.add(e.id), true)))
+        .filter((e) => (seen.has(e.id) ? false : (seen.add(e.id), true)));
+      const pageTotal = pages.reduce((n, p) => n + p.eventsPage.totalCount, 0);
+      // A district query can miss events the write-up cited (location, window, or type).
+      // An empty page then reads as "0 events" next to a header that names those citations.
+      let recovered: GqlAnalysisEvent[] = [];
+      if (pageTotal === 0) {
+        const missing = [...new Set((input.citedIds ?? []).map(eventIdFromCitation).filter((id): id is string => !!id && !seen.has(id)))];
+        if (missing.length > 0) {
+          recovered = [...(await fetchEventMeta(missing.slice(0, EVENTS_LIMIT), headers)).values()];
+        }
+      }
+      const items = [...pageItems, ...recovered]
         .map(toAnalysisEvent)
         .sort((a, b) => b.startedAt.localeCompare(a.startedAt))
         .slice(0, EVENTS_LIMIT);
       return {
-        totalCount: pages.reduce((n, p) => n + p.eventsPage.totalCount, 0),
+        totalCount: pageTotal > 0 ? pageTotal : items.length,
         items,
       };
     }),

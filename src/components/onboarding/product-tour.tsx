@@ -11,12 +11,23 @@ import { requestTourMapDemo, stopTourMapDemo } from "~/lib/onboarding/tour-map-d
 import { PRODUCT_TOUR_STEPS } from "~/lib/onboarding/product-tour-steps";
 import { resolveTourTarget } from "~/lib/onboarding/resolve-tour-target";
 import { markTourComplete } from "~/lib/onboarding/storage";
+import {
+  trackTourEnded,
+  trackTourStarted,
+  trackTourStepViewed,
+  type TourOutcome,
+  type TourTrigger,
+} from "~/lib/onboarding/tour-analytics";
 import type { ProductTourStep, TourCompleteOptions } from "~/lib/onboarding/types";
 
 interface ProductTourProps {
   userId: string;
   active: boolean;
   onComplete: (options?: TourCompleteOptions) => void;
+  /** How this run started, for usage analytics. */
+  trigger?: TourTrigger;
+  /** Whether this device had never finished the tour before, for usage analytics. */
+  firstOnDevice?: boolean;
 }
 
 const CARD_WIDTH = 340;
@@ -192,7 +203,13 @@ function computeCardPos(
   };
 }
 
-export function ProductTour({ userId, active, onComplete }: ProductTourProps) {
+export function ProductTour({
+  userId,
+  active,
+  onComplete,
+  trigger = "auto",
+  firstOnDevice = false,
+}: ProductTourProps) {
   const t = useTranslations("onboarding.tour");
   const router = useRouter();
   const pathname = usePathname();
@@ -201,6 +218,11 @@ export function ProductTour({ userId, active, onComplete }: ProductTourProps) {
   const finishingRef = useRef(false);
   const cardPosRef = useRef<{ top: number; left: number } | null>(null);
   const [stepIndex, setStepIndex] = useState(0);
+  const stepIndexRef = useRef(0);
+  stepIndexRef.current = stepIndex;
+  /** Read at start only, so a later prop change doesn't re-fire tour.started. */
+  const startPropsRef = useRef({ trigger, firstOnDevice });
+  startPropsRef.current = { trigger, firstOnDevice };
   const [cardPos, setCardPos] = useState<{ top: number; left: number } | null>(null);
   /** True while spotlight target / map demo is still catching up. */
   const [scenePending, setScenePending] = useState(false);
@@ -228,9 +250,10 @@ export function ProductTour({ userId, active, onComplete }: ProductTourProps) {
   }, []);
 
   const finish = useCallback(
-    (options?: TourCompleteOptions) => {
+    (options: TourCompleteOptions | undefined, outcome: TourOutcome) => {
       if (finishingRef.current) return;
       finishingRef.current = true;
+      trackTourEnded(outcome, stepIndexRef.current);
       driverRef.current?.destroy();
       driverRef.current = null;
       setCardPos(null);
@@ -245,8 +268,18 @@ export function ProductTour({ userId, active, onComplete }: ProductTourProps) {
   useEffect(() => {
     if (!active || finishingRef.current) return;
     if (isTourSurface(pathname)) return;
-    finish({ landOnMap: false });
+    finish({ landOnMap: false }, "skipped");
   }, [active, pathname, finish]);
+
+  useEffect(() => {
+    if (!active) return;
+    const { trigger: how, firstOnDevice: first } = startPropsRef.current;
+    trackTourStarted(how, first);
+  }, [active]);
+
+  useEffect(() => {
+    if (active) trackTourStepViewed(stepIndex);
+  }, [active, stepIndex]);
 
   // Drive current step: show the card immediately, then refine against the page.
   useEffect(() => {
@@ -384,12 +417,12 @@ export function ProductTour({ userId, active, onComplete }: ProductTourProps) {
         }}
         onPrimary={() => {
           if (step.primaryAction === "finish") {
-            finish({ landOnMap: true });
+            finish({ landOnMap: true }, "finished");
             return;
           }
           setStepIndex((i) => Math.min(PRODUCT_TOUR_STEPS.length - 1, i + 1));
         }}
-        onSkip={() => finish({ landOnMap: true })}
+        onSkip={() => finish({ landOnMap: true }, "skipped")}
       />
     </div>
   );

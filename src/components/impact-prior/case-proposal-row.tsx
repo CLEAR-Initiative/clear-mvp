@@ -1,5 +1,6 @@
 "use client";
 
+import { eventHref, type EventFrom } from "~/lib/analytics/event-source";
 import { useState } from "react";
 import { Anchor, Badge, Box, Button, Group, Stack, Text, Textarea } from "@mantine/core";
 import { IconCircleCheck, IconCircleX } from "@tabler/icons-react";
@@ -17,6 +18,8 @@ const STATE_COLOR: Record<GqlCaseProposal["state"], string> = {
 };
 
 export interface CaseProposalRowProps {
+  /** Where its Event links are followed from (analytics `from`). */
+  eventFrom?: EventFrom;
   proposal: GqlCaseProposal;
   /** Client twin of clear-api's decider gate (admins and analysts, with
    * `impact_prior_review` on); the server is the real gate. Without it the
@@ -38,7 +41,7 @@ export interface CaseProposalRowProps {
  * Mounted through both doors — the Inbox's case group and the Event page's
  * Enrichment section — so the decision is the same wherever it is taken.
  */
-export function CaseProposalRow({ proposal, canDecide, onDecided, onStale }: CaseProposalRowProps) {
+export function CaseProposalRow({ proposal, canDecide, onDecided, onStale, eventFrom = "inbox" }: CaseProposalRowProps) {
   const t = useTranslations("caseReview");
   const tEnrichment = useTranslations("eventDetail.enrichment");
   const format = useFormatter();
@@ -155,12 +158,12 @@ export function CaseProposalRow({ proposal, canDecide, onDecided, onStale }: Cas
           </Text>
         )}
         {shown.matchedEventId && (
-          <Anchor href={`/event/${encodeURIComponent(shown.matchedEventId)}`} size="xs" data-testid="case-proposal-matched-event">
+          <Anchor href={eventHref(shown.matchedEventId, eventFrom)} size="xs" data-testid="case-proposal-matched-event">
             {t("matchesEvent")}
           </Anchor>
         )}
         {shown.state === "accepted" && shown.resultEventId && (
-          <Anchor href={`/event/${encodeURIComponent(shown.resultEventId)}`} size="xs" fw={600} data-testid="case-proposal-result-event">
+          <Anchor href={eventHref(shown.resultEventId, eventFrom)} size="xs" fw={600} data-testid="case-proposal-result-event">
             {t("resultEvent")}
           </Anchor>
         )}

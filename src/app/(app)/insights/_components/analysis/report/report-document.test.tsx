@@ -39,12 +39,15 @@ const data = {
 } as unknown as Analysis;
 
 const labels: ReportLabels = {
-  eyebrow: "Situation report", scopeKind: "Created analysis", period: "Covers 1 Jul 2026 to date", versionOf: "Analysis version of 29 Sep 2026, 21:52",
+  eyebrow: "Situation report", org: "Norwegian Refugee Council", classification: "Internal use and private sharing only",
+  disclaimer: "For planning. Figures come from the sources listed and are not a field assessment.",
+  scopeKind: "Created analysis", period: "Covers 1 Jul 2026 to date", versionOf: "Analysis version of 29 Sep 2026, 21:52",
   keyDevelopments: "Key developments", currentStatus: "Current status", displaced: "Displaced", displacedSub: "people displaced",
   inNeed: "In need", inNeedSub: "people in need", funding: "Funding", fundingSub: "received / required", notReported: "Not reported",
   map: "Scope map", mapScope: "Shaded: analysis area", mapEvents: "Dots: 2 events since 1 Jul 2026", contexts: "Context", hazards: "Hazards",
   displacement: "What is forcing people out", priorityNeeds: "Priority needs", responseActivities: "Response activities",
-  noResponse: "None reported.", outlook: "Outlook", sources: "Sources", provenance: "Provenance", footer: "CLEAR · Bara",
+  noResponse: "None reported.", outlook: "Outlook", mostLikely: "Most likely", bestCase: "Best case", worstCase: "Worst case",
+  sources: "Sources", eventLabel: "Event", hapiFigure: "HAPI figure", provenance: "Provenance", footer: "CLEAR · Bara",
   page: (n, t) => `Page ${n} of ${t}`, severity: (k) => k,
 };
 
@@ -62,6 +65,91 @@ describe("ReportDocument", () => {
     const buf = await renderToBuffer(
       <ReportDocument sections={[...REPORT_SECTIONS]} data={data} kpis={kpis} map={map} labels={labels} scopeName="Bara, North Kordofan, Sudan" generatedLabel="Report created 29 Sep 2026 by admin@clearinitiative.io" />,
     );
+    expect(buf.subarray(0, 5).toString()).toBe("%PDF-");
+  }, 30_000);
+
+  it("renders a Sudan-sized report to a PDF file", async () => {
+    const sentence = "Fighting, displacement and disease continue across Sudan. ";
+    const paragraph = (label: string) => `${label}: ${sentence.repeat(12)}`;
+    const lines = (n: number, label: string) => Array.from({ length: n }, (_, i) => paragraph(`${label} ${i}`));
+    const sector = (i: number) => ({
+      id: `s${i}`,
+      code: "HE",
+      name: `Sector ${i}`,
+      severity: i % 2 === 0 ? "critical" : "high",
+      impact: [],
+      humanitarian: [],
+      atRisk: [],
+      needs: lines(3, `Need ${i}`),
+      interventions: lines(3, `Response ${i}`),
+      coverage: [],
+      refs: [1],
+      lineRefs: {},
+      reportCount: 4,
+      evidenceScope: "sector" as const,
+    });
+    const sudan = {
+      ...data,
+      scope: { locationIds: ["sdn"], name: "Sudan", windowStart: "2026-01-01T00:00:00Z", windowEnd: null },
+      summary: paragraph("Summary"),
+      summaryRefs: [1, 2, 3],
+      keyFindings: lines(12, "Security").map((text) => ({ text: `Security: ${text}`, refs: [2] })),
+      contextRisks: Array.from({ length: 6 }, (_, i) => ({
+        key: `c${i}`,
+        label: `Context ${i}`,
+        items: lines(4, `Context ${i}`),
+        refs: [1],
+        lineRefs: {},
+      })),
+      hazards: { hazards: lines(8, "Hazard").map((text) => ({ text, refs: [1] })), vulnerabilities: [] },
+      displacement: { push: lines(8, "Displacement").map((text) => ({ text, refs: [2] })), return: [] },
+      sectors: Array.from({ length: 8 }, (_, i) => sector(i)),
+      sources: Array.from({ length: 40 }, (_, i) => ({
+        id: `r${i}`,
+        title: `OCHA Sudan update ${i}`,
+        url: `https://reliefweb.int/sudan/${i}`,
+        publishedAt: "2026-09-01T00:00:00Z",
+        publisher: "OCHA",
+      })),
+      scenarios: {
+        description: paragraph("Outlook"),
+        mostLikely: paragraph("Most likely"),
+        bestCase: paragraph("Best case"),
+        worstCase: paragraph("Worst case"),
+        refs: [2],
+      },
+      eventSourceIds: ["event:e1"],
+    } as unknown as Analysis;
+    const map = projectReportMap({
+      country: square(22, 9, 16),
+      areas: [],
+      events: Array.from({ length: 40 }, (_, i) => ({ point: [24 + (i % 10), 10 + Math.floor(i / 10)] as [number, number], severity: (i % 5) + 1 })),
+      width: 515,
+      height: 250,
+    });
+    const kpis = {
+      inside: 8.6e6,
+      abroad: 2.8e6,
+      displacedTotal: 11.4e6,
+      returned: null,
+      inNeed: { value: 30.4e6, low: 19e6, high: 30.4e6, newestAt: "2026-09-01" },
+      fundingReceived: 1.1e9,
+      fundingRequired: 4.2e9,
+    };
+    const started = Date.now();
+    const buf = await renderToBuffer(
+      <ReportDocument
+        sections={[...REPORT_SECTIONS]}
+        data={sudan}
+        kpis={kpis}
+        map={map}
+        labels={{ ...labels, scopeKind: "Country analysis", footer: "CLEAR · Sudan" }}
+        scopeName="Sudan"
+        generatedLabel="Report created 27 Oct 2026 by analyst@clearinitiative.io"
+      />,
+    );
+    expect(Date.now() - started).toBeLessThan(25_000);
+    expect(buf.byteLength).toBeGreaterThan(1000);
     expect(buf.subarray(0, 5).toString()).toBe("%PDF-");
   }, 30_000);
 });

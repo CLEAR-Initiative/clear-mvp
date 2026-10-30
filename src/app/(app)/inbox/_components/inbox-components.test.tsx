@@ -2,7 +2,7 @@ import React from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { MantineProvider } from "@mantine/core";
-import type { CaseGroupEntry, GroundTranslationState, HotlineEntry } from "~/lib/hotline-inbox";
+import { buildLocationChallengeEntries, type CaseGroupEntry, type GroundTranslationState, type HotlineEntry } from "~/lib/hotline-inbox";
 import { EntryList } from "./entry-list";
 import { ReadingPane, TranslationBlock } from "./reading-pane";
 import { AddToClearModal } from "./add-to-clear-modal";
@@ -14,6 +14,7 @@ vi.mock("next-intl", () => ({
     dateTime: () => "15 Sep 2026",
     relativeTime: () => "1 month ago",
   }),
+  useNow: () => new Date("2026-10-15T12:00:00Z"),
   useLocale: () => "en",
 }));
 
@@ -286,6 +287,54 @@ describe("EntryList", () => {
     fireEvent.click(rows[0]!);
     expect(baseProps.onSelect).toHaveBeenCalledWith("cases:evt-1");
   });
+
+  it("renders a Location challenge as its own kind of row: the Signal, the proposed place and the filer", () => {
+    const base = {
+      signalId: "sig-1",
+      status: "consideration",
+      note: null,
+      createdBy: "u-analyst",
+      createdAt: "2026-10-28T09:00:00Z",
+      updatedAt: "2026-10-28T09:00:00Z",
+      teamId: "T1",
+      team: null,
+      signal: { id: "sig-1", title: "Clashes near the market", generalLocation: null, originLocation: null, destinationLocation: null },
+    };
+    const entries = buildLocationChallengeEntries([
+      {
+        ...base,
+        id: "lc-1",
+        proposedLat: 12.0,
+        proposedLng: 24.95,
+        proposedName: "Kalma",
+        hasProposedPoint: true,
+        createdByName: "Amira",
+        proposedPlacement: { id: "D2", name: "Bielel", level: 2, ancestors: [] },
+      },
+      {
+        ...base,
+        id: "lc-2",
+        proposedLat: null,
+        proposedLng: null,
+        proposedName: null,
+        hasProposedPoint: false,
+        createdByName: null,
+        proposedPlacement: null,
+        signal: { ...base.signal, title: null },
+      },
+    ]);
+    wrap(<EntryList {...baseProps} entries={entries} />);
+    const rows = screen.getAllByTestId("inbox-entry");
+    expect(rows[0]).toHaveAttribute("data-kind", "location_challenge");
+    expect(rows[0]).toHaveTextContent("Clashes near the market");
+    expect(rows[0]).toHaveTextContent('location.preview.proposed:{"place":"Kalma"}');
+    expect(rows[0]).toHaveTextContent("Amira");
+    expect(within(rows[0]!).getByTestId("inbox-kind-pill")).toHaveAttribute("data-kind", "location_challenge");
+    expect(rows[1]).toHaveTextContent("location.untitled");
+    expect(rows[1]).toHaveTextContent("location.preview.bare");
+    fireEvent.click(rows[0]!);
+    expect(baseProps.onSelect).toHaveBeenCalledWith("location:lc-1");
+  });
 });
 
 describe("ReadingPane", () => {
@@ -414,7 +463,7 @@ describe("ReadingPane", () => {
     wrap(<ReadingPane {...baseProps} entry={entry} canDecide onCaseDecided={onCaseDecided} />);
     expect(screen.getByTestId("inbox-pane")).toHaveAttribute("data-kind", "cases");
     expect(screen.queryByTestId("inbox-action-bar")).not.toBeInTheDocument();
-    expect(screen.getByTestId("inbox-cases-event-link")).toHaveAttribute("href", "/event/evt-1");
+    expect(screen.getByTestId("inbox-cases-event-link")).toHaveAttribute("href", "/event/evt-1?from=inbox");
     expect(screen.getByTestId("case-proposal")).toHaveAttribute("data-state", "proposed");
     expect(screen.getByTestId("case-proposal-source")).toHaveAttribute("href", "https://example.test/floods");
 

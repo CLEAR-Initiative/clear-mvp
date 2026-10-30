@@ -264,12 +264,16 @@ export interface KpiValues {
 }
 
 /**
- * The headline figures shown in the KPI cards and the report. Stock figures
- * prefer the location's all-time aggregation (countries only) and fall back to
- * the analysis' own datapoints; funding reads only the analysis window.
+ * The headline figures shown in the KPI cards and the report.
+ *
+ * Displaced uses the analysis-window figure the write-up is about. The
+ * all-time stock is only a fallback when that figure is missing, so a card
+ * cannot show a different total from the paragraph beside it. Funding prefers
+ * the snapshot's dollars, then the same window's aggregation. A share that
+ * exists only in the prose is not a figure.
  */
 export function kpiValues(data: Analysis, figures: AnalysisFigures | undefined): KpiValues {
-  const inside = figures?.idpStock?.value ?? data.figures.displaced;
+  const inside = data.figures.displaced ?? figures?.idpStock?.value ?? null;
   const abroad = figures?.refugees?.value ?? null;
   return {
     inside,
@@ -279,8 +283,8 @@ export function kpiValues(data: Analysis, figures: AnalysisFigures | undefined):
     inNeed:
       figures?.overallPin ??
       (data.figures.inNeed != null ? { value: data.figures.inNeed, low: null, high: null, newestAt: null } : null),
-    fundingReceived: data.figures.fundingReceived,
-    fundingRequired: data.figures.fundingRequired,
+    fundingReceived: data.figures.fundingReceived ?? figures?.fundingReceived?.value ?? null,
+    fundingRequired: data.figures.fundingRequired ?? figures?.fundingRequired?.value ?? null,
   };
 }
 

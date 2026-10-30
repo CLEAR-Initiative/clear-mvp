@@ -54,6 +54,10 @@ jobs:
           registry-token: ${{ secrets.GITHUB_TOKEN }}
           mapbox-token: ${{ secrets.NEXT_PUBLIC_MAPBOX_TOKEN }}
           sentry-dsn: ${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}
+          sentry-client: ${{ secrets.NEXT_PUBLIC_SENTRY_CLIENT }}
+          # Public, not secrets: GitHub environment variables. Unset = no tracker.
+          umami-host-url: ${{ vars.NEXT_PUBLIC_UMAMI_HOST_URL }}
+          umami-website-id: ${{ vars.NEXT_PUBLIC_UMAMI_WEBSITE_ID }}
           # Final-stage-only cache export: the builder-stage upload was ~1-2 min
           # of the 3.85-min image build and is invalidated by every merge anyway.
           cache-mode: min

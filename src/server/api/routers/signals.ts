@@ -2,7 +2,7 @@ import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { graphqlFetch, cookieHeaders } from "~/server/api/graphql";
 import type { GqlSignal, GqlSignalDetail } from "~/lib/types/graphql";
-import { sanitizeLocationGeometry } from "~/lib/geo/to-map-point";
+import { sanitizeLocationGeometry, sanitizeSignalListGeometry } from "~/lib/geo/to-map-point";
 
 const LOCATION_FIELDS = `id name level geoId ancestorIds geometry pointType parent { id name } ancestors { id name level }`;
 
@@ -274,6 +274,7 @@ export const signalsRouter = createTRPCRouter({
         { input: graphqlInput },
         cookieHeaders(ctx),
       );
+      data.signalsPage.items.forEach(sanitizeSignalListGeometry);
       return data.signalsPage;
     }),
 
@@ -302,6 +303,23 @@ export const signalsRouter = createTRPCRouter({
     );
     const MANUAL_SOURCE_NAMES = new Set(["field_officer", "partner", "government"]);
     return data.dataSources.filter((s) => MANUAL_SOURCE_NAMES.has(s.name));
+  }),
+
+  /** Names of active push-feed sources (type "webhook", e.g. sudan-war-x),
+   *  sorted. Source filter chips otherwise only list sources in the loaded
+   *  rows; push feeds are added so they can be picked before any of their
+   *  signals are on screen. Organisation sources are deliberately left out —
+   *  there are 150+ of them, which makes the chip list unusable. */
+  pushFeedSourceNames: protectedProcedure.query(async ({ ctx }) => {
+    const data = await graphqlFetch<{ dataSources: { id: string; name: string; type: string; isActive: boolean }[] }>(
+      DATA_SOURCES_QUERY,
+      undefined,
+      cookieHeaders(ctx),
+    );
+    return data.dataSources
+      .filter((s) => s.isActive && s.type === "webhook")
+      .map((s) => s.name)
+      .sort();
   }),
 
   /** Pipeline-facing signal creation (used internally, not from UI) */

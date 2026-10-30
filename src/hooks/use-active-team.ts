@@ -7,6 +7,9 @@ const STORAGE_KEY = "clear-active-team-id";
 
 export function useActiveTeam() {
   const [activeTeamId, setActiveTeamId] = useState<string | null>(null);
+  // The stored id is read in an effect, so the fallback below must wait for
+  // it or it would replace a valid stored team on the first render.
+  const [storageRead, setStorageRead] = useState(false);
   const { data: teams, isLoading, isError } = api.teams.myTeams.useQuery();
   const setDefault = api.teams.setDefaultTeam.useMutation();
 
@@ -16,15 +19,17 @@ export function useActiveTeam() {
     if (stored) {
       setActiveTeamId(stored);
     }
+    setStorageRead(true);
   }, []);
 
-  // If no stored team but user has teams, pick the first one
+  // No stored team, or a stored one the user is not in (another environment,
+  // or removed from it): pick the first team the user belongs to
   useEffect(() => {
-    if (!activeTeamId && teams?.length) {
+    if (storageRead && teams?.length && !teams.some((t) => t.id === activeTeamId)) {
       switchTeam(teams[0]!.id);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTeamId, teams]);
+  }, [storageRead, activeTeamId, teams]);
 
   const switchTeam = useCallback(
     (teamId: string) => {

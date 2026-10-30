@@ -101,7 +101,7 @@ describe("Agent navigation", () => {
     act(() => agent.applyNavigation("nav-1", result));
     act(() => agent.applyNavigation("nav-1", result)); // a re-render must not move again
     expect(push).toHaveBeenCalledTimes(1);
-    expect(push).toHaveBeenCalledWith("/event/ev-1");
+    expect(push).toHaveBeenCalledWith("/event/ev-1?from=agent");
     land();
 
     // The page the user lands on rewrites the filters and the Map's view…
@@ -117,6 +117,20 @@ describe("Agent navigation", () => {
     expect(sessionStorage.getItem("map-nav-context")).toBe('{"country":"Sudan"}');
     expect(sessionStorage.getItem("clear.map.viewState.v1")).toBe('{"region":"North Darfur"}');
     expect(screen.queryByRole("button", { name: "Back" })).toBeNull();
+  });
+
+  it("tracks agent.navigation_back when Back undoes a move", () => {
+    const umamiTrack = vi.fn();
+    window.umami = { track: umamiTrack, identify: vi.fn() };
+    try {
+      const { land } = renderWith(<AgentMessage message={answer()} />);
+      act(() => agent.applyNavigation("nav-1", result));
+      land();
+      fireEvent.click(screen.getByRole("button", { name: "Back" }));
+      expect(umamiTrack).toHaveBeenCalledWith("agent.navigation_back", undefined);
+    } finally {
+      delete window.umami;
+    }
   });
 
   it("keeps the page unmounted until Back lands, then remounts it on the restored URL and state", () => {
@@ -161,7 +175,7 @@ describe("Agent navigation", () => {
     act(() => {
       agent.chat.messages = [answer()];
     });
-    expect(push).toHaveBeenCalledWith("/event/ev-1");
+    expect(push).toHaveBeenCalledWith("/event/ev-1?from=agent");
   });
 
   it("never replays a move from a Thread opened from history, with the Thread on screen", () => {
@@ -188,7 +202,7 @@ describe("Agent navigation from the Agent page", () => {
     act(() => agent.applyNavigation("nav-1", result));
     expect(agent.open).toBe(true);
     expect(agent.threadId).toBe(threadId);
-    expect(push).toHaveBeenCalledWith("/event/ev-1");
+    expect(push).toHaveBeenCalledWith("/event/ev-1?from=agent");
 
     // On the new page the drawer shows that same Thread.
     pathname = "/event/ev-1";

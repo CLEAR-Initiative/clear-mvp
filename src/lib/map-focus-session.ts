@@ -1,8 +1,7 @@
 /**
- * In-session solo-focus context for map ↔ Insights ↔ Map-tab round-trips.
+ * In-session solo-focus context for the Map tab.
  *
- * Survives bare `/map` (sidebar Map tab) and drives Insights → crisis detail
- * when a crisis chip is still active. Session-only (same tab), like map-view-state.
+ * Survives bare `/map` (sidebar Map tab). Session-only (same tab), like map-view-state.
  */
 
 import { mapFocusHref, type MapFocusKind } from "~/lib/map-focus-href";
@@ -115,14 +114,4 @@ export function mapNavHrefFromFocusSession(
 ): string {
   if (!session || session.kind === "place") return "/map";
   return mapFocusHref(session.kind, session.id);
-}
-
-/** Sidebar Insights — return to the focused crisis detail when still active. */
-export function insightsNavHrefFromFocusSession(
-  session: MapFocusSession | null,
-): string {
-  if (session?.kind === "crisis") {
-    return `/crisis/${encodeURIComponent(session.id)}`;
-  }
-  return "/insights";
 }

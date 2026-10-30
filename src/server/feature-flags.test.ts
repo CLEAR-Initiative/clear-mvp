@@ -32,6 +32,6 @@ describe("readFeatureFlag", () => {
     expect(await readFeatureFlag("hotline_translation", {})).toBe(false);
     resetFeatureFlagCache();
     graphqlFetch.mockRejectedValueOnce(new Error("down"));
-    expect(await readFeatureFlag("ground_intel", {})).toBe(true);
+    expect(await readFeatureFlag("detection", {})).toBe(true);
   });
 });

@@ -4,6 +4,7 @@ import type { SaBullet, SaSector } from "~/server/api/mappers/situation-analysis
 import { compactNumber } from "~/server/api/mappers/situation-analysis";
 import { splitSubject, type KpiValues } from "~/lib/analysis-view";
 import { pdfSafe, type ReportMap, type ReportSectionKey } from "~/lib/analysis-report";
+import { distinctHeadings, readablePublisher, sourceHeading } from "../../situation/source-heading";
 
 /**
  * The PDF can't read the app's CSS variables, so this mirrors the light-theme
@@ -29,8 +30,11 @@ const SEVERITY_RANK: Record<string, number> = { critical: 0, high: 1, medium: 2,
 const MAX_SECTOR_LINES = 3;
 
 const s = StyleSheet.create({
-  page: { paddingTop: 36, paddingBottom: 48, paddingHorizontal: 40, fontSize: 9.5, color: C.ink, fontFamily: "Helvetica", lineHeight: 1.45 },
-  eyebrow: { fontSize: 8, color: C.accent, fontFamily: "Helvetica-Bold", letterSpacing: 1, textTransform: "uppercase" },
+  page: { paddingTop: 42, paddingBottom: 52, paddingHorizontal: 40, fontSize: 9.5, color: C.ink, fontFamily: "Helvetica", lineHeight: 1.5 },
+  band: { position: "absolute", top: 0, left: 0, right: 0, height: 5, backgroundColor: C.accent },
+  running: { position: "absolute", top: 14, left: 40, right: 40, flexDirection: "row", justifyContent: "space-between" },
+  runningText: { fontSize: 7, color: C.muted, fontFamily: "Helvetica-Bold", letterSpacing: 0.4, textTransform: "uppercase" },
+  eyebrow: { fontSize: 8, color: C.accent, fontFamily: "Helvetica-Bold", letterSpacing: 1.1, textTransform: "uppercase" },
   title: { fontSize: 20, fontFamily: "Helvetica-Bold", marginTop: 4, lineHeight: 1.2 },
   meta: { fontSize: 8.5, color: C.secondary, marginTop: 6 },
   rule: { borderBottomWidth: 1, borderBottomColor: C.border, marginVertical: 14 },
@@ -42,8 +46,8 @@ const s = StyleSheet.create({
   bulletText: { flex: 1 },
   bold: { fontFamily: "Helvetica-Bold" },
   refs: { fontSize: 7, color: C.info },
-  kpis: { flexDirection: "row", gap: 8, marginTop: 4 },
-  kpi: { flex: 1, borderWidth: 1, borderColor: C.border, padding: 8 },
+  kpis: { flexDirection: "row", gap: 8, marginTop: 2 },
+  kpi: { flex: 1, borderWidth: 1, borderColor: C.border, borderTopWidth: 3, borderTopColor: C.accent, padding: 8, backgroundColor: "#FAFAFA" },
   kpiLabel: { fontSize: 7.5, color: C.secondary, fontFamily: "Helvetica-Bold", textTransform: "uppercase", letterSpacing: 0.6 },
   kpiValue: { fontSize: 16, fontFamily: "Helvetica-Bold", marginTop: 3 },
   kpiSub: { fontSize: 7.5, color: C.secondary, marginTop: 2 },
@@ -55,12 +59,20 @@ const s = StyleSheet.create({
   pill: { fontSize: 7, fontFamily: "Helvetica-Bold", color: "#FFFFFF", paddingHorizontal: 4, paddingVertical: 1.5 },
   source: { flexDirection: "row", marginBottom: 3, fontSize: 8 },
   sourceNo: { width: 18, color: C.muted },
-  provenance: { marginTop: 14, padding: 8, backgroundColor: C.bgMuted, fontSize: 7.5, color: C.secondary },
-  footer: { position: "absolute", bottom: 20, left: 40, right: 40, flexDirection: "row", justifyContent: "space-between", fontSize: 7, color: C.muted },
+  provenance: { marginTop: 16, padding: 8, backgroundColor: C.bgMuted, fontSize: 7.5, color: C.secondary },
+  gapGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  gapCard: { width: "48%", borderWidth: 1, borderColor: C.border, padding: 8 },
+  gapTag: { fontSize: 7, fontFamily: "Helvetica-Bold", letterSpacing: 0.5, marginBottom: 3 },
+  // An explicit height keeps a long report's fixed footer from growing without
+  // bound (each extra page was multiplying its box until PDFKit rejected it).
+  footer: { position: "absolute", bottom: 20, left: 40, right: 40, height: 12, flexDirection: "row", justifyContent: "space-between", fontSize: 7, color: C.muted },
 });
 
 export interface ReportLabels {
   eyebrow: string;
+  org: string;
+  classification: string;
+  disclaimer: string;
   scopeKind: string;
   period: string;
   versionOf: string;
@@ -83,7 +95,12 @@ export interface ReportLabels {
   responseActivities: string;
   noResponse: string;
   outlook: string;
+  mostLikely: string;
+  bestCase: string;
+  worstCase: string;
   sources: string;
+  eventLabel: string;
+  hapiFigure: string;
   provenance: string;
   footer: string;
   page: (n: number, total: number) => string;
@@ -210,7 +227,6 @@ export function ReportDocument({
         if (!data.summary && data.keyFindings.length === 0) return null;
         return (
           <>
-            <Text style={s.h2}>{labels.keyDevelopments}</Text>
             {data.summary && (
               <Text style={s.para}>
                 {clean(data.summary)}
@@ -231,7 +247,6 @@ export function ReportDocument({
       case "currentStatus":
         return (
           <>
-            <Text style={s.h2}>{labels.currentStatus}</Text>
             <View style={s.kpis} wrap={false}>
               <Kpi
                 label={labels.displaced}
@@ -250,7 +265,6 @@ export function ReportDocument({
       case "map":
         return map ? (
           <>
-            <Text style={s.h2}>{labels.map}</Text>
             <ScopeMapSvg map={map} labels={labels} />
           </>
         ) : null;
@@ -258,7 +272,6 @@ export function ReportDocument({
         if (data.contextRisks.length === 0) return null;
         return (
           <>
-            <Text style={s.h2}>{labels.contexts}</Text>
             {data.contextRisks.map((r) => (
               <View key={r.key}>
                 <Text style={s.h3}>{clean(r.label)}</Text>
@@ -275,7 +288,6 @@ export function ReportDocument({
         if (data.hazards.hazards.length === 0) return null;
         return (
           <>
-            <Text style={s.h2}>{labels.hazards}</Text>
             <Bullets items={data.hazards.hazards} />
           </>
         );
@@ -283,7 +295,6 @@ export function ReportDocument({
         if (data.displacement.push.length === 0) return null;
         return (
           <>
-            <Text style={s.h2}>{labels.displacement}</Text>
             <Bullets items={data.displacement.push} />
           </>
         );
@@ -291,28 +302,26 @@ export function ReportDocument({
         if (needs.length === 0) return null;
         return (
           <>
-            <Text style={s.h2}>{labels.priorityNeeds}</Text>
-            {needs.map((x) => (
-              <View key={x.id} style={s.sector} wrap={false}>
-                <View style={s.sectorHead}>
-                  <Text style={s.sectorName}>{clean(x.name)}</Text>
-                  <Text style={[s.pill, { backgroundColor: SEVERITY_COLOR[x.severity!] ?? C.muted }]}>
-                    {labels.severity(x.severity!)}
+            <View style={s.gapGrid}>
+              {needs.map((x) => (
+                <View key={x.id} style={s.gapCard} wrap={false}>
+                  <Text style={[s.gapTag, { color: SEVERITY_COLOR[x.severity!] ?? C.muted }]}>
+                    {labels.severity(x.severity!).toUpperCase()}
                   </Text>
+                  <Text style={s.sectorName}>{clean(x.name)}</Text>
+                  {x.needs.slice(0, MAX_SECTOR_LINES).map((n, i) => (
+                    <Bullet key={i} refs={x.lineRefs[n] ?? []}>
+                      {clean(n)}
+                    </Bullet>
+                  ))}
                 </View>
-                {x.needs.slice(0, MAX_SECTOR_LINES).map((n, i) => (
-                  <Bullet key={i} refs={x.lineRefs[n] ?? []}>
-                    {clean(n)}
-                  </Bullet>
-                ))}
-              </View>
-            ))}
+              ))}
+            </View>
           </>
         );
       case "responseActivities":
         return (
           <>
-            <Text style={s.h2}>{labels.responseActivities}</Text>
             {response.length === 0 ? (
               <Text style={{ color: C.secondary }}>{labels.noResponse}</Text>
             ) : (
@@ -329,27 +338,47 @@ export function ReportDocument({
             )}
           </>
         );
-      case "outlook":
-        return data.scenarios?.mostLikely ? (
-          <>
-            <Text style={s.h2}>{labels.outlook}</Text>
-            <Text style={s.para}>
-              {clean(data.scenarios.mostLikely)}
-              <Refs refs={data.scenarios.refs} />
-            </Text>
-          </>
-        ) : null;
-      case "sources":
-        if (data.sources.length === 0) return null;
+      case "outlook": {
+        const scenarios = data.scenarios;
+        if (!scenarios) return null;
+        const cases = (
+          [
+            [labels.mostLikely, scenarios.mostLikely],
+            [labels.bestCase, scenarios.bestCase],
+            [labels.worstCase, scenarios.worstCase],
+          ] as const
+        ).filter((entry): entry is [string, string] => !!entry[1]);
+        if (!scenarios.description && cases.length === 0) return null;
         return (
           <>
-            <Text style={s.h2}>{labels.sources}</Text>
-            {data.sources.map((src, i) => (
+            {scenarios.description && <Text style={s.para}>{clean(scenarios.description)}</Text>}
+            {cases.map(([label, text]) => (
+              <View key={label}>
+                <Text style={s.bold}>{label}</Text>
+                <Text style={s.para}>{clean(text)}</Text>
+              </View>
+            ))}
+            {scenarios.refs.length > 0 && <Refs refs={scenarios.refs} />}
+          </>
+        );
+      }
+      case "sources":
+        if (data.sources.length === 0) return null;
+        {
+        const sourceLabels = { event: labels.eventLabel, hapiFigure: labels.hapiFigure };
+        const headings = distinctHeadings(data.sources, sourceLabels, (iso) => iso.slice(0, 10));
+        return (
+          <>
+            {data.sources.map((src, i) => {
+              const plain = sourceHeading(src, sourceLabels);
+              const heading = headings[i] ?? plain;
+              const publisher = heading === plain ? readablePublisher(src.publisher) : null;
+              return (
               <View key={src.id} style={s.source} wrap={false}>
                 <Text style={s.sourceNo}>{i + 1}.</Text>
                 <Text style={{ flex: 1 }}>
-                  {clean(src.title)}
-                  {src.publisher ? ` · ${clean(src.publisher)}` : ""}
+                  {clean(heading)}
+                  {publisher ? ` · ${clean(publisher)}` : ""}
                   {src.url?.startsWith("http") ? (
                     <>
                       {" · "}
@@ -360,28 +389,71 @@ export function ReportDocument({
                   ) : null}
                 </Text>
               </View>
-            ))}
+              );
+            })}
           </>
         );
+        }
+      }
+  };
+
+  const titled = (key: ReportSectionKey): string => {
+    switch (key) {
+      case "keyDevelopments":
+        return labels.keyDevelopments;
+      case "currentStatus":
+        return labels.currentStatus;
+      case "map":
+        return labels.map;
+      case "contexts":
+        return labels.contexts;
+      case "hazards":
+        return labels.hazards;
+      case "displacement":
+        return labels.displacement;
+      case "priorityNeeds":
+        return labels.priorityNeeds;
+      case "responseActivities":
+        return labels.responseActivities;
+      case "outlook":
+        return labels.outlook;
+      case "sources":
+        return labels.sources;
     }
   };
+  const blocks = sections.flatMap((key) => {
+    const body = renderSection(key);
+    return body ? [{ key, body }] : [];
+  });
 
   return (
     <Document title={clean(`${labels.eyebrow}: ${scopeName}`)} author="CLEAR" creator="CLEAR" producer="CLEAR">
       <Page size="A4" style={s.page}>
+        <View style={s.band} fixed />
+        <View style={s.running} fixed>
+          <Text style={s.runningText}>{labels.org}</Text>
+          <Text style={s.runningText}>{labels.classification}</Text>
+        </View>
         <Text style={s.eyebrow}>{labels.eyebrow}</Text>
         <Text style={s.title}>{clean(scopeName)}</Text>
         <Text style={s.meta}>
-          {labels.scopeKind} · {labels.period} · {labels.versionOf}
+          {labels.scopeKind} · {labels.period}
         </Text>
+        <Text style={s.meta}>{labels.versionOf}</Text>
         <View style={s.rule} />
 
-        {sections.map((key) => (
-          <View key={key}>{renderSection(key)}</View>
+        {blocks.map((block, i) => (
+          <View key={block.key}>
+            <Text style={s.h2}>
+              {i + 1}. {titled(block.key)}
+            </Text>
+            {block.body}
+          </View>
         ))}
 
         <View style={s.provenance} wrap={false}>
           <Text style={s.bold}>{labels.provenance}</Text>
+          <Text>{labels.disclaimer}</Text>
           <Text>{generatedLabel}</Text>
           <Text>
             {labels.versionOf} · ID {data.id}

@@ -1,11 +1,26 @@
+import path from "path";
+import { fileURLToPath } from "url";
 import withPWA from "@ducanh2912/next-pwa";
 import createNextIntlPlugin from "next-intl/plugin";
 
 const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 
+const appDir = path.dirname(fileURLToPath(import.meta.url));
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // The image starts `node server.js` from the standalone directory, so the
+  // tracing root has to be this app. A parent root nests that file and the
+  // container exits before it listens. Dev still uses the parent: Turbopack
+  // has to see the symlinked node_modules, and a lockfile in the home
+  // directory would otherwise become the root.
+  ...(process.env.NODE_ENV === "development"
+    ? { turbopack: { root: path.resolve(appDir, "..") } }
+    : { outputFileTracingRoot: appDir }),
   devIndicators: false,
+  // Lint runs as its own CI gate (`bun run lint` in unit-tests.yml); skipping it
+  // here keeps Docker builds, which are already memory-tight, from paying for it twice.
+  eslint: { ignoreDuringBuilds: true },
   output: "standalone",
   // Force @sentry/nextjs and the instrumentation config files into the
   // standalone trace. Without this, Next.js's file tracer can miss them
@@ -20,6 +35,13 @@ const nextConfig = {
       "./sentry.server.config.ts",
       "./sentry.edge.config.ts",
     ],
+    // @react-pdf/renderer (insights report export) depends on pdfkit 0.20,
+    // which loads its built-in fonts through package.json subpath imports
+    // (`require('#standard-fonts/Helvetica')`). The tracer doesn't follow
+    // those, so the standalone image shipped without pdfkit's font files and
+    // the server logged an unhandledRejection "Cannot find module
+    // .../pdfkit/js/standard-fonts/Helvetica.cjs" on every insights render.
+    "/insights": ["./node_modules/pdfkit/js/**/*"],
   },
   // The clear-mcp Tool library is Node-only (it reads its own package.json
   // at load), so it is required at runtime instead of bundled.
@@ -27,6 +49,9 @@ const nextConfig = {
   experimental: {
     // Optimize large icon/component libraries to prevent webpack JSON parse crash
     optimizePackageImports: ["@mantine/core", "@mantine/hooks", "@tabler/icons-react"],
+  },
+  async rewrites() {
+    return [{ source: "/favicon.ico", destination: "/nrc-logo-square.svg" }];
   },
 };
 
@@ -46,10 +71,11 @@ export default withPWA({
   fallbacks: {
     document: "/offline.html",
   },
-  // Disabled in dev (PWA service worker caches aggressively, breaks HMR) and
-  // in Docker builds where memory headroom is tight - next-pwa + workbox
-  // generation can push peak build RSS past 5 GB and OOM-kill the container.
-  // Vercel / non-Docker builds keep PWA enabled.
+  // Disabled in dev (PWA service worker caches aggressively, breaks HMR).
+  // DISABLE_PWA=1 also skips it, for Docker builds where memory headroom is
+  // tight - next-pwa + workbox generation can push peak build RSS past 5 GB
+  // and OOM-kill the container. The deploy images don't set it, so they ship
+  // the PWA.
   disable:
     process.env.NODE_ENV === "development" || process.env.DISABLE_PWA === "1",
   workboxOptions: {

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   countryConfig,
+  parseDateFilter,
   resolveCountryConfig,
   staticCountryBounds,
   WORLD_VIEW,
@@ -33,5 +34,23 @@ describe("countryConfig", () => {
     for (const cfg of Object.values(countryConfig)) {
       expect(cfg.zoom).toBeGreaterThanOrEqual(4);
     }
+  });
+});
+
+describe("parseDateFilter", () => {
+  const DAY_MS = 24 * 60 * 60 * 1000;
+  const span = (option: string) => {
+    const { start, end } = parseDateFilter(option);
+    return end.getTime() - start.getTime();
+  };
+
+  it("parses the singular 'Last 1 day' as a 24h window, not the 30-day fallback", () => {
+    expect(span("Last 1 day")).toBe(DAY_MS);
+  });
+
+  it("parses short rolling windows", () => {
+    expect(span("Last 2 days")).toBe(2 * DAY_MS);
+    expect(span("Last 3 days")).toBe(3 * DAY_MS);
+    expect(span("Last 7 days")).toBe(7 * DAY_MS);
   });
 });

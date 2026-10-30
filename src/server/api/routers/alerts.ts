@@ -2,7 +2,7 @@ import { z } from "zod";
 import { createTRPCRouter, protectedProcedure, publicProcedure } from "~/server/api/trpc";
 import { graphqlFetch, cookieHeaders } from "~/server/api/graphql";
 import type { GqlAlert, GqlEvent, GqlSignal, GqlCrisis } from "~/lib/types/graphql";
-import { sanitizeLocationGeometry } from "~/lib/geo/to-map-point";
+import { sanitizeEventListGeometry, sanitizeLocationGeometry } from "~/lib/geo/to-map-point";
 
 const LOCATION_FIELDS = `
   id name level geoId ancestorIds geometry pointType
@@ -12,8 +12,10 @@ const LOCATION_FIELDS = `
 
 // Slim location-fields for *list views*. The events/alerts feed renders
 // `location.name` for the card and `location.geometry` for the map
-// marker; `geometry` is cheap because the resolver caches per-request
-// via a WeakMap. What was expensive was `ancestors { ... }` (recursive
+// marker. `geometry` is cheap to resolve (clear-api caches it) but NOT
+// cheap to ship: a country/state tag is a full admin polygon, so the
+// paginated routes below cut it to a Point before it reaches the browser
+// (sanitizeEventListGeometry). What was expensive was `ancestors { ... }` (recursive
 // resolver) and `metadata` (separate sub-query) - dropping those gets
 // the list query off the heavy path while keeping map markers visible.
 // Detail pages keep using the full LOCATION_FIELDS (they need the
@@ -90,19 +92,14 @@ const EVENT_FIELDS = `
 // id)`). That fan-out wedged the response for tens of seconds at
 // `locale=ar`. Detail pages and other call sites that *do* render full
 // signal cards keep using EVENT_FIELDS.
-// Slim signal shape nested inside EVENT_LIST_FIELDS. The events feed
-// reads `signals[].source.name` (count + filter), AND the map-marker
-// fallback walks `signals[].{general,origin,destination}Location` when
-// the event itself has a Polygon (not Point) geometry - so signal
-// locations need at minimum geometry + ancestorIds to render markers.
-// We deliberately skip name translation work at the signal level by
-// keeping the shape minimal: id, name, level, geometry, ancestorIds.
+// Slim signal shape nested inside EVENT_LIST_FIELDS. The feeds only read
+// `signals[].source.name` (count, first source, source filter). Markers
+// come from the event's `representativePoint`, so nested signals carry no
+// locations: each one used to carry three full admin polygons, and
+// clear-api returns up to 50 signals per event (150 geometries per row).
 const SIGNAL_NESTED_FOR_EVENT_LIST = `
   id
   source { name }
-  generalLocation { id name level geometry ancestorIds }
-  originLocation { id name level geometry ancestorIds }
-  destinationLocation { id name level geometry ancestorIds }
 `;
 
 const EVENT_LIST_FIELDS = `
@@ -119,13 +116,15 @@ const EVENT_LIST_FIELDS = `
   generalLocation { ${LOCATION_LIST_FIELDS} }
   originLocation { ${LOCATION_LIST_FIELDS} }
   destinationLocation { ${LOCATION_LIST_FIELDS} }
+  representativePoint { ${LOCATION_LIST_FIELDS} }
   signals { ${SIGNAL_NESTED_FOR_EVENT_LIST} }
   alerts { id status }
 `;
 
 // Map-only event shape (clear-api representativePoint). One Location per
 // marker — no nested signal geometries and no admin polygons on the event.
-// Detection list views keep EVENT_LIST_FIELDS (they still need signals[]).
+// Detection list views keep EVENT_LIST_FIELDS (they still need signals[] for
+// source names).
 const MAP_POINT_LOCATION_FIELDS = `
   id name level geometry ancestorIds
 `;
@@ -576,6 +575,9 @@ export const alertsRouter = createTRPCRouter({
         { input: graphqlInput },
         cookieHeaders(ctx),
       );
+      for (const alert of data.alertsPage.items) {
+        sanitizeEventListGeometry(alert.event);
+      }
       return data.alertsPage;
     }),
 
@@ -596,6 +598,9 @@ export const alertsRouter = createTRPCRouter({
         { input: graphqlInput },
         cookieHeaders(ctx),
       );
+      for (const event of data.eventsPage.items) {
+        sanitizeEventListGeometry(event);
+      }
       return data.eventsPage;
     }),
 

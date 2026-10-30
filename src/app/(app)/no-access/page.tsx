@@ -10,6 +10,7 @@ import {
 import { useTranslations } from "next-intl";
 import { IconLock, IconLogout } from "@tabler/icons-react";
 import { authClient } from "~/lib/auth-client";
+import { clearAnalysisCollaboration } from "~/lib/analysis-collaboration";
 import { useRouter } from "next/navigation";
 
 export default function NoAccessPage() {
@@ -18,6 +19,7 @@ export default function NoAccessPage() {
 
   const handleSignOut = async () => {
     try { await authClient.signOut(); } catch { /* ignore */ }
+    clearAnalysisCollaboration();
     // Mirrors nav-sidebar's handleLogout: don't wipe storage wholesale.
     // The hard redirect tears down React state and Better Auth manages
     // the session cookie; targeted removal is the right move if any

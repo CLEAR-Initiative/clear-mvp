@@ -37,6 +37,30 @@
   color: var(--color-text-muted);
 }
 
+.tabs {
+  display: flex;
+  gap: var(--space-5);
+  margin-bottom: var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.tab {
+  padding: var(--space-2) 0;
+  margin-bottom: -1px;
+  font-size: var(--fs-md);
+  font-weight: 600;
+  color: var(--color-text-muted);
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+}
+
+.tab[data-active="true"] {
+  color: var(--color-text-primary);
+  border-bottom-color: var(--color-accent);
+}
+
 .filters {
   display: flex;
   flex-wrap: wrap;
@@ -739,4 +763,24 @@
   .backBtn {
     display: inline-flex;
   }
+}
+
+/* ─── Location challenge ─── */
+
+.placeMeta {
+  display: block;
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--color-text-muted);
+}
+
+.placePicker {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.placePicker .sectionLabel {
+  margin-bottom: 0;
 }

@@ -29,6 +29,7 @@ import {
 } from "@tabler/icons-react";
 import { cn } from "~/lib/utils";
 import { clearAgentSession } from "~/components/agent/agent-provider";
+import { clearAnalysisCollaboration } from "~/lib/analysis-collaboration";
 import { authClient } from "~/lib/auth-client";
 import { NrcLogoMark } from "~/components/ui/nrc-logo-mark";
 import { colors, fontSizesPx, spacingPx } from "~/lib/tokens";
@@ -41,16 +42,13 @@ import { useSlidingNavIndicator } from "~/hooks/use-sliding-nav-indicator";
 import { SlidingNavIndicator } from "~/components/ui/sliding-nav-indicator";
 import { usePageTransition } from "~/components/page-transition";
 import { isModifiedNavClick } from "~/components/page-transition-intent";
-import {
-  insightsNavHrefFromFocusSession,
-  mapNavHrefFromFocusSession,
-  readMapFocusSession,
-} from "~/lib/map-focus-session";
+import { mapNavHrefFromFocusSession, readMapFocusSession } from "~/lib/map-focus-session";
 import { NAV_COLLAPSED_W_PX, NAV_EXPANDED_W_PX } from "~/lib/is-map-path";
 import { setNavCollapsedCookie } from "~/lib/nav-collapsed-cookie";
-import { useInboxUnread } from "~/lib/inbox-badge";
+import { inboxBadgeLabel, useInboxUnread } from "~/lib/inbox-badge";
 import { NAV_ROUTES, type NavItemKey } from "~/lib/nav-routes";
 import { NotificationsBell } from "~/components/notifications-bell";
+import { SidebarCountryPicker } from "~/components/sidebar-country-picker";
 
 interface NavVisibility {
   isAdmin: boolean;
@@ -60,8 +58,15 @@ interface NavVisibility {
   inbox: InboxAccess;
 }
 
+type NavLabelKey = NavItemKey;
+
+function navBadge(badges: Partial<Record<NavItemKey, string>>, key: NavLabelKey): string | undefined {
+  if (!(key in badges)) return undefined;
+  return badges[key as NavItemKey];
+}
+
 interface NavItem {
-  labelKey: NavItemKey;
+  labelKey: NavLabelKey;
   href: string;
   icon: React.ElementType;
   featureKey?: string;
@@ -83,12 +88,10 @@ function isItemVisible(item: NavItem, ctx: NavVisibility): boolean {
   return item.featureKey ? (ctx.flags[item.featureKey] ?? true) : true;
 }
 
-/** Map / Insights hrefs follow in-session focus chips (#582). */
+/** The Map href keeps an in-session focus chip (#582). */
 function resolveNavHref(item: NavItem): string {
-  if (item.labelKey !== "map" && item.labelKey !== "insights") return item.href;
-  const session = readMapFocusSession();
-  if (item.labelKey === "map") return mapNavHrefFromFocusSession(session);
-  return insightsNavHrefFromFocusSession(session);
+  if (item.labelKey !== "map") return item.href;
+  return mapNavHrefFromFocusSession(readMapFocusSession());
 }
 
 interface NavSection {
@@ -108,13 +111,13 @@ const navSections: NavSection[] = [
         labelKey: "inbox",
         href: NAV_ROUTES.inbox,
         icon: IconInbox,
-        // The same rule as the page gate: hotline threads for admins,
-        // proposed signals for deciders, My requests for content readers,
-        // each behind its flag.
+        // The same rule as the page gate: community signals for admins,
+        // team admins and ERMs, proposed signals for deciders, each behind
+        // its flag.
         visibleWhen: ({ inbox }) => inbox.any,
       },
       { labelKey: "map", href: NAV_ROUTES.map, icon: IconMapPin, featureKey: "crisis_map" },
-      { labelKey: "insights", href: NAV_ROUTES.insights, icon: IconChartPie, featureKey: "insights" },
+      { labelKey: "insights", href: NAV_ROUTES.insights, icon: IconChartPie },
       { labelKey: "metrics", href: NAV_ROUTES.metrics, icon: IconChartBar, adminOnly: true },
       { labelKey: "operations", href: NAV_ROUTES.operations, icon: IconUser, featureKey: "operations", adminOnly: true },
       { labelKey: "cash", href: NAV_ROUTES.cash, icon: IconCurrencyDollar, featureKey: "cash_assistance", adminOnly: true },
@@ -186,7 +189,6 @@ export function NavSidebar({
     isErm,
     hotlineInbox: flags.hotline_inbox ?? true,
     impactPriorReview: flags.impact_prior_review ?? true,
-    eventEnrichment: flags.event_enrichment ?? true,
   });
   const visibility: NavVisibility = { isAdmin, role, flags, inbox: reviewAccess };
 
@@ -194,17 +196,25 @@ export function NavSidebar({
   // Until the Inbox has measured that, it is the server queue (ids only;
   // capped at clear-api's page maximum, shown as "200+"). After that, the
   // measurement follows later polls: new proposals and other reviewers'
-  // decisions move the badge by the change in the server total.
+  // decisions move the badge by the change in the server total. Open
+  // Location challenges the reader decides add to it until decided.
   const proposedCount = api.tasks.reviewCount.useQuery(undefined, {
     enabled: reviewAccess.proposals,
     staleTime: 60_000,
     refetchInterval: 120_000,
   });
+  const locationCount = api.locationChallenge.toDecideCount.useQuery(undefined, {
+    enabled: reviewAccess.locations,
+    staleTime: 60_000,
+    refetchInterval: 120_000,
+  });
   const liveUnread = useInboxUnread(proposedCount.data?.count);
-  const inboxCount = liveUnread ?? proposedCount.data?.count;
-  const inboxBadge = reviewAccess.proposals && inboxCount != null && inboxCount > 0
-    ? `${inboxCount}${liveUnread == null && proposedCount.data?.capped ? "+" : ""}`
-    : undefined;
+  const inboxBadge = inboxBadgeLabel({
+    proposals: reviewAccess.proposals ? (liveUnread ?? proposedCount.data?.count) : undefined,
+    proposalsCapped: reviewAccess.proposals && liveUnread == null && !!proposedCount.data?.capped,
+    locations: reviewAccess.locations ? locationCount.data?.count : undefined,
+    locationsCapped: reviewAccess.locations && !!locationCount.data?.capped,
+  });
   const badges: Partial<Record<NavItemKey, string>> = { inbox: inboxBadge };
 
   // Publish overlay width before paint. Keep motion flag out of this cleanup —
@@ -257,6 +267,7 @@ export function NavSidebar({
     // redirect below tears down all in-memory React state. If a specific
     // app key ever needs clearing on sign-out, remove it explicitly here.
     clearAgentSession(); // the active Agent Thread belongs to this user
+    clearAnalysisCollaboration();
     window.location.href = "/auth/login";
   };
 
@@ -340,10 +351,11 @@ export function NavSidebar({
           }}
         >
           <NrcLogoMark size={32} />
-          <Text fw={700} style={{ fontSize: fontSizesPx.xl, color: colors.textPrimary, fontFamily: "Calibri, 'Trebuchet MS', sans-serif" }}>CLEAR</Text>
+          <Box style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
+            <Text fw={700} style={{ fontSize: fontSizesPx.xl, color: colors.textPrimary, fontFamily: "Calibri, 'Trebuchet MS', sans-serif" }}>CLEAR</Text>
+            <SidebarCountryPicker />
+          </Box>
         </Box>
-
-        {/* Mobile team switcher */}
 
         {/* Mobile drawer nav */}
         <Box
@@ -388,9 +400,9 @@ export function NavSidebar({
                       <Text fw={isActive ? 600 : 500} style={{ fontSize: fontSizesPx.lg, flex: 1 }}>{t(`items.${item.labelKey}`)}</Text>
                       {isDisabled && <Badge size="xs" variant="light" color="gray" style={{ fontSize: fontSizesPx["2xs"] }}>{tBadges("soon")}</Badge>}
                       {!isDisabled && item.demo && <Badge size="xs" variant="light" color="accent" style={{ fontSize: fontSizesPx["2xs"] }}>{tBadges("demo")}</Badge>}
-                      {!isDisabled && badges[item.labelKey] && (
+                      {!isDisabled && navBadge(badges, item.labelKey) && (
                         <Badge size="xs" variant="filled" color="accent" circle data-testid={`nav-badge-${item.labelKey}`} style={{ fontSize: fontSizesPx["2xs"] }}>
-                          {badges[item.labelKey]}
+                          {navBadge(badges, item.labelKey)}
                         </Badge>
                       )}
                     </Box>
@@ -612,7 +624,7 @@ export function NavSidebar({
         {/* ── Logo + toggle ─────────────────────────────────────── */}
         <Box
         style={{
-          height: 64,
+          minHeight: 64,
           borderBottom: `1px solid ${isMapRoute ? "var(--map-frost-border)" : colors.border}`,
             display: "flex",
             alignItems: "flex-start",
@@ -622,7 +634,8 @@ export function NavSidebar({
             background: isMapRoute ? "transparent" : colors.bgWhite,
           }}
         >
-          <Box style={{ display: "flex", alignItems: "center", gap: spacingPx[5], overflow: "hidden", width: collapsed ? 32 : 150, flexShrink: 0, transition: `width ${TRANSITION}` }}>
+          <Box style={{ display: "flex", flexDirection: "column", overflow: "hidden", width: collapsed ? 32 : 150, flexShrink: 0, transition: `width ${TRANSITION}` }}>
+          <Box style={{ display: "flex", alignItems: "center", gap: spacingPx[5] }}>
             {/* Logo stays visible in both states */}
             <NrcLogoMark size={32} />
             <Text
@@ -639,6 +652,11 @@ export function NavSidebar({
             >
               CLEAR
             </Text>
+          </Box>
+            {/* Country picker: under the wordmark, or under the logo when collapsed */}
+            <Box style={{ paddingInlineStart: collapsed ? 0 : 32 + spacingPx[5], transition: `padding ${TRANSITION}` }}>
+              <SidebarCountryPicker collapsed={collapsed} />
+            </Box>
           </Box>
 
           <Tooltip label={collapsed ? t("expand") : t("collapse")} position="right" withArrow>
@@ -667,8 +685,6 @@ export function NavSidebar({
             </UnstyledButton>
           </Tooltip>
         </Box>
-
-        {/* ── Team switcher ──────────────────────────────────────── */}
 
         {/* ── Navigation ────────────────────────────────────────── */}
         <Box
@@ -764,7 +780,7 @@ export function NavSidebar({
                         </Badge>
                       )}
 
-                      {!isDisabled && badges[item.labelKey] && (
+                      {!isDisabled && navBadge(badges, item.labelKey) && (
                         <Badge
                           size="xs"
                           variant="filled"
@@ -773,7 +789,7 @@ export function NavSidebar({
                           data-testid={`nav-badge-${item.labelKey}`}
                           style={{ fontSize: fontSizesPx["2xs"], fontWeight: 600, flexShrink: 0, ...labelStyle }}
                         >
-                          {badges[item.labelKey]}
+                          {navBadge(badges, item.labelKey)}
                         </Badge>
                       )}
 

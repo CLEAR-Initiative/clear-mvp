@@ -8,6 +8,9 @@
  * other nav contexts.
  */
 
+import { tagEventPath } from "~/lib/analytics/event-source";
+import { track } from "~/lib/analytics/track";
+import { AgentPageOpenWatcher } from "./agent-analytics";
 import {
   Fragment,
   Suspense,
@@ -271,7 +274,7 @@ export function AgentProvider({ children }: { children: ReactNode }) {
       // A fresh move: the page applies its deep link as new, where arriving
       // on the same URL later (Back, a reload) restores what it had.
       markAgentDeepLink(result.url);
-      router.push(result.url);
+      router.push(tagEventPath(result.url, "agent"));
     },
     [router, state, update],
   );
@@ -295,6 +298,7 @@ export function AgentProvider({ children }: { children: ReactNode }) {
       const index = backStack.findIndex((e) => e.toolCallId === toolCallId);
       if (index < 0) return;
       const entry = backStack[index]!;
+      track("agent.navigation_back");
       // This move and any made after it are undone together.
       setBackStack(backStack.slice(0, index));
       const { pathname, search } = window.location;
@@ -373,6 +377,7 @@ export function AgentProvider({ children }: { children: ReactNode }) {
       {available && (
         <NavigationWatcher chat={chat} apply={applyNavigation} />
       )}
+      {available && <AgentPageOpenWatcher />}
       {returning && (
         <Suspense fallback={null}>
           <ReturnWatcher pending={returning} finish={finishReturn} />

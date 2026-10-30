@@ -20,6 +20,16 @@ inputs:
   sentry-dsn:
     description: Public Sentry DSN inlined in the client bundle
     required: true
+  sentry-client:
+    description: Set to "on" to compile the browser Sentry client into the bundle
+    required: false
+    default: ""
+  umami-host-url:
+    description: Umami base URL (e.g. https://app.clearinitiative.io/ux). Empty = no usage tracker
+    default: ""
+  umami-website-id:
+    description: Umami website id. Empty = no usage tracker
+    default: ""
   cache-mode:
     description: >-
       buildx GHA cache export mode. `max` exports every intermediate layer
@@ -66,5 +76,8 @@ runs:
           NEXT_PUBLIC_MAPBOX_TOKEN=${{ inputs.mapbox-token }}
           NEXT_PUBLIC_SENTRY_DSN=${{ inputs.sentry-dsn }}
           NEXT_PUBLIC_SENTRY_ENV=${{ inputs.environment }}
+          NEXT_PUBLIC_SENTRY_CLIENT=${{ inputs.sentry-client }}
+          NEXT_PUBLIC_UMAMI_HOST_URL=${{ inputs.umami-host-url }}
+          NEXT_PUBLIC_UMAMI_WEBSITE_ID=${{ inputs.umami-website-id }}
         cache-from: type=gha,scope=${{ inputs.environment }}
         cache-to: type=gha,mode=${{ inputs.cache-mode }},scope=${{ inputs.environment }}

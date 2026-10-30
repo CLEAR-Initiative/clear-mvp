@@ -45,8 +45,21 @@ ENV NEXT_PUBLIC_SENTRY_DSN=${NEXT_PUBLIC_SENTRY_DSN}
 ARG NEXT_PUBLIC_SENTRY_ENV="development"
 ENV NEXT_PUBLIC_SENTRY_ENV=${NEXT_PUBLIC_SENTRY_ENV}
 
-# Hermetic Playwright stack only. Lets `/observe?noTeam=1` run against the
-# production Next image (NODE_ENV=production, no Vercel preview env).
+# Browser reporting stays off unless this is "on". The public DSN can be set
+# and still be rejected by ingest; runtime env cannot change the client bundle.
+ARG NEXT_PUBLIC_SENTRY_CLIENT=""
+ENV NEXT_PUBLIC_SENTRY_CLIENT=${NEXT_PUBLIC_SENTRY_CLIENT}
+
+# Usage analytics (self-hosted Umami, src/lib/analytics). Empty = no tracker.
+ARG NEXT_PUBLIC_UMAMI_HOST_URL=""
+ENV NEXT_PUBLIC_UMAMI_HOST_URL=${NEXT_PUBLIC_UMAMI_HOST_URL}
+ARG NEXT_PUBLIC_UMAMI_WEBSITE_ID=""
+ENV NEXT_PUBLIC_UMAMI_WEBSITE_ID=${NEXT_PUBLIC_UMAMI_WEBSITE_ID}
+
+# Hermetic Playwright stack only (docker-compose.e2e.yml sets it to 1). No
+# code reads it today. The e2e image keeps NEXT_PUBLIC_SENTRY_ENV at its
+# default, so it is not a dev deploy (src/lib/deploy-env.ts) and dev-only tools
+# such as `/observe?noTeam=1` stay off; spec 12 mocks auth.me instead.
 ARG NEXT_PUBLIC_E2E=""
 ENV NEXT_PUBLIC_E2E=${NEXT_PUBLIC_E2E}
 
@@ -78,6 +91,14 @@ ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
+# The builder stage's NODE_OPTIONS does not carry into this stage, so without
+# this line the server runs on V8's default heap, which inside the 1 GB
+# container on dev comes out near 500 MB. One History tab load (3 x 100-row
+# pages with nested signal geometries, plus the map's full-scan resolvers)
+# exceeds that and the process dies with "JavaScript heap out of memory",
+# which Caddy surfaces as 502s until the container restarts. 768 MB leaves
+# ~250 MB headroom for the non-heap RSS under the 1 GB cgroup limit.
+ENV NODE_OPTIONS=--max-old-space-size=768
 
 # Run as a non-root user — Next.js docs' recommended pattern.
 RUN addgroup -g 1001 -S nodejs && \

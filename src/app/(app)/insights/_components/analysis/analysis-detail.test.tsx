@@ -4,7 +4,15 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { MantineProvider } from "@mantine/core";
 import type { Analysis } from "~/server/api/mappers/analysis";
 import type { CreatedAnalysis } from "~/server/api/mappers/analysis";
+import { clearAnalysisFiles } from "~/lib/analysis-file-store";
 
+const replace = vi.fn();
+const params = new URLSearchParams("country=sdn");
+vi.mock("next/navigation", () => ({
+  usePathname: () => "/insights",
+  useRouter: () => ({ replace }),
+  useSearchParams: () => params,
+}));
 vi.mock("next-intl", () => ({
   useTranslations: (ns?: string) => (key: string, vars?: Record<string, unknown>) =>
     `${ns ? `${ns}.` : ""}${key}${vars ? `:${JSON.stringify(vars)}` : ""}`,
@@ -36,6 +44,7 @@ const frameQuery = vi.fn();
 const refreshMutate = vi.fn();
 let refreshOpts: { onSuccess?: () => void; onError?: () => void } = {};
 const invalidateScopes = vi.fn();
+const recordExported = vi.fn();
 const utils = {
   locations: { getById: { fetch: async () => ({ geometry: null }) } },
   analysis: { scopes: { invalidate: invalidateScopes } },
@@ -43,7 +52,7 @@ const utils = {
 vi.mock("~/trpc/react", () => ({
   api: {
     useUtils: () => utils,
-    auth: { me: { useQuery: () => ({ data: { user: { role: role === "admin" ? "admin" : "member", teamMemberships: role === "analyst" ? [{ role: "analyst" }] : [] } } }) } },
+    auth: { me: { useQuery: () => ({ data: { user: { id: "user-1", role: role === "admin" ? "admin" : "member", teamMemberships: role === "analyst" ? [{ role: "analyst" }] : [] } } }) } },
     analysis: {
       current: {
         useQuery: (input: unknown, opts: { enabled?: boolean }) => (
@@ -57,12 +66,25 @@ vi.mock("~/trpc/react", () => ({
       },
       events: { useQuery: () => ({ data: { totalCount: 0, items: [] } }) },
       figures: { useQuery: () => ({ data: undefined }) },
+      needs: { useQuery: () => ({ data: undefined }) },
       refresh: {
         useMutation: (opts: typeof refreshOpts) => {
           refreshOpts = opts;
           return { mutate: refreshMutate, isPending: false };
         },
       },
+      thread: {
+        useQuery: () => ({
+          data: undefined,
+          isSuccess: false,
+          isError: false,
+          isLoading: false,
+          refetch: async () => ({ data: undefined }),
+        }),
+      },
+      rename: { useMutation: () => ({ mutate: vi.fn(), isPending: false }) },
+      recordReportExported: { useMutation: () => ({ mutate: recordExported }) },
+      comment: { useMutation: () => ({ mutateAsync: vi.fn(), isPending: false }) },
     },
     locations: { getById: { useQuery: () => ({ data: { geometry: null } }) } },
     useQueries: (build: (q: unknown) => unknown[]) =>
@@ -151,9 +173,109 @@ beforeEach(() => {
   analysisResult = { data: analysis(), isLoading: false, isError: false };
   refreshOpts = {};
 });
-afterEach(() => {
+afterEach(async () => {
   cleanup();
   vi.clearAllMocks();
+  sessionStorage.clear();
+  localStorage.clear();
+  await clearAnalysisFiles();
+});
+
+describe("AnalysisDetail usage tracking (#1214)", () => {
+  const umamiTrack = vi.fn();
+  beforeEach(() => {
+    window.umami = { track: umamiTrack, identify: vi.fn() };
+    Object.defineProperty(URL, "createObjectURL", { configurable: true, writable: true, value: () => "blob:x" });
+    Object.defineProperty(URL, "revokeObjectURL", { configurable: true, writable: true, value: () => {} });
+  });
+  afterEach(() => {
+    delete window.umami;
+  });
+  const sent = () => JSON.stringify(umamiTrack.mock.calls);
+
+  it("tracks a summary copy with no content", async () => {
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText: async () => undefined } });
+    renderDetail(COUNTRY);
+    fireEvent.click(screen.getByRole("button", { name: "analysis.layout.copySummary" }));
+    await vi.waitFor(() => expect(umamiTrack).toHaveBeenCalledWith("analysis.summary_copied", undefined));
+    expect(sent()).not.toContain("Summary.");
+  });
+
+  it("tracks an evidence preview and download with no file name", async () => {
+    renderDetail(COUNTRY);
+    fireEvent.change(screen.getByTestId("analysis-evidence-input"), {
+      target: { files: [new File(["%PDF-1.4"], "brief.pdf", { type: "application/pdf" })] },
+    });
+    fireEvent.click(await screen.findByRole("button", { name: /brief\.pdf/ }));
+    expect(umamiTrack).toHaveBeenCalledWith("analysis.evidence_previewed", undefined);
+    fireEvent.click(await screen.findByRole("link", { name: "analysis.layout.evidenceDownload" }));
+    expect(umamiTrack).toHaveBeenCalledWith("analysis.evidence_downloaded", undefined);
+    expect(sent()).not.toContain("brief");
+  });
+
+  it("records the report export with the analysis id once the PDF is built", async () => {
+    HTMLAnchorElement.prototype.click = () => {};
+    renderDetail(COUNTRY);
+    fireEvent.click(screen.getByTestId("analysis-create-report"));
+    fireEvent.click(await screen.findByTestId("report-builder-create"));
+    await vi.waitFor(() => expect(recordExported).toHaveBeenCalledWith({ analysisId: "a1" }));
+  });
+
+  it("doesn't record an export when the report fails", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    Object.defineProperty(URL, "createObjectURL", { configurable: true, writable: true, value: () => { throw new Error("no blob"); } });
+    renderDetail(COUNTRY);
+    fireEvent.click(screen.getByTestId("analysis-create-report"));
+    fireEvent.click(await screen.findByTestId("report-builder-create"));
+    await vi.waitFor(() => expect(notify).toHaveBeenCalled());
+    expect(recordExported).not.toHaveBeenCalled();
+  });
+});
+
+describe("AnalysisDetail collaboration", () => {
+  it("shows add evidence and the discussion", () => {
+    renderDetail(COUNTRY);
+    expect(screen.getByTestId("analysis-evidence")).toHaveTextContent("analysis.layout.addEvidence");
+    expect(screen.getByTestId("analysis-discussion")).toHaveTextContent("analysis.layout.discussionTitle");
+    expect(screen.getByTestId("analysis-title-edit")).toBeInTheDocument();
+  });
+
+  it("keeps a comment after the page is opened again", () => {
+    const { unmount } = renderDetail(COUNTRY);
+    fireEvent.change(screen.getByTestId("analysis-comment-input"), { target: { value: "Check the west road" } });
+    fireEvent.click(screen.getByTestId("analysis-comment-post"));
+    expect(screen.getByTestId("analysis-comment")).toHaveTextContent("Check the west road");
+    unmount();
+    renderDetail(COUNTRY);
+    expect(screen.getByTestId("analysis-comment")).toHaveTextContent("Check the west road");
+  });
+
+  it("opens a saved PDF after the page is opened again", async () => {
+    Object.defineProperty(URL, "createObjectURL", { configurable: true, writable: true, value: () => "blob:evidence" });
+    Object.defineProperty(URL, "revokeObjectURL", { configurable: true, writable: true, value: () => {} });
+    const { unmount } = renderDetail(COUNTRY);
+    fireEvent.change(screen.getByTestId("analysis-evidence-input"), {
+      target: { files: [new File(["%PDF-1.4"], "brief.pdf", { type: "application/pdf" })] },
+    });
+    expect(await screen.findByRole("button", { name: /brief\.pdf/ })).toBeInTheDocument();
+    unmount();
+
+    renderDetail(COUNTRY);
+    fireEvent.click(await screen.findByRole("button", { name: /brief\.pdf/ }));
+    expect(await screen.findByTitle(/evidencePreview/)).toHaveAttribute("src", "blob:evidence");
+    expect(screen.getByRole("link", { name: "analysis.layout.evidenceDownload" })).toHaveAttribute("href", "blob:evidence");
+  });
+
+  it("keeps a renamed title after the page is opened again", () => {
+    const { unmount } = renderDetail(createdScope(created()));
+    fireEvent.click(screen.getByTestId("analysis-title-edit"));
+    fireEvent.change(screen.getByTestId("analysis-title-input"), { target: { value: "Kordofan weekly" } });
+    fireEvent.click(screen.getByText("analysis.layout.saveTitle"));
+    expect(screen.getByTestId("analysis-title")).toHaveTextContent("Kordofan weekly");
+    unmount();
+    renderDetail(createdScope(created()));
+    expect(screen.getByTestId("analysis-title")).toHaveTextContent("Kordofan weekly");
+  });
 });
 
 describe("AnalysisDetail header", () => {
@@ -166,6 +288,13 @@ describe("AnalysisDetail header", () => {
   it("shows the period the analysis covers", () => {
     renderDetail(COUNTRY);
     expect(screen.getByTestId("analysis-meta")).toHaveTextContent('analysis.meta.covers:{"start":"2026-01-01"}');
+  });
+
+  it("writes the active tab into the page URL", () => {
+    renderDetail(COUNTRY);
+    fireEvent.click(screen.getByRole("tab", { name: "analysis.tabs.needs" }));
+    expect(replace).toHaveBeenCalledWith("/insights?country=sdn&tab=needs", { scroll: false });
+    expect(screen.getByTestId("analysis-needs")).toBeInTheDocument();
   });
 
   it("flags an old version as out of date and a fresh one not", () => {
@@ -317,6 +446,52 @@ describe("AnalysisDetail generating", () => {
     expect(interval()({ state: { data: undefined } })).toBe(30_000);
   });
 
+  it("stays on the generating notice when a poll fails before the first version", () => {
+    analysisResult = { data: null, isLoading: false, isError: true };
+    renderDetail(createdScope(pending("2026-09-29T11:50:00Z")));
+    expect(screen.getByTestId("analysis-generating")).toBeInTheDocument();
+    expect(screen.queryByText("analysis.error")).not.toBeInTheDocument();
+    expect(interval()({ state: { data: undefined, status: "error" } })).toBe(30_000);
+  });
+
+  it("shows the analysis when the row arrives after a failed poll", () => {
+    analysisResult = { data: null, isLoading: false, isError: true };
+    const view = renderDetail(createdScope(pending("2026-09-29T11:50:00Z")));
+    expect(screen.getByTestId("analysis-generating")).toBeInTheDocument();
+
+    analysisResult = { data: analysis(), isLoading: false, isError: false };
+    view.rerender(
+      <MantineProvider>
+        <AnalysisDetail scope={createdScope(pending("2026-09-29T11:50:00Z"))} onBack={() => {}} />
+      </MantineProvider>,
+    );
+    expect(screen.getByText("analysis.tabs.overview")).toBeInTheDocument();
+    expect(screen.queryByTestId("analysis-generating")).not.toBeInTheDocument();
+    expect(screen.queryByText("analysis.error")).not.toBeInTheDocument();
+  });
+
+  it("keeps a readable analysis on screen when a later refetch fails", () => {
+    analysisResult = { data: analysis(), isLoading: false, isError: true };
+    renderDetail(createdScope(created()));
+    expect(screen.getByText("analysis.tabs.overview")).toBeInTheDocument();
+    expect(screen.queryByText("analysis.error")).not.toBeInTheDocument();
+  });
+
+  it("shows the overdue retry when the first version never arrives, even if the last poll failed", () => {
+    analysisResult = { data: null, isLoading: false, isError: true };
+    renderDetail(createdScope(pending("2026-09-29T10:00:00Z")));
+    expect(screen.getByTestId("analysis-overdue")).toBeInTheDocument();
+    expect(screen.queryByText("analysis.error")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("analysis-generating")).not.toBeInTheDocument();
+  });
+
+  it("shows the load error when a country analysis fails and nothing is readable", () => {
+    analysisResult = { data: undefined, isLoading: false, isError: true };
+    renderDetail(COUNTRY);
+    expect(screen.getByText("analysis.error")).toBeInTheDocument();
+    expect(screen.queryByTestId("analysis-generating")).not.toBeInTheDocument();
+  });
+
   it("hides the retry from viewers", () => {
     role = "viewer";
     analysisResult.data = null;
@@ -338,5 +513,55 @@ describe("AnalysisDetail map", () => {
     renderDetail(COUNTRY);
     expect(screen.getByTestId("minimap")).toBeEmptyDOMElement();
     expect(screen.getByTestId("analysis-map").parentElement).toHaveTextContent("analysis.scope.wholeCountry");
+  });
+});
+
+describe("Analysis detail layout", () => {
+  it("paints the redesign and dismisses change notes", () => {
+    const row = analysis();
+    row.changes = { comparedTo: "2026-09-01T00:00:00Z", notes: { summary: "Cholera line revised.", hazards: "Storm added." } };
+    row.hazards = {
+      hazards: [{ text: "Cholera outbreak.", refs: [] }],
+      vulnerabilities: [{ text: "Climate: already fragile.", refs: [] }],
+    };
+    row.keyFindings = [{ text: "Security: Drone strikes hit El Obeid.", refs: [] }];
+    analysisResult.data = row;
+    renderDetail(COUNTRY);
+
+    expect(screen.getByTestId("analysis-page")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: "Sudan" })).toBeInTheDocument();
+    expect(screen.getByTestId("analysis-changes")).toHaveTextContent("analysis.layout.sections.summary");
+    expect(screen.getByTestId("analysis-changes")).toHaveTextContent("analysis.layout.sections.hazards");
+    expect(screen.getByTestId("analysis-highlights")).toBeInTheDocument();
+    expect(screen.getByTestId("analysis-section-hazards")).toBeInTheDocument();
+    expect(screen.getByTestId("analysis-section-vulnerabilities")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "analysis.layout.dismissChanges" }));
+    expect(screen.queryByTestId("analysis-changes")).not.toBeInTheDocument();
+
+    cleanup();
+    renderDetail(COUNTRY);
+    expect(screen.queryByTestId("analysis-changes")).not.toBeInTheDocument();
+
+    row.changes = { comparedTo: "2026-09-01T00:00:00Z", notes: { summary: "A later revision." } };
+    cleanup();
+    renderDetail(COUNTRY);
+    expect(screen.getByTestId("analysis-changes")).toHaveTextContent("analysis.layout.sections.summary");
+  });
+
+  it("does not cite a funding share the card cannot show", () => {
+    const row = analysis();
+    row.figures = { ...row.figures, displaced: 8_600_000 };
+    row.changes = {
+      comparedTo: "2026-09-01T00:00:00Z",
+      notes: { funding_received: "People in need rose. Funding coverage moved from 41% to 31%." },
+    };
+    analysisResult.data = row;
+    renderDetail(COUNTRY);
+    expect(screen.getByText("People in need rose.")).toBeInTheDocument();
+    expect(screen.queryByText(/41%/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/31%/)).not.toBeInTheDocument();
+    expect(screen.queryByTitle(/41%/)).not.toBeInTheDocument();
+    expect(screen.getByText("analysis.kpis.funding").closest("article")).toHaveTextContent("analysis.kpis.notReported");
   });
 });

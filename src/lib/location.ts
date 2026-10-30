@@ -184,17 +184,19 @@ export function crisisInCountry(
 }
 
 /**
- * Keep locations that are one of the scoped countries, or sit under them.
- * An empty `countryIds` list means unscoped / global — return everything.
+ * The `within` scope clear-api's `locations` query filters by: rows that are
+ * one of these ids or sit under one. The most specific input wins (state, then
+ * the country list, then a single country). Undefined means unscoped / global.
  */
-export function filterLocationsByCountryScope<
-  T extends { id: string; ancestorIds?: readonly string[] },
->(locations: readonly T[], countryIds: readonly string[]): T[] {
-  if (countryIds.length === 0) return [...locations];
-  const scoped = new Set(countryIds);
-  return locations.filter(
-    (l) => scoped.has(l.id) || (l.ancestorIds?.some((id) => scoped.has(id)) ?? false),
-  );
+export function adminBoundaryScope(input: {
+  stateId?: string;
+  countryIds?: readonly string[];
+  countryId?: string;
+}): string[] | undefined {
+  if (input.stateId) return [input.stateId];
+  if (input.countryIds?.length) return [...input.countryIds];
+  if (input.countryId) return [input.countryId];
+  return undefined;
 }
 
 /** Best display name for a crisis, falling back to linked event locations. */

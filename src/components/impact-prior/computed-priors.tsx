@@ -1,5 +1,6 @@
 "use client";
 
+import { eventHref } from "~/lib/analytics/event-source";
 import { Anchor, Badge, Box, Group, Stack, Text } from "@mantine/core";
 import { useFormatter, useTranslations } from "next-intl";
 import { api } from "~/trpc/react";
@@ -90,7 +91,7 @@ export function ComputedPriorRow({ prior }: { prior: GqlComputedImpactPrior }) {
       {shown.length > 0 && (
         <Group gap={8} mt={4} wrap="wrap" data-testid="computed-prior-events">
           {shown.map((id, i) => (
-            <Anchor key={id} href={`/event/${encodeURIComponent(id)}`} size="xs" data-testid="computed-prior-event">
+            <Anchor key={id} href={eventHref(id, "related_event")} size="xs" data-testid="computed-prior-event">
               {t("pastEvent", { n: i + 1 })}
             </Anchor>
           ))}

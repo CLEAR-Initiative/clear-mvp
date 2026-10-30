@@ -19,46 +19,6 @@
       "firstEvent": "Premier événement : {date}",
       "lastUpdate": "Dernière mise à jour : {date}"
     },
-    "executiveSummary": {
-      "priorityAnalysis": "Analyse prioritaire",
-      "criticalBadge": "{count} critique(s)",
-      "activeBadge": "{count} active(s)",
-      "situationReport": "Rapport de situation - {country}",
-      "defaultReportTitle": "Crise de déplacement liée au conflit armé - {country}",
-      "activeAlerts": "Alertes actives",
-      "totalAlerts": "Total des alertes",
-      "trend": "Tendance",
-      "needs": {
-        "shelter": {
-          "label": "Abris",
-          "description": "Logement et déplacement"
-        },
-        "wash": {
-          "label": "WASH",
-          "description": "Eau et assainissement"
-        },
-        "protection": {
-          "label": "Protection",
-          "description": "Droits et sécurité"
-        },
-        "health": {
-          "label": "Santé",
-          "description": "Réponse médicale"
-        },
-        "foodSecurity": {
-          "label": "Sécurité alimentaire",
-          "description": "Accès à la nutrition"
-        }
-      },
-      "viewFullReport": "Voir le rapport complet",
-      "downloadPdf": "Télécharger le PDF",
-      "updatedAt": "Mise à jour {time}",
-      "updatedFallback": "Mise à jour il y a 2 heures",
-      "confidence": "Confiance : {pct} %",
-      "aiGeneratedAnalysis": "Analyse générée par IA",
-      "generating": "Génération d'une analyse complète à partir de {count} alertes actives...",
-      "generateFailed": "Échec de la génération de l'analyse. Veuillez réessayer."
-    },
     "insights": {
       "title": "Constats générés par IA",
       "subtitle": "Détection de tendances et recommandations",
@@ -281,7 +241,9 @@
         "visit": "Consulter la source",
         "published": "Publié le {date}",
         "empty": "Aucune source enregistrée pour cet instantané.",
-        "count": "{count} références"
+        "count": "{count} références",
+        "eventLabel": "Événement",
+        "hapiFigure": "Chiffre HAPI"
       },
       "kpi": {
         "informSeverity": "Sévérité INFORM",
@@ -357,7 +319,8 @@
   "admin": {
     "header": {
       "title": "Administration",
-      "subtitle": "Configuration de la plateforme, gestion des utilisateurs et des organisations"
+      "subtitle": "Configuration de la plateforme, gestion des utilisateurs et des organisations",
+      "activityLink": "Activité d'utilisation"
     },
     "tabs": {
       "users": "Utilisateurs",
@@ -1465,8 +1428,7 @@
       "alerts": "Alertes",
       "events": "Événements",
       "signals": "Signaux",
-      "history": "Historique",
-      "ground": "Renseignement terrain"
+      "history": "Historique"
     },
     "actions": {
       "createSignal": "Créer un signal"
@@ -1497,6 +1459,9 @@
         "medium": "Moyenne",
         "low": "Faible"
       },
+      "last1day": "Dernières 24 heures",
+      "last2days": "2 derniers jours",
+      "last3days": "3 derniers jours",
       "last7days": "7 derniers jours",
       "last30days": "30 derniers jours",
       "last90days": "90 derniers jours"
@@ -1518,21 +1483,24 @@
         "empty": "Aucune alerte active pour le moment.",
         "noMatch": "Aucune alerte ne correspond à vos filtres.",
         "untitled": "Alerte sans titre",
-        "allLoaded": "{count, plural, one {# alerte chargée} other {# alertes chargées}}"
+        "allLoaded": "{count, plural, one {# alerte chargée} other {# alertes chargées}}",
+        "scanning": "Recherche dans les alertes plus anciennes, {loaded} sur {total} vérifiées"
       },
       "events": {
         "title": "Événements",
         "empty": "Aucun événement trouvé.",
         "noMatch": "Aucun événement ne correspond à vos filtres.",
         "untitled": "Événement sans titre",
-        "allLoaded": "{count, plural, one {# événement chargé} other {# événements chargés}}"
+        "allLoaded": "{count, plural, one {# événement chargé} other {# événements chargés}}",
+        "scanning": "Recherche dans les événements plus anciens, {loaded} sur {total} vérifiés"
       },
       "signals": {
         "title": "Signaux",
         "empty": "Aucun signal trouvé.",
         "noMatch": "Aucun signal ne correspond à vos filtres.",
         "untitled": "Signal sans titre",
-        "allLoaded": "{count, plural, one {# signal chargé} other {# signaux chargés}}"
+        "allLoaded": "{count, plural, one {# signal chargé} other {# signaux chargés}}",
+        "scanning": "Recherche dans les signaux plus anciens, {loaded} sur {total} vérifiés"
       }
     },
     "history": {
@@ -1541,7 +1509,9 @@
       "empty": "Aucun historique disponible.",
       "noMatch": "Aucun élément ne correspond à votre recherche.",
       "loadMore": "Charger plus",
+      "sortByTime": "Trier par date",
       "untitled": "Sans titre",
+      "selectRow": "Sélectionner {title}",
       "columns": {
         "title": "Titre",
         "class": "Classe",
@@ -1549,6 +1519,7 @@
         "severity": "Sévérité",
         "source": "Source",
         "date": "Date",
+        "age": "Ancienneté",
         "location": "Localisation"
       },
       "classes": {
@@ -1715,82 +1686,6 @@
       },
       "submit": "Créer l'alerte"
     },
-    "groundIntel": {
-      "title": "Revue du renseignement terrain",
-      "count": "{count, plural, one {# message en attente} other {# messages en attente}}",
-      "privateTier": "Niveau privé — revue interne uniquement",
-      "classifications": {
-        "field_report": "Rapport de terrain",
-        "news_digest": "Revue de presse",
-        "operational": "Opérationnel",
-        "chatter": "Discussion",
-        "unclassified": "Non classé"
-      },
-      "sources": {
-        "all": "Toutes les sources"
-      },
-      "sourceKinds": {
-        "staff_group": "Groupe du personnel",
-        "partner_group": "Groupe partenaire",
-        "hotline": "Ligne d'assistance"
-      },
-      "columns": {
-        "sent": "Envoyé",
-        "sender": "Expéditeur",
-        "source": "Source",
-        "classification": "Classification",
-        "message": "Message",
-        "media": "Médias",
-        "thread": "Fil"
-      },
-      "lifecycle": {
-        "reported": "Signalé",
-        "updated": "Mis à jour",
-        "confirmed": "Confirmé",
-        "corrected": "Corrigé",
-        "retracted": "Rétracté"
-      },
-      "reviewStates": {
-        "unverified": "Non vérifié",
-        "approved_private": "Approuvé (privé)",
-        "approved_public": "Approuvé (public)",
-        "rejected": "Rejeté"
-      },
-      "thread": {
-        "untitled": "Fil sans titre",
-        "notFound": "Fil introuvable",
-        "reviewNote": "Note de revue",
-        "rejectReason": "Motif du rejet"
-      },
-      "review": {
-        "approvePrivate": "Approuver (privé)",
-        "approvePublic": "Approuver (public)",
-        "reject": "Rejeter",
-        "confirmPublish": "La publication est définitive — ce fil est promu et devient un signal dans le graphe des signaux.",
-        "confirm": "Confirmer la publication",
-        "cancel": "Annuler",
-        "finalNotice": "Approuvé public — ce fil est devenu un signal dans le graphe des signaux.",
-        "viewSignal": "Voir le signal promu",
-        "help": {
-          "approvePrivate": {
-            "title": "Vérifié, mais reste en interne.",
-            "body": "Le fil est marqué comme examiné et jugé crédible, mais il reste dans le niveau de préparation terrain : visible uniquement dans cet onglet Renseignement terrain, et uniquement pour les admins et les analystes. Aucun signal n'est créé — rien n'apparaît sur la carte ni dans les événements et alertes, et rien n'est exposé via l'API. C'est l'état prévu pour un contenu vrai mais sensible sur le plan opérationnel — déplacements du personnel, ou attribution qui pourrait mettre en danger la personne à l'origine du signalement. Il pourra encore être promu en public plus tard si les circonstances changent."
-          },
-          "approvePublic": {
-            "title": "Vérifié — diffusé dans CLEAR.",
-            "body": "C'est une promotion : le fil devient un vrai signal dans le graphe à cinq niveaux de CLEAR — source « whatsapp », visible dans les vues Signaux et Historique ainsi que sur la carte, éligible au regroupement en événements et à tout ce qui en découle — avec toute identité d'expéditeur structurellement supprimée : la charge utile de promotion ne contient aucun champ d'expéditeur, le nom de l'expéditeur ne peut donc physiquement pas l'accompagner. Cette action est définitive — une fois la promotion effectuée, le signal existe dans le graphe et le fil ne peut pas être dé-promu ; le serveur refuse toute modification ultérieure."
-          },
-          "reject": {
-            "title": "Non exploitable.",
-            "body": "Met le fil de côté. Contrairement à l'approbation publique, le rejet est réversible si quelqu'un change d'avis."
-          }
-        }
-      },
-      "empty": "Aucun message terrain en attente",
-      "noMatch": "Aucun message ne correspond au filtre actuel",
-      "noText": "Média sans légende",
-      "edited": "modifié"
-    },
     "dataSources": {
       "title": "Sources de données connectées",
       "subtitle": "{count, plural, one {# source alimente} other {# sources alimentent}} le moteur de détection",
@@ -1815,7 +1710,7 @@
     "viewOnCrisisMap": "Voir sur la carte",
     "status": {
       "active": "Actif",
-      "resolved": "Résolu"
+      "inactive": "Inactif"
     },
     "signalCount": "{count, plural, one {# signal} other {# signaux}}",
     "sourceCount": "{count, plural, one {# source} other {# sources}}",
@@ -2142,6 +2037,7 @@
       "inbox": "Boîte de réception",
       "map": "Carte",
       "insights": "Constats",
+      "analysis": "Analyse",
       "metrics": "Indicateurs",
       "operations": "Opérations",
       "cash": "Assistance monétaire",
@@ -2160,6 +2056,10 @@
       "unread": "{count, plural, one {# notification non lue} other {# notifications non lues}}",
       "empty": "Rien de nouveau",
       "loadError": "Impossible de charger les notifications"
+    },
+    "country": {
+      "label": "Pays",
+      "placeholder": "Choisir un pays"
     }
   },
   "noAccess": {
@@ -2779,7 +2679,8 @@
     "actions": {
       "title": "Actions",
       "addToCrisis": "Ajouter à une crise",
-      "comingSoon": "bientôt disponible"
+      "comingSoon": "bientôt disponible",
+      "menu": "Actions du signal"
     },
     "details": {
       "title": "Détails",
@@ -2797,8 +2698,8 @@
   },
   "locationChallenge": {
     "actions": {
-      "challengeLocation": "Contester l’emplacement",
-      "updateChallenge": "Mettre à jour la contestation",
+      "changeLocation": "Modifier l’emplacement",
+      "editChange": "Modifier le changement d’emplacement",
       "challengeOnMap": "Contester l’emplacement",
       "updateOnMap": "Déplacer l’épingle corrigée",
       "showSignalsLayer": "Afficher la couche Signaux"
@@ -2811,36 +2712,58 @@
       "signalLayerHint": "Pour contester une épingle, ouvrez Couches, passez les données sur Signaux, puis ouvrez une épingle Signal."
     },
     "status": {
-      "challenged": "Emplacement contesté",
-      "correctionQueued": "Correction en file d’attente"
+      "challenged": "Changement d’emplacement demandé",
+      "correctionQueued": "Changement d’emplacement proposé"
+    },
+    "indicator": {
+      "requested": "Changement d’emplacement demandé : en attente de la décision d’un administrateur",
+      "requestedTo": "Changement vers {place} demandé : en attente de la décision d’un administrateur",
+      "changed": "Emplacement modifié par un administrateur le {date}"
     },
     "modal": {
-      "title": "Contester l’emplacement",
-      "intro": "Marquez l’épingle de ce Signal comme non fiable. Vous pouvez proposer un point corrigé pour examen — l’épingle source n’est pas écrasée.",
-      "noteLabel": "Pourquoi cela semble incorrect ? (facultatif)",
+      "title": "Modifier l’emplacement",
+      "current": "Emplacement actuel",
+      "noPlace": "Lieu sans nom",
+      "noPin": "Placé sur une zone, sans point exact.",
+      "changeTo": "Changer pour",
+      "orOnMap": "Ou cliquez sur la carte là où il devrait être.",
+      "placeOnMap": "Le choisir sur la carte",
+      "noteLabel": "Pourquoi ? (facultatif)",
       "notePlaceholder": "ex. Dataminr a placé ceci dans la mauvaise ville…",
-      "proposeCorrection": "Proposer un point corrigé (facultatif)",
-      "proposeCorrectionHint": "Facultatif. Saisissez latitude et longitude si vous les connaissez. Mis en file d’attente uniquement.",
-      "placeOnMap": "Placer l’épingle corrigée sur la carte",
-      "placeOnMapHint": "Revenez à la carte et cliquez où l’épingle doit être. Vous pouvez aussi saisir les coordonnées manuellement ci-dessous.",
       "enterCoordinatesManually": "Saisir les coordonnées manuellement",
       "hideManualCoordinates": "Masquer les champs de coordonnées",
       "lat": "Latitude",
       "lng": "Longitude",
       "placeName": "Nom du lieu (facultatif)",
       "placeNamePlaceholder": "Orthographe locale ou point de repère",
-      "submitChallenge": "Soumettre la contestation",
-      "submitCorrection": "Soumettre contestation + correction",
-      "successTitle": "Mis en file d’attente",
-      "successChallenge": "L’emplacement de ce Signal est marqué contesté. Pas de seconde épingle tant qu’aucun point corrigé n’est proposé.",
-      "successCorrection": "Les épingles source et proposée s’afficheront toutes deux sur la carte pendant l’examen.",
+      "submit": "Proposer le changement",
+      "successTitle": "Changement proposé",
+      "successBody": "Les deux épingles s’affichent sur la carte jusqu’à la décision de l’administrateur de votre équipe.",
       "sessionOnlyTitle": "Visible pour cette session seulement",
-      "sessionOnlyChallenge": "La carte affiche cette épingle comme contestée pour l’instant. Ce n’est pas encore enregistré — la persistance clear-api est encore en attente.",
-      "sessionOnlyCorrection": "Les épingles source et proposée s’affichent sur la carte pour cette session. L’enregistrement pour examen nécessite le support clear-api (encore en attente)."
+      "sessionOnlyCorrection": "Les épingles source et proposée s’affichent sur la carte pour cette session. L’enregistrement pour examen nécessite le support clear-api (encore en attente).",
+      "searchLabel": "Rechercher le lieu",
+      "searchPlaceholder": "Village, ville ou point de repère",
+      "noResults": "Aucun lieu trouvé. Essayez une autre orthographe.",
+      "placing": "Recherche de l’emplacement dans CLEAR…",
+      "landsIn": "Dans CLEAR : {chain}",
+      "outsideCoverage": "Ce lieu est hors des zones couvertes par CLEAR.",
+      "outsideTeamArea": "Ce lieu est hors de la zone de votre équipe. Un administrateur de la plateforme peut y placer le Signal.",
+      "changePick": "Choisir un autre lieu"
+    },
+    "map": {
+      "pins": {
+        "source": "Actuel",
+        "proposed": "Proposé",
+        "placed": "Votre point"
+      },
+      "unavailable": "La carte n’a pas pu se charger. Vous pouvez quand même rechercher le lieu ou saisir ses coordonnées."
     },
     "errors": {
-      "submitFailed": "Impossible de soumettre la contestation. Réessayez.",
-      "backendUnavailable": "La contestation d’emplacement n’est pas encore disponible — le support clear-api est en attente."
+      "submitFailed": "Impossible de proposer le changement d’emplacement. Réessayez.",
+      "forbidden": "Votre équipe ne peut pas corriger ce Signal à cet endroit : le Signal ou le lieu est hors de sa zone.",
+      "outsideCoverage": "Ce lieu est hors des zones couvertes par CLEAR.",
+      "conflict": "Quelqu’un a proposé un changement d’emplacement pour ce Signal au même moment. Réessayez.",
+      "backendUnavailable": "Le changement d’emplacement n’est pas encore disponible : le support clear-api est en attente."
     }
   },
   "verifyEmail": {
@@ -2861,13 +2784,18 @@
   "inbox": {
     "title": "Boîte de réception",
     "awaiting": "{count, plural, one {# en attente de revue} other {# en attente de revue}}",
+    "tabs": {
+      "community": "Signaux communautaires",
+      "proposals": "Signaux proposés",
+      "locations": "Changements d’emplacement"
+    },
     "filters": {
+      "community": "Tous",
       "reports": "Rapports terrain",
       "unclassified": "Non classés",
       "chatter": "Bavardage",
       "proposals": "Signaux proposés",
-      "requests": "Mes demandes",
-      "all": "Tout"
+      "locations": "Changements d’emplacement"
     },
     "search": "Rechercher texte, réf. d'admission",
     "sort": {
@@ -2991,20 +2919,53 @@
       "partial": "Remis en file : {done} message(s) sur {total}. {error}"
     },
     "kinds": {
-      "task": "Ma demande",
-      "cases": "Signaux proposés"
+      "cases": "Signaux proposés",
+      "location": "Emplacement"
     },
     "event": {
       "untitled": "Événement sans titre",
       "open": "Ouvrir l'événement",
       "proposedAt": "Proposé le {date}"
     },
-    "requests": {
-      "requestedAt": "Demandé le {date}",
-      "awaitingReview": "Proposé, en attente d'examen",
-      "cancelFailed": "Cette demande n'a pas pu être annulée. Réessayez.",
-      "producedSeeEvent": "Proposition produite — voir l'événement",
-      "proposalLoadFailed": "La proposition n'a pas pu être chargée. Ouvrez l'événement pour la voir."
+    "location": {
+      "untitled": "Signal sans titre",
+      "preview": {
+        "proposed": "Point proposé : {place}",
+        "bare": "Épingle signalée comme fausse, aucun point proposé"
+      },
+      "filedBy": "Déposée par {name} · {date}",
+      "filed": "Déposée le {date}",
+      "openSignal": "Ouvrir le signal",
+      "now": "Emplacement actuel",
+      "noPlace": "Ce Signal n’a pas d’emplacement",
+      "noPin": "Placé sur une zone, il n’a donc pas d’épingle sur la carte.",
+      "proposed": "Emplacement proposé",
+      "noProposal": "Aucun point proposé : l’analyste indique que l’épingle est fausse, sans dire où elle devrait être.",
+      "landsIn": "Dans CLEAR : {chain}",
+      "outsideCoverage": "Hors des zones couvertes par CLEAR",
+      "note": "Note de l’analyste",
+      "team": "Équipe",
+      "placeTitle": "Placer le point",
+      "placeHint": "Cliquez sur la carte là où le Signal devrait être, ou recherchez le lieu. Vous pouvez aussi saisir ses coordonnées.",
+      "actions": {
+        "accept": "Accepter le point proposé",
+        "placeOther": "Placer un autre point",
+        "place": "Placer un point",
+        "decline": "Refuser",
+        "save": "Enregistrer ce point",
+        "cancel": "Annuler"
+      },
+      "toast": {
+        "accepted": "Emplacement corrigé au point proposé",
+        "corrected": "Emplacement corrigé à votre point",
+        "declined": "Changement refusé. L’épingle reste à sa place."
+      },
+      "errors": {
+        "forbidden": "Vous ne pouvez pas corriger ce Signal à cet endroit : le Signal ou le lieu est hors de la zone de l’équipe.",
+        "outsideCoverage": "Ce lieu est hors des zones couvertes par CLEAR.",
+        "conflict": "Ce changement a déjà été tranché, ou remplacé par un plus récent.",
+        "failed": "Impossible d’enregistrer la décision. Réessayez."
+      }
     },
     "cases": {
       "preview": "{count, plural, =0 {Tous les signaux proposés décidés} one {# signal proposé à examiner} other {# signaux proposés à examiner}} · {hazard}"
@@ -3020,9 +2981,9 @@
     "meta": {
       "updated": "Mis à jour {relative}",
       "asOf": "au {date}",
-      "builtFrom": "Établie à partir de {reports, plural, one {# rapport} other {# rapports}} et {events, plural, one {# événement} other {# événements}}",
-      "covers": "Couvre la période du {start} à ce jour",
-      "period": "Couvre la période du {start} au {end}",
+      "builtFrom": "{reports, plural, one {# rapport} other {# rapports}}, {events, plural, one {# événement cité} other {# événements cités}}",
+      "covers": "{start} – aujourd'hui",
+      "period": "{start} – {end}",
       "stale": "Pas à jour"
     },
     "tabs": {
@@ -3047,6 +3008,7 @@
       "funding": "Financement",
       "fundingOf": "sur {required}",
       "fundingSub": "reçus par rapport aux besoins",
+      "fundingHow": "Le reçu est ce qui a déjà été versé. La partie hachurée est l'écart encore requis.",
       "received": "Reçu",
       "gap": "Déficit",
       "notReported": "Non rapporté dans les sources actuelles",
@@ -3054,6 +3016,7 @@
       "inside": "En {scope}",
       "abroad": "À l'étranger",
       "differentDates": "les parts peuvent dater de moments différents",
+      "roundedParts": "arrondies séparément, elles peuvent ne pas correspondre au total",
       "rangeLabel": "Fourchette selon les sources",
       "headline": "Chiffre retenu",
       "bySector": "Personnes dans le besoin par secteur",
@@ -3067,22 +3030,34 @@
         "protection": "Protection",
         "shelter": "Abris et BNA",
         "education": "Éducation",
-        "nutrition": "Nutrition"
+        "nutrition": "Nutrition",
+        "agriculture": "Agriculture"
       }
     },
     "map": {
       "title": "Zone d'analyse",
       "events": "{count, plural, one {# événement} other {# événements}} depuis le {date}",
+      "eventsSince": "{count, plural, one {événement dans cette zone} other {événements dans cette zone}} depuis le {date}",
       "areas": "Où les événements ont eu lieu",
       "areaEvents": "{count, plural, one {# événement} other {# événements}}",
       "noEvents": "Aucun événement enregistré dans cette zone depuis le {date}.",
-      "sample": "La carte montre les {count} plus récents"
+      "loading": "Chargement des événements…",
+      "error": "Les événements n'ont pas pu être chargés.",
+      "sample": "La carte montre les {count} plus récents",
+      "hotspots": "{scope} · foyers d'événements",
+      "recent": "{count, plural, one {# événement le plus récent} other {# événements les plus récents}}",
+      "zoomIn": "Zoom avant",
+      "zoomOut": "Zoom arrière",
+      "fullScreen": "Plein écran"
     },
     "timeline": {
       "title": "Chronologie des événements",
       "today": "Aujourd'hui",
       "empty": "Aucun événement enregistré sur cette période.",
-      "sample": "Les {count} événements les plus récents"
+      "sample": "Les {count} événements les plus récents",
+      "span": "{start} → aujourd'hui · {count, plural, one {# événement clé} other {# événements clés}}",
+      "live": "{start} → aujourd'hui · {count, plural, one {# événement} other {# événements}}",
+      "loading": "Chargement des événements…"
     },
     "findings": {
       "hazards": "Aléas",
@@ -3096,7 +3071,7 @@
       "showAll": "Tout afficher ({count})",
       "showLess": "Afficher moins",
       "forecast": "Prévisions",
-      "forecastTag": "projections, non observées",
+      "forecastTag": "Projections, non observées",
       "forecastNote": "Ce que les sources prévoient. Séparé des faits ci-dessus.",
       "mostLikely": "Le plus probable",
       "bestCase": "Meilleur scénario",
@@ -3108,26 +3083,31 @@
       "severityIntro": "Chaque secteur est évalué par l'analyse à partir des rapports sectoriels qu'elle cite.",
       "severityNull": "Non évalué : trop peu d'éléments pour noter.",
       "inferred": "Évalué à partir de rapports hors de ce secteur. À considérer comme indicatif.",
-      "notAssessed": "Non évalué"
+      "notAssessed": "Non évalué",
+      "reportingGrade": "D'après les rapports : {grade}",
+      "noFigure": "Pas de chiffre de personnes dans le besoin"
     },
     "events": {
       "title": "Événements dans cette zone",
       "empty": "Aucun événement enregistré dans cette zone sur cette période.",
+      "loading": "Chargement des événements…",
+      "error": "Les événements n'ont pas pu être chargés.",
       "untitled": "Événement sans titre",
       "severity": "Gravité {value}",
-      "count": "{shown} sur {total}"
+      "count": "Échantillon : {shown} sur {total}"
     },
     "sources": {
       "title": "Sources citées"
     },
     "contexts": {
-      "title": "Contextes",
+      "title": "Risques contextuels",
       "meta": "{categories, plural, one {# catégorie} other {# catégories}} · {findings, plural, one {# constat} other {# constats}}",
       "findings": "{count, plural, one {# constat} other {# constats}}"
     },
     "generating": {
       "title": "Génération de la première version",
       "description": "Le pipeline construit cette analyse à partir de la base de connaissances. Cette page se met à jour d'elle-même lorsqu'elle est prête.",
+      "elapsed": "Généralement prêt en 5–6 minutes. En cours depuis {minutes, plural, one {# minute} other {# minutes}}.",
       "overdueTitle": "Pas encore générée",
       "overdueDescription": "La première version n'est pas arrivée. Elle a peut-être échoué ; demandez-la à nouveau avec Mettre à jour."
     },
@@ -3139,6 +3119,8 @@
     },
     "home": {
       "title": "Analyses",
+      "preview": "Aperçu du design",
+      "previewHint": "Analyse Soudan d'exemple pour revoir la mise en page.",
       "subtitle": "Analyses actuelles pour {country}. Ouvrez-en une ou créez la vôtre sur des États ou districts précis.",
       "new": "Nouvelle analyse",
       "countryGroup": "Pays",
@@ -3173,6 +3155,7 @@
       "firstRun": "La première version prend généralement quelques minutes. Vous pouvez quitter cette page en attendant.",
       "duplicate": "Votre équipe a déjà une analyse pour ces districts : {name}.",
       "openExisting": "L'ouvrir",
+      "needTeam": "Rejoignez une équipe pour créer une analyse. Un administrateur peut vous y ajouter.",
       "error": "L'analyse n'a pas pu être créée. Veuillez réessayer.",
       "cancel": "Annuler",
       "submit": "Créer l'analyse",
@@ -3191,6 +3174,9 @@
     "report": {
       "button": "Créer un rapport",
       "eyebrow": "Rapport de situation",
+      "org": "Conseil norvégien pour les réfugiés",
+      "classification": "Usage interne et partage privé",
+      "disclaimer": "À des fins de planification. Les chiffres proviennent des sources citées et ne constituent pas une évaluation de terrain.",
       "scopeCountry": "Analyse pays",
       "scopeCreated": "Analyse créée",
       "period": "Couvre la période du {start} à ce jour",
@@ -3213,8 +3199,10 @@
       "priorityNeeds": "Besoins prioritaires",
       "responseActivities": "Activités de réponse",
       "noResponse": "Aucune activité de réponse signalée dans les sources actuelles.",
-      "outlook": "Perspectives (scénario le plus probable)",
+      "outlook": "Perspectives",
       "sources": "Sources",
+      "eventLabel": "Événement",
+      "hapiFigure": "Chiffre HAPI",
       "provenance": "Provenance",
       "generated": "Rapport créé le {date} par {author} dans CLEAR. Les nombres entre crochets renvoient à la liste des sources.",
       "footer": "CLEAR · {scope}",
@@ -3255,13 +3243,80 @@
         },
         "hints": {
           "currentStatus": "Déplacés, besoins et financement",
-          "outlook": "Scénario le plus probable"
+          "outlook": "Le plus probable, le meilleur et le pire scénario"
         }
+      }
+    },
+    "layout": {
+      "changes": "Ce qui a changé",
+      "changesStamp": "mise à jour du {date}",
+      "newCount": "{count, plural, one {# nouveau} other {# nouveaux}}",
+      "newMark": "Nouveau",
+      "updatedCount": "{count, plural, one {# mis à jour} other {# mis à jour}}",
+      "nrcEvidence": "Preuves du NRC",
+      "breadcrumb": "Fil d'Ariane",
+      "addEvidence": "Ajouter des éléments",
+      "editTitle": "Modifier le titre",
+      "saveTitle": "Enregistrer le titre",
+      "titlePlaceholder": "Nom de cette analyse",
+      "evidencePdfOnly": "Seuls les fichiers PDF peuvent être ajoutés.",
+      "discussionYou": "Vous",
+      "evidenceFiles": "{count, plural, one {# fichier} other {# fichiers}}",
+      "evidenceDrop": "Déposez des fichiers pour ajouter une preuve",
+      "evidencePreview": "Aperçu de {name}",
+      "evidenceDownload": "Télécharger",
+      "evidenceUnavailable": "Ce fichier n'est pas sur ce navigateur. Ajoutez-le de nouveau pour l'afficher ou le télécharger.",
+      "evidenceClose": "Fermer l'aperçu",
+      "evidenceNew": "NOUVEAU",
+      "evidenceProcessed": "TRAITÉ",
+      "evidenceStale": "PÉRIMÉ",
+      "evidenceInternal": "NRC INTERNAL",
+      "evidenceIncidentKind": "Rapport d'incident · Kordofan-Ouest · information datée du 7 sep 2026",
+      "evidenceIncidentNote": "6 faits ajoutés à cette page · 1 rapport pas encore lié à une crise",
+      "evidenceSitrepKind": "Sitrep · tous les bureaux de zone · information datée d'août 2025",
+      "evidenceSitrepNote": "Plus de 30 jours : conservé, non utilisé dans les chiffres ni le résumé",
+      "evidenceUploadedKind": "Ajouté à l'instant",
+      "evidenceUploadedNote": "Conservé. Pas encore lu dans cette page.",
+      "discussionTitle": "Discussion",
+      "discussionComments": "{count, plural, one {# commentaire} other {# commentaires}}",
+      "discussionEmpty": "Pas encore de commentaires. Lancez la discussion.",
+      "discussionPlaceholder": "Ajouter un commentaire...",
+      "discussionPost": "Publier",
+      "dismissChanges": "Marquer comme vu",
+      "updated": "Mis à jour",
+      "summary": "Résumé de situation",
+      "expandSummary": "Lire le résumé complet",
+      "collapseSummary": "Réduire",
+      "copySummary": "Copier le résumé",
+      "editSummary": "Modifier le résumé",
+      "saveSummary": "Enregistrer",
+      "cancelEdit": "Annuler",
+      "summaryEdited": "Modifié",
+      "copied": "Copié",
+      "highlights": "Points clés",
+      "howToRead": "Comment lire",
+      "vulnerabilitiesMeta": "{count, plural, one {# condition préexistante} other {# conditions préexistantes}}",
+      "legend": "Légende",
+      "legendArea": "Zone d'analyse",
+      "legendAreaCountry": "Zone d'analyse (tout le pays)",
+      "legendEvents": "Les marqueurs indiquent où les événements ont été enregistrés",
+      "legendHow": "Comment lire cette carte",
+      "legendHotspot": "Foyer d'événements — la taille indique le nombre",
+      "legendBoundary": "Limite d'État",
+      "sections": {
+        "summary": "Résumé",
+        "figures": "Chiffres clés",
+        "contexts": "Risques de contexte",
+        "hazards": "Aléas",
+        "vulnerabilities": "Vulnérabilités",
+        "displacement": "Déplacement",
+        "forecast": "Prévision"
       }
     },
     "refresh": {
       "button": "Mettre à jour",
       "requested": "Mise à jour demandée. La nouvelle version prend généralement quelques minutes et s'affiche ici d'elle-même.",
+      "preview": "Ceci est l'échantillon de conception : Mettre à jour ne demande pas de nouvelle version au pipeline.",
       "error": "La mise à jour n'a pas pu être demandée. Veuillez réessayer."
     }
   },
@@ -3530,6 +3585,78 @@
       "country": "Pays",
       "allCountries": "Tous les pays",
       "hint": "Les jours sont en UTC. Laissez les dates vides pour les 12 dernières semaines."
+    }
+  },
+  "usageAnalytics": {
+    "profile": {
+      "title": "Statistiques d'utilisation",
+      "toggleLabel": "Aider à améliorer CLEAR avec les statistiques d'utilisation",
+      "toggleDescription": "Enregistre les pages et fonctionnalités que vous utilisez. Désactivez pour l'arrêter complètement sur ce navigateur.",
+      "adminNote": "Les administrateurs globaux ne sont jamais suivis.",
+      "noticeLink": "Fonctionnement des statistiques d'utilisation",
+      "backToProfile": "Retour au profil"
+    },
+    "notice": {
+      "title": "Statistiques d'utilisation dans CLEAR",
+      "intro": "CLEAR enregistre l'utilisation de l'application pour que l'équipe voie ce qui aide les équipes de terrain et ce qui les freine.",
+      "whatTitle": "Ce que nous collectons",
+      "whatPages": "Les pages que vous ouvrez, en ne gardant que l'adresse de la page (le texte de recherche et les autres détails de requête sont supprimés).",
+      "whatActions": "Une liste fixe d'actions, comme ouvrir un événement ou terminer la visite guidée.",
+      "whatIdentity": "Votre identifiant utilisateur, rôle, organisation, équipe et langue.",
+      "whatNot": "Jamais votre nom, e-mail, texte de recherche, requêtes à l'Agent, titres ou tout ce que vous saisissez.",
+      "whyTitle": "Pourquoi",
+      "why": "Pour savoir quelles fonctionnalités sont utilisées, où les utilisateurs bloquent et quoi améliorer ensuite.",
+      "whoTitle": "Qui y a accès",
+      "who": "Uniquement l'équipe produit CLEAR, dans un outil auto-hébergé sur les serveurs de CLEAR. Rien n'est partagé avec des tiers ni utilisé à des fins publicitaires.",
+      "retentionTitle": "Durée de conservation",
+      "retention": "13 mois, puis les données sont supprimées.",
+      "optOutTitle": "Désactivation",
+      "optOut": "Vous pouvez désactiver les statistiques d'utilisation à tout moment dans votre profil. Une fois désactivées, le traceur n'est pas chargé du tout.",
+      "manageInProfile": "Gérer dans le profil",
+      "gotIt": "Compris"
+    }
+  },
+  "adminActivity": {
+    "page": {
+      "title": "Activité d'utilisation",
+      "breadcrumb": "Activité",
+      "breadcrumbAdmin": "Administration"
+    },
+    "window": {
+      "label": "Période",
+      "days": "{days} derniers jours"
+    },
+    "error": {
+      "title": "Impossible de charger l'activité"
+    },
+    "unavailable": {
+      "title": "Activité pas encore disponible",
+      "body": "L'API CLEAR ne fournit pas encore les statistiques d'activité. Réessayez après la prochaine version de l'API."
+    },
+    "loading": "Chargement de l'activité",
+    "actions": {
+      "title": "Actions",
+      "action": "Action",
+      "count": "Nombre",
+      "total": "Total",
+      "empty": "Aucune action enregistrée sur cette période."
+    },
+    "agent": {
+      "title": "Utilisation de l'agent",
+      "turns": "Échanges",
+      "distinctUsers": "Utilisateurs distincts",
+      "answers": "Réponses",
+      "cost": "Coût (USD)",
+      "tokens": "Jetons",
+      "tokensSplit": "{input} en entrée / {output} en sortie",
+      "byRoute": "Par page",
+      "route": "Page",
+      "empty": "Aucune utilisation de l'agent sur cette période."
+    },
+    "export": {
+      "title": "Export agrégé NRC",
+      "note": "Totaux mensuels des 12 derniers mois par organisation, équipe et rôle. Les groupes de moins de 5 personnes et les administrateurs de la plateforme sont exclus.",
+      "button": "Télécharger l'export NRC (CSV)"
     }
   }
 }

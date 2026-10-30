@@ -666,11 +666,15 @@ export async function addBlockagesMapLayers(
   
   // Debug: log feature types and status codes
   if (data.features.length > 0) {
-    const points = data.features.filter((f: any) => f.geometry.type === "Point");
-    const lines = data.features.filter((f: any) => f.geometry.type === "LineString");
+    const features = data.features as Array<{
+      geometry?: { type?: string } | null;
+      properties?: { status_code?: unknown } | null;
+    }>;
+    const points = features.filter((f) => f.geometry?.type === "Point");
+    const lines = features.filter((f) => f.geometry?.type === "LineString");
     console.log(`Blockages: ${points.length} points, ${lines.length} lines`);
     if (points.length > 0) {
-      const statuses = points.map((p: any) => p.properties?.status_code).filter(Boolean);
+      const statuses = points.map((p) => p.properties?.status_code).filter(Boolean);
       console.log(`Point status codes:`, [...new Set(statuses)]);
     }
   }

@@ -69,7 +69,8 @@ export function projectReportMap({
 }): ReportMap | null {
   const countryRings = rings(country);
   const areaRings = areas.map(rings);
-  const focus = bounds(areaRings.flat()) ?? bounds(countryRings);
+  const eventPoints = events.flatMap((event) => (event.point ? [event.point] : []));
+  const focus = bounds(areaRings.flat()) ?? bounds(countryRings) ?? bounds(eventPoints.length > 0 ? [eventPoints] : []);
   if (!focus) return null;
 
   const pad = areaRings.flat().length > 0 ? 0.35 : 0.05;
@@ -143,6 +144,29 @@ function isWinAnsi(ch: string): boolean {
   return c === 0x0a || (c >= 0x20 && c <= 0x7e) || (c >= 0xa0 && c <= 0xff) || WIN_ANSI_EXTRA.has(ch);
 }
 
+/**
+ * How long the in-browser PDF build may run before the button stops waiting.
+ * A Sudan analysis was observed sitting busy past this with no file and no error.
+ */
+export const REPORT_BUILD_TIMEOUT_MS = 25_000;
+
+/** Resolves with `work`, or rejects once `ms` passes without a result. */
+export function withDeadline<T>(work: Promise<T>, ms: number): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error("PDF build timed out")), ms);
+    work.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (error: unknown) => {
+        clearTimeout(timer);
+        reject(error instanceof Error ? error : new Error("PDF build failed"));
+      },
+    );
+  });
+}
+
 /** "sitrep-sheikan-north-kordofan-sudan-2026-09-29.pdf" */
 export function reportFileName(scopeName: string, at: Date): string {
   const slug = scopeName
@@ -186,7 +210,12 @@ interface ReportContent {
   hazards: { hazards: unknown[] };
   displacement: { push: unknown[] };
   sectors: { severity: string | null; needs: unknown[]; interventions: unknown[] }[];
-  scenarios: { mostLikely: string | null } | null;
+  scenarios: {
+    description?: string | null;
+    mostLikely: string | null;
+    bestCase?: string | null;
+    worstCase?: string | null;
+  } | null;
   sources: unknown[];
 }
 
@@ -213,7 +242,10 @@ export function defaultReportSections(data: ReportContent, eventCount: number): 
     displacement: counts.displacement! > 0,
     priorityNeeds: counts.priorityNeeds! > 0,
     responseActivities: counts.responseActivities! > 0,
-    outlook: !!data.scenarios?.mostLikely,
+    outlook: !!(
+      data.scenarios &&
+      (data.scenarios.description || data.scenarios.mostLikely || data.scenarios.bestCase || data.scenarios.worstCase)
+    ),
     sources: counts.sources! > 0,
   };
   return REPORT_SECTIONS.map((key) => ({ key, included: available[key], available: available[key], count: counts[key] }));

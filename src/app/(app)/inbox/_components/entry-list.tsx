@@ -1,6 +1,6 @@
 "use client";
 
-import { useFormatter, useTranslations } from "next-intl";
+import { useFormatter, useNow, useTranslations } from "next-intl";
 import { IconPaperclip, IconSearch } from "@tabler/icons-react";
 import {
   isCaseGroupEntry,
@@ -10,9 +10,10 @@ import {
   type HotlineEntry,
   type InboxEntry,
   type InboxSort,
-  type TaskEntry,
+  type LocationChallengeEntry,
 } from "~/lib/hotline-inbox";
-import { WEB_SEARCH_KIND, requestLabel } from "~/lib/impact-prior-source";
+import { locationChain } from "~/lib/location-challenge";
+import { WEB_SEARCH_KIND } from "~/lib/impact-prior-source";
 import { getHazardName } from "~/lib/disaster-types";
 import { InboxEntryPills } from "./classification-pill";
 import styles from "../inbox.module.css";
@@ -35,12 +36,13 @@ interface EntryListProps {
 function HotlineRow({ entry }: { entry: HotlineEntry }) {
   const t = useTranslations("inbox");
   const format = useFormatter();
+  const now = useNow({ updateInterval: 60_000 });
   const mediaCount = entry.attachments.length + entry.omittedMediaCount;
   return (
     <span className={styles.entryBody}>
       <span className={styles.entryLine1}>
         <span className={styles.entryTitle}>{entry.title || t("pane.noText")}</span>
-        <span className={styles.entryTime}>{format.relativeTime(new Date(entry.sentAt))}</span>
+        <span className={styles.entryTime}>{format.relativeTime(new Date(entry.sentAt), now)}</span>
       </span>
       <span className={styles.entryPreview}>
         {entry.text.length > 0 ? entry.text.split("\n\n")[0] : t("pane.noText")}
@@ -66,12 +68,13 @@ function HotlineRow({ entry }: { entry: HotlineEntry }) {
 function CaseGroupRow({ entry }: { entry: CaseGroupEntry }) {
   const t = useTranslations("inbox");
   const format = useFormatter();
+  const now = useNow({ updateInterval: 60_000 });
   const hazards = [...new Set(entry.cases.map((c) => getHazardName(c.hazardType)))].join(", ");
   return (
     <span className={styles.entryBody}>
       <span className={styles.entryLine1}>
         <span className={styles.entryTitle}>{entry.eventTitle ?? t("event.untitled")}</span>
-        <span className={styles.entryTime}>{format.relativeTime(new Date(entry.sentAt))}</span>
+        <span className={styles.entryTime}>{format.relativeTime(new Date(entry.sentAt), now)}</span>
       </span>
       <span className={styles.entryPreview}>
         {t("cases.preview", { count: entry.undecided, hazard: hazards })}
@@ -83,23 +86,29 @@ function CaseGroupRow({ entry }: { entry: CaseGroupEntry }) {
   );
 }
 
-/** One of the reader's own requests: the Event, which source, and where it stands. */
-function TaskRow({ entry }: { entry: TaskEntry }) {
+/** A Location challenge: the Signal, what the analyst proposed, and who
+ * filed it when. */
+function LocationChallengeRow({ entry }: { entry: LocationChallengeEntry }) {
   const t = useTranslations("inbox");
-  const tEnrichment = useTranslations("eventDetail.enrichment");
   const format = useFormatter();
-  const { task } = entry;
+  const now = useNow({ updateInterval: 60_000 });
+  const c = entry.challenge;
+  const place =
+    c.proposedName?.trim() ||
+    locationChain(c.proposedPlacement) ||
+    (c.proposedLat != null && c.proposedLng != null ? `${c.proposedLat.toFixed(4)}, ${c.proposedLng.toFixed(4)}` : null);
   return (
     <span className={styles.entryBody}>
       <span className={styles.entryLine1}>
-        <span className={styles.entryTitle}>{entry.eventTitle ?? t("event.untitled")}</span>
-        <span className={styles.entryTime}>{format.relativeTime(new Date(entry.sentAt))}</span>
+        <span className={styles.entryTitle}>{entry.signalTitle ?? t("location.untitled")}</span>
+        <span className={styles.entryTime}>{format.relativeTime(new Date(entry.sentAt), now)}</span>
       </span>
       <span className={styles.entryPreview}>
-        {tEnrichment("kindStatus", { source: requestLabel(task.kind, tEnrichment), status: tEnrichment(`status.${task.status}`) })}
+        {place ? t("location.preview.proposed", { place }) : t("location.preview.bare")}
       </span>
       <span className={styles.entryMeta}>
         <InboxEntryPills entry={entry} />
+        {c.createdByName?.trim() && <span className={styles.relation}>{c.createdByName.trim()}</span>}
       </span>
     </span>
   );
@@ -147,11 +156,8 @@ export function EntryList({
               className={styles.entry}
               data-testid="inbox-entry"
               data-kind={entry.kind}
-              data-source-kind={
-                // Proposed signals come from the web Worker's kind.
-                isCaseGroupEntry(entry) ? WEB_SEARCH_KIND : isHotlineEntry(entry) ? undefined : entry.task.kind
-              }
-              data-status={entry.kind === "task" ? entry.task.status : undefined}
+              // Proposed signals come from the web Worker's kind.
+              data-source-kind={isCaseGroupEntry(entry) ? WEB_SEARCH_KIND : undefined}
               data-undecided={isCaseGroupEntry(entry) ? entry.undecided : undefined}
               data-selected={entry.id === selectedId}
               data-unread={unread}
@@ -164,7 +170,7 @@ export function EntryList({
               ) : isCaseGroupEntry(entry) ? (
                 <CaseGroupRow entry={entry} />
               ) : (
-                <TaskRow entry={entry} />
+                <LocationChallengeRow entry={entry} />
               )}
             </button>
           );

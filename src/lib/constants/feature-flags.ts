@@ -2,9 +2,8 @@
  * Feature flag registry.
  *
  * Most entries gate a top-level nav item (they carry a `route`). Entries
- * without a `route` gate a sub-tab within a page (e.g. the Ground Intel tab in
- * Detection, the Situation Analysis tab in Insights) — the component reads the
- * flag via `useFeatureEnabled(key)`.
+ * without a `route` gate something within a page (e.g. the Event page's
+ * enrichment) — the component reads the flag via `useFeatureEnabled(key)`.
  *
  * Tier 1 = Core (always on, non-toggleable)
  * Tier 2 = High priority
@@ -51,14 +50,6 @@ export const FEATURE_FLAGS: FeatureFlagDefinition[] = [
   },
 
   // Tier 3 - Medium Priority
-  {
-    key: "insights",
-    label: "Insights",
-    description: "Situation reports, scenario planning, and impact assessment",
-    tier: 3,
-    defaultEnabled: true,
-    route: "/insights",
-  },
   {
     key: "operations",
     label: "Operations",
@@ -116,37 +107,6 @@ export const FEATURE_FLAGS: FeatureFlagDefinition[] = [
     defaultEnabled: false,
   },
   {
-    key: "ground_intel",
-    label: "Ground Intel",
-    description:
-      "Ground Intel review tab in the Detection page (also admin/analyst only)",
-    tier: 2,
-    defaultEnabled: true,
-  },
-  {
-    key: "crisis_overview",
-    label: "Crisis Overview",
-    description:
-      "Crisis Overview tab in the Insights page (the crises list). UI-only gate; when off the page falls back to the next enabled Insights tab.",
-    tier: 3,
-    defaultEnabled: true,
-  },
-  {
-    key: "situation_analysis",
-    label: "Situation Analysis",
-    description: "Situation Analysis tab in the Insights page",
-    tier: 3,
-    defaultEnabled: true,
-  },
-  {
-    key: "analysis_v2",
-    label: "Analysis",
-    description:
-      "Analysis tab in the Insights page: the unified scoped analysis (PRD Situation analysis (neo)), country scope first, read from clear-api's frame-scoped `analysis` (ADR-0007). UI-only gate. Remove once it replaces the Crisis and Situation Analysis tabs.",
-    tier: 3,
-    defaultEnabled: false,
-  },
-  {
     key: "event_enrichment",
     label: "Event enrichment",
     description:
@@ -167,6 +127,14 @@ export const FEATURE_FLAGS: FeatureFlagDefinition[] = [
     label: "CLEAR Agent: CLEAR data and navigation",
     description:
       "Lets the CLEAR Agent (needs `agent`) answer from CLEAR's own data (Signals, Events, Alerts, Crises, situation analyses, knowledge base) through the curated clear-mcp tools, see the user's Current view, and move the app with Agent navigation (always announced, with Back). Enforced in /api/agent, not only the UI. Off: the Agent answers from NRC Find only, as in V1.",
+    tier: 4,
+    defaultEnabled: false,
+  },
+  {
+    key: "usage_analytics",
+    label: "Usage analytics",
+    description:
+      "Loads self-hosted Umami page views and allowlisted usage events (src/lib/analytics) for signed-in users. Also needs NEXT_PUBLIC_UMAMI_HOST_URL and NEXT_PUBLIC_UMAMI_WEBSITE_ID baked into the image. Global admins and users who opted out on their Profile are never tracked.",
     tier: 4,
     defaultEnabled: false,
   },

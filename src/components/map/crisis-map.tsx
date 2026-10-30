@@ -102,7 +102,9 @@ export interface MapMarker {
   type?: string;
   description?: string;
   popup?: string;
-  markerKind?: "event" | "signal" | "crisis";
+  markerKind?: "event" | "signal" | "crisis" | "hotspot";
+  /** Halo diameter in px for analysis hotspot markers. */
+  hotspotSize?: number;
   /** CLEAR Signals SVG slug for type glyph on unclustered pins. */
   iconSlug?: string;
   /** Source pin challenged / correction queued (Location trust v1). */
@@ -154,6 +156,8 @@ export interface CrisisMapApi {
   restoreViewCamera: (camera: MapViewCameraSnapshot) => void;
   /** Programmatic fly for place search — does not fight React center/zoom props. */
   flyTo: (args: CrisisMapFlyToArgs) => void;
+  /** Step the camera zoom. Used by the analysis map's own controls. */
+  zoomBy: (delta: number) => void;
 }
 
 export interface MapRegion {
@@ -309,6 +313,14 @@ interface CrisisMapProps {
   } | null;
   /** Basemap: simple (theme style), topography (hillshade + DEM terrain mesh), or satellite imagery */
   baseMapType?: BaseMapType;
+  /**
+   * Analysis detail paints the focus country in the handoff orange and draws
+   * one hotspot per area instead of severity pins. Other maps stay on the
+   * default blue focus treatment.
+   */
+  appearance?: "default" | "analysis";
+  /** Mapbox +/- control. The analysis map draws its own stack. Default true. */
+  showNavigation?: boolean;
   /**
    * Mutable ref filled with project helpers while the map is mounted.
    * Cleared on unmount. Used by `/map` spaghetti connectors.
@@ -615,6 +627,34 @@ function buildPointEl(
   return outer;
 }
 
+/** Analysis hotspot: sized halo, solid core, state name above. */
+function buildHotspotEl(title: string, size: number): HTMLDivElement {
+  const outer = document.createElement("div");
+  outer.style.cssText = `width:${size}px;height:${size}px;cursor:pointer;`;
+  const halo = document.createElement("div");
+  halo.className = "marker-pin-head";
+  halo.style.cssText = [
+    "position:relative;width:100%;height:100%;border-radius:50%;",
+    "background:var(--sa-accent-wash, rgba(242,107,43,0.22));",
+    "display:flex;align-items:center;justify-content:center;",
+  ].join("");
+  const core = document.createElement("div");
+  core.className = "marker-dot";
+  core.style.cssText = "width:7px;height:7px;border-radius:50%;background:var(--sa-accent, #F26B2B);";
+  const label = document.createElement("div");
+  label.textContent = title;
+  label.style.cssText = [
+    "position:absolute;left:50%;bottom:calc(100% + 4px);transform:translateX(-50%);",
+    "white-space:nowrap;pointer-events:none;",
+    "font:500 11.5px system-ui,sans-serif;color:var(--sa-lead, #E6E8EC);",
+    "text-shadow:0 1px 2px rgba(0,0,0,0.75);",
+  ].join("");
+  halo.appendChild(core);
+  halo.appendChild(label);
+  outer.appendChild(halo);
+  return outer;
+}
+
 // ── Component ────────────────────────────────────────────────────────────────
 
 export function CrisisMap({
@@ -660,6 +700,8 @@ export function CrisisMap({
   showSeismicSignals = false,
   seismicSignalsGeoJson = null,
   baseMapType = "simple",
+  appearance = "default",
+  showNavigation = true,
   mapApiRef,
   onMapMove,
   locationPickActive = false,
@@ -716,6 +758,8 @@ export function CrisisMap({
   const onMapMoveRef = useRef(onMapMove);
   const onMapClickRef = useRef(onMapClick);
   const locationPickActiveRef = useRef(locationPickActive);
+  const showNavigationRef = useRef(showNavigation);
+  showNavigationRef.current = showNavigation;
   useEffect(() => { onMarkerClickRef.current = onMarkerClick; }, [onMarkerClick]);
   useEffect(() => { onMarkerHoverRef.current = onMarkerHover; }, [onMarkerHover]);
   useEffect(() => { onCameraChangeRef.current = onCameraChange; }, [onCameraChange]);
@@ -732,7 +776,7 @@ export function CrisisMap({
   const seismicAnimRef = useRef<number | null>(null);
   const shakemapPaintIdsRef = useRef<Set<string>>(new Set());
   const shakemapHoverBoundRef = useRef<Set<string>>(new Set());
-  const shakemapPopupRef = useRef<any>(null);
+  const shakemapPopupRef = useRef<MapboxGLAny>(null);
   const [loaded, setLoaded] = useState(false);
   /** Host inside `.mapboxgl-map` so overlays can sit between canvas and markers. */
   const [mapOverlayHost, setMapOverlayHost] = useState<HTMLElement | null>(null);
@@ -862,10 +906,12 @@ export function CrisisMap({
         onMapMoveRef.current?.();
       });
 
-      map.current.addControl(
-        new mapboxgl.NavigationControl({ showCompass: false }),
-        "bottom-right",
-      );
+      if (showNavigationRef.current) {
+        map.current.addControl(
+          new mapboxgl.NavigationControl({ showCompass: false }),
+          "bottom-right",
+        );
+      }
 
       // Stash disposer on the map instance for effect cleanup below.
       (map.current as MapboxGLAny).__clearMetaPitchBridge = removeMetaPitchBridge;
@@ -1271,10 +1317,13 @@ export function CrisisMap({
     // areas recede. Terrain/satellite: softer, always-dark mask - a white
     // wash over imagery reads as fog, and these basemaps carry real
     // information outside the focus country too.
+    const analysisLook = appearance === "analysis";
+    const accent = isDark ? "#F26B2B" : "#E85D3D";
     const maskColor =
       baseMapType === "simple" && !isDark ? "#FFFFFF" : "#000000";
-    const maskOpacity =
-      baseMapType === "simple" ? (isDark ? 0.55 : 0.9) : 0.4;
+    const maskOpacity = analysisLook
+      ? (isDark ? 0.28 : 0.35)
+      : baseMapType === "simple" ? (isDark ? 0.55 : 0.9) : 0.4;
     m.addLayer(
       {
         id: "focus-mask-fill",
@@ -1300,11 +1349,11 @@ export function CrisisMap({
     const overlayOnDark = baseMapType === "satellite" || isDark;
     // Prefer paintable DB geometry (real OCHA polygons). Seed bboxes fall
     // through to Mapbox country tiles so local/dev doesn't paint squares.
-    const highlightColor = isDark ? "#1E3A5F" : "#1E40AF";
-    const highlightOpacity = isDark ? 0.45 : 0.35;
-    const borderColor = overlayOnDark ? "#60A5FA" : "#1D4ED8";
-    const borderWidth = overlayOnDark ? 1.5 : 1.25;
-    const borderOpacity = overlayOnDark ? 0.9 : 0.85;
+    const highlightColor = analysisLook ? accent : (isDark ? "#1E3A5F" : "#1E40AF");
+    const highlightOpacity = analysisLook ? 0.1 : (isDark ? 0.45 : 0.35);
+    const borderColor = analysisLook ? accent : (overlayOnDark ? "#60A5FA" : "#1D4ED8");
+    const borderWidth = analysisLook ? 1.8 : (overlayOnDark ? 1.5 : 1.25);
+    const borderOpacity = analysisLook ? 1 : (overlayOnDark ? 0.9 : 0.85);
 
     if (paintableFocusGeometry) {
       m.addSource(FOCUS_GEOJSON_SOURCE, {
@@ -1385,10 +1434,10 @@ export function CrisisMap({
               ["==", ["get", "iso_3166_1"], focusIso],
             ]);
             m.setLayerZoomRange(layer.id, 0, 24);
-            m.setPaintProperty(layer.id, "line-color", overlayOnDark ? "#94A3B8" : "#475569");
-            m.setPaintProperty(layer.id, "line-width", 1.4);
+            m.setPaintProperty(layer.id, "line-color", analysisLook ? (isDark ? "#3A2A22" : "#C4A494") : (overlayOnDark ? "#94A3B8" : "#475569"));
+            m.setPaintProperty(layer.id, "line-width", analysisLook ? 1 : 1.4);
             m.setPaintProperty(layer.id, "line-opacity", 0.85);
-            m.setPaintProperty(layer.id, "line-dasharray", [3, 2]);
+            m.setPaintProperty(layer.id, "line-dasharray", analysisLook ? [4, 4] : [3, 2]);
             m.setLayoutProperty(layer.id, "visibility", "visible");
           } catch { /* ignore */ }
         } else {
@@ -1399,6 +1448,9 @@ export function CrisisMap({
       // State/province labels - show for focus country only at all zoom levels.
       if (layer.type === "symbol" && id === "state-label") {
         try {
+          if (analysisLook) {
+            m.setLayoutProperty(layer.id, "visibility", "none");
+          } else {
           m.setLayerZoomRange(layer.id, 0, 24);
           m.setFilter(layer.id, ["==", ["get", "iso_3166_1"], focusIso] as unknown as never);
           m.setLayoutProperty(layer.id, "text-size", [
@@ -1411,16 +1463,22 @@ export function CrisisMap({
           m.setPaintProperty(layer.id, "text-halo-color", isDark ? "rgba(15,23,42,0.85)" : "#FFFFFF");
           m.setPaintProperty(layer.id, "text-halo-width", 1.5);
           m.setPaintProperty(layer.id, "text-halo-blur", 0.5);
+          }
         } catch { /* ignore */ }
       }
 
       // Country labels - improve legibility with solid fill (no hollow outline effect).
       if (layer.type === "symbol" && id === "country-label") {
         try {
-          m.setPaintProperty(layer.id, "text-color", isDark ? "#E2E8F0" : "#1F2937");
+          m.setPaintProperty(layer.id, "text-color", analysisLook ? (isDark ? "#6B717C" : "#737373") : (isDark ? "#E2E8F0" : "#1F2937"));
           m.setPaintProperty(layer.id, "text-halo-color", isDark ? "rgba(15,23,42,0.9)" : "rgba(255,255,255,0.9)");
           m.setPaintProperty(layer.id, "text-halo-width", 2);
           m.setPaintProperty(layer.id, "text-halo-blur", 0.3);
+          if (analysisLook) {
+            m.setLayoutProperty(layer.id, "text-transform", "uppercase");
+            m.setLayoutProperty(layer.id, "text-letter-spacing", 0.14);
+            m.setLayoutProperty(layer.id, "text-size", 10);
+          }
         } catch { /* ignore */ }
       }
 
@@ -1433,6 +1491,9 @@ export function CrisisMap({
         (id === "settlement-minor-label" || id === "settlement-major-label")
       ) {
         try {
+          if (appearance === "analysis") {
+            m.setLayoutProperty(layer.id, "visibility", "none");
+          } else {
           m.setLayerZoomRange(layer.id, 0, 24);
           const existing = layer.filter as unknown[] | undefined;
           if (Array.isArray(existing) && existing[0] === "all") {
@@ -1463,12 +1524,13 @@ export function CrisisMap({
           m.setPaintProperty(layer.id, "text-halo-color", isDark ? "rgba(15,23,42,0.85)" : "#FFFFFF");
           m.setPaintProperty(layer.id, "text-halo-width", 1.5);
           m.setPaintProperty(layer.id, "text-halo-blur", 0.5);
+          }
         } catch { /* ignore */ }
       }
     }
 
     return cleanup;
-  }, [focusIso, paintableFocusGeometry, loaded, paintableAdminBoundaries, adminBoundaryLevel, isDark, showBoundaries, baseMapType, scopeCountryIsos, mapboxAdmin1Isos]);
+  }, [focusIso, paintableFocusGeometry, loaded, paintableAdminBoundaries, adminBoundaryLevel, isDark, showBoundaries, baseMapType, scopeCountryIsos, mapboxAdmin1Isos, appearance]);
 
   // Frame the focus country instantly from static countryConfig.
   // L0 GeoJSON (focusCountryFitBounds) is for highlight paint only — waiting
@@ -1581,20 +1643,23 @@ export function CrisisMap({
           type: "geojson",
           data: { type: "Feature", geometry: fitBoundsGeometry as never, properties: {} },
         });
+        const regionAccent = appearance === "analysis" ? (isDark ? "#F26B2B" : "#E85D3D") : null;
         m.addLayer({ id: REGION_FILL, type: "fill", source: REGION_SOURCE,
-          paint: { "fill-color": isDark ? "#1D4ED8" : "#1E40AF", "fill-opacity": isDark ? 0.25 : 0.25 } }, beforeId);
+          paint: { "fill-color": regionAccent ?? (isDark ? "#1D4ED8" : "#1E40AF"), "fill-opacity": regionAccent ? 0.1 : 0.25 } }, beforeId);
         m.addLayer({ id: REGION_LINE, type: "line", source: REGION_SOURCE,
-          paint: { "line-color": isDark ? "#60A5FA" : "#1D4ED8", "line-width": 2, "line-opacity": 1 } }, beforeId);
+          paint: { "line-color": regionAccent ?? (isDark ? "#60A5FA" : "#1D4ED8"), "line-width": regionAccent ? 1.8 : 2, "line-opacity": 1 } }, beforeId);
       } catch { /* ignore */ }
     } else {
       // Restore country highlight when no region is selected.
       try {
-        if (m.getLayer("focus-highlight-fill")) m.setPaintProperty("focus-highlight-fill", "fill-opacity", 0.35);
+        if (m.getLayer("focus-highlight-fill")) {
+          m.setPaintProperty("focus-highlight-fill", "fill-opacity", appearance === "analysis" ? 0.1 : (isDark ? 0.45 : 0.35));
+        }
       } catch { /* ignore */ }
     }
 
     return cleanup;
-  }, [fitBoundsGeometry, loaded, isDark]);
+  }, [fitBoundsGeometry, loaded, isDark, appearance]);
 
   // ── FlyTo on center/zoom prop change ────────────────────────────────────
   const prevCenter = useRef(center);
@@ -1764,6 +1829,7 @@ export function CrisisMap({
         icon_slug: mk.iconSlug ?? "",
         location_trust: mk.locationTrust ?? "",
         location_pin_role: mk.locationPinRole ?? "",
+        hotspot_size: mk.hotspotSize ?? 0,
         is_critical: mk.severity === "critical" ? 1 : 0,
         is_high:     mk.severity === "high"     ? 1 : 0,
         is_medium:   mk.severity === "medium"   ? 1 : 0,
@@ -1774,19 +1840,24 @@ export function CrisisMap({
       geometry: { type: "Point" as const, coordinates: [mk.lng, mk.lat] },
     }));
 
+    const clusterMarkers = appearance !== "analysis";
     m.addSource(SOURCE, {
       type: "geojson",
       data: { type: "FeatureCollection", features },
-      cluster: true,
-      clusterMinPoints: CLUSTER_MIN_POINTS,
-      clusterMaxZoom: DENSITY_DONUT_MAX_ZOOM,
-      clusterRadius: 30,
-      clusterProperties: {
-        critical: ["+", ["get", "is_critical"]],
-        high:     ["+", ["get", "is_high"]],
-        medium:   ["+", ["get", "is_medium"]],
-        low:      ["+", ["get", "is_low"]],
-      },
+      ...(clusterMarkers
+        ? {
+            cluster: true,
+            clusterMinPoints: CLUSTER_MIN_POINTS,
+            clusterMaxZoom: DENSITY_DONUT_MAX_ZOOM,
+            clusterRadius: 30,
+            clusterProperties: {
+              critical: ["+", ["get", "is_critical"]],
+              high:     ["+", ["get", "is_high"]],
+              medium:   ["+", ["get", "is_medium"]],
+              low:      ["+", ["get", "is_low"]],
+            },
+          }
+        : { cluster: false }),
     });
 
     const densityOpts = { heatmap: showDensityHeatmap };
@@ -2003,7 +2074,8 @@ export function CrisisMap({
         const pinRoleRaw = props.location_pin_role;
         // Stem-capable on every basemap — flat until pitch > 45°, then grows.
         // Pass the raw GeoJSON value so unknown roles fail closed (allowlist).
-        const elevated = shouldElevatePointPin({
+        const isHotspot = props.marker_kind === "hotspot";
+        const elevated = !isHotspot && shouldElevatePointPin({
           locationPinRole: pinRoleRaw,
         });
         const elevationFactor = elevated
@@ -2012,7 +2084,9 @@ export function CrisisMap({
             )
           : 0;
         const isCrisisMarker = props.marker_kind === "crisis";
-        const el = buildPointEl(props.severity as string, {
+        const el = isHotspot
+          ? buildHotspotEl(String(props.title ?? ""), Number(props.hotspot_size) || 36)
+          : buildPointEl(props.severity as string, {
           locationTrust:
             trust === "challenged" || trust === "correction_queued"
               ? trust
@@ -2080,12 +2154,14 @@ export function CrisisMap({
       setHeatOpacity(heatOp);
       setDomMarkerOpacity(markerOp);
 
-      const wantMount = markersShouldMount(z, densityOpts);
+      const wantMount = !clusterMarkers || markersShouldMount(z, densityOpts);
       const mode = aggregationModeForZoom(z, densityOpts);
       // In the crossfade below the floor, settled mode is still "heatmap" but
       // markers must already be mounted (as donuts) so they can fade in.
-      const renderMode: DensityAggregationMode =
-        mode === "heatmap" ? "donut" : mode;
+      // Analysis hotspots stay individual circles at every zoom.
+      const renderMode: DensityAggregationMode = !clusterMarkers
+        ? "point"
+        : mode === "heatmap" ? "donut" : mode;
 
       if (!wantMount) {
         // Heatmap is already carrying the view — safe to drop DOM.
@@ -2155,7 +2231,7 @@ export function CrisisMap({
       m.off("moveend", onZoomEnd);
       m.off("sourcedata", onSourceData);
     };
-  }, [markers, loaded, showMarkers, showDensityHeatmap, baseMapType]);
+  }, [markers, loaded, showMarkers, showDensityHeatmap, baseMapType, appearance]);
 
   // ── Marker hover pulse (synced from list) ────────────────────────────────
   useEffect(() => {
@@ -2589,7 +2665,7 @@ export function CrisisMap({
     // then briefly hold (~700ms) and fade out so "More details" remains clickable.
     const POPUP_HOLD_MS = 700;
     const POPUP_FADE_MS = 220;
-    const popup = new (window as any).mapboxgl.Popup({
+    const popup = new (window as MapboxGLAny).mapboxgl.Popup({
       closeButton: false,
       closeOnClick: false,
       maxWidth: "300px",
@@ -2747,11 +2823,11 @@ export function CrisisMap({
         },
       }, beforeId);
 
-      m.on("mouseenter", UNCLUSTERED_LAYER, (e: any) => {
+      m.on("mouseenter", UNCLUSTERED_LAYER, (e: MapboxGLAny) => {
         cancelPopupClose();
         m.getCanvas().style.cursor = "pointer";
         const coords = e.features?.[0]?.geometry?.coordinates as [number, number];
-        const props = e.features?.[0]?.properties as Record<string, any>;
+        const props = e.features?.[0]?.properties as Record<string, MapboxGLAny>;
         if (!coords || !props) return;
 
         const mag = escapeHtml(props.mag ? `M ${props.mag}` : "Unknown magnitude");
@@ -2784,15 +2860,15 @@ export function CrisisMap({
       });
 
       // Click to expand clusters
-      m.on("click", CLUSTER_LAYER, (e: any) => {
+      m.on("click", CLUSTER_LAYER, (e: MapboxGLAny) => {
         const features = m.queryRenderedFeatures(e.point, {
           layers: [CLUSTER_LAYER],
         });
         const clusterId = features[0]?.properties?.cluster_id;
         if (clusterId == null) return;
 
-        const source = m.getSource(SOURCE) as any;
-        source.getClusterExpansionZoom(clusterId, (err: any, zoom: number) => {
+        const source = m.getSource(SOURCE) as MapboxGLAny;
+        source.getClusterExpansionZoom(clusterId, (err: MapboxGLAny, zoom: number) => {
           if (err) return;
           m.easeTo({
             center: features[0]!.geometry.coordinates as [number, number],
@@ -2861,7 +2937,7 @@ export function CrisisMap({
     }
 
     if (!shakemapPopupRef.current) {
-      shakemapPopupRef.current = new (window as any).mapboxgl.Popup({
+      shakemapPopupRef.current = new (window as MapboxGLAny).mapboxgl.Popup({
         closeButton: false,
         closeOnClick: false,
         maxWidth: "320px",
@@ -2875,7 +2951,7 @@ export function CrisisMap({
     const bindBandHover = (layerId: string, color: string) => {
       if (shakemapHoverBoundRef.current.has(layerId)) return;
       shakemapHoverBoundRef.current.add(layerId);
-      m.on("mouseenter", layerId, (e: any) => {
+      m.on("mouseenter", layerId, (e: MapboxGLAny) => {
         m.getCanvas().style.cursor = "pointer";
         const coords = e.lngLat;
         const props = e.features?.[0]?.properties;
@@ -3447,6 +3523,15 @@ export function CrisisMap({
           /* ignore */
         }
       },
+      zoomBy: (delta: number) => {
+        const m = map.current;
+        if (!m || !Number.isFinite(delta) || delta === 0) return;
+        try {
+          m.easeTo({ zoom: m.getZoom() + delta, duration: 200 });
+        } catch {
+          /* ignore */
+        }
+      },
     };
     return () => {
       mapApiRef.current = null;
@@ -3562,11 +3647,13 @@ export function CrisisMap({
           // light chrome under dark satellite imagery. Topography uses the
           // same shell as Simple — no separate dark globe palette.
           background:
-            baseMapType === "satellite"
-              ? "#0a0a0a"
-              : isDark
-                ? "#111111"
-                : "#FAFAFA",
+            appearance === "analysis"
+              ? (isDark ? "#0D0F13" : "#F4F4F5")
+              : baseMapType === "satellite"
+                ? "#0a0a0a"
+                : isDark
+                  ? "#111111"
+                  : "#FAFAFA",
           // Promote canvas without `isolation: isolate` — isolation blocks
           // sidebar/panel backdrop-filter from sampling Mapbox WebGL.
           transform: "translateZ(0)",

@@ -2,14 +2,22 @@
 
 import { useMemo, useState } from "react";
 import { useFormatter, useLocale, useTranslations } from "next-intl";
-import { Button, Tooltip } from "@mantine/core";
+import { Tooltip } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
-import { IconFileDownload } from "@tabler/icons-react";
+import { IconFileText } from "@tabler/icons-react";
+import styles from "./dark/analysis-dark.module.css";
 import { api } from "~/trpc/react";
 import type { Analysis } from "~/server/api/mappers/analysis";
 import type { AnalysisEvents, AnalysisFigures } from "~/server/api/mappers/analysis";
 import { kpiValues } from "~/lib/analysis-view";
-import { defaultReportSections, projectReportMap, reportFileName, type ReportSectionChoice } from "~/lib/analysis-report";
+import {
+  defaultReportSections,
+  projectReportMap,
+  REPORT_BUILD_TIMEOUT_MS,
+  reportFileName,
+  withDeadline,
+  type ReportSectionChoice,
+} from "~/lib/analysis-report";
 import type { ReportLabels } from "./report/report-document";
 import { ReportBuilderModal } from "./report-builder-modal";
 
@@ -44,14 +52,17 @@ export function CreateReportButton({
   isCountry: boolean;
 }) {
   const t = useTranslations("analysis.report");
+  const tFindings = useTranslations("analysis.findings");
   const tSeverity = useTranslations("common.severities");
   const locale = useLocale();
   const format = useFormatter();
   const utils = api.useUtils();
   const me = api.auth.me.useQuery(undefined, { staleTime: 60_000 });
+  const recordExported = api.analysis.recordReportExported.useMutation();
   const [busy, setBusy] = useState(false);
   const [building, setBuilding] = useState(false);
-  const initialSections = useMemo(() => defaultReportSections(data, events?.items.length ?? 0), [data, events]);
+  const eventTotal = events?.totalCount ?? 0;
+  const initialSections = useMemo(() => defaultReportSections(data, eventTotal), [data, eventTotal]);
   const unsupported = UNSUPPORTED_LOCALES.has(locale);
 
   const date = (iso: string, withTime = false) =>
@@ -65,8 +76,16 @@ export function CreateReportButton({
   async function create(chosen: ReportSectionChoice[]) {
     setBusy(true);
     try {
-      const fetchGeometry = (id: string) =>
-        utils.locations.getById.fetch({ id }, { staleTime: Infinity }).then((l) => l?.geometry ?? null);
+      const fetchGeometry = async (id: string) => {
+        // The design sample is not a location. A missing polygon still leaves the report.
+        if (id.startsWith("preview-")) return null;
+        try {
+          const location = await utils.locations.getById.fetch({ id }, { staleTime: Infinity });
+          return location?.geometry ?? null;
+        } catch {
+          return null;
+        }
+      };
       const [country, ...areas] = await Promise.all([countryId, ...areaIds].map(fetchGeometry));
       const items = events?.items ?? [];
       const map = projectReportMap({ country, areas, events: items, width: MAP_WIDTH, height: MAP_HEIGHT });
@@ -75,6 +94,9 @@ export function CreateReportButton({
       const author = me.data?.user?.name || me.data?.user?.email || t("unknownAuthor");
       const labels: ReportLabels = {
         eyebrow: t("eyebrow"),
+        org: t("org"),
+        classification: t("classification"),
+        disclaimer: t("disclaimer"),
         scopeKind: isCountry ? t("scopeCountry") : t("scopeCreated"),
         period: t("period", { start: date(data.scope.windowStart) }),
         versionOf: t("versionOf", { date: date(data.crisis.generatedAt, true) }),
@@ -89,7 +111,7 @@ export function CreateReportButton({
         notReported: t("notReported"),
         map: t("sections.map"),
         mapScope: isCountry ? t("mapCountry") : t("mapArea"),
-        mapEvents: t("mapEvents", { count: items.length, date: date(data.scope.windowStart) }),
+        mapEvents: t("mapEvents", { count: eventTotal, date: date(data.scope.windowStart) }),
         contexts: t("contexts"),
         hazards: t("hazards"),
         displacement: t("displacement"),
@@ -97,7 +119,12 @@ export function CreateReportButton({
         responseActivities: t("responseActivities"),
         noResponse: t("noResponse"),
         outlook: t("outlook"),
+        mostLikely: tFindings("mostLikely"),
+        bestCase: tFindings("bestCase"),
+        worstCase: tFindings("worstCase"),
         sources: t("sources"),
+        eventLabel: t("eventLabel"),
+        hapiFigure: t("hapiFigure"),
         provenance: t("provenance"),
         footer: t("footer", { scope: scopeName }),
         page: (n, total) => t("page", { n, total }),
@@ -108,17 +135,20 @@ export function CreateReportButton({
         import("@react-pdf/renderer"),
         import("./report/report-document"),
       ]);
-      const blob = await pdf(
-        <ReportDocument
-          sections={chosen.filter((x) => x.included).map((x) => x.key)}
-          data={data}
-          kpis={kpiValues(data, figures)}
-          map={map}
-          labels={labels}
-          scopeName={scopeName}
-          generatedLabel={t("generated", { date: date(now.toISOString(), true), author })}
-        />,
-      ).toBlob();
+      const blob = await withDeadline(
+        pdf(
+          <ReportDocument
+            sections={chosen.filter((x) => x.included).map((x) => x.key)}
+            data={data}
+            kpis={kpiValues(data, figures)}
+            map={map}
+            labels={labels}
+            scopeName={scopeName}
+            generatedLabel={t("generated", { date: date(now.toISOString(), true), author })}
+          />,
+        ).toBlob(),
+        REPORT_BUILD_TIMEOUT_MS,
+      );
 
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -127,6 +157,9 @@ export function CreateReportButton({
       a.click();
       setTimeout(() => URL.revokeObjectURL(url), 10_000);
       setBuilding(false);
+      // Activity log only: the id, never the report's content. The design
+      // sample isn't a stored analysis.
+      if (!data.id.startsWith("preview-")) recordExported.mutate({ analysisId: data.id });
     } catch (e) {
       console.error("[analysis] report generation failed", e);
       notifications.show({ color: "red", message: t("error") });
@@ -136,16 +169,16 @@ export function CreateReportButton({
   }
 
   const button = (
-    <Button
-      size="xs"
-      color="dark"
-      leftSection={<IconFileDownload size={14} />}
-      disabled={unsupported}
+    <button
+      type="button"
+      className={styles.cta}
+      disabled={unsupported || busy}
       onClick={() => setBuilding(true)}
       data-testid="analysis-create-report"
     >
+      <IconFileText size={15} stroke={2} />
       {t("button")}
-    </Button>
+    </button>
   );
   if (unsupported) return <Tooltip label={t("unsupportedLocale")}>{<span>{button}</span>}</Tooltip>;
   return (

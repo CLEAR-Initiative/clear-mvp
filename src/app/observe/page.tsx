@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback, type ReactNode } from "react";
 import Link from "next/link";
-import { useFormatter, useTranslations } from "next-intl";
+import { useFormatter, useNow, useTranslations } from "next-intl";
 import {
   IconAntennaBars5,
   IconAntennaBarsOff,
@@ -212,6 +212,7 @@ function MessageBubble({ msg }: { msg: ChatMessage }) {
 function SignalCard({ signal }: { signal: GqlSignal }) {
   const t = useTranslations("observe.signals");
   const format = useFormatter();
+  const now = useNow({ updateInterval: 60_000 });
   const location = signal.generalLocation ?? signal.originLocation;
   const eventCount = signal.events?.length ?? 0;
   const hasEvents = eventCount > 0;
@@ -237,7 +238,7 @@ function SignalCard({ signal }: { signal: GqlSignal }) {
         <span style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--color-accent)", background: "var(--color-accent-light)", padding: "2px 8px", borderRadius: 10 }}>
           {signal.source.name}
         </span>
-        <span style={{ fontSize: 12, color: "var(--color-text-muted)" }}>{format.relativeTime(new Date(signal.publishedAt))}</span>
+        <span style={{ fontSize: 12, color: "var(--color-text-muted)" }}>{format.relativeTime(new Date(signal.publishedAt), now)}</span>
       </div>
 
       {signal.title && <div style={{ fontWeight: 700, fontSize: 15, color: "var(--color-text-primary)", marginBottom: 4, lineHeight: 1.35 }}>{signal.title}</div>}
@@ -558,11 +559,7 @@ export default function ObservePage() {
   }, []);
 
   useEffect(() => {
-    const allowed = isObserveQaOverrideAllowed({
-      nodeEnv: process.env.NODE_ENV,
-      vercelEnv: process.env.NEXT_PUBLIC_VERCEL_ENV ?? process.env.VERCEL_ENV,
-    });
-    if (!allowed) return;
+    if (!isObserveQaOverrideAllowed()) return;
     setForceNoTeam(searchForcesMissingTeam(window.location.search));
   }, []);
 

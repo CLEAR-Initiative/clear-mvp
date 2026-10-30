@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect, useRef, useCallback } from "react";
-import { useFormatter, useTranslations } from "next-intl";
+import { useFormatter, useNow, useTranslations } from "next-intl";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import {
@@ -107,6 +107,7 @@ export function EventsTab({
 }: EventsTabProps) {
   const t = useTranslations("detection");
   const format = useFormatter();
+  const now = useNow({ updateInterval: 60_000 });
   const [search, setSearch] = useState("");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [previewEventId, setPreviewEventId] = useState<string | null>(null);
@@ -314,17 +315,12 @@ export function EventsTab({
                     >
                     <Box style={{ width: 3, background: sevCol, flexShrink: 0, borderRadius: 2 }} />
                     <Box style={{ flex: 1, minWidth: 0 }}>
-                      <Group justify="space-between" mb={4}>
-                        <Group gap={6}>
-                          <Badge size="xs" style={{ background: sevBg, color: sevCol, fontWeight: 700 }}>
-                            {severityLabels[sev]}
-                          </Badge>
-                          {isAlert && <Badge size="xs" variant="outline" style={{ fontSize: 10, borderColor: "var(--color-critical)", color: "var(--color-critical)" }}>{t("feed.alertBadge")}</Badge>}
-                          {sourceName && <Badge size="xs" variant="light" color="gray" style={{ fontSize: 10 }}>{sourceName}</Badge>}
-                        </Group>
-                        <Text size="xs" c="var(--color-text-muted)" title={t("feed.firstSignal", { time: format.relativeTime(new Date(event.firstSignalCreatedAt)) })}>
-                          {format.relativeTime(new Date(event.lastSignalCreatedAt))}
-                        </Text>
+                      <Group gap={6} mb={4}>
+                        <Badge size="xs" style={{ background: sevBg, color: sevCol, fontWeight: 700 }}>
+                          {severityLabels[sev]}
+                        </Badge>
+                        {isAlert && <Badge size="xs" variant="outline" style={{ fontSize: 10, borderColor: "var(--color-critical)", color: "var(--color-critical)" }}>{t("feed.alertBadge")}</Badge>}
+                        {sourceName && <Badge size="xs" variant="light" color="gray" style={{ fontSize: 10 }}>{sourceName}</Badge>}
                       </Group>
                       <Text fw={600} size="sm" c="var(--color-text-primary)" lineClamp={1} mb={4}>
                         {displayTitle}
@@ -341,8 +337,11 @@ export function EventsTab({
                             {pill.label}
                           </span>
                         ))}
-                        <Text size="xs" c="var(--color-text-muted)" style={{ marginInlineStart: "auto" }}>
+                        <Text size="xs" c="var(--color-text-muted)">
                           {t("feed.signalCount", { count: event.signals.length })}
+                        </Text>
+                        <Text size="xs" c="var(--color-text-muted)" style={{ marginInlineStart: "auto" }} title={t("feed.firstSignal", { time: format.relativeTime(new Date(event.firstSignalCreatedAt), now) })}>
+                          {format.relativeTime(new Date(event.lastSignalCreatedAt), now)}
                         </Text>
                       </Group>
                     </Box>
@@ -356,8 +355,15 @@ export function EventsTab({
             {hasMore && filtered.length > 0 && <div ref={sentinelRef} style={{ height: 1 }} />}
 
             {isFetchingMore && (
-              <Box py={12} style={{ display: "flex", justifyContent: "center" }}>
+              <Box py={12} style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 8 }}>
                 <Loader size="xs" />
+                {/* A client-side search keeps the sentinel in view until every page is
+                    loaded, so say what the spinner is doing instead of looking stuck. */}
+                {search.trim() !== "" && (
+                  <Text size="xs" c="var(--color-text-muted)">
+                    {t("feed.events.scanning", { loaded: format.number(events.length), total: format.number(totalCount) })}
+                  </Text>
+                )}
               </Box>
             )}
 

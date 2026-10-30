@@ -2,7 +2,7 @@
 
 import { Badge, Box, Card, Group, Stack, Text } from "@mantine/core";
 import { IconSparkles } from "@tabler/icons-react";
-import { useFormatter, useTranslations } from "next-intl";
+import { useFormatter, useNow, useTranslations } from "next-intl";
 import { notifications } from "@mantine/notifications";
 import { api } from "~/trpc/react";
 import { useFeatureEnabled } from "~/components/feature-flags-provider";
@@ -89,6 +89,7 @@ export function EnrichmentSection({ eventId }: { eventId: string }) {
                 </Text>
                 {cases.map((proposal) => (
                   <CaseProposalRow
+                    eventFrom="related_event"
                     key={proposal.id}
                     proposal={proposal}
                     canDecide={canDecide}
@@ -110,11 +111,11 @@ export function EnrichmentSection({ eventId }: { eventId: string }) {
 }
 
 /** One Task's status line — kind and source, status, requester, Worker,
- * outcome, and its error when the server let us see it. Shared with the
- * Inbox's "My requests" pane. */
+ * outcome, and its error when the server let us see it. */
 export function TaskRow({ task }: { task: GqlTask }) {
   const t = useTranslations("eventDetail.enrichment");
   const format = useFormatter();
+  const now = useNow({ updateInterval: 60_000 });
   const kind = requestLabel(task.kind, t);
   return (
     <Box data-testid="enrichment-task" data-status={task.status} data-kind={task.kind}>
@@ -129,7 +130,7 @@ export function TaskRow({ task }: { task: GqlTask }) {
       <Text size="xs" c="var(--color-text-muted)">
         {task.requester?.name ? t("requestedBy", { name: task.requester.name }) + " · " : ""}
         {task.leaseOwner?.name ? t("worker", { name: task.leaseOwner.name }) + " · " : ""}
-        {format.relativeTime(new Date(task.createdAt))}
+        {format.relativeTime(new Date(task.createdAt), now)}
       </Text>
       {task.status === "COMPLETED" && task.outcome && (
         <Text size="xs" c="var(--color-text-secondary)">

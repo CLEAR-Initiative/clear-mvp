@@ -103,6 +103,30 @@ export interface GqlSignalLocationChallenge {
   hasProposedPoint: boolean;
 }
 
+/** An open Location challenge as its decider reads it in the Inbox (clear-api
+ *  `signalLocationChallengesToDecide`). */
+export interface GqlLocationChallengeToDecide extends GqlSignalLocationChallenge {
+  teamId: string | null;
+  createdByName: string | null;
+  /** The team it was filed for, with its area (no locations = global
+   *  monitoring). Null for a challenge filed before teams were recorded. */
+  team: { id: string; name: string; locations: { id: string }[] } | null;
+  signal: {
+    id: string;
+    title: string | null;
+    generalLocation: GqlLocation | null;
+    originLocation: GqlLocation | null;
+    destinationLocation: GqlLocation | null;
+  };
+  /** The admin area the proposed point falls in; null for a bare challenge. */
+  proposedPlacement: {
+    id: string;
+    name: string;
+    level: number;
+    ancestors: { id: string; name: string; level: number }[];
+  } | null;
+}
+
 /* ─── Event ─── */
 
 export interface GqlEvent {
@@ -320,7 +344,7 @@ export interface GqlCrisis {
   }>;
 }
 
-/* ─── Ground intel staging tier ─── */
+/* ─── Ground staging tier (hotline threads, reviewed in the Inbox) ─── */
 
 /** Message classification labels ("unclassified" = pipeline hasn't labeled yet). */
 export const GROUND_CLASSIFICATIONS = [
@@ -365,9 +389,9 @@ export interface GqlGroundThreadDetail extends GqlGroundThread {
 }
 
 /**
- * A staged ground message. PRIVATE TIER: `senderName` may be rendered in
- * the detection Ground-intel tab ONLY — never anywhere else, and never in
- * anything promoted to the signals graph. Text is phone-number-redacted
+ * A staged ground message. PRIVATE TIER: `senderName` is not rendered
+ * anywhere (the Inbox shows only the pseudonymous intake ref), and never
+ * goes into anything promoted to the signals graph. Text is phone-number-redacted
  * at persistence by clear-api.
  */
 export interface GqlGroundMessage {

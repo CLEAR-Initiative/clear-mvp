@@ -21,9 +21,7 @@ public/swe-worker-*.js
 public/workbox-*.js
 public/fallback-*.js
 
-# Local agent-skill configuration (not for the shared repo)
-/CLAUDE.md
-/docs/agents/
+# Per-developer agent state. AGENTS.md and CLAUDE.md are shared and committed.
 .exponential/
 
 # LogIE spike pull artifacts (regenerate with `bun run logie:spike`)
@@ -38,3 +36,6 @@ scripts/logie/out/
 
 # Local-only compose override (points builds at a worktree)
 docker-compose.e2e.override.yml
+
+# Design-preview PDFs for local evidence clicks. A generated report is built from analysis data.
+/public/analysis-samples/

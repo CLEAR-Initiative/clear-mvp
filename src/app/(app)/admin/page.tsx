@@ -40,7 +40,7 @@ import {
   IconX,
 } from "@tabler/icons-react";
 import Link from "next/link";
-import { useFormatter, useTranslations } from "next-intl";
+import { useFormatter, useNow, useTranslations } from "next-intl";
 import { type ChangeEvent, type MouseEvent, type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import { notifications } from "@mantine/notifications";
 import { api } from "~/trpc/react";
@@ -2376,6 +2376,7 @@ function DataSourceCard({
 }) {
   const t = useTranslations("admin.data");
   const format = useFormatter();
+  const now = useNow({ updateInterval: 60_000 });
   const typeBadgeColor = source.type === "api" ? "blue" : source.type === "direct" ? "violet" : "gray";
   const typeLabel = t(`types.${source.type}`);
   const barWidth = signalCount && maxCount > 0 ? Math.max((signalCount / maxCount) * 100, 2) : 0;
@@ -2432,7 +2433,7 @@ function DataSourceCard({
                 }} />
               </Box>
               <Text style={{ fontSize: fontSizesPx.xs, color: latestAt ? colors.textSecondary : colors.border }}>
-                {latestAt ? format.relativeTime(new Date(latestAt)) : t("noDataYet")}
+                {latestAt ? format.relativeTime(new Date(latestAt), now) : t("noDataYet")}
               </Text>
             </>
           ) : (
@@ -2552,7 +2553,11 @@ export default function AdminPage() {
       <PageHeader
         title={t("header.title")}
         subtitle={t("header.subtitle")}
-      />
+      >
+        <Button component={Link} href="/admin/activity" variant="light" size="xs">
+          {t("header.activityLink")}
+        </Button>
+      </PageHeader>
 
       <Tabs
         defaultValue="users"

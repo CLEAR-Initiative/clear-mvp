@@ -121,6 +121,52 @@ describe("analysis router", () => {
     expect(result?.scope).toMatchObject({ name: "Sudan", locationIds: ["sdn"] });
   });
 
+  it("uses the event title when a listed citation is the raw event id", async () => {
+    graphqlFetch.mockImplementation(async (query: string, vars?: Record<string, string>) => {
+      if (query.includes("query Analysis(")) {
+        return {
+          analysis: {
+            ...row,
+            sourceReportIds: ["r1", "event:e1", "event:e-missing"],
+            data: {
+              ai_summary: { text: "Sudan summary.", source_report_ids: ["event:e1", "event:e-missing"] },
+              sources: {
+                reports: [
+                  { report_id: "r1", report_title: "Listed report", source_url: "https://rw/1" },
+                  { report_id: "event:e1", report_title: "event:e1" },
+                ],
+              },
+            },
+          },
+        };
+      }
+      if (query.includes("query ReportMeta")) {
+        return {
+          r0: { reportId: "r1", reportTitle: "Listed report", sourceUrl: "https://rw/1", publishedAt: null, source: { name: "OCHA" } },
+        };
+      }
+      if (query.includes("query CitedEvents")) {
+        const events: Record<string, unknown> = {};
+        for (const [key, id] of Object.entries(vars ?? {})) {
+          events[key] =
+            id === "e1"
+              ? { id: "e1", title: "Shelling in El Fasher", firstSignalCreatedAt: "2026-09-20T00:00:00Z" }
+              : null;
+        }
+        return events;
+      }
+      throw new Error(`unexpected query ${query.slice(0, 40)}`);
+    });
+
+    const result = await caller().analysis.current({ countryLocationId: "sdn", countryName: "Sudan" });
+
+    expect(result?.sources.map((s) => [s.id, s.title])).toEqual([
+      ["r1", "Listed report"],
+      ["event:e1", "Shelling in El Fasher"],
+      ["event:e-missing", ""],
+    ]);
+  });
+
   it("falls back to last year's frame, then to null", async () => {
     graphqlFetch.mockResolvedValue({ analysis: null });
     const result = await caller().analysis.current({ countryLocationId: "sdn", countryName: "Sudan" });
@@ -176,6 +222,75 @@ describe("analysis router", () => {
     });
   });
 
+  it("uses cited events when the scope query is empty, and keeps the scope total otherwise", async () => {
+    const cited = {
+      id: "k1",
+      title: "Clash in Kassala",
+      types: ["conflict"],
+      severity: 3,
+      firstSignalCreatedAt: "2026-09-02T00:00:00Z",
+      lastSignalCreatedAt: "2026-09-02T00:00:00Z",
+      casualties: null,
+      populationDisplaced: null,
+      representativePoint: { id: "p", name: "Kassala", level: 2, geometry: { type: "Point", coordinates: [36.4, 15.4] } },
+      generalLocation: { id: "ks", name: "Kassala", level: 1 },
+    };
+    graphqlFetch.mockResolvedValueOnce({ eventsPage: { totalCount: 0, items: [] } }).mockResolvedValueOnce({ e0: cited });
+
+    const empty = await caller().analysis.events({
+      locationIds: ["kassala"],
+      from: "2026-07-01T00:00:00.000Z",
+      citedIds: ["event:k1"],
+    });
+
+    expect(empty.totalCount).toBe(1);
+    expect(empty.items.map((e) => e.id)).toEqual(["k1"]);
+    expect(graphqlFetch).toHaveBeenCalledTimes(2);
+
+    graphqlFetch.mockReset();
+    graphqlFetch.mockResolvedValueOnce({
+      eventsPage: { totalCount: 4495, items: [{ ...cited, id: "e1" }] },
+    });
+    const full = await caller().analysis.events({
+      locationIds: ["sdn"],
+      from: "2026-01-01T00:00:00.000Z",
+      citedIds: ["event:k1"],
+    });
+    expect(full.totalCount).toBe(4495);
+    expect(graphqlFetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("still returns scope events when the citation list is longer than the recovery lookup", async () => {
+    graphqlFetch.mockResolvedValueOnce({
+      eventsPage: {
+        totalCount: 3,
+        items: [
+          {
+            id: "e1",
+            title: "Shelling",
+            types: [],
+            severity: null,
+            firstSignalCreatedAt: "2026-09-01T00:00:00Z",
+            lastSignalCreatedAt: "2026-09-01T00:00:00Z",
+            casualties: null,
+            populationDisplaced: null,
+            representativePoint: null,
+            generalLocation: null,
+          },
+        ],
+      },
+    });
+
+    const result = await caller().analysis.events({
+      locationIds: ["sdn"],
+      from: "2026-01-01T00:00:00.000Z",
+      citedIds: Array.from({ length: 101 }, (_, i) => `event:c${i}`),
+    });
+
+    expect(result.totalCount).toBe(3);
+    expect(graphqlFetch).toHaveBeenCalledTimes(1);
+  });
+
   it("leaves a geometry-less event off the map rather than guessing", () => {
     const e = toAnalysisEvent({
       id: "e2",
@@ -204,6 +319,8 @@ describe("analysis router", () => {
           pin_wash: { value: 25512902 },
           pin_wash_male: { value: 1 },
           returnee_stock: null,
+          funding_received_usd: { value: 1 },
+          funding_required_usd: { value: 2 },
         },
       },
     });
@@ -216,10 +333,125 @@ describe("analysis router", () => {
     expect(result.returneeStock).toBeNull();
     expect(result.overallPin).toMatchObject({ low: 19000000, high: 33699770 });
     expect(result.pinBySector.map((r) => r.sector)).toEqual(["wash", "health"]);
+    expect(result.fundingReceived).toBeNull();
+    expect(result.fundingRequired).toBeNull();
+  });
+
+  it("loads needs from the scope's districts and does not expand a district scope", async () => {
+    graphqlFetch.mockResolvedValueOnce({
+      l0: {
+        id: "sheikan",
+        level: 2,
+        population: "100000",
+        ancestorIds: ["sdn"],
+        metadata: [{ type: "msna_severity_082025", data: { sectors: { WASH: { label: "Severe", score: 50 } } } }],
+        ancestors: [],
+      },
+      l1: {
+        id: "umrawaba",
+        level: 2,
+        population: "50000",
+        ancestorIds: ["sdn"],
+        metadata: [{ type: "msna_severity_082025", data: { sectors: { WASH: { label: "Catastrophic", score: 80 } } } }],
+        ancestors: [],
+      },
+    });
+    const result = await caller().analysis.needs({ locationIds: ["sheikan", "umrawaba"] });
+    expect(graphqlFetch).toHaveBeenCalledTimes(1);
+    expect(graphqlFetch.mock.calls[0]?.[0]).toContain("query ScopeNeedsLocations");
+    const wash = result.sectors.find((sector) => sector.key === "wash");
+    expect(wash).toMatchObject({ saf: "Catastrophic", pin: 90_000 });
+    expect(result.sectors.find((sector) => sector.key === "health")?.pin).toBeNull();
+  });
+
+  it("expands a country scope to admin-2 districts inside that country", async () => {
+    graphqlFetch.mockImplementation(async (query: string, vars?: Record<string, string>) => {
+      if (query.includes("NeedsDistrictIndex")) {
+        return {
+          locations: [
+            { id: "sheikan", level: 2, population: "10000", ancestorIds: ["sdn", "nk"] },
+            { id: "kabul", level: 2, population: "10000", ancestorIds: ["afg"] },
+          ],
+        };
+      }
+      if (vars?.l0 === "sdn") {
+        return { l0: { id: "sdn", level: 0, population: null, ancestorIds: [], metadata: [], ancestors: [] } };
+      }
+      if (vars?.l0 === "sheikan") {
+        return {
+          l0: {
+            id: "sheikan",
+            level: 2,
+            population: "10000",
+            ancestorIds: ["sdn", "nk"],
+            metadata: [{ type: "msna_severity_082025", data: { sectors: { Health: { label: "Extreme", score: 70 } } } }],
+            ancestors: [],
+          },
+        };
+      }
+      return {};
+    });
+    const result = await caller().analysis.needs({ locationIds: ["sdn"] });
+    const queries = graphqlFetch.mock.calls.map((call) => call[0] as string);
+    expect(queries.some((query) => query.includes("NeedsDistrictIndex"))).toBe(true);
+    expect(queries.filter((query) => query.includes("ScopeNeedsLocations"))).toHaveLength(2);
+    expect(result.sectors.find((sector) => sector.key === "health")).toMatchObject({ saf: "Extreme", pin: 7_000 });
+  });
+
+  it("reads funding from the analysis window and not from the all-time tier", async () => {
+    graphqlFetch.mockImplementation(async (query: string) => {
+      if ((query as string).includes("AnalysisWindowFunding")) {
+        return {
+          aggregatedDatapoint: {
+            data: {
+              funding_received_usd: { value: 1_200_000_000 },
+              funding_required_usd: { value: 4_000_000_000 },
+            },
+          },
+        };
+      }
+      return {
+        aggregatedDatapoint: {
+          data: { funding_received_usd: { value: 99 }, funding_required_usd: { value: 99 }, idp_stock: { value: 10 } },
+        },
+      };
+    });
+    const result = await caller().analysis.figures({
+      locationId: "sdn",
+      windowStart: "2026-01-01T00:00:00Z",
+      windowEnd: "2026-12-31T23:59:59Z",
+    });
+    const fundingCall = graphqlFetch.mock.calls.find(([query]) => (query as string).includes("AnalysisWindowFunding"));
+    expect(fundingCall?.[1]).toMatchObject({
+      locationId: "sdn",
+      windowStart: "2026-01-01T00:00:00Z",
+      windowEnd: "2026-12-31T23:59:59Z",
+      windowKind: "yearly",
+    });
+    expect(result.idpStock?.value).toBe(10);
+    expect(result.fundingReceived?.value).toBe(1_200_000_000);
+    expect(result.fundingRequired?.value).toBe(4_000_000_000);
+
+    graphqlFetch.mockClear();
+    await caller().analysis.figures({
+      locationId: "gedaref",
+      windowStart: "2026-07-01T00:00:00.000Z",
+      windowEnd: null,
+    });
+    const rolling = graphqlFetch.mock.calls.find(([query]) => (query as string).includes("AnalysisWindowFunding"));
+    expect(rolling?.[1]).toMatchObject({ windowKind: "window", windowStart: "2026-07-01T00:00:00.000Z" });
+    expect((rolling?.[1] as { windowEnd: string }).windowEnd).not.toBe("1970-01-01T00:00:00Z");
   });
 
   it("maps a missing bucket to empty figures", () => {
     expect(mapFigures(null)).toEqual({ idpStock: null, refugees: null, returneeStock: null, overallPin: null, pinBySector: [] });
+  });
+
+  it("reads a food stock stored as pin_food", () => {
+    const figures = mapFigures({ pin_food: { value: 8_600_000 } });
+    expect(figures.pinBySector).toEqual([
+      expect.objectContaining({ sector: "food_security", figure: expect.objectContaining({ value: 8_600_000 }) }),
+    ]);
   });
 
   it("rejects unauthenticated callers", async () => {
