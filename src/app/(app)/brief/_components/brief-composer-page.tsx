@@ -96,9 +96,10 @@ function Composer({ brief }: { brief: Brief }) {
   // Whatever is still being typed goes into the email, the PDF and the copy:
   // every editor saves, the queue drains, and then the Brief is read back
   // from clear-api, so the PDF and the copy are built from the server's own
-  // copy, never from cache entries patched by individual responses. False,
-  // with a notice, when an edit couldn't be saved: nothing then goes out
-  // with older content.
+  // copy, never from cache entries patched by individual responses. The read
+  // goes through the plain client, outside the `briefs.get` cache, so it
+  // can't replace a pick or removal still in flight. Null, with a notice,
+  // when an edit couldn't be saved: nothing then goes out with older content.
   const utils = api.useUtils();
   const saveAll = useCallback(async (): Promise<Brief | null> => {
     const ok = await saver.saveAll();
@@ -106,7 +107,7 @@ function Composer({ brief }: { brief: Brief }) {
       notifications.show({ color: "red", message: t("composer.unsaved") });
       return null;
     }
-    return utils.briefs.get.fetch({ id: brief.id }, { staleTime: 0 });
+    return utils.client.briefs.get.query({ id: brief.id });
   }, [saver, t, utils, brief.id]);
   const editable = brief.status === "draft";
   // Events open in the drawer so the Brief stays on screen; Signals have no
