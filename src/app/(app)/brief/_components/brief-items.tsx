@@ -12,6 +12,7 @@ import { groupItems, isPendingItem, type BriefItemsApi } from "../_hooks/use-bri
 import { AUTOSAVE_DELAY_MS } from "../_hooks/use-brief-autosave";
 import { itemPreviewTarget, type PreviewTarget } from "../_lib/preview-target";
 import { MarkdownLite } from "./markdown-lite";
+import { createOrderedSaver } from "~/lib/brief/ordered-saver";
 import type { Saver } from "../_hooks/use-save-tracker";
 
 /**
@@ -214,43 +215,36 @@ function ItemNote({
 }) {
   const t = useTranslations("brief");
   const [value, setValue] = useState(item.note ?? "");
-  const saved = useRef(item.note ?? "");
   const { setDirty, track, registerFlush } = saver;
-  const latest = useRef({ item, value, onSave, setDirty, track });
-  latest.current = { item, value, onSave, setDirty, track };
   const dirtyKey = `note:${item.id}`;
-  const queue = useRef<Promise<void>>(Promise.resolve());
-
-  // Reads the latest values through a ref, so it never goes stale.
-  const flush = useCallback(() => {
-    const { item: current, value: note, onSave: save, setDirty: mark, track: count } = latest.current;
-    if (note === saved.current) return;
-    const before = saved.current;
-    saved.current = note;
-    mark(dirtyKey, false);
-    // One save at a time, in order, so the newest note is the one kept. It
-    // counts from the moment it is queued, so a send waits for it.
-    const run = () => save(current, note);
-    queue.current = count(queue.current.then(run, run)).catch(() => {
-      saved.current = before;
-      mark(dirtyKey, true);
-    });
-  }, [dirtyKey]);
+  // What the saver calls, kept current through a ref.
+  const deps = useRef({ item, onSave, setDirty, track });
+  deps.current = { item, onSave, setDirty, track };
+  // Ordered saves; only a success marks the note saved (see createOrderedSaver).
+  const [noteSaver] = useState(() =>
+    createOrderedSaver<string, void>({
+      initial: item.note ?? "",
+      same: (a, b) => a === b,
+      save: (note) => deps.current.onSave(deps.current.item, note),
+      track: (work) => deps.current.track(work),
+      setDirty: (dirty) => deps.current.setDirty(dirtyKey, dirty),
+    }),
+  );
+  const flush = useCallback(() => noteSaver.flush(), [noteSaver]);
 
   useEffect(() => registerFlush(dirtyKey, flush), [registerFlush, dirtyKey, flush]);
 
   useEffect(() => {
-    setDirty(dirtyKey, value !== saved.current);
-    if (value === saved.current) return;
+    noteSaver.set(value);
     const timer = setTimeout(flush, AUTOSAVE_DELAY_MS);
     return () => clearTimeout(timer);
-  }, [value, dirtyKey, setDirty, flush]);
+  }, [value, noteSaver, flush]);
 
   // Leaving the page saves what was typed; a removed item's note goes nowhere.
   useEffect(
     () => () => {
       flush();
-      latest.current.setDirty(dirtyKey, false);
+      deps.current.setDirty(dirtyKey, false);
     },
     [flush, dirtyKey],
   );

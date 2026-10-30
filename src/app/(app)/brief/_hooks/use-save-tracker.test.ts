@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { act, renderHook } from "@testing-library/react";
+import { createOrderedSaver } from "~/lib/brief/ordered-saver";
 import { useSaveTracker } from "./use-save-tracker";
 
 describe("useSaveTracker", () => {
@@ -24,6 +25,22 @@ describe("useSaveTracker", () => {
         .catch(() => result.current.setDirty("text", true));
     });
     await expect(result.current.settled()).resolves.toBe(false);
+  });
+
+  it("settles false when the editor's failure cleanup runs inside the tracked work", async () => {
+    const { result } = renderHook(() => useSaveTracker());
+    let fail!: (e: Error) => void;
+    act(() => {
+      result.current.setDirty("note:i1", false);
+      const write = new Promise<void>((_, reject) => (fail = reject)).catch((err: unknown) => {
+        result.current.setDirty("note:i1", true);
+        throw err;
+      });
+      void result.current.track(write).catch(() => undefined);
+    });
+    const settled = result.current.settled();
+    await act(async () => fail(new Error("no")));
+    await expect(settled).resolves.toBe(false);
   });
 
   it("doesn't block on a refused item change, which is rolled back to what clear-api holds", async () => {
@@ -51,6 +68,32 @@ describe("useSaveTracker", () => {
     await act(async () => second());
     await settled;
     expect(done).toBe(true);
+  });
+
+  it("saveAll is false while an editor's last save failed, true once a retry lands", async () => {
+    const { result } = renderHook(() => useSaveTracker());
+    let attempt = 0;
+    const saver = createOrderedSaver<string, void>({
+      initial: "",
+      same: (a, b) => a === b,
+      save: () => (++attempt === 1 ? Promise.reject(new Error("refused")) : Promise.resolve()),
+      track: (work) => result.current.track(work),
+      setDirty: (dirty) => result.current.setDirty("note:i1", dirty),
+    });
+    act(() => {
+      result.current.registerFlush("note:i1", saver.flush);
+      saver.set("Watch Tawila");
+    });
+    let ok = true;
+    await act(async () => {
+      ok = await result.current.saveAll();
+    });
+    expect(ok).toBe(false);
+    await act(async () => {
+      ok = await result.current.saveAll();
+    });
+    expect(ok).toBe(true);
+    expect(attempt).toBe(2);
   });
 
   it("flushes every registered editor", () => {

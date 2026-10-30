@@ -21,12 +21,15 @@ export interface SaveTracker {
   /** Whether leaving now would lose something. */
   hasUnsaved: () => boolean;
   /**
-   * Resolves once no write is queued or running: true when nothing is left
-   * unsaved. A failed text or note save keeps its editor dirty until it
-   * saves, so a send refuses to go out with older content; a refused item
-   * change is rolled back to what clear-api holds and doesn't block.
+   * Resolves once no write is queued or running: true when no editor is
+   * unsaved. Editors are marked saved only by a save's success (see
+   * `createOrderedSaver`), so a failed text or note save keeps this false;
+   * a refused item change is rolled back to what clear-api holds and doesn't
+   * count.
    */
   settled: () => Promise<boolean>;
+  /** Sends every editor's pending edit, waits for the queue to drain, then says whether everything saved. */
+  saveAll: () => Promise<boolean>;
 }
 
 /** What an editor needs to take part in saving. */
@@ -88,5 +91,10 @@ export function useSaveTracker(): SaveTracker {
     [],
   );
 
-  return { status: dirtyCount > 0 ? "saving" : status, track, setDirty, registerFlush, flushAll, hasUnsaved, settled };
+  const saveAll = useCallback(() => {
+    flushAll();
+    return settled();
+  }, [flushAll, settled]);
+
+  return { status: dirtyCount > 0 ? "saving" : status, track, setDirty, registerFlush, flushAll, hasUnsaved, settled, saveAll };
 }

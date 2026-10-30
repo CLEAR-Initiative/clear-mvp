@@ -60,10 +60,9 @@ export function BriefComposerPage({ briefId }: { briefId: string }) {
 function Composer({ brief }: { brief: Brief }) {
   const t = useTranslations("brief");
   const saver = useSaveTracker();
-  const { status: saveStatus, track, setDirty, registerFlush, flushAll, hasUnsaved, settled } = saver;
+  const { status: saveStatus, track, flushAll, hasUnsaved } = saver;
   const items = useBriefItems(brief, { track });
-  const { text, setField, flush } = useBriefAutosave(brief, track, setDirty);
-  useEffect(() => registerFlush("text", () => void flush()), [registerFlush, flush]);
+  const { text, setField } = useBriefAutosave(brief, saver);
   // Leaving before the last edit has saved asks first, for a reload or a
   // closed tab (beforeunload) and for in-app links, which never fire it.
   // Either way the text save starts at once, in case the reader stays.
@@ -98,11 +97,10 @@ function Composer({ brief }: { brief: Brief }) {
   // False, with a notice, when an edit couldn't be saved: nothing then goes
   // out with older content.
   const saveAll = useCallback(async (): Promise<boolean> => {
-    flushAll();
-    const ok = await settled();
+    const ok = await saver.saveAll();
     if (!ok) notifications.show({ color: "red", message: t("composer.unsaved") });
     return ok;
-  }, [flushAll, settled, t]);
+  }, [saver, t]);
   const editable = brief.status === "draft";
   // Events open in the drawer so the Brief stays on screen; Signals have no
   // drawer and open their page in a new tab.
