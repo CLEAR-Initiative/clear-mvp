@@ -4,10 +4,8 @@ import { useState, useMemo, useCallback, useEffect, useRef, Suspense } from "rea
 import { flushSync } from "react-dom";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Box, Tabs, Button, Group, Popover, Text, Badge, ActionIcon, Divider } from "@mantine/core";
+import { Box, Tabs, Button, Group } from "@mantine/core";
 import { DetectionTabContentSkeleton } from "~/components/ui/detection-page-skeleton";
-import { IconFilter } from "@tabler/icons-react";
-import { DisasterTypePicker } from "~/components/disaster-type-picker";
 import { useDisclosure } from "@mantine/hooks";
 import { IconPlus } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
@@ -30,6 +28,7 @@ import {
 
 import { LiveAlertsTab, type AlertSortOrder } from "./_components/live-alerts-tab";
 import { HistoryTab } from "./_components/history-tab";
+import { DetectionFilterPopover } from "./_components/detection-filter-popover";
 import { EventsTab, type EventSortOrder } from "./_components/events-tab";
 import { SignalsTab, type SignalSortOrder } from "./_components/signals-tab";
 import { CreateSignalModal } from "~/components/create-signal-modal";
@@ -202,9 +201,6 @@ function DetectionPageContent() {
   const lastFocusedCountry = useLastFocusedCountry(selectedCountry);
 
   const [createModalOpened, { open: openCreateModal, close: closeCreateModal }] = useDisclosure(false);
-  const [filterOpen, setFilterOpen] = useState(false);
-  const isFiltered = activeSeverities.size < 4 || selectedTypeFilters.length > 0 || activeSources !== null;
-  const filterCount = (activeSeverities.size < 4 ? 1 : 0) + (selectedTypeFilters.length > 0 ? 1 : 0) + (activeSources !== null ? 1 : 0);
 
   const selectedCountryId = useMemo(
     () => (selectedCountry !== ALL_COUNTRIES ? getLocationId(selectedCountry) : null),
@@ -720,91 +716,16 @@ function DetectionPageContent() {
           onDateChange={filters.onDateChange}
           dateOptions={filters.dateOptions}
         >
-          <Box>
-            <Text size="xs" c="#737373" tt="uppercase" style={{ fontSize: 10, letterSpacing: "0.05em", marginBottom: 5 }}>{t("filters.filter")}</Text>
-            <Popover opened={filterOpen} onChange={setFilterOpen} position="bottom-start" shadow="md" width={270} withinPortal>
-              <Popover.Target>
-                <ActionIcon
-                  variant="default" size={30}
-                  style={{ position: "relative", border: "1px solid #E5E5E5", borderRadius: 4 }}
-                  styles={{ root: { overflow: "visible" } }}
-                  onClick={() => setFilterOpen((o) => !o)}
-                  title={t("filters.filter")}
-                  aria-label={t("filters.filter")}
-                >
-                  <IconFilter size={13} color={isFiltered ? "var(--color-accent)" : "var(--color-text-muted)"} />
-                  {isFiltered && (
-                    <Box style={{ position: "absolute", top: -4, insetInlineEnd: -4, width: 14, height: 14, borderRadius: "50%", background: "var(--color-accent)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 2 }}>
-                      <Text style={{ fontSize: 9, color: "white", fontWeight: 700, lineHeight: 1 }}>{filterCount}</Text>
-                    </Box>
-                  )}
-                </ActionIcon>
-              </Popover.Target>
-              <Popover.Dropdown p={14} onMouseDown={(e) => e.stopPropagation()}>
-                <Group justify="space-between" mb={10}>
-                  <Text size="xs" fw={700} tt="uppercase" style={{ fontSize: 10, letterSpacing: "0.06em" }}>{t("filters.title")}</Text>
-                  {isFiltered && (
-                    <Button size="compact-xs" variant="subtle" color="gray" onClick={() => { setActiveSeverities(new Set(["critical", "high", "medium", "low"])); setSelectedTypeFilters([]); setActiveSources(null); }}>
-                      {t("filters.clearAll")}
-                    </Button>
-                  )}
-                </Group>
-                <Text size="xs" fw={700} c="var(--color-text-primary)" mb={8}>{t("filters.severity")}</Text>
-                <Group gap={6} mb={12} wrap="wrap">
-                  {(["critical", "high", "medium", "low"] as const).map((sev) => {
-                    const active = activeSeverities.has(sev);
-                    return (
-                      <Badge
-                        key={sev} size="sm"
-                        variant={active ? "filled" : "light"}
-                        color={sev === "critical" ? "red" : sev === "high" ? "orange" : sev === "medium" ? "yellow" : "green"}
-                        style={{ cursor: "pointer", textTransform: "capitalize" }}
-                        onClick={() => setActiveSeverities((prev) => {
-                          const next = new Set(prev);
-                          if (next.has(sev)) next.delete(sev);
-                          else next.add(sev);
-                          return next;
-                        })}
-                      >
-                        {t(`filters.severities.${sev}`)}
-                      </Badge>
-                    );
-                  })}
-                </Group>
-                <Divider color="var(--color-border)" mb={10} />
-                <Text size="xs" fw={700} c="var(--color-text-primary)" mb={8}>{t("filters.eventType")}</Text>
-                <DisasterTypePicker hierarchy={hierarchy} selected={selectedTypeFilters} onChange={setSelectedTypeFilters} size="xs" />
-                {allSources.length > 0 && (
-                  <>
-                    <Divider color="var(--color-border)" my={10} />
-                    <Text size="xs" fw={700} c="var(--color-text-primary)" mb={8}>{t("filters.source")}</Text>
-                    <Group gap={6} wrap="wrap">
-                      {allSources.map((src) => {
-                        const active = activeSources === null || activeSources.has(src);
-                        return (
-                          <Badge
-                            key={src} size="sm"
-                            variant={active ? "filled" : "light"}
-                            color={active ? "dark" : "gray"}
-                            style={{ cursor: "pointer", textTransform: "none" }}
-                            onClick={() => setActiveSources((prev) => {
-                              const base = prev ?? new Set(allSources);
-                              const next = new Set(base);
-                              if (next.has(src)) next.delete(src);
-                              else next.add(src);
-                              return next.size === allSources.length ? null : next;
-                            })}
-                          >
-                            {src}
-                          </Badge>
-                        );
-                      })}
-                    </Group>
-                  </>
-                )}
-              </Popover.Dropdown>
-            </Popover>
-          </Box>
+          <DetectionFilterPopover
+            severities={activeSeverities}
+            onSeveritiesChange={setActiveSeverities}
+            typeFilters={selectedTypeFilters}
+            onTypeFiltersChange={setSelectedTypeFilters}
+            hierarchy={hierarchy}
+            sourceOptions={allSources}
+            sources={activeSources}
+            onSourcesChange={setActiveSources}
+          />
         </FilterBar>
         </Box>
         <Group gap={8} data-tour="detection-create">
