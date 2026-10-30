@@ -161,8 +161,12 @@ next-intl · Sentry.
 - **Auth.** Sign-in goes to clear-api's Better Auth endpoints, which set a session cookie.
   `protectedProcedure` in [`src/server/api/trpc.ts`](./src/server/api/trpc.ts) validates it;
   `orgAdminProcedure` additionally requires an admin role. clear-api enforces permissions too.
-- **Severity.** Use `mapSeverity` / `severityColor` from
-  [`src/lib/types/graphql.ts`](./src/lib/types/graphql.ts) rather than hand-rolled thresholds.
+- **Severity.** Thresholds come from `mapSeverity` in
+  [`src/lib/types/graphql.ts`](./src/lib/types/graphql.ts); labels from `severityLabels` and
+  theme-aware component colours from `severityColors`, both in
+  [`src/lib/constants/severity.ts`](./src/lib/constants/severity.ts). `severityColor` next to
+  `mapSeverity` and `severityDotColors` in the constants file return fixed hex and do not
+  follow the theme.
 - **Disaster types.** Events carry GLIDE codes (e.g. `["fl"]`); resolve labels and colours with
   [`src/lib/disaster-types.ts`](./src/lib/disaster-types.ts).
 - **Colours** come from theme tokens, not hex literals ([ADR 0002](./docs/adr/0002-colors-come-from-theme-tokens.md)).
