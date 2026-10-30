@@ -314,17 +314,12 @@ export function EventsTab({
                     >
                     <Box style={{ width: 3, background: sevCol, flexShrink: 0, borderRadius: 2 }} />
                     <Box style={{ flex: 1, minWidth: 0 }}>
-                      <Group justify="space-between" mb={4}>
-                        <Group gap={6}>
-                          <Badge size="xs" style={{ background: sevBg, color: sevCol, fontWeight: 700 }}>
-                            {severityLabels[sev]}
-                          </Badge>
-                          {isAlert && <Badge size="xs" variant="outline" style={{ fontSize: 10, borderColor: "var(--color-critical)", color: "var(--color-critical)" }}>{t("feed.alertBadge")}</Badge>}
-                          {sourceName && <Badge size="xs" variant="light" color="gray" style={{ fontSize: 10 }}>{sourceName}</Badge>}
-                        </Group>
-                        <Text size="xs" c="var(--color-text-muted)" title={t("feed.firstSignal", { time: format.relativeTime(new Date(event.firstSignalCreatedAt)) })}>
-                          {format.relativeTime(new Date(event.lastSignalCreatedAt))}
-                        </Text>
+                      <Group gap={6} mb={4}>
+                        <Badge size="xs" style={{ background: sevBg, color: sevCol, fontWeight: 700 }}>
+                          {severityLabels[sev]}
+                        </Badge>
+                        {isAlert && <Badge size="xs" variant="outline" style={{ fontSize: 10, borderColor: "var(--color-critical)", color: "var(--color-critical)" }}>{t("feed.alertBadge")}</Badge>}
+                        {sourceName && <Badge size="xs" variant="light" color="gray" style={{ fontSize: 10 }}>{sourceName}</Badge>}
                       </Group>
                       <Text fw={600} size="sm" c="var(--color-text-primary)" lineClamp={1} mb={4}>
                         {displayTitle}
@@ -341,8 +336,11 @@ export function EventsTab({
                             {pill.label}
                           </span>
                         ))}
-                        <Text size="xs" c="var(--color-text-muted)" style={{ marginInlineStart: "auto" }}>
+                        <Text size="xs" c="var(--color-text-muted)">
                           {t("feed.signalCount", { count: event.signals.length })}
+                        </Text>
+                        <Text size="xs" c="var(--color-text-muted)" style={{ marginInlineStart: "auto" }} title={t("feed.firstSignal", { time: format.relativeTime(new Date(event.firstSignalCreatedAt)) })}>
+                          {format.relativeTime(new Date(event.lastSignalCreatedAt))}
                         </Text>
                       </Group>
                     </Box>
