@@ -3,27 +3,17 @@
 import { useState, useMemo, useCallback, useEffect, useRef, Suspense } from "react";
 import { flushSync } from "react-dom";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useTranslations, useLocale } from "next-intl";
-import { Box, Tabs, Button, Group, Popover, Text, Badge, ActionIcon, Divider } from "@mantine/core";
+import { useTranslations } from "next-intl";
+import { Box, Tabs, Button, Group } from "@mantine/core";
 import { DetectionTabContentSkeleton } from "~/components/ui/detection-page-skeleton";
-import { IconFilter } from "@tabler/icons-react";
-import { DisasterTypePicker, expandSelectionsToCodes } from "~/components/disaster-type-picker";
 import { useDisclosure } from "@mantine/hooks";
 import { IconPlus } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
-import { useTeam } from "~/providers/team-provider";
-import {
-  ALL_COUNTRIES,
-  pickerCountryOptions,
-  resolveSelectedCountry,
-  useTeamCountry,
-} from "~/hooks/use-team-country";
-import { useReportStaleCountryPick } from "~/lib/report-stale-country-pick";
+import { ALL_COUNTRIES } from "~/hooks/use-team-country";
 import type { MapMarker } from "~/components/map/crisis-map";
-import { parseDateFilter, resolveCountryConfig, staticCountryBounds } from "~/lib/constants/country-config";
+import { resolveCountryConfig, staticCountryBounds } from "~/lib/constants/country-config";
 import { isoForCountryName } from "~/lib/constants/countries";
 import { scopeIsosMissingPaintableBoundaries } from "~/lib/geo/country-mask";
-import { useLocations } from "~/hooks/use-locations";
 import { useLastFocusedCountry } from "~/hooks/use-last-focused-country";
 import { browseMapCamera } from "~/lib/map/country-picker-camera";
 import { markerMatchesLocationScope } from "~/lib/map/marker-location-match";
@@ -37,50 +27,18 @@ import {
 } from "~/lib/detection-nav-context";
 
 import { LiveAlertsTab, type AlertSortOrder } from "./_components/live-alerts-tab";
-import { HistoryTab, type HistorySortOrder } from "./_components/history-tab";
+import { HistoryTab } from "./_components/history-tab";
+import { DetectionFilterPopover } from "./_components/detection-filter-popover";
 import { EventsTab, type EventSortOrder } from "./_components/events-tab";
 import { SignalsTab, type SignalSortOrder } from "./_components/signals-tab";
 import { CreateSignalModal } from "~/components/create-signal-modal";
+import { useHistoryFeed } from "./_hooks/use-history-feed";
+import { useDetectionFilters } from "./_hooks/use-detection-filters";
+import { ALERT_ORDER_MAP, DETECTION_PAGE_SIZE, EVENT_ORDER_MAP, SIGNAL_ORDER_MAP } from "./_lib/feed-order";
 import detectionTabsStyles from "./detection-tabs.module.css";
 import { detectionFiltersForAgent, useAgentCurrentView } from "~/lib/agent-current-view";
-import {
-  DETECTION_DEEP_LINK_PARAMS,
-  DETECTION_ONE_SHOT_PARAMS,
-  readDetectionDeepLink,
-  resolveLinkScope,
-  withoutDeepLink,
-} from "~/lib/agent-deep-link";
-import { useAgentDeepLink } from "~/components/agent/use-agent-deep-link";
 
-const PAGE_SIZE = 25;
-// History fires alerts, events and signals pages in parallel and waits on all
-// three, so each page stays the same size as the single-feed tabs.
-const HISTORY_PAGE_SIZE = PAGE_SIZE;
-
-// Map UI sort labels to API orderBy enum values.
-// Types must match the z.enum() definitions in alerts.ts router exactly.
-type EventOrderBy = "LAST_SIGNAL_DESC" | "LAST_SIGNAL_ASC" | "CREATED_DESC" | "CREATED_ASC" | "SEVERITY_DESC" | "SEVERITY_ASC";
-type AlertOrderBy = "CREATED_DESC" | "CREATED_ASC" | "SEVERITY_DESC" | "SEVERITY_ASC";
-type SignalOrderBy = "PUBLISHED_DESC" | "PUBLISHED_ASC" | "SEVERITY_DESC" | "SEVERITY_ASC";
-
-const EVENT_ORDER_MAP: Record<EventSortOrder, EventOrderBy> = {
-  "sev-desc": "SEVERITY_DESC",
-  "sev-asc":  "SEVERITY_ASC",
-  "newest":   "LAST_SIGNAL_DESC",
-  "oldest":   "LAST_SIGNAL_ASC",
-};
-const ALERT_ORDER_MAP: Record<AlertSortOrder, AlertOrderBy> = {
-  "sev-desc": "SEVERITY_DESC",
-  "sev-asc":  "SEVERITY_ASC",
-  "newest":   "CREATED_DESC",
-  "oldest":   "CREATED_ASC",
-};
-const SIGNAL_ORDER_MAP: Record<SignalSortOrder, SignalOrderBy> = {
-  "newest":   "PUBLISHED_DESC",
-  "oldest":   "PUBLISHED_ASC",
-  "sev-desc": "SEVERITY_DESC",
-  "sev-asc":  "SEVERITY_ASC",
-};
+const PAGE_SIZE = DETECTION_PAGE_SIZE;
 
 /** Tab order drives the sliding indicator geometry: equal slots. */
 const DETECTION_TABS = ["alerts", "events", "signals", "history"];
@@ -94,43 +52,13 @@ function normalizeDetectionTab(raw: string | null): string | null {
 }
 
 const TAB_STORAGE_KEY = "detection-active-tab";
-const FILTERS_STORAGE_KEY = "detection-filters";
-/**
- * Filters chosen during a deep-linked visit (an Agent navigation), kept
- * apart from the page's defaults and tagged with the link's country, so a
- * revisit of that link restores them and an ordinary visit never sees them.
- */
-const LINK_FILTERS_STORAGE_KEY = "detection-link-filters";
 /** Gap after underline paints before skeleton - one frame, not a full CSS duration. */
 const TAB_SKELETON_DELAY_MS = 0;
 
-// Persisted alongside the tab so filter selections survive a round trip
-// through a signal/event detail page (which unmounts this component).
-interface StoredFilters {
-  country?: string;
-  regionId?: string | null;
-  date?: string;
-  severities?: string[];
-  typeFilters?: string[];
-  sources?: string[] | null;
-  boundaryLevel?: "none" | "A0" | "A1" | "A2";
-}
-
-function readStoredFilters(key = FILTERS_STORAGE_KEY): StoredFilters & { countryId?: string } {
-  try {
-    const raw = sessionStorage.getItem(key);
-    return raw ? (JSON.parse(raw) as StoredFilters & { countryId?: string }) : {};
-  } catch {
-    return {}; // sessionStorage unavailable (SSR or private mode)
-  }
-}
-
 function DetectionPageContent() {
   const t = useTranslations("detection");
-  const locale = useLocale();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [storageReady, setStorageReady] = useState(false);
 
   // URL/defaults only on first render - sessionStorage restore happens after mount
   // to avoid SSR/client hydration mismatch.
@@ -221,115 +149,7 @@ function DetectionPageContent() {
       commitTabRoute(tab);
     }, TAB_SKELETON_DELAY_MS);
   }, [indicatorTab, clearTabTimers, commitTabRoute]);
-  const [selectedRegionId, setSelectedRegionId] = useState<string | null>(null);
-  const [selectedDate, setSelectedDate] = useState("Last 30 days");
-  const localizedDateOptions = useMemo(() => {
-    const now = new Date();
-    const englishMonths = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-    const fmt = new Intl.DateTimeFormat(locale, { month: "short", year: "numeric" });
-    const result: { value: string; label: string }[] = [];
-    for (let i = 0; i < 6; i++) {
-      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      result.push({ value: `${englishMonths[d.getMonth()]} ${d.getFullYear()}`, label: fmt.format(d) });
-    }
-    result.push(
-      { value: "Last 1 day",   label: t("filters.last1day") },
-      { value: "Last 2 days",  label: t("filters.last2days") },
-      { value: "Last 3 days",  label: t("filters.last3days") },
-      { value: "Last 7 days",  label: t("filters.last7days") },
-      { value: "Last 30 days", label: t("filters.last30days") },
-      { value: "Last 90 days", label: t("filters.last90days") },
-    );
-    return result;
-  }, [locale, t]);
-  const [createModalOpened, { open: openCreateModal, close: closeCreateModal }] = useDisclosure(false);
-  const [filterOpen, setFilterOpen] = useState(false);
-  const [activeSeverities, setActiveSeverities] = useState<Set<string>>(
-    () => new Set(["critical", "high", "medium", "low"]),
-  );
-  const [selectedTypeFilters, setSelectedTypeFilters] = useState<string[]>([]);
-  const hierarchyQuery = api.alerts.getDisasterTypeHierarchy.useQuery(undefined, { staleTime: Infinity, refetchOnWindowFocus: false });
-  const hierarchy = hierarchyQuery.data ?? [];
-  const expandedTypeCodes = selectedTypeFilters.length > 0 ? expandSelectionsToCodes(selectedTypeFilters, hierarchy) : null;
-  const [activeSources, setActiveSources] = useState<Set<string> | null>(null);
-  const isFiltered = activeSeverities.size < 4 || selectedTypeFilters.length > 0 || activeSources !== null;
-  const filterCount = (activeSeverities.size < 4 ? 1 : 0) + (selectedTypeFilters.length > 0 ? 1 : 0) + (activeSources !== null ? 1 : 0);
-
-  const { activeTeamId } = useTeam();
-  const { countries, getCenter, getZoom, getLocationId, tree, isLoading: isLocationsLoading } = useLocations();
-  const {
-    countries: teamCountries,
-    countryName: workingCountryName,
-    setWorkingCountry,
-    scopeReady,
-  } = useTeamCountry();
-
-  // Country the user picked. Scoped teams use the working-country cookie;
-  // multi-country unset (All Countries) means every assigned country.
-  const [pickedCountry, setPickedCountry] = useState("");
-  const teamCountryNames = useMemo(() => teamCountries.map((c) => c.name), [teamCountries]);
-  // An Agent navigation deep link's country holds for this visit only and
-  // doesn't touch the working country; picking a country drops it. Its place
-  // is matched by id against this page's locations tree and the active
-  // team's scope: only a place the page can show ever overrides.
-  const detectionDeepLink = useMemo(() => readDetectionDeepLink(searchParams), [searchParams]);
-  const linkScope = useMemo(
-    () =>
-      resolveLinkScope({
-        countryId: detectionDeepLink.countryId,
-        regionId: detectionDeepLink.regionId,
-        tree,
-        teamCountryNames,
-        scopeReady,
-      }),
-    [detectionDeepLink.countryId, detectionDeepLink.regionId, tree, teamCountryNames, scopeReady],
-  );
-  const linkCountry = linkScope.status === "honoured" ? linkScope.country : undefined;
-  const selectedCountry = resolveSelectedCountry(
-    teamCountryNames,
-    linkCountry ?? workingCountryName ?? pickedCountry,
-    scopeReady,
-  );
-  const lastFocusedCountry = useLastFocusedCountry(selectedCountry);
-  
-  const handleCountryChange = useCallback(
-    (value: string) => {
-      // Picking a country ends a deep link's override.
-      if (detectionDeepLink.countryId) {
-        const rest = withoutDeepLink(new URLSearchParams(searchParams.toString()), DETECTION_DEEP_LINK_PARAMS);
-        router.replace(`/detection${rest}`, { scroll: false });
-      }
-      if (value === ALL_COUNTRIES) {
-        setPickedCountry(ALL_COUNTRIES);
-        setWorkingCountry("", ALL_COUNTRIES);
-      } else if (teamCountries.length > 0) {
-        const location = teamCountries.find((c) => c.name === value);
-        if (location) setWorkingCountry(location.id);
-      } else {
-        setPickedCountry(value);
-        setWorkingCountry(getLocationId(value) ?? value, value);
-      }
-      // Reset region when country changes
-      setSelectedRegionId(null);
-    },
-    [teamCountries, setWorkingCountry, getLocationId, detectionDeepLink.countryId, searchParams, router],
-  );
-  
-  const countryOptions = useMemo(() => {
-    if (!scopeReady) {
-      return workingCountryName ? [workingCountryName] : [];
-    }
-    return pickerCountryOptions(countries, teamCountryNames);
-  }, [scopeReady, workingCountryName, countries, teamCountryNames]);
-  useReportStaleCountryPick(
-    countryOptions,
-    linkCountry ?? workingCountryName ?? pickedCountry,
-    selectedCountry,
-  );
-
-  const [boundaryLevel, setBoundaryLevel] = useState<"none" | "A0" | "A1" | "A2">("A1");
-
-  // Restore tab/filters from sessionStorage after mount (URL tab still wins).
+  // Restore the tab from sessionStorage after mount (URL tab still wins).
   useEffect(() => {
     const fromUrl = searchParams.get("tab");
     if (!fromUrl) {
@@ -342,91 +162,45 @@ function DetectionPageContent() {
         }
       } catch { /* sessionStorage unavailable */ }
     }
-
-    const storedFilters = readStoredFilters();
-    // Country lives in the working-country cookie. Do not restore it from
-    // session here: on the first mount `teamCountries` is still empty, so a
-    // leftover "Venezuela" would look like an unscoped pick and pin Detection
-    // after Map already switched to All Countries.
-    if (storedFilters.regionId !== undefined) setSelectedRegionId(storedFilters.regionId ?? null);
-    if (storedFilters.date) setSelectedDate(storedFilters.date);
-    if (storedFilters.severities) setActiveSeverities(new Set(storedFilters.severities));
-    if (storedFilters.typeFilters) setSelectedTypeFilters(storedFilters.typeFilters);
-    if (storedFilters.sources !== undefined) {
-      setActiveSources(storedFilters.sources ? new Set(storedFilters.sources) : null);
-    }
-    if (storedFilters.boundaryLevel) setBoundaryLevel(storedFilters.boundaryLevel);
-    setStorageReady(true);
     // Mount-only restore; searchParams read intentionally for initial URL tab check.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // An Agent navigation deep link, after the stored defaults so it wins. A
-  // fresh move applies its filters like picking them by hand (a new country
-  // resets the region); a revisit (details and back, a reload, Back) brings
-  // back the filters chosen during that visit. From then on they are
-  // ordinary filter state; only the country stays in the URL, as this
-  // visit's override, and a region it set goes with it.
-  const linkedRegionRef = useRef(false);
-  useAgentDeepLink({
-    path: "/detection",
-    params: DETECTION_DEEP_LINK_PARAMS,
-    oneShot: DETECTION_ONE_SHOT_PARAMS,
-    scope: linkScope,
-    apply: (fresh) => {
-      if (linkScope.status !== "honoured") return;
-      if (!fresh) {
-        const visit = readStoredFilters(LINK_FILTERS_STORAGE_KEY);
-        if (visit.countryId !== detectionDeepLink.countryId) return;
-        setSelectedRegionId(visit.regionId ?? null);
-        linkedRegionRef.current = !!visit.regionId;
-        if (visit.date) setSelectedDate(visit.date);
-        if (visit.severities) setActiveSeverities(new Set(visit.severities));
-        if (visit.typeFilters) setSelectedTypeFilters(visit.typeFilters);
-        if (visit.sources !== undefined) setActiveSources(visit.sources ? new Set(visit.sources) : null);
-        if (visit.boundaryLevel) setBoundaryLevel(visit.boundaryLevel);
-        return;
-      }
-      setSelectedRegionId(linkScope.region?.id ?? null);
-      linkedRegionRef.current = !!linkScope.region;
-      if (detectionDeepLink.date) setSelectedDate(detectionDeepLink.date);
-      if (detectionDeepLink.severities) setActiveSeverities(new Set(detectionDeepLink.severities));
-    },
-    onGone: () => {
-      if (linkedRegionRef.current) setSelectedRegionId(null);
-      linkedRegionRef.current = false;
-    },
-  });
+  const filters = useDetectionFilters({ agentDeepLinkPath: "/detection" });
+  const {
+    country: selectedCountry,
+    regionId: selectedRegionId,
+    date: selectedDate,
+    severities: activeSeverities,
+    setSeverities: setActiveSeverities,
+    typeFilters: selectedTypeFilters,
+    setTypeFilters: setSelectedTypeFilters,
+    hierarchy,
+    expandedTypeCodes,
+    sources: activeSources,
+    setSources: setActiveSources,
+    boundaryLevel,
+    setBoundaryLevel,
+    teamCountries,
+    scopeReady,
+    getLocationId,
+    getCenter,
+    getZoom,
+    teamId: activeTeamId,
+    selectedLocationId,
+    locationsReady,
+    fromIso,
+    effectiveTo,
+    severityMin,
+    severityMax,
+    snapshotTime,
+    refreshSnapshot,
+    filter: sharedFilter,
+    filterKey,
+  } = filters;
+  const lastFocusedCountry = useLastFocusedCountry(selectedCountry);
 
-  // Mirror filter selections into sessionStorage so they survive navigating
-  // to a signal/event detail page and back (that route change unmounts this
-  // component, resetting the useState defaults above without this). During
-  // a deep-linked visit they go under the link instead: they hold for that
-  // visit and never become the page's defaults.
-  useEffect(() => {
-    if (!storageReady || linkScope.status === "pending") return;
-    try {
-      const toStore: StoredFilters = {
-        country: selectedCountry,
-        regionId: selectedRegionId,
-        date: selectedDate,
-        severities: Array.from(activeSeverities),
-        typeFilters: selectedTypeFilters,
-        sources: activeSources ? Array.from(activeSources) : null,
-        boundaryLevel,
-      };
-      if (linkScope.status === "honoured") {
-        sessionStorage.setItem(
-          LINK_FILTERS_STORAGE_KEY,
-          JSON.stringify({ ...toStore, countryId: detectionDeepLink.countryId }),
-        );
-      } else {
-        sessionStorage.setItem(FILTERS_STORAGE_KEY, JSON.stringify(toStore));
-      }
-    } catch {
-      /* sessionStorage unavailable (SSR or private mode) */
-    }
-  }, [storageReady, linkScope.status, detectionDeepLink.countryId, selectedCountry, selectedRegionId, selectedDate, activeSeverities, selectedTypeFilters, activeSources, boundaryLevel]);
+  const [createModalOpened, { open: openCreateModal, close: closeCreateModal }] = useDisclosure(false);
 
   const selectedCountryId = useMemo(
     () => (selectedCountry !== ALL_COUNTRIES ? getLocationId(selectedCountry) : null),
@@ -499,56 +273,10 @@ function DetectionPageContent() {
     [selectedRegionId, regionQuery.data],
   );
 
-  const selectedLocationId = useMemo(
-    () => selectedRegionId ?? getLocationId(selectedCountry),
-    [selectedCountry, selectedRegionId, getLocationId],
-  );
-
-  // Don't fire feed queries until the location tree has loaded. Without this
-  // guard, the queries fire with locationId=undefined (no filter) during the
-  // brief window before the tree resolves, returning results from all countries.
-  const locationsReady = !isLocationsLoading || !!selectedLocationId;
-
-  const currentCountryStates = useMemo(
-    () => tree.find((c) => c.name === selectedCountry)?.states ?? [],
-    [tree, selectedCountry],
-  );
-
-  const dateRange = useMemo(() => parseDateFilter(selectedDate), [selectedDate]);
-  const fromIso = useMemo(() => dateRange.start.toISOString(), [dateRange]);
-  const toIso = useMemo(() => dateRange.end.toISOString(), [dateRange]);
-
-  // Snapshot time: freezes the upper bound of all feed queries so that new
-  // items arriving mid-session don't shift offsets and cause duplicates when
-  // the user loads more. Resets whenever filters or sort change.
-  const [snapshotTime, setSnapshotTime] = useState(() => new Date().toISOString());
-  // Rolling presets ("Last N days") follow snapshotTime so refresh expands
-  // the window to include new events. Fixed-range presets ("Mon YYYY") keep
-  // their explicit upper bound - snapshotTime is irrelevant there because
-  // the range is in the past and no new events can fall into it.
-  const isRollingPreset = /^Last \d+ days?$/i.test(selectedDate);
-  const effectiveTo = isRollingPreset ? snapshotTime : toIso;
-
-  const SEV_NUM: Record<string, number> = { low: 2, medium: 3, high: 4, critical: 5 };
-  const { severityMin, severityMax } = useMemo(() => {
-    if (activeSeverities.size === 0 || activeSeverities.size === 4) {
-      return { severityMin: undefined, severityMax: undefined };
-    }
-    const nums = [...activeSeverities].map((s) => SEV_NUM[s]).filter((n): n is number => typeof n === "number");
-    if (nums.length === 0) return { severityMin: undefined, severityMax: undefined };
-    const min = Math.min(...nums) === 2 ? 1 : Math.min(...nums);
-    return { severityMin: min, severityMax: Math.max(...nums) };
-  }, [activeSeverities]);
-
   // ── Per-feed sort state ────────────────────────────────────────────────────
   const [eventsSort, setEventsSort] = useState<EventSortOrder>("newest");
   const [alertsSort, setAlertsSort] = useState<AlertSortOrder>("newest");
   const [signalsSort, setSignalsSort] = useState<SignalSortOrder>("newest");
-  const [historySortOrder, setHistorySortOrder] = useState<HistorySortOrder>("newest");
-  // History's source filter lives here (not in HistoryTab) so it can narrow
-  // the paginated signals query server-side — otherwise a source with no
-  // rows on the first page could never be filtered to. null = all sources.
-  const [historySources, setHistorySources] = useState<Set<string> | null>(null);
 
   // Write detection nav context for event/signal page prev/next navigation.
   // Wait until locationId is resolved - writing null would make detail arrow
@@ -635,30 +363,6 @@ function DetectionPageContent() {
     }
   }, [activeTab, signalsItems]);
 
-  // History tab accumulation - same pattern as feeds, HISTORY_PAGE_SIZE per source
-  const [historyAlertsItems, setHistoryAlertsItems] = useState<GqlAlert[]>([]);
-  const [historyEventsItems, setHistoryEventsItems] = useState<GqlEvent[]>([]);
-  const [historySignalsItems, setHistorySignalsItems] = useState<GqlSignal[]>([]);
-  const [historyOffset, setHistoryOffset] = useState(0);
-  const [historyAlertsTotalCount, setHistoryAlertsTotalCount] = useState(0);
-  const [historyEventsTotalCount, setHistoryEventsTotalCount] = useState(0);
-  const [historySignalsTotalCount, setHistorySignalsTotalCount] = useState(0);
-  const [historyAlertsHasMore, setHistoryAlertsHasMore] = useState(false);
-  const [historyEventsHasMore, setHistoryEventsHasMore] = useState(false);
-  const [historySignalsHasMore, setHistorySignalsHasMore] = useState(false);
-  const historyAppending = useRef(false);
-  const [historyVersion, setHistoryVersion] = useState(0);
-
-  const sharedFilter = {
-    teamId: activeTeamId,
-    locationId: selectedLocationId ?? undefined,
-    from: fromIso,
-    to: effectiveTo,
-    severityMin,
-    severityMax,
-    eventTypes: expandedTypeCodes ?? undefined,
-  };
-
   // ── Main feed queries ──────────────────────────────────────────────────────
   // staleTime: Infinity prevents re-fetching on tab switch.
   // _v (version) is part of the React Query cache key, so incrementing it on
@@ -731,28 +435,16 @@ function DetectionPageContent() {
   }, [signalsQuery.data]);
 
   // ── Reset effects ──────────────────────────────────────────────────────────
-  // FILTER changes: reset snapshot + items. A new snapshotTime means a new
-  // frozen window, so the user sees results from the correct time range.
+  // FILTER changes (filterKey): reset items. useDetectionFilters also moves
+  // the snapshot, so the user sees results from the correct time range.
   // SORT changes: reset items only, keep the existing snapshotTime. This
   // ensures switching sort and switching back always queries the same dataset.
-  const FILTER_DEPS = [selectedLocationId, fromIso, toIso, activeTeamId, severityMin, severityMax, expandedTypeCodes?.join(",")] as const;
-
-  // Snapshot is shared across all three feeds, so we set it once. Previously
-  // each per-feed reset effect called setSnapshotTime independently, which
-  // scheduled three setState calls per filter change with three slightly
-  // different timestamps.
-  useEffect(() => {
-    setSnapshotTime(new Date().toISOString());
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [...FILTER_DEPS, activeSources]);
-
   useEffect(() => {
     eventsAppending.current = false;
     setEventsOffset(0);
     setEventsItems([]);
     setEventsVersion((v) => v + 1);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [...FILTER_DEPS]);
+  }, [filterKey]);
 
   useEffect(() => {
     eventsAppending.current = false;
@@ -766,8 +458,7 @@ function DetectionPageContent() {
     setAlertsOffset(0);
     setAlertsItems([]);
     setAlertsVersion((v) => v + 1);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [...FILTER_DEPS]);
+  }, [filterKey]);
 
   useEffect(() => {
     alertsAppending.current = false;
@@ -781,8 +472,7 @@ function DetectionPageContent() {
     setSignalsOffset(0);
     setSignalsItems([]);
     setSignalsVersion((v) => v + 1);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [...FILTER_DEPS, activeSources]);
+  }, [filterKey, activeSources]);
 
   useEffect(() => {
     signalsAppending.current = false;
@@ -817,31 +507,28 @@ function DetectionPageContent() {
   // the cached value, the accumulation effect doesn't fire, and the list
   // we just cleared above stays blank.
   const refreshEvents = useCallback(() => {
-    const now = new Date().toISOString();
-    setSnapshotTime(now);
+    refreshSnapshot();
     eventsAppending.current = false;
     setEventsOffset(0);
     setEventsItems([]);
     setEventsVersion((v) => v + 1);
-  }, []);
+  }, [refreshSnapshot]);
 
   const refreshAlerts = useCallback(() => {
-    const now = new Date().toISOString();
-    setSnapshotTime(now);
+    refreshSnapshot();
     alertsAppending.current = false;
     setAlertsOffset(0);
     setAlertsItems([]);
     setAlertsVersion((v) => v + 1);
-  }, []);
+  }, [refreshSnapshot]);
 
   const refreshSignals = useCallback(() => {
-    const now = new Date().toISOString();
-    setSnapshotTime(now);
+    refreshSnapshot();
     signalsAppending.current = false;
     setSignalsOffset(0);
     setSignalsItems([]);
     setSignalsVersion((v) => v + 1);
-  }, []);
+  }, [refreshSnapshot]);
 
   // ── "New items" polls: lightweight queries with from=snapshotTime ──────────
   // Only the active tab polls so we don't waste bandwidth on hidden tabs.
@@ -886,85 +573,11 @@ function DetectionPageContent() {
   const signalsNewCount = signalsNewQuery.data?.totalCount ?? 0;
 
   // ── History tab - paginated per source, all three sources accumulated ──────
-  const historyAlertsQuery = api.alerts.alertsPage.useQuery(
-    { ...sharedFilter, orderBy: ALERT_ORDER_MAP[historySortOrder], limit: HISTORY_PAGE_SIZE, offset: historyOffset, _v: historyVersion },
-    { enabled: locationsReady && activeTab === "history", staleTime: Infinity },
-  );
-  const historyEventsQuery = api.alerts.eventsPage.useQuery(
-    { ...sharedFilter, orderBy: EVENT_ORDER_MAP[historySortOrder], limit: HISTORY_PAGE_SIZE, offset: historyOffset, _v: historyVersion },
-    { enabled: locationsReady && activeTab === "history", staleTime: Infinity },
-  );
-  const historySignalsQuery = api.signals.signalsPage.useQuery(
-    { teamId: activeTeamId, locationId: selectedLocationId ?? undefined, from: fromIso, to: effectiveTo, severityMin, severityMax, sourceNames: historySources ? [...historySources] : undefined, orderBy: SIGNAL_ORDER_MAP[historySortOrder], limit: HISTORY_PAGE_SIZE, offset: historyOffset, _v: historyVersion },
-    { enabled: locationsReady && activeTab === "history", staleTime: Infinity },
-  );
-  const historySourceNamesQuery = api.signals.pushFeedSourceNames.useQuery(undefined, {
-    enabled: activeTab === "history",
-    staleTime: Infinity,
+  const historyFeed = useHistoryFeed(sharedFilter, {
+    enabled: locationsReady && activeTab === "history",
+    resetKey: filterKey,
   });
-
-  // ── History accumulation effects ───────────────────────────────────────────
-  useEffect(() => {
-    if (!historyAlertsQuery.data) return;
-    const { items, totalCount, hasMore } = historyAlertsQuery.data;
-    setHistoryAlertsTotalCount(totalCount);
-    setHistoryAlertsHasMore(hasMore);
-    if (historyAppending.current) {
-      setHistoryAlertsItems((prev) => [...prev, ...items]);
-    } else {
-      setHistoryAlertsItems(items);
-    }
-  }, [historyAlertsQuery.data]);
-
-  useEffect(() => {
-    if (!historyEventsQuery.data) return;
-    const { items, totalCount, hasMore } = historyEventsQuery.data;
-    setHistoryEventsTotalCount(totalCount);
-    setHistoryEventsHasMore(hasMore);
-    if (historyAppending.current) {
-      setHistoryEventsItems((prev) => [...prev, ...items]);
-    } else {
-      setHistoryEventsItems(items);
-    }
-  }, [historyEventsQuery.data]);
-
-  useEffect(() => {
-    if (!historySignalsQuery.data) return;
-    const { items, totalCount, hasMore } = historySignalsQuery.data;
-    setHistorySignalsTotalCount(totalCount);
-    setHistorySignalsHasMore(hasMore);
-    if (historyAppending.current) {
-      setHistorySignalsItems((prev) => [...prev, ...items]);
-      historyAppending.current = false;
-    } else {
-      setHistorySignalsItems(items);
-    }
-  }, [historySignalsQuery.data]);
-
-  // Reset history on filter change
-  useEffect(() => {
-    historyAppending.current = false;
-    setHistoryOffset(0);
-    setHistoryAlertsItems([]);
-    setHistoryEventsItems([]);
-    setHistorySignalsItems([]);
-    setHistoryVersion((v) => v + 1);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [...FILTER_DEPS]);
-
-  // Reset history on sort or source-filter change
-  useEffect(() => {
-    historyAppending.current = false;
-    setHistoryOffset(0);
-    setHistoryAlertsItems([]);
-    setHistoryEventsItems([]);
-    setHistorySignalsItems([]);
-    setHistoryVersion((v) => v + 1);
-  }, [historySortOrder, historySources]);
-
-  const historyHasMore = historyAlertsHasMore || historyEventsHasMore || historySignalsHasMore;
-  const historyTotalCount = historyAlertsTotalCount + historyEventsTotalCount + historySignalsTotalCount;
-  const historyIsFetching = historyAlertsQuery.isFetching || historyEventsQuery.isFetching || historySignalsQuery.isFetching;
+  const historyInitialLoading = historyFeed.loading;
 
   // Every page of a feed is its own React Query cache key (offset is part of
   // it), so `isLoading` flips to true again for each lazy-loaded page. Only
@@ -974,15 +587,6 @@ function DetectionPageContent() {
   const eventsInitialLoading = eventsQuery.isLoading && eventsOffset === 0;
   const alertsInitialLoading = alertsQuery.isLoading && alertsOffset === 0;
   const signalsInitialLoading = signalsQuery.isLoading && signalsOffset === 0;
-  const historyInitialLoading =
-    (historyAlertsQuery.isLoading || historyEventsQuery.isLoading || historySignalsQuery.isLoading) &&
-    historyOffset === 0;
-
-  const loadMoreHistory = useCallback(() => {
-    if (!historyHasMore || historyIsFetching) return;
-    historyAppending.current = true;
-    setHistoryOffset((prev) => prev + HISTORY_PAGE_SIZE);
-  }, [historyHasMore, historyIsFetching]);
 
   const allSources = useMemo(() => {
     const s = new Set<string>();
@@ -1098,105 +702,30 @@ function DetectionPageContent() {
         <Box data-tour="detection-filters">
         <FilterBar
           country={selectedCountry}
-          onCountryChange={handleCountryChange}
-          countries={countryOptions}
+          onCountryChange={filters.onCountryChange}
+          countries={filters.countryOptions}
           regionsContent={
             <RegionPicker
-              states={currentCountryStates}
+              states={filters.regionStates}
               value={selectedRegionId}
-              onChange={setSelectedRegionId}
+              onChange={filters.onRegionChange}
               label={t("filters.region")}
             />
           }
           date={selectedDate}
-          onDateChange={setSelectedDate}
-          dateOptions={localizedDateOptions}
+          onDateChange={filters.onDateChange}
+          dateOptions={filters.dateOptions}
         >
-          <Box>
-            <Text size="xs" c="#737373" tt="uppercase" style={{ fontSize: 10, letterSpacing: "0.05em", marginBottom: 5 }}>{t("filters.filter")}</Text>
-            <Popover opened={filterOpen} onChange={setFilterOpen} position="bottom-start" shadow="md" width={270} withinPortal>
-              <Popover.Target>
-                <ActionIcon
-                  variant="default" size={30}
-                  style={{ position: "relative", border: "1px solid #E5E5E5", borderRadius: 4 }}
-                  styles={{ root: { overflow: "visible" } }}
-                  onClick={() => setFilterOpen((o) => !o)}
-                  title={t("filters.filter")}
-                  aria-label={t("filters.filter")}
-                >
-                  <IconFilter size={13} color={isFiltered ? "var(--color-accent)" : "var(--color-text-muted)"} />
-                  {isFiltered && (
-                    <Box style={{ position: "absolute", top: -4, insetInlineEnd: -4, width: 14, height: 14, borderRadius: "50%", background: "var(--color-accent)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 2 }}>
-                      <Text style={{ fontSize: 9, color: "white", fontWeight: 700, lineHeight: 1 }}>{filterCount}</Text>
-                    </Box>
-                  )}
-                </ActionIcon>
-              </Popover.Target>
-              <Popover.Dropdown p={14} onMouseDown={(e) => e.stopPropagation()}>
-                <Group justify="space-between" mb={10}>
-                  <Text size="xs" fw={700} tt="uppercase" style={{ fontSize: 10, letterSpacing: "0.06em" }}>{t("filters.title")}</Text>
-                  {isFiltered && (
-                    <Button size="compact-xs" variant="subtle" color="gray" onClick={() => { setActiveSeverities(new Set(["critical", "high", "medium", "low"])); setSelectedTypeFilters([]); setActiveSources(null); }}>
-                      {t("filters.clearAll")}
-                    </Button>
-                  )}
-                </Group>
-                <Text size="xs" fw={700} c="var(--color-text-primary)" mb={8}>{t("filters.severity")}</Text>
-                <Group gap={6} mb={12} wrap="wrap">
-                  {(["critical", "high", "medium", "low"] as const).map((sev) => {
-                    const active = activeSeverities.has(sev);
-                    return (
-                      <Badge
-                        key={sev} size="sm"
-                        variant={active ? "filled" : "light"}
-                        color={sev === "critical" ? "red" : sev === "high" ? "orange" : sev === "medium" ? "yellow" : "green"}
-                        style={{ cursor: "pointer", textTransform: "capitalize" }}
-                        onClick={() => setActiveSeverities((prev) => {
-                          const next = new Set(prev);
-                          if (next.has(sev)) next.delete(sev);
-                          else next.add(sev);
-                          return next;
-                        })}
-                      >
-                        {t(`filters.severities.${sev}`)}
-                      </Badge>
-                    );
-                  })}
-                </Group>
-                <Divider color="var(--color-border)" mb={10} />
-                <Text size="xs" fw={700} c="var(--color-text-primary)" mb={8}>{t("filters.eventType")}</Text>
-                <DisasterTypePicker hierarchy={hierarchy} selected={selectedTypeFilters} onChange={setSelectedTypeFilters} size="xs" />
-                {allSources.length > 0 && (
-                  <>
-                    <Divider color="var(--color-border)" my={10} />
-                    <Text size="xs" fw={700} c="var(--color-text-primary)" mb={8}>{t("filters.source")}</Text>
-                    <Group gap={6} wrap="wrap">
-                      {allSources.map((src) => {
-                        const active = activeSources === null || activeSources.has(src);
-                        return (
-                          <Badge
-                            key={src} size="sm"
-                            variant={active ? "filled" : "light"}
-                            color={active ? "dark" : "gray"}
-                            style={{ cursor: "pointer", textTransform: "none" }}
-                            onClick={() => setActiveSources((prev) => {
-                              const base = prev ?? new Set(allSources);
-                              const next = new Set(base);
-                              if (next.has(src)) next.delete(src);
-                              else next.add(src);
-                              return next.size === allSources.length ? null : next;
-                            })}
-                          >
-                            {src}
-                          </Badge>
-                        );
-                      })}
-                    </Group>
-                  </>
-                )}
-              </Popover.Dropdown>
-            </Popover>
-          </Box>
+          <DetectionFilterPopover
+            severities={activeSeverities}
+            onSeveritiesChange={setActiveSeverities}
+            typeFilters={selectedTypeFilters}
+            onTypeFiltersChange={setSelectedTypeFilters}
+            hierarchy={hierarchy}
+            sourceOptions={allSources}
+            sources={activeSources}
+            onSourcesChange={setActiveSources}
+          />
         </FilterBar>
         </Box>
         <Group gap={8} data-tour="detection-create">
@@ -1335,21 +864,7 @@ function DetectionPageContent() {
             )}
 
             {activeTab === "history" && (
-              <HistoryTab
-                alerts={historyAlertsItems}
-                events={historyEventsItems}
-                signals={historySignalsItems}
-                loading={historyInitialLoading}
-                hasMore={historyHasMore}
-                isFetchingMore={historyIsFetching && historyAppending.current}
-                totalCount={historyTotalCount}
-                onLoadMore={loadMoreHistory}
-                sortOrder={historySortOrder}
-                onSortChange={setHistorySortOrder}
-                activeSources={historySources}
-                onActiveSourcesChange={setHistorySources}
-                sourceOptions={historySourceNamesQuery.data}
-              />
+              <HistoryTab {...historyFeed} />
             )}
           </>
         )}
