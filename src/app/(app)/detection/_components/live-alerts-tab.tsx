@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect, useRef } from "react";
-import { useFormatter, useTranslations } from "next-intl";
+import { useFormatter, useNow, useTranslations } from "next-intl";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import {
@@ -101,6 +101,7 @@ export function LiveAlertsTab({
 }: LiveAlertsTabProps) {
   const t = useTranslations("detection");
   const format = useFormatter();
+  const now = useNow({ updateInterval: 60_000 });
   const [search, setSearch] = useState("");
   const { hoveredMarkerId, getCardProps, onMarkerHover } = useMarkerHover(mapMarkers);
   const [showPopulation, setShowPopulation] = useState(false);
@@ -201,8 +202,8 @@ export function LiveAlertsTab({
                           <Badge size="xs" style={{ background: sevBg, color: sevCol, fontWeight: 700 }}>{severityLabels[sev]}</Badge>
                           {sourceName && <Badge size="xs" variant="light" color="gray" style={{ fontSize: 10 }}>{sourceName}</Badge>}
                         </Group>
-                        <Text size="xs" c="var(--color-text-muted)" title={t("feed.firstSignal", { time: format.relativeTime(new Date(alert.event.firstSignalCreatedAt)) })}>
-                          {format.relativeTime(new Date(alert.event.lastSignalCreatedAt))}
+                        <Text size="xs" c="var(--color-text-muted)" title={t("feed.firstSignal", { time: format.relativeTime(new Date(alert.event.firstSignalCreatedAt), now) })}>
+                          {format.relativeTime(new Date(alert.event.lastSignalCreatedAt), now)}
                         </Text>
                       </Group>
                       <Text fw={600} size="sm" c="var(--color-text-primary)" lineClamp={1} mb={4}>{displayTitle}</Text>
@@ -228,8 +229,15 @@ export function LiveAlertsTab({
             {hasMore && filtered.length > 0 && <div ref={sentinelRef} style={{ height: 1 }} />}
 
             {isFetchingMore && (
-              <Box py={12} style={{ display: "flex", justifyContent: "center" }}>
+              <Box py={12} style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 8 }}>
                 <Loader size="xs" />
+                {/* A client-side search keeps the sentinel in view until every page is
+                    loaded, so say what the spinner is doing instead of looking stuck. */}
+                {search.trim() !== "" && (
+                  <Text size="xs" c="var(--color-text-muted)">
+                    {t("feed.alerts.scanning", { loaded: format.number(alerts.length), total: format.number(totalCount) })}
+                  </Text>
+                )}
               </Box>
             )}
 

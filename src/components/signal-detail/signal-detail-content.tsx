@@ -3,7 +3,7 @@
 import { eventHref } from "~/lib/analytics/event-source";
 import { useState, useMemo } from "react";
 import Link from "next/link";
-import { useFormatter, useTranslations } from "next-intl";
+import { useFormatter, useNow, useTranslations } from "next-intl";
 import { useMediaQuery } from "@mantine/hooks";
 import {
   Box,
@@ -179,6 +179,7 @@ export function SignalDetailContent({
   const t = useTranslations("signalDetail");
   const tCommon = useTranslations("common");
   const format = useFormatter();
+  const now = useNow({ updateInterval: 60_000 });
   const isMobile = useMediaQuery("(max-width: 48em)") === true;
   const [challengeOpen, setChallengeOpen] = useState(false);
   /** Only the active team's analysts (and platform admins) file. */
@@ -569,7 +570,7 @@ export function SignalDetailContent({
             <Group gap={4}>
               <IconClock size={13} color="var(--color-text-muted)" />
               <Text size="xs" c="var(--color-text-muted)">
-                {format.relativeTime(new Date(signal.publishedAt))}
+                {format.relativeTime(new Date(signal.publishedAt), now)}
               </Text>
             </Group>
           </Group>
@@ -761,7 +762,7 @@ export function SignalDetailContent({
                             <Badge size="xs" style={{ background: relBg, color: relColor, fontWeight: 600 }}>
                               {tCommon(`severities.${relSev}`)}
                             </Badge>
-                            <Text size="xs" c="var(--color-text-muted)">{format.relativeTime(new Date(ev.firstSignalCreatedAt))}</Text>
+                            <Text size="xs" c="var(--color-text-muted)">{format.relativeTime(new Date(ev.firstSignalCreatedAt), now)}</Text>
                           </Group>
                           <Text size="sm" fw={500} c="var(--color-text-primary)" lineClamp={2} style={{ lineHeight: 1.4 }}>
                             {relTitle}
@@ -820,7 +821,7 @@ export function SignalDetailContent({
                             <Badge size="xs" style={{ background: "var(--color-bg-muted)", color: "var(--color-text-secondary)", fontWeight: 600 }}>
                               {s.source.name}
                             </Badge>
-                            <Text size="xs" c="var(--color-text-muted)">{format.relativeTime(new Date(s.publishedAt))}</Text>
+                            <Text size="xs" c="var(--color-text-muted)">{format.relativeTime(new Date(s.publishedAt), now)}</Text>
                           </Group>
                           <Text size="sm" fw={500} c="var(--color-text-primary)" lineClamp={2} style={{ lineHeight: 1.4 }}>
                             {relTitle}

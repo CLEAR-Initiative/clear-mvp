@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useFormatter, useTranslations } from "next-intl";
+import { useFormatter, useNow, useTranslations } from "next-intl";
 import {
   Badge,
   Box,
@@ -43,6 +43,7 @@ export function AddEventsToCrisisModal({
 }: AddEventsToCrisisModalProps) {
   const t = useTranslations("crisisDetail.events");
   const format = useFormatter();
+  const now = useNow({ updateInterval: 60_000 });
   const utils = api.useUtils();
   const { activeTeamId } = useTeam();
   const [search, setSearch] = useState("");
@@ -161,7 +162,7 @@ export function AddEventsToCrisisModal({
               adding={addingId === event.id}
               disabled={addingId !== null}
               onAdd={() => void handleAdd(event.id)}
-              formatRelative={(d) => format.relativeTime(d)}
+              formatRelative={(d) => format.relativeTime(d, now)}
             />
           ))}
         </Stack>

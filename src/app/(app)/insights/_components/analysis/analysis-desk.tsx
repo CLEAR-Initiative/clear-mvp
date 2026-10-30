@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useFormatter, useTranslations } from "next-intl";
+import { useFormatter, useNow, useTranslations } from "next-intl";
 import { IconDownload, IconMessageCircle, IconUpload, IconX } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
 import type { GqlUserComment } from "~/lib/types/graphql";
@@ -60,6 +60,7 @@ export function AnalysisDesk({
 }) {
   const t = useTranslations("analysis.layout");
   const format = useFormatter();
+  const now = useNow({ updateInterval: 60_000 });
   const me = api.auth.me.useQuery();
   const thread = api.analysis.thread.useQuery(
     { id: automationId ?? "" },
@@ -323,7 +324,7 @@ export function AnalysisDesk({
                 <strong>{comment.author?.trim() || t("discussionYou")}</strong>
                 {" · "}
                 <span className={styles.deskMeta}>
-                  {format.relativeTime(new Date(comment.createdAt))}
+                  {format.relativeTime(new Date(comment.createdAt), now)}
                 </span>
                 <p>{comment.text}</p>
               </article>

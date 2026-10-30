@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect, useRef } from "react";
-import { useFormatter, useTranslations } from "next-intl";
+import { useFormatter, useNow, useTranslations } from "next-intl";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import {
@@ -99,6 +99,7 @@ export function SignalsTab({
 }: SignalsTabProps) {
   const t = useTranslations("detection");
   const format = useFormatter();
+  const now = useNow({ updateInterval: 60_000 });
   const [search, setSearch] = useState("");
   const activeSources = activeSourcesProp ?? null;
   const activeSeverities = activeSeveritiesProp ?? new Set(["critical", "high", "medium", "low"]);
@@ -201,7 +202,7 @@ export function SignalsTab({
                           <Badge size="xs" style={{ background: "var(--color-bg-muted)", color: "var(--color-text-secondary)", fontWeight: 600 }}>{signal.source.name}</Badge>
                           <Badge size="xs" variant="outline" style={{ color: "var(--color-text-muted)", borderColor: "var(--color-border-dark)", fontSize: 10 }}>{signal.source.type}</Badge>
                         </Group>
-                        <Text size="xs" c="var(--color-text-muted)">{format.relativeTime(new Date(signal.publishedAt))}</Text>
+                        <Text size="xs" c="var(--color-text-muted)">{format.relativeTime(new Date(signal.publishedAt), now)}</Text>
                       </Group>
                       <Text fw={600} size="sm" c="var(--color-text-primary)" lineClamp={2} mb={4} style={{ lineHeight: 1.4 }}>
                         {displayTitle}
@@ -231,8 +232,15 @@ export function SignalsTab({
             {hasMore && filtered.length > 0 && <div ref={sentinelRef} style={{ height: 1 }} />}
 
             {isFetchingMore && (
-              <Box py={12} style={{ display: "flex", justifyContent: "center" }}>
+              <Box py={12} style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 8 }}>
                 <Loader size="xs" />
+                {/* A client-side search keeps the sentinel in view until every page is
+                    loaded, so say what the spinner is doing instead of looking stuck. */}
+                {search.trim() !== "" && (
+                  <Text size="xs" c="var(--color-text-muted)">
+                    {t("feed.signals.scanning", { loaded: format.number(signals.length), total: format.number(totalCount) })}
+                  </Text>
+                )}
               </Box>
             )}
 
