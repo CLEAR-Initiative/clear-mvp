@@ -48,9 +48,12 @@ compose files.
 - Branch off `dev` and open the pull request against `dev`. Conventional Commits
   (`feat:`, `fix:`, `docs:`, ...). A merge to `dev` builds and deploys the dev environment; a
   merge to `prod` deploys production.
-- Greptile reviews every pull request. The PR merges itself once Greptile has reviewed the head
-  commit with no open P0 or P1 and the checks pass. Fix P1s and push rather than arguing in
-  comments. Add the `no-automerge` label only when merge order matters, and say why in the body.
+- Greptile reviews every pull request, but not every push: small follow-up commits are often
+  skipped. The PR merges itself once Greptile has reviewed the head commit with no open P0 or
+  P1 and the checks pass. If the automerge bot comments "Greptile hasn't reviewed `<sha>`",
+  use the Retrigger link on Greptile's summary comment or ask a person to merge. Fix P1s and
+  push rather than arguing in comments. Add the `no-automerge` label only when merge order
+  matters, and say why in the body.
 - Never force-push to `dev` or `prod`.
 
 ## Tracker
@@ -104,8 +107,9 @@ you make a decision that a future reader would otherwise reverse, add an ADR.
 - New user-facing strings go in `messages/en.json` and every other locale. `bun run i18n:check`
   fails CI otherwise.
 - Severity thresholds come from `mapSeverity` in `src/lib/types/graphql.ts`. Severity labels
-  and theme-aware colours for components come from `src/lib/constants/severity.ts`; the
-  `severityColor` helper next to `mapSeverity` returns fixed hex and does not follow the theme.
+  come from `severityLabels` and theme-aware component colours from `severityColors`, both in
+  `src/lib/constants/severity.ts`. Two helpers return fixed hex and do not follow the theme:
+  `severityColor` next to `mapSeverity`, and `severityDotColors` in the constants file.
   Disaster-type labels and colours come from `src/lib/disaster-types.ts`. Don't hand-roll
   thresholds.
 - New server-side env vars are read through `src/server/env.ts` and documented in
