@@ -15,6 +15,7 @@ vi.mock("next-intl", () => ({
   useTranslations: () => (key: string, vars?: Record<string, unknown>) =>
     vars ? `${key}:${JSON.stringify(vars)}` : key,
   useFormatter: () => ({ relativeTime: () => "2 hours ago" }),
+  useNow: () => new Date("2026-10-15T12:00:00Z"),
 }));
 vi.mock("next/link", () => ({
   default: React.forwardRef<HTMLAnchorElement, React.ComponentPropsWithoutRef<"a">>(function LinkMock(props, ref) {

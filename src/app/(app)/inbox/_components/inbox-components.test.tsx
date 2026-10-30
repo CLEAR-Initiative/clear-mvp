@@ -14,6 +14,7 @@ vi.mock("next-intl", () => ({
     dateTime: () => "15 Sep 2026",
     relativeTime: () => "1 month ago",
   }),
+  useNow: () => new Date("2026-10-15T12:00:00Z"),
   useLocale: () => "en",
 }));
 
