@@ -15,6 +15,8 @@ import { BriefStatusBadge } from "./brief-status-badge";
 import { RecipientListsDrawer } from "./recipient-lists-drawer";
 
 const NO_RETRY = new Set(["BAD_REQUEST", "FORBIDDEN", "UNAUTHORIZED"]);
+/** Briefs per page of the list. */
+const BRIEF_PAGE_SIZE = 50;
 
 /** /brief: past Briefs, newest first, and the way to start a new one. */
 export function BriefListPage() {
@@ -27,10 +29,17 @@ export function BriefListPage() {
   const pathname = usePathname();
   const listsOpen = useSearchParams().get("lists") === "1";
   const setListsOpen = (open: boolean) => router.replace(open ? `${pathname}?lists=1` : pathname, { scroll: false });
-  const query = api.briefs.list.useQuery(undefined, {
-    refetchOnWindowFocus: false,
-    retry: (count, err) => !NO_RETRY.has(err.data?.code ?? "") && count < 2,
-  });
+  const query = api.briefs.list.useInfiniteQuery(
+    { limit: BRIEF_PAGE_SIZE },
+    {
+      refetchOnWindowFocus: false,
+      retry: (count, err) => !NO_RETRY.has(err.data?.code ?? "") && count < 2,
+      // A short page is the last one; the next page starts after every Brief loaded so far.
+      getNextPageParam: (last, pages) => (last.length < BRIEF_PAGE_SIZE ? undefined : pages.length * BRIEF_PAGE_SIZE),
+      initialCursor: 0,
+    },
+  );
+  const briefs = query.data?.pages.flat() ?? [];
   const remove = api.briefs.delete.useMutation({
     onSuccess: () => utils.briefs.list.invalidate(),
     onError: (err) => notifications.show({ color: "red", message: t("list.deleteError", { message: err.message }) }),
@@ -80,7 +89,7 @@ export function BriefListPage() {
                   { label: t("list.columns.sentAt") },
                   { label: "", width: 40 },
                 ]}
-                data={query.data ?? []}
+                data={briefs}
                 loading={query.isLoading}
                 emptyMessage={t("list.empty")}
                 renderRow={(brief) => (
@@ -136,6 +145,19 @@ export function BriefListPage() {
                 )}
               />
             </Box>
+            {query.hasNextPage && (
+              <Box px={16} py={12} style={{ borderTop: "1px solid var(--color-border)", display: "flex", justifyContent: "center" }}>
+                <Button
+                  size="xs"
+                  variant="default"
+                  loading={query.isFetchingNextPage}
+                  onClick={() => void query.fetchNextPage()}
+                  data-testid="brief-load-more"
+                >
+                  {t("list.loadMore")}
+                </Button>
+              </Box>
+            )}
           </Card>
         )}
       </Box>

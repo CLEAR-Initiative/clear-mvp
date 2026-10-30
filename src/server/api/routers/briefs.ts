@@ -125,13 +125,21 @@ const id = z.string().min(1);
 const kind = z.enum(["alert", "event", "signal"]);
 
 export const briefsRouter = createTRPCRouter({
-  /** Past Briefs, newest first. */
+  /** Past Briefs, newest first, a page at a time. `cursor` is the offset, for infinite queries. */
   list: adminProcedure
-    .input(z.object({ limit: z.number().int().min(1).max(200).optional(), offset: z.number().int().min(0).optional() }).optional())
+    .input(
+      z
+        .object({
+          limit: z.number().int().min(1).max(200).optional(),
+          offset: z.number().int().min(0).optional(),
+          cursor: z.number().int().min(0).nullish(),
+        })
+        .optional(),
+    )
     .query(async ({ ctx, input }) => {
       const data = await call<{ briefs: BriefSummary[] }>(ctx, BRIEFS_QUERY, {
         limit: input?.limit ?? 50,
-        offset: input?.offset ?? 0,
+        offset: input?.cursor ?? input?.offset ?? 0,
       });
       return data.briefs;
     }),

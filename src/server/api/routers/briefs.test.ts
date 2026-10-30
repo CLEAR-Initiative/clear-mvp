@@ -169,6 +169,13 @@ describe("briefs router", () => {
     });
   }
 
+  it("pages the list by its cursor", async () => {
+    stubSession("admin");
+    graphqlFetch.mockResolvedValueOnce({ briefs: [] });
+    await caller().briefs.list({ limit: 50, cursor: 100 });
+    expect(graphqlFetch.mock.calls[0]![1]).toEqual({ limit: 50, offset: 100 });
+  });
+
   it("turns clear-api's refusal of a sent Brief into BAD_REQUEST with its message", async () => {
     stubSession("admin");
     graphqlFetch.mockRejectedValueOnce(new GraphQLRequestError("Brief already sent", "BAD_USER_INPUT"));
