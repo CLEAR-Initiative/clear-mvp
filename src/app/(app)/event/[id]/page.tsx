@@ -104,13 +104,17 @@ function EventDetailPageContent({
   );
 
   // Fly the minimap as soon as the id changes. The nav list is usually not
-  // fetched (stored Detection ids win), so fall back to the prefetched event.
+  // fetched (stored Detection ids win), so fall back to the event itself:
+  // the live query once it matches (so a refetch can move the map), else the
+  // prefetched copy while it is still pending.
   const navigationMapCenter = useMemo(() => {
     const item =
       navigation.listItems.find((e) => e.id === activeId) ??
-      utils.events.get.getData({ id: activeId });
+      (eventQuery.data?.id === activeId
+        ? eventQuery.data
+        : utils.events.get.getData({ id: activeId }));
     return item ? getEventMapCenter(item) ?? undefined : undefined;
-  }, [activeId, navigation.listItems, utils]);
+  }, [activeId, navigation.listItems, eventQuery.data, utils]);
 
   const navigatePrev = useCallback(() => {
     if (navigation.prevId) navigateTo(navigation.prevId);
