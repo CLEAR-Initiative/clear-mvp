@@ -2,8 +2,10 @@
  * Autosave for one editor (a Brief's text, or one item's note), built so
  * that "saved" can't be claimed early:
  *
- * - Every save of the editor goes through one ordered queue, and each save
- *   carries the whole value, so clear-api always ends on the newest one.
+ * - Every save of the editor goes through one ordered queue, so clear-api
+ *   always ends on the newest value. Each save is told the value clear-api
+ *   last confirmed when it starts, so it can send only what changed and
+ *   leave fields another tab saved alone.
  * - The editor is unsaved while its latest value differs from the last value
  *   clear-api confirmed. Only a save's success moves that confirmed value,
  *   so a failed save leaves the editor unsaved.
@@ -17,7 +19,8 @@ export interface OrderedSaverOptions<V, R> {
   initial: V;
   /** Whether two values save to the same thing. */
   same: (a: V, b: V) => boolean;
-  save: (value: V) => Promise<R>;
+  /** Saves `value`; `confirmed` is what clear-api held when this save started. */
+  save: (value: V, confirmed: V) => Promise<R>;
   /** After a save succeeds. `latest` is false when a newer save was queued after it. */
   onSaved?: (result: R, value: V, latest: boolean) => void;
   onError?: (err: unknown) => void;
@@ -57,7 +60,7 @@ export function createOrderedSaver<V, R>(options: OrderedSaverOptions<V, R>): Or
       const value = latest;
       queued = value;
       const mine = ++seq;
-      const run = () => save(value);
+      const run = () => save(value, confirmed);
       const write = queue.then(run, run).then(
         (result) => {
           confirmed = value;

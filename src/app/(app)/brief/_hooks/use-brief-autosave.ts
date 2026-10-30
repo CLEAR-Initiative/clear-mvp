@@ -39,19 +39,18 @@ export function useBriefAutosave(brief: Brief, { track, setDirty, registerFlush 
   deps.current = { track, setDirty, update, utils, t };
 
   const [saver] = useState<OrderedSaver<BriefText>>(() =>
-    createOrderedSaver<BriefText, SavedText>({
+    createOrderedSaver<BriefText, SavedText | null>({
       initial: text,
       // A blank title is never sent (clear-api refuses it), so it counts as unchanged.
       same: (a, b) => textPatch(a, b) === null,
-      save: (value) =>
-        deps.current.update.mutateAsync({
-          id: briefId,
-          ...(value.title.trim() ? { title: value.title } : {}),
-          summary: value.summary,
-          closingNotes: value.closingNotes,
-        }),
+      // Only the fields that differ from what clear-api last confirmed, so a
+      // field saved from another tab isn't overwritten with an older copy.
+      save: async (value, confirmed) => {
+        const patch = textPatch(value, confirmed);
+        return patch ? deps.current.update.mutateAsync({ id: briefId, ...patch }) : null;
+      },
       onSaved: (row, _value, latest) => {
-        if (!latest) return;
+        if (!row || !latest) return;
         deps.current.utils.briefs.get.setData({ id: briefId }, (old) =>
           old ? { ...old, title: row.title, summary: row.summary, closingNotes: row.closingNotes, updatedAt: row.updatedAt } : old,
         );

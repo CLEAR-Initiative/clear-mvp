@@ -118,6 +118,32 @@ describe("createOrderedSaver", () => {
     ]);
   });
 
+  it("tells each save what clear-api confirmed when it started", async () => {
+    const confirmedSeen: string[] = [];
+    const t = tracker();
+    const pending: (() => void)[] = [];
+    const saver = createOrderedSaver<string, void>({
+      initial: "a",
+      same: (x, y) => x === y,
+      save: (_value, confirmed) => {
+        confirmedSeen.push(confirmed);
+        return new Promise<void>((r) => pending.push(r));
+      },
+      track: t.track,
+      setDirty: () => {},
+    });
+    saver.set("b");
+    saver.flush();
+    saver.set("c");
+    saver.flush();
+    await tick();
+    pending[0]!();
+    await tick();
+    pending[1]!();
+    await t.drain();
+    expect(confirmedSeen).toEqual(["a", "b"]);
+  });
+
   it("doesn't queue a value already saved or queued", async () => {
     const { saver, saves } = setup();
     saver.flush();
