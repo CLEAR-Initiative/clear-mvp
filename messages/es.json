@@ -3685,6 +3685,48 @@
       "testSent": "Prueba enviada a tu correo electrónico.",
       "testRefused": "El proveedor de correo rechazó la prueba.",
       "testError": "No se pudo enviar la prueba: {message}"
+    },
+    "list": {
+      "new": "Nuevo Brief",
+      "empty": "Todavía no hay Briefs. Empieza uno con Nuevo Brief.",
+      "loadError": "No se pudieron cargar los Briefs.",
+      "delete": "Eliminar borrador",
+      "deleteConfirm": "¿Eliminar el borrador «{title}»? No se puede deshacer.",
+      "deleteError": "No se pudo eliminar el borrador: {message}",
+      "columns": {
+        "title": "Brief",
+        "area": "Zona",
+        "window": "Periodo",
+        "status": "Estado",
+        "sentAt": "Enviado"
+      }
+    },
+    "cadence": {
+      "daily": "Diario",
+      "weekly": "Semanal",
+      "monthly": "Mensual"
+    },
+    "status": {
+      "draft": "Borrador",
+      "sent": "Enviado"
+    },
+    "new": {
+      "title": {
+        "daily": "Nuevo Brief diario",
+        "weekly": "Nuevo Brief semanal",
+        "monthly": "Nuevo Brief mensual"
+      },
+      "window": {
+        "daily": "Cubre las últimas 24 horas, hasta ahora.",
+        "weekly": "Cubre los últimos 7 días, hasta ahora.",
+        "monthly": "Cubre los últimos 30 días, hasta ahora."
+      },
+      "country": "País",
+      "countryPlaceholder": "Elige un país",
+      "region": "Estado o distrito (opcional)",
+      "cancel": "Cancelar",
+      "submit": "Empezar Brief",
+      "error": "No se pudo empezar el Brief: {message}"
     }
   }
 }

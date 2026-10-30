@@ -3685,6 +3685,48 @@
       "testSent": "Test envoyé à votre adresse e-mail.",
       "testRefused": "Le fournisseur d'e-mail a refusé le test.",
       "testError": "Impossible d'envoyer le test : {message}"
+    },
+    "list": {
+      "new": "Nouveau Brief",
+      "empty": "Aucun Brief pour l'instant. Commencez-en un avec Nouveau Brief.",
+      "loadError": "Impossible de charger les Briefs.",
+      "delete": "Supprimer le brouillon",
+      "deleteConfirm": "Supprimer le brouillon « {title} » ? Cette action est irréversible.",
+      "deleteError": "Impossible de supprimer le brouillon : {message}",
+      "columns": {
+        "title": "Brief",
+        "area": "Zone",
+        "window": "Période",
+        "status": "Statut",
+        "sentAt": "Envoyé"
+      }
+    },
+    "cadence": {
+      "daily": "Quotidien",
+      "weekly": "Hebdomadaire",
+      "monthly": "Mensuel"
+    },
+    "status": {
+      "draft": "Brouillon",
+      "sent": "Envoyé"
+    },
+    "new": {
+      "title": {
+        "daily": "Nouveau Brief quotidien",
+        "weekly": "Nouveau Brief hebdomadaire",
+        "monthly": "Nouveau Brief mensuel"
+      },
+      "window": {
+        "daily": "Couvre les dernières 24 heures, jusqu'à maintenant.",
+        "weekly": "Couvre les 7 derniers jours, jusqu'à maintenant.",
+        "monthly": "Couvre les 30 derniers jours, jusqu'à maintenant."
+      },
+      "country": "Pays",
+      "countryPlaceholder": "Choisir un pays",
+      "region": "État ou district (facultatif)",
+      "cancel": "Annuler",
+      "submit": "Commencer le Brief",
+      "error": "Impossible de commencer le Brief : {message}"
     }
   }
 }

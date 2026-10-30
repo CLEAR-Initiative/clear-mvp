@@ -3685,6 +3685,48 @@
       "testSent": "Test sent to your email address.",
       "testRefused": "The email provider refused the test.",
       "testError": "Couldn't send the test: {message}"
+    },
+    "list": {
+      "new": "New Brief",
+      "empty": "No Briefs yet. Start one with New Brief.",
+      "loadError": "Couldn't load the Briefs.",
+      "delete": "Delete draft",
+      "deleteConfirm": "Delete the draft “{title}”? This can't be undone.",
+      "deleteError": "Couldn't delete the draft: {message}",
+      "columns": {
+        "title": "Brief",
+        "area": "Area",
+        "window": "Window",
+        "status": "Status",
+        "sentAt": "Sent"
+      }
+    },
+    "cadence": {
+      "daily": "Daily",
+      "weekly": "Weekly",
+      "monthly": "Monthly"
+    },
+    "status": {
+      "draft": "Draft",
+      "sent": "Sent"
+    },
+    "new": {
+      "title": {
+        "daily": "New Daily Brief",
+        "weekly": "New Weekly Brief",
+        "monthly": "New Monthly Brief"
+      },
+      "window": {
+        "daily": "Covers the last 24 hours, ending now.",
+        "weekly": "Covers the last 7 days, ending now.",
+        "monthly": "Covers the last 30 days, ending now."
+      },
+      "country": "Country",
+      "countryPlaceholder": "Pick a country",
+      "region": "State or district (optional)",
+      "cancel": "Cancel",
+      "submit": "Start Brief",
+      "error": "Couldn't start the Brief: {message}"
     }
   }
 }
