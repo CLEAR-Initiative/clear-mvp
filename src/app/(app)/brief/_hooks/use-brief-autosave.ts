@@ -6,6 +6,7 @@ import { notifications } from "@mantine/notifications";
 import { api } from "~/trpc/react";
 import type { Brief } from "~/lib/brief/types";
 import type { TrackSave } from "./use-brief-items";
+import type { SetDirty } from "./use-save-tracker";
 import { textPatch, type BriefText } from "~/lib/brief/autosave";
 
 export type { BriefText };
@@ -17,7 +18,7 @@ export const AUTOSAVE_DELAY_MS = 800;
  * The Brief's title, summary and closing notes as the composer edits them,
  * saved to clear-api 800 ms after typing stops, and on leaving the page.
  */
-export function useBriefAutosave(brief: Brief, track: TrackSave) {
+export function useBriefAutosave(brief: Brief, track: TrackSave, setDirty: SetDirty) {
   const t = useTranslations("brief");
   const utils = api.useUtils();
   const update = api.briefs.update.useMutation();
@@ -37,6 +38,7 @@ export function useBriefAutosave(brief: Brief, track: TrackSave) {
     if (!patch || !editable) return Promise.resolve();
     const before = saved.current;
     saved.current = { ...saved.current, ...patch };
+    setDirty("text", false);
     return track(update.mutateAsync({ id: briefId, ...patch }))
       .then((row) => {
         utils.briefs.get.setData({ id: briefId }, (old) =>
@@ -46,18 +48,21 @@ export function useBriefAutosave(brief: Brief, track: TrackSave) {
       .catch((err: unknown) => {
         // Put back what clear-api still holds, so the next edit sends it again.
         saved.current = { ...saved.current, ...pick(before, patch) };
+        setDirty("text", true);
         notifications.show({
           color: "red",
           message: t("composer.saveError", { message: err instanceof Error ? err.message : String(err) }),
         });
       });
-  }, [briefId, editable, t, track, update, utils]);
+  }, [briefId, editable, setDirty, t, track, update, utils]);
 
   useEffect(() => {
-    if (!textPatch(text, saved.current)) return;
+    const pending = editable && !!textPatch(text, saved.current);
+    setDirty("text", pending);
+    if (!pending) return;
     const timer = setTimeout(() => void flush(), AUTOSAVE_DELAY_MS);
     return () => clearTimeout(timer);
-  }, [text, flush]);
+  }, [text, flush, editable, setDirty]);
 
   // Leaving the page saves what was typed since the last pause.
   const flushRef = useRef(flush);

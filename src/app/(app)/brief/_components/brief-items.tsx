@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { ActionIcon, Badge, Box, Group, Stack, Text, TextInput, Tooltip, UnstyledButton } from "@mantine/core";
 import { DragDropContext, Draggable, Droppable, type DropResult } from "@hello-pangea/dnd";
@@ -12,6 +12,7 @@ import { groupItems, isPendingItem, type BriefItemsApi } from "../_hooks/use-bri
 import { AUTOSAVE_DELAY_MS } from "../_hooks/use-brief-autosave";
 import { itemPreviewTarget, type PreviewTarget } from "../_lib/preview-target";
 import { MarkdownLite } from "./markdown-lite";
+import type { SetDirty } from "../_hooks/use-save-tracker";
 
 /**
  * Picked items, Alerts → Events → Signals. On a draft each group is a drag
@@ -24,6 +25,7 @@ export function BriefItems({
   rawItems,
   editable,
   onPreview,
+  setDirty,
 }: {
   groups: ViewGroup[];
   items: BriefItemsApi;
@@ -31,6 +33,7 @@ export function BriefItems({
   rawItems: BriefItem[];
   editable: boolean;
   onPreview: (target: PreviewTarget) => void;
+  setDirty: SetDirty;
 }) {
   const t = useTranslations("brief");
   const byId = new Map(rawItems.map((i) => [i.id, i]));
@@ -100,6 +103,7 @@ export function BriefItems({
                                   editable={editable}
                                   items={items}
                                   onPreview={onPreview}
+                                  setDirty={setDirty}
                                 />
                               </Box>
                             )}
@@ -125,12 +129,14 @@ function ItemBody({
   editable,
   items,
   onPreview,
+  setDirty,
 }: {
   view: ViewItem;
   item: BriefItem;
   editable: boolean;
   items: BriefItemsApi;
   onPreview: (target: PreviewTarget) => void;
+  setDirty: SetDirty;
 }) {
   const t = useTranslations("brief");
   const target = itemPreviewTarget(item);
@@ -182,7 +188,7 @@ function ItemBody({
         </Text>
       </Group>
       {editable ? (
-        <ItemNote item={item} disabled={pending} onSave={items.updateNote} />
+        <ItemNote item={item} disabled={pending} onSave={items.updateNote} setDirty={setDirty} />
       ) : (
         view.note && (
           <Box pt={2}>
@@ -199,36 +205,48 @@ function ItemNote({
   item,
   disabled,
   onSave,
+  setDirty,
 }: {
   item: BriefItem;
   disabled: boolean;
   onSave: (item: BriefItem, note: string) => Promise<void>;
+  setDirty: SetDirty;
 }) {
   const t = useTranslations("brief");
   const [value, setValue] = useState(item.note ?? "");
   const saved = useRef(item.note ?? "");
-  const latest = useRef({ item, value, onSave });
-  latest.current = { item, value, onSave };
+  const latest = useRef({ item, value, onSave, setDirty });
+  latest.current = { item, value, onSave, setDirty };
+  const dirtyKey = `note:${item.id}`;
 
-  const flush = () => {
-    const { item: current, value: note, onSave: save } = latest.current;
+  // Reads the latest values through a ref, so it never goes stale.
+  const flush = useCallback(() => {
+    const { item: current, value: note, onSave: save, setDirty: mark } = latest.current;
     if (note === saved.current) return;
     const before = saved.current;
     saved.current = note;
+    mark(dirtyKey, false);
     save(current, note).catch(() => {
       saved.current = before;
+      mark(dirtyKey, true);
     });
-  };
+  }, [dirtyKey]);
 
   useEffect(() => {
+    setDirty(dirtyKey, value !== saved.current);
     if (value === saved.current) return;
     const timer = setTimeout(flush, AUTOSAVE_DELAY_MS);
     return () => clearTimeout(timer);
-    // flush reads the latest values through a ref.
-  }, [value]);
+  }, [value, dirtyKey, setDirty, flush]);
 
-  // Leaving the page saves what was typed.
-  useEffect(() => () => flush(), []);
+  // Leaving the page saves what was typed; a removed item's note goes nowhere.
+  useEffect(
+    () => () => {
+      flush();
+      latest.current.setDirty(dirtyKey, false);
+    },
+    [flush, dirtyKey],
+  );
 
   return (
     <TextInput

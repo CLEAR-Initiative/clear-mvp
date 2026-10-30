@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useFormatter, useTranslations } from "next-intl";
 import Link from "next/link";
 import { Box, Button, Center, Grid, Group, Loader, Stack, Text } from "@mantine/core";
@@ -59,9 +59,20 @@ export function BriefComposerPage({ briefId }: { briefId: string }) {
 
 function Composer({ brief }: { brief: Brief }) {
   const t = useTranslations("brief");
-  const { status: saveStatus, track, settled } = useSaveTracker();
+  const { status: saveStatus, track, setDirty, hasUnsaved, settled } = useSaveTracker();
   const items = useBriefItems(brief, { track });
-  const { text, setField, flush } = useBriefAutosave(brief, track);
+  const { text, setField, flush } = useBriefAutosave(brief, track, setDirty);
+  // Reloading or closing the tab before the last edit is sent asks first
+  // (and starts the text save, in case the reader stays).
+  useEffect(() => {
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (!hasUnsaved()) return;
+      void flush();
+      e.preventDefault();
+    };
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => window.removeEventListener("beforeunload", onBeforeUnload);
+  }, [flush, hasUnsaved]);
   const [sending, setSending] = useState(false);
   // Whatever is still being typed goes into the email.
   const saveAll = useCallback(async () => {
@@ -118,6 +129,7 @@ function Composer({ brief }: { brief: Brief }) {
             text={text}
             onTextChange={setField}
             track={track}
+            setDirty={setDirty}
             onPreview={onPreview}
           />
         </Grid.Col>

@@ -5,16 +5,27 @@ import type { TrackSave } from "./use-brief-items";
 
 export type SaveStatus = "idle" | "saving" | "saved" | "error";
 
-/**
- * One "Saving… / Saved" state for every write the composer makes: saving
- * while any tracked write runs, then saved, or error when one of them failed.
- * `settled()` resolves once nothing is running, so a send can wait for the
- * last edit to land.
- */
-export function useSaveTracker(): { status: SaveStatus; track: TrackSave; settled: () => Promise<void> } {
+/** Marks one piece of the composer as typed-but-not-yet-sent (or not). */
+export type SetDirty = (key: string, dirty: boolean) => void;
+
+export interface SaveTracker {
+  /** "saving" while anything is typed-but-unsent or in flight, then "saved", or "error" if a write failed. */
+  status: SaveStatus;
+  track: TrackSave;
+  setDirty: SetDirty;
+  /** Whether leaving now would lose something. */
+  hasUnsaved: () => boolean;
+  /** Resolves once no write is in flight, so a send can wait for the last edit to land. */
+  settled: () => Promise<void>;
+}
+
+/** One save state for every write the composer makes. */
+export function useSaveTracker(): SaveTracker {
   const [status, setStatus] = useState<SaveStatus>("idle");
+  const [dirtyCount, setDirtyCount] = useState(0);
   const running = useRef(0);
   const failed = useRef(false);
+  const dirty = useRef(new Set<string>());
   const waiters = useRef<(() => void)[]>([]);
 
   const track = useCallback<TrackSave>((work) => {
@@ -36,10 +47,18 @@ export function useSaveTracker(): { status: SaveStatus; track: TrackSave; settle
     return work;
   }, []);
 
+  const setDirty = useCallback<SetDirty>((key, isDirty) => {
+    if (isDirty) dirty.current.add(key);
+    else dirty.current.delete(key);
+    setDirtyCount(dirty.current.size);
+  }, []);
+
+  const hasUnsaved = useCallback(() => dirty.current.size > 0 || running.current > 0, []);
+
   const settled = useCallback(
     () => (running.current === 0 ? Promise.resolve() : new Promise<void>((resolve) => waiters.current.push(resolve))),
     [],
   );
 
-  return { status, track, settled };
+  return { status: dirtyCount > 0 ? "saving" : status, track, setDirty, hasUnsaved, settled };
 }

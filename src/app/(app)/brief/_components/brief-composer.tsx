@@ -15,6 +15,7 @@ import { MarkdownLite } from "./markdown-lite";
 import { BriefCounts } from "./brief-counts";
 import { BriefItems } from "./brief-items";
 import type { PreviewTarget } from "../_lib/preview-target";
+import type { SetDirty } from "../_hooks/use-save-tracker";
 
 export interface BriefComposerProps {
   brief: Brief;
@@ -23,6 +24,7 @@ export interface BriefComposerProps {
   text: BriefText;
   onTextChange: (field: keyof BriefText, value: string) => void;
   track: TrackSave;
+  setDirty: SetDirty;
   onPreview: (target: PreviewTarget) => void;
 }
 
@@ -30,7 +32,7 @@ export interface BriefComposerProps {
  * The left half of the composer: the Brief itself, in fixed sections. A sent
  * Brief renders read-only.
  */
-export function BriefComposer({ brief, items, text, onTextChange, track, onPreview }: BriefComposerProps) {
+export function BriefComposer({ brief, items, text, onTextChange, track, setDirty, onPreview }: BriefComposerProps) {
   const t = useTranslations("brief");
   const format = useFormatter();
   const utils = api.useUtils();
@@ -112,6 +114,7 @@ export function BriefComposer({ brief, items, text, onTextChange, track, onPrevi
             rawItems={brief.items}
             editable={editable}
             onPreview={onPreview}
+            setDirty={setDirty}
           />
         </Section>
 

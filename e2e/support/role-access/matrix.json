@@ -72,6 +72,24 @@
       "onDeny": "redirect /dashboard"
     },
     {
+      "id": "nav-brief",
+      "area": "access",
+      "action": "Open /brief (hidden, admin-only Briefs; no nav entry)",
+      "route": "/brief",
+      "selectors": [],
+      "flags": [],
+      "source": "middleware.ts (/brief); routers/briefs.ts adminProcedure",
+      "expect": {
+        "admin": "allow",
+        "analyst": "hidden",
+        "member": "hidden",
+        "erm": "hidden",
+        "pending": "hidden",
+        "team_admin": "hidden"
+      },
+      "onDeny": "redirect /no-access"
+    },
+    {
       "id": "nav-ops",
       "area": "access",
       "action": "Operations/Cash nav items",
