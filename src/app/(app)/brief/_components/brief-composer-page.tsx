@@ -59,16 +59,18 @@ export function BriefComposerPage({ briefId }: { briefId: string }) {
 
 function Composer({ brief }: { brief: Brief }) {
   const t = useTranslations("brief");
-  const { status: saveStatus, track, setDirty, hasUnsaved, settled } = useSaveTracker();
+  const saver = useSaveTracker();
+  const { status: saveStatus, track, setDirty, registerFlush, flushAll, hasUnsaved, settled } = saver;
   const items = useBriefItems(brief, { track });
   const { text, setField, flush } = useBriefAutosave(brief, track, setDirty);
+  useEffect(() => registerFlush("text", () => void flush()), [registerFlush, flush]);
   // Leaving before the last edit has saved asks first, for a reload or a
   // closed tab (beforeunload) and for in-app links, which never fire it.
   // Either way the text save starts at once, in case the reader stays.
   useEffect(() => {
     const onBeforeUnload = (e: BeforeUnloadEvent) => {
       if (!hasUnsaved()) return;
-      void flush();
+      flushAll();
       e.preventDefault();
     };
     const onClick = (e: MouseEvent) => {
@@ -78,7 +80,7 @@ function Composer({ brief }: { brief: Brief }) {
       const to = new URL(link.href, window.location.href);
       if (to.origin !== window.location.origin || to.pathname === window.location.pathname) return;
       if (!hasUnsaved()) return;
-      void flush();
+      flushAll();
       if (!window.confirm(t("composer.leaveConfirm"))) {
         e.preventDefault();
         e.stopPropagation();
@@ -90,17 +92,17 @@ function Composer({ brief }: { brief: Brief }) {
       window.removeEventListener("beforeunload", onBeforeUnload);
       document.removeEventListener("click", onClick, true);
     };
-  }, [flush, hasUnsaved, t]);
+  }, [flushAll, hasUnsaved, t]);
   const [sending, setSending] = useState(false);
   // Whatever is still being typed goes into the email, the PDF and the copy.
   // False, with a notice, when an edit couldn't be saved: nothing then goes
   // out with older content.
   const saveAll = useCallback(async (): Promise<boolean> => {
-    await flush();
+    flushAll();
     const ok = await settled();
     if (!ok) notifications.show({ color: "red", message: t("composer.unsaved") });
     return ok;
-  }, [flush, settled, t]);
+  }, [flushAll, settled, t]);
   const editable = brief.status === "draft";
   // Events open in the drawer so the Brief stays on screen; Signals have no
   // drawer and open their page in a new tab.
@@ -151,7 +153,7 @@ function Composer({ brief }: { brief: Brief }) {
             text={text}
             onTextChange={setField}
             track={track}
-            setDirty={setDirty}
+            saver={saver}
             onPreview={onPreview}
           />
         </Grid.Col>

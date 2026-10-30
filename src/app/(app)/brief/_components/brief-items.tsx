@@ -12,7 +12,7 @@ import { groupItems, isPendingItem, type BriefItemsApi } from "../_hooks/use-bri
 import { AUTOSAVE_DELAY_MS } from "../_hooks/use-brief-autosave";
 import { itemPreviewTarget, type PreviewTarget } from "../_lib/preview-target";
 import { MarkdownLite } from "./markdown-lite";
-import type { SetDirty } from "../_hooks/use-save-tracker";
+import type { Saver } from "../_hooks/use-save-tracker";
 
 /**
  * Picked items, Alerts → Events → Signals. On a draft each group is a drag
@@ -25,7 +25,7 @@ export function BriefItems({
   rawItems,
   editable,
   onPreview,
-  setDirty,
+  saver,
 }: {
   groups: ViewGroup[];
   items: BriefItemsApi;
@@ -33,7 +33,7 @@ export function BriefItems({
   rawItems: BriefItem[];
   editable: boolean;
   onPreview: (target: PreviewTarget) => void;
-  setDirty: SetDirty;
+  saver: Saver;
 }) {
   const t = useTranslations("brief");
   const byId = new Map(rawItems.map((i) => [i.id, i]));
@@ -103,7 +103,7 @@ export function BriefItems({
                                   editable={editable}
                                   items={items}
                                   onPreview={onPreview}
-                                  setDirty={setDirty}
+                                  saver={saver}
                                 />
                               </Box>
                             )}
@@ -129,14 +129,14 @@ function ItemBody({
   editable,
   items,
   onPreview,
-  setDirty,
+  saver,
 }: {
   view: ViewItem;
   item: BriefItem;
   editable: boolean;
   items: BriefItemsApi;
   onPreview: (target: PreviewTarget) => void;
-  setDirty: SetDirty;
+  saver: Saver;
 }) {
   const t = useTranslations("brief");
   const target = itemPreviewTarget(item);
@@ -188,7 +188,7 @@ function ItemBody({
         </Text>
       </Group>
       {editable ? (
-        <ItemNote item={item} disabled={pending} onSave={items.updateNote} setDirty={setDirty} />
+        <ItemNote item={item} disabled={pending} onSave={items.updateNote} saver={saver} />
       ) : (
         view.note && (
           <Box pt={2}>
@@ -205,35 +205,39 @@ function ItemNote({
   item,
   disabled,
   onSave,
-  setDirty,
+  saver,
 }: {
   item: BriefItem;
   disabled: boolean;
   onSave: (item: BriefItem, note: string) => Promise<void>;
-  setDirty: SetDirty;
+  saver: Saver;
 }) {
   const t = useTranslations("brief");
   const [value, setValue] = useState(item.note ?? "");
   const saved = useRef(item.note ?? "");
-  const latest = useRef({ item, value, onSave, setDirty });
-  latest.current = { item, value, onSave, setDirty };
+  const { setDirty, track, registerFlush } = saver;
+  const latest = useRef({ item, value, onSave, setDirty, track });
+  latest.current = { item, value, onSave, setDirty, track };
   const dirtyKey = `note:${item.id}`;
   const queue = useRef<Promise<void>>(Promise.resolve());
 
   // Reads the latest values through a ref, so it never goes stale.
   const flush = useCallback(() => {
-    const { item: current, value: note, onSave: save, setDirty: mark } = latest.current;
+    const { item: current, value: note, onSave: save, setDirty: mark, track: count } = latest.current;
     if (note === saved.current) return;
     const before = saved.current;
     saved.current = note;
     mark(dirtyKey, false);
-    // One save at a time, in order, so the newest note is the one kept.
+    // One save at a time, in order, so the newest note is the one kept. It
+    // counts from the moment it is queued, so a send waits for it.
     const run = () => save(current, note);
-    queue.current = queue.current.then(run, run).catch(() => {
+    queue.current = count(queue.current.then(run, run)).catch(() => {
       saved.current = before;
       mark(dirtyKey, true);
     });
   }, [dirtyKey]);
+
+  useEffect(() => registerFlush(dirtyKey, flush), [registerFlush, dirtyKey, flush]);
 
   useEffect(() => {
     setDirty(dirtyKey, value !== saved.current);
