@@ -218,6 +218,7 @@ function ItemNote({
   const latest = useRef({ item, value, onSave, setDirty });
   latest.current = { item, value, onSave, setDirty };
   const dirtyKey = `note:${item.id}`;
+  const queue = useRef<Promise<void>>(Promise.resolve());
 
   // Reads the latest values through a ref, so it never goes stale.
   const flush = useCallback(() => {
@@ -226,7 +227,9 @@ function ItemNote({
     const before = saved.current;
     saved.current = note;
     mark(dirtyKey, false);
-    save(current, note).catch(() => {
+    // One save at a time, in order, so the newest note is the one kept.
+    const run = () => save(current, note);
+    queue.current = queue.current.then(run, run).catch(() => {
       saved.current = before;
       mark(dirtyKey, true);
     });

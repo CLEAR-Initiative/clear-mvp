@@ -33,14 +33,22 @@ export function useBriefAutosave(brief: Brief, track: TrackSave, setDirty: SetDi
   const editable = brief.status === "draft";
   const briefId = brief.id;
 
+  // Saves go out one at a time, in order, so clear-api always ends on the
+  // newest text; only the newest save's answer is written to the cache.
+  const queue = useRef<Promise<unknown>>(Promise.resolve());
+  const seq = useRef(0);
+
   const flush = useCallback((): Promise<void> => {
     const patch = textPatch(latest.current, saved.current);
-    if (!patch || !editable) return Promise.resolve();
+    if (!patch || !editable) return queue.current.then(() => undefined);
     const before = saved.current;
     saved.current = { ...saved.current, ...patch };
     setDirty("text", false);
-    return track(update.mutateAsync({ id: briefId, ...patch }))
+    const mine = ++seq.current;
+    const run = () => update.mutateAsync({ id: briefId, ...patch });
+    const work = track(queue.current.then(run, run))
       .then((row) => {
+        if (mine !== seq.current) return;
         utils.briefs.get.setData({ id: briefId }, (old) =>
           old ? { ...old, title: row.title, summary: row.summary, closingNotes: row.closingNotes, updatedAt: row.updatedAt } : old,
         );
@@ -54,6 +62,8 @@ export function useBriefAutosave(brief: Brief, track: TrackSave, setDirty: SetDi
           message: t("composer.saveError", { message: err instanceof Error ? err.message : String(err) }),
         });
       });
+    queue.current = work;
+    return work;
   }, [briefId, editable, setDirty, t, track, update, utils]);
 
   useEffect(() => {
