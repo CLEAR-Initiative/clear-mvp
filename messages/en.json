@@ -3701,7 +3701,27 @@
       "test": "Send test to me",
       "testSent": "Test sent to your email address.",
       "testRefused": "The email provider refused the test.",
-      "testError": "Couldn't send the test: {message}"
+      "testError": "Couldn't send the test: {message}",
+      "open": "Send…",
+      "title": "Send Brief",
+      "list": "Recipient list",
+      "listPlaceholder": "Choose a list",
+      "listOption": "{name} ({count, plural, one {# recipient} other {# recipients}})",
+      "noLists": "No list with recipients yet.",
+      "manageLists": "Manage Recipient lists",
+      "cancel": "Cancel",
+      "next": "Next",
+      "back": "Back",
+      "confirm": "Send to {list} ({count, plural, one {# recipient} other {# recipients}})?",
+      "freezes": "Sending freezes the Brief: it can't be edited afterwards.",
+      "send": "Send",
+      "error": "Couldn't send: {message}",
+      "result": "Sent to {sent}, failed {failed}.",
+      "partial": "Failed emails are not retried.",
+      "done": "Done",
+      "unknownList": "a deleted list",
+      "sentNotice": "Sent {date} to {list}: {sent} sent, {failed} failed.",
+      "frozen": "A sent Brief is frozen: its items keep what they showed when it was sent."
     },
     "list": {
       "new": "New Brief",
@@ -3770,6 +3790,24 @@
       "dateCustom": "Custom range",
       "from": "From",
       "to": "To"
+    },
+    "lists": {
+      "open": "Recipient lists",
+      "title": "Recipient lists",
+      "intro": "Named sets of email addresses a Brief can be sent to. Addresses don't need a CLEAR account; every email carries an unsubscribe link.",
+      "newName": "New list name",
+      "create": "Create",
+      "loading": "Loading lists…",
+      "loadError": "Couldn't load the lists.",
+      "empty": "No lists yet.",
+      "recipients": "{count, plural, one {# recipient} other {# recipients}}",
+      "unsubscribed": "Unsubscribed",
+      "remove": "Remove address",
+      "removeLabel": "Remove {email}",
+      "removeError": "Couldn't remove the address: {message}",
+      "addEmail": "name@example.org",
+      "addEmailLabel": "Add an address to {list}",
+      "add": "Add"
     }
   }
 }

@@ -2,15 +2,17 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useFormatter, useTranslations } from "next-intl";
 import { ActionIcon, Box, Button, Card, Menu, Text, Tooltip } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
-import { IconChevronDown, IconPlus, IconTrash } from "@tabler/icons-react";
+import { IconChevronDown, IconPlus, IconTrash, IconUsers } from "@tabler/icons-react";
 import { DataTable, PageHeader, Table } from "~/components/ui";
 import { api } from "~/trpc/react";
 import { BRIEF_CADENCES, type BriefCadence, type BriefSummary } from "~/lib/brief/types";
 import { NewBriefModal } from "./new-brief-modal";
 import { BriefStatusBadge } from "./brief-status-badge";
+import { RecipientListsDrawer } from "./recipient-lists-drawer";
 
 const NO_RETRY = new Set(["BAD_REQUEST", "FORBIDDEN", "UNAUTHORIZED"]);
 
@@ -20,6 +22,11 @@ export function BriefListPage() {
   const format = useFormatter();
   const utils = api.useUtils();
   const [cadence, setCadence] = useState<BriefCadence | null>(null);
+  // `?lists=1` opens the Recipient lists (the send dialog links here).
+  const router = useRouter();
+  const pathname = usePathname();
+  const listsOpen = useSearchParams().get("lists") === "1";
+  const setListsOpen = (open: boolean) => router.replace(open ? `${pathname}?lists=1` : pathname, { scroll: false });
   const query = api.briefs.list.useQuery(undefined, {
     refetchOnWindowFocus: false,
     retry: (count, err) => !NO_RETRY.has(err.data?.code ?? "") && count < 2,
@@ -33,6 +40,15 @@ export function BriefListPage() {
   return (
     <Box>
       <PageHeader title={t("page.title")} breadcrumbs={["CLEAR", t("page.breadcrumb")]} loading={query.isFetching}>
+        <Button
+          size="xs"
+          variant="default"
+          leftSection={<IconUsers size={14} />}
+          onClick={() => setListsOpen(true)}
+          data-testid="brief-recipient-lists"
+        >
+          {t("lists.open")}
+        </Button>
         <Menu position="bottom-end" withinPortal>
           <Menu.Target>
             <Button size="xs" leftSection={<IconPlus size={14} />} rightSection={<IconChevronDown size={14} />} data-testid="brief-new">
@@ -125,6 +141,7 @@ export function BriefListPage() {
       </Box>
 
       <NewBriefModal cadence={cadence} onClose={() => setCadence(null)} />
+      <RecipientListsDrawer opened={listsOpen} onClose={() => setListsOpen(false)} />
     </Box>
   );
 }

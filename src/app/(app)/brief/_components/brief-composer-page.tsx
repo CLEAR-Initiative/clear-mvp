@@ -1,11 +1,11 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { useTranslations } from "next-intl";
+import { useFormatter, useTranslations } from "next-intl";
 import Link from "next/link";
 import { Box, Button, Center, Grid, Group, Loader, Stack, Text } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
-import { IconMailForward } from "@tabler/icons-react";
+import { IconMailForward, IconSend } from "@tabler/icons-react";
 import { PageHeader } from "~/components/ui";
 import { api } from "~/trpc/react";
 import type { Brief } from "~/lib/brief/types";
@@ -17,6 +17,7 @@ import { BriefComposer } from "./brief-composer";
 import { BriefPicker } from "./brief-picker";
 import { EventDetailDrawer } from "~/components/event-detail";
 import type { PreviewTarget } from "../_lib/preview-target";
+import { SendBriefModal } from "./send-brief-modal";
 
 const NO_RETRY = new Set(["BAD_REQUEST", "FORBIDDEN", "UNAUTHORIZED", "NOT_FOUND"]);
 
@@ -56,9 +57,15 @@ export function BriefComposerPage({ briefId }: { briefId: string }) {
 
 function Composer({ brief }: { brief: Brief }) {
   const t = useTranslations("brief");
-  const { status: saveStatus, track } = useSaveTracker();
+  const { status: saveStatus, track, settled } = useSaveTracker();
   const items = useBriefItems(brief, { track });
-  const { text, setField } = useBriefAutosave(brief, track);
+  const { text, setField, flush } = useBriefAutosave(brief, track);
+  const [sending, setSending] = useState(false);
+  // Whatever is still being typed goes into the email.
+  const saveAll = useCallback(async () => {
+    flush();
+    await settled();
+  }, [flush, settled]);
   const editable = brief.status === "draft";
   // Events open in the drawer so the Brief stays on screen; Signals have no
   // drawer and open their page in a new tab.
@@ -87,12 +94,18 @@ function Composer({ brief }: { brief: Brief }) {
           variant="default"
           leftSection={<IconMailForward size={14} />}
           loading={sendTest.isPending}
-          onClick={() => sendTest.mutate({ id: brief.id })}
+          onClick={() => void saveAll().then(() => sendTest.mutate({ id: brief.id }))}
           data-testid="brief-send-test"
         >
           {t("send.test")}
         </Button>
+        {editable && (
+          <Button size="xs" leftSection={<IconSend size={14} />} onClick={() => setSending(true)} data-testid="brief-send">
+            {t("send.open")}
+          </Button>
+        )}
       </PageHeader>
+      {brief.status === "sent" && <SentNotice brief={brief} />}
       <Grid p={{ base: 16, sm: 24 }} gutter={24}>
         <Grid.Col span={{ base: 12, md: 5 }}>
           <BriefComposer
@@ -108,6 +121,7 @@ function Composer({ brief }: { brief: Brief }) {
           <BriefPicker brief={brief} items={items} onPreview={onPreview} />
         </Grid.Col>
       </Grid>
+      <SendBriefModal briefId={brief.id} opened={sending} onClose={() => setSending(false)} beforeSend={saveAll} />
       <EventDetailDrawer eventId={previewEventId} opened={previewEventId !== null} onClose={() => setPreviewEventId(null)} />
     </Box>
   );
@@ -125,5 +139,34 @@ function SaveIndicator({ status }: { status: SaveStatus }) {
         {t(`save.${status}`)}
       </Text>
     </Group>
+  );
+}
+
+/** A sent Brief: when, to which list, and what the provider accepted. Read-only from here on. */
+function SentNotice({ brief }: { brief: Brief }) {
+  const t = useTranslations("brief.send");
+  const format = useFormatter();
+  const lists = api.briefs.recipientLists.useQuery(undefined, { refetchOnWindowFocus: false, staleTime: 60_000 });
+  const listName = lists.data?.find((l) => l.id === brief.sentToListId)?.name ?? t("unknownList");
+  return (
+    <Box
+      mx={{ base: 16, sm: 24 }}
+      mt={16}
+      p={12}
+      style={{ background: "var(--color-success-light)", borderInlineStart: "3px solid var(--color-success)", borderRadius: 4 }}
+      data-testid="brief-sent-notice"
+    >
+      <Text size="sm" c="var(--color-text-primary)">
+        {t("sentNotice", {
+          date: brief.sentAt ? format.dateTime(new Date(brief.sentAt), { dateStyle: "medium", timeStyle: "short" }) : "-",
+          list: listName,
+          sent: brief.sentCount ?? 0,
+          failed: brief.failedCount ?? 0,
+        })}
+      </Text>
+      <Text size="xs" c="var(--color-text-secondary)">
+        {t("frozen")}
+      </Text>
+    </Box>
   );
 }

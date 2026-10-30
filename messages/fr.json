@@ -3701,7 +3701,27 @@
       "test": "M'envoyer un test",
       "testSent": "Test envoyé à votre adresse e-mail.",
       "testRefused": "Le fournisseur d'e-mail a refusé le test.",
-      "testError": "Impossible d'envoyer le test : {message}"
+      "testError": "Impossible d'envoyer le test : {message}",
+      "open": "Envoyer…",
+      "title": "Envoyer le Brief",
+      "list": "Liste de destinataires",
+      "listPlaceholder": "Choisir une liste",
+      "listOption": "{name} ({count, plural, one {# destinataire} other {# destinataires}})",
+      "noLists": "Aucune liste avec des destinataires pour l'instant.",
+      "manageLists": "Gérer les listes de destinataires",
+      "cancel": "Annuler",
+      "next": "Suivant",
+      "back": "Retour",
+      "confirm": "Envoyer à {list} ({count, plural, one {# destinataire} other {# destinataires}}) ?",
+      "freezes": "L'envoi fige le Brief : il ne pourra plus être modifié.",
+      "send": "Envoyer",
+      "error": "Impossible d'envoyer : {message}",
+      "result": "Envoyé à {sent}, échec pour {failed}.",
+      "partial": "Les e-mails en échec ne sont pas renvoyés.",
+      "done": "Terminé",
+      "unknownList": "une liste supprimée",
+      "sentNotice": "Envoyé le {date} à {list} : {sent} envoyés, {failed} en échec.",
+      "frozen": "Un Brief envoyé est figé : ses éléments gardent ce qu'ils affichaient à l'envoi."
     },
     "list": {
       "new": "Nouveau Brief",
@@ -3770,6 +3790,24 @@
       "dateCustom": "Période personnalisée",
       "from": "Du",
       "to": "Au"
+    },
+    "lists": {
+      "open": "Listes de destinataires",
+      "title": "Listes de destinataires",
+      "intro": "Ensembles nommés d'adresses e-mail auxquels un Brief peut être envoyé. Les adresses n'ont pas besoin d'un compte CLEAR ; chaque e-mail contient un lien de désinscription.",
+      "newName": "Nom de la nouvelle liste",
+      "create": "Créer",
+      "loading": "Chargement des listes…",
+      "loadError": "Impossible de charger les listes.",
+      "empty": "Aucune liste pour l'instant.",
+      "recipients": "{count, plural, one {# destinataire} other {# destinataires}}",
+      "unsubscribed": "Désinscrit",
+      "remove": "Retirer l'adresse",
+      "removeLabel": "Retirer {email}",
+      "removeError": "Impossible de retirer l'adresse : {message}",
+      "addEmail": "nom@exemple.org",
+      "addEmailLabel": "Ajouter une adresse à {list}",
+      "add": "Ajouter"
     }
   }
 }

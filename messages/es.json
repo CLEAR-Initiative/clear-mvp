@@ -3701,7 +3701,27 @@
       "test": "Enviarme una prueba",
       "testSent": "Prueba enviada a tu correo electrónico.",
       "testRefused": "El proveedor de correo rechazó la prueba.",
-      "testError": "No se pudo enviar la prueba: {message}"
+      "testError": "No se pudo enviar la prueba: {message}",
+      "open": "Enviar…",
+      "title": "Enviar Brief",
+      "list": "Lista de destinatarios",
+      "listPlaceholder": "Elige una lista",
+      "listOption": "{name} ({count, plural, one {# destinatario} other {# destinatarios}})",
+      "noLists": "Todavía no hay ninguna lista con destinatarios.",
+      "manageLists": "Gestionar listas de destinatarios",
+      "cancel": "Cancelar",
+      "next": "Siguiente",
+      "back": "Atrás",
+      "confirm": "¿Enviar a {list} ({count, plural, one {# destinatario} other {# destinatarios}})?",
+      "freezes": "Enviar congela el Brief: después no se puede editar.",
+      "send": "Enviar",
+      "error": "No se pudo enviar: {message}",
+      "result": "Enviado a {sent}, fallidos {failed}.",
+      "partial": "Los correos fallidos no se reintentan.",
+      "done": "Hecho",
+      "unknownList": "una lista eliminada",
+      "sentNotice": "Enviado el {date} a {list}: {sent} enviados, {failed} fallidos.",
+      "frozen": "Un Brief enviado está congelado: sus elementos conservan lo que mostraban al enviarse."
     },
     "list": {
       "new": "Nuevo Brief",
@@ -3770,6 +3790,24 @@
       "dateCustom": "Rango personalizado",
       "from": "Desde",
       "to": "Hasta"
+    },
+    "lists": {
+      "open": "Listas de destinatarios",
+      "title": "Listas de destinatarios",
+      "intro": "Conjuntos con nombre de direcciones de correo a las que se puede enviar un Brief. Las direcciones no necesitan una cuenta de CLEAR; cada correo incluye un enlace para darse de baja.",
+      "newName": "Nombre de la nueva lista",
+      "create": "Crear",
+      "loading": "Cargando listas…",
+      "loadError": "No se pudieron cargar las listas.",
+      "empty": "Todavía no hay listas.",
+      "recipients": "{count, plural, one {# destinatario} other {# destinatarios}}",
+      "unsubscribed": "Dado de baja",
+      "remove": "Quitar dirección",
+      "removeLabel": "Quitar {email}",
+      "removeError": "No se pudo quitar la dirección: {message}",
+      "addEmail": "nombre@ejemplo.org",
+      "addEmailLabel": "Añadir una dirección a {list}",
+      "add": "Añadir"
     }
   }
 }

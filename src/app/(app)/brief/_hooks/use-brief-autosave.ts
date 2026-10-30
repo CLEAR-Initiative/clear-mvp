@@ -32,17 +32,17 @@ export function useBriefAutosave(brief: Brief, track: TrackSave) {
   const editable = brief.status === "draft";
   const briefId = brief.id;
 
-  const flush = useCallback(() => {
+  const flush = useCallback((): Promise<void> => {
     const patch = textPatch(latest.current, saved.current);
-    if (!patch || !editable) return;
+    if (!patch || !editable) return Promise.resolve();
     const before = saved.current;
     saved.current = { ...saved.current, ...patch };
-    void track(update.mutateAsync({ id: briefId, ...patch }))
-      .then((row) =>
+    return track(update.mutateAsync({ id: briefId, ...patch }))
+      .then((row) => {
         utils.briefs.get.setData({ id: briefId }, (old) =>
           old ? { ...old, title: row.title, summary: row.summary, closingNotes: row.closingNotes, updatedAt: row.updatedAt } : old,
-        ),
-      )
+        );
+      })
       .catch((err: unknown) => {
         // Put back what clear-api still holds, so the next edit sends it again.
         saved.current = { ...saved.current, ...pick(before, patch) };
@@ -55,14 +55,14 @@ export function useBriefAutosave(brief: Brief, track: TrackSave) {
 
   useEffect(() => {
     if (!textPatch(text, saved.current)) return;
-    const timer = setTimeout(flush, AUTOSAVE_DELAY_MS);
+    const timer = setTimeout(() => void flush(), AUTOSAVE_DELAY_MS);
     return () => clearTimeout(timer);
   }, [text, flush]);
 
   // Leaving the page saves what was typed since the last pause.
   const flushRef = useRef(flush);
   flushRef.current = flush;
-  useEffect(() => () => flushRef.current(), []);
+  useEffect(() => () => void flushRef.current(), []);
 
   const setField = useCallback((field: keyof BriefText, value: string) => setText((prev) => ({ ...prev, [field]: value })), []);
 
