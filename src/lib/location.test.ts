@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   crisisInCountry,
-  filterLocationsByCountryScope,
+  adminBoundaryScope,
   flattenLocationTree,
   locationInCountry,
   resolveCrisisLocationName,
@@ -362,31 +362,26 @@ describe("resolveCrisisLocationName", () => {
   });
 });
 
-describe("filterLocationsByCountryScope", () => {
-  const sd = { id: "sd", ancestorIds: [] as string[] };
-  const khartoum = { id: "krt", ancestorIds: ["sd"] };
-  const ve = { id: "ve", ancestorIds: [] as string[] };
+describe("adminBoundaryScope", () => {
+  it("is unscoped without a state or country", () => {
+    expect(adminBoundaryScope({})).toBeUndefined();
+    expect(adminBoundaryScope({ countryIds: [] })).toBeUndefined();
+  });
 
-  it("returns every row when scope is empty (unscoped / global)", () => {
-    expect(filterLocationsByCountryScope([sd, khartoum, ve], [])).toEqual([
-      sd,
-      khartoum,
-      ve,
+  it("scopes to a state before any country", () => {
+    expect(adminBoundaryScope({ stateId: "krt", countryId: "sd", countryIds: ["sd"] })).toEqual([
+      "krt",
     ]);
   });
 
-  it("keeps a country and its children when that country is in scope", () => {
-    expect(filterLocationsByCountryScope([sd, khartoum, ve], ["sd"])).toEqual([
-      sd,
-      khartoum,
+  it("scopes to several countries for an All Countries browse", () => {
+    expect(adminBoundaryScope({ countryIds: ["sd", "ve"], countryId: "sd" })).toEqual([
+      "sd",
+      "ve",
     ]);
   });
 
-  it("keeps several scoped countries for an All Countries browse", () => {
-    expect(filterLocationsByCountryScope([sd, khartoum, ve], ["sd", "ve"])).toEqual([
-      sd,
-      khartoum,
-      ve,
-    ]);
+  it("scopes to a single country", () => {
+    expect(adminBoundaryScope({ countryId: "sd" })).toEqual(["sd"]);
   });
 });
