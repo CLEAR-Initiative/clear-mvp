@@ -3,27 +3,19 @@
 import { useState, useMemo, useCallback, useEffect, useRef, Suspense } from "react";
 import { flushSync } from "react-dom";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useTranslations, useLocale } from "next-intl";
+import { useTranslations } from "next-intl";
 import { Box, Tabs, Button, Group, Popover, Text, Badge, ActionIcon, Divider } from "@mantine/core";
 import { DetectionTabContentSkeleton } from "~/components/ui/detection-page-skeleton";
 import { IconFilter } from "@tabler/icons-react";
-import { DisasterTypePicker, expandSelectionsToCodes } from "~/components/disaster-type-picker";
+import { DisasterTypePicker } from "~/components/disaster-type-picker";
 import { useDisclosure } from "@mantine/hooks";
 import { IconPlus } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
-import { useTeam } from "~/providers/team-provider";
-import {
-  ALL_COUNTRIES,
-  pickerCountryOptions,
-  resolveSelectedCountry,
-  useTeamCountry,
-} from "~/hooks/use-team-country";
-import { useReportStaleCountryPick } from "~/lib/report-stale-country-pick";
+import { ALL_COUNTRIES } from "~/hooks/use-team-country";
 import type { MapMarker } from "~/components/map/crisis-map";
-import { parseDateFilter, resolveCountryConfig, staticCountryBounds } from "~/lib/constants/country-config";
+import { resolveCountryConfig, staticCountryBounds } from "~/lib/constants/country-config";
 import { isoForCountryName } from "~/lib/constants/countries";
 import { scopeIsosMissingPaintableBoundaries } from "~/lib/geo/country-mask";
-import { useLocations } from "~/hooks/use-locations";
 import { useLastFocusedCountry } from "~/hooks/use-last-focused-country";
 import { browseMapCamera } from "~/lib/map/country-picker-camera";
 import { markerMatchesLocationScope } from "~/lib/map/marker-location-match";
@@ -42,17 +34,10 @@ import { EventsTab, type EventSortOrder } from "./_components/events-tab";
 import { SignalsTab, type SignalSortOrder } from "./_components/signals-tab";
 import { CreateSignalModal } from "~/components/create-signal-modal";
 import { useHistoryFeed } from "./_hooks/use-history-feed";
+import { useDetectionFilters } from "./_hooks/use-detection-filters";
 import { ALERT_ORDER_MAP, DETECTION_PAGE_SIZE, EVENT_ORDER_MAP, SIGNAL_ORDER_MAP } from "./_lib/feed-order";
 import detectionTabsStyles from "./detection-tabs.module.css";
 import { detectionFiltersForAgent, useAgentCurrentView } from "~/lib/agent-current-view";
-import {
-  DETECTION_DEEP_LINK_PARAMS,
-  DETECTION_ONE_SHOT_PARAMS,
-  readDetectionDeepLink,
-  resolveLinkScope,
-  withoutDeepLink,
-} from "~/lib/agent-deep-link";
-import { useAgentDeepLink } from "~/components/agent/use-agent-deep-link";
 
 const PAGE_SIZE = DETECTION_PAGE_SIZE;
 
@@ -68,43 +53,13 @@ function normalizeDetectionTab(raw: string | null): string | null {
 }
 
 const TAB_STORAGE_KEY = "detection-active-tab";
-const FILTERS_STORAGE_KEY = "detection-filters";
-/**
- * Filters chosen during a deep-linked visit (an Agent navigation), kept
- * apart from the page's defaults and tagged with the link's country, so a
- * revisit of that link restores them and an ordinary visit never sees them.
- */
-const LINK_FILTERS_STORAGE_KEY = "detection-link-filters";
 /** Gap after underline paints before skeleton - one frame, not a full CSS duration. */
 const TAB_SKELETON_DELAY_MS = 0;
 
-// Persisted alongside the tab so filter selections survive a round trip
-// through a signal/event detail page (which unmounts this component).
-interface StoredFilters {
-  country?: string;
-  regionId?: string | null;
-  date?: string;
-  severities?: string[];
-  typeFilters?: string[];
-  sources?: string[] | null;
-  boundaryLevel?: "none" | "A0" | "A1" | "A2";
-}
-
-function readStoredFilters(key = FILTERS_STORAGE_KEY): StoredFilters & { countryId?: string } {
-  try {
-    const raw = sessionStorage.getItem(key);
-    return raw ? (JSON.parse(raw) as StoredFilters & { countryId?: string }) : {};
-  } catch {
-    return {}; // sessionStorage unavailable (SSR or private mode)
-  }
-}
-
 function DetectionPageContent() {
   const t = useTranslations("detection");
-  const locale = useLocale();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [storageReady, setStorageReady] = useState(false);
 
   // URL/defaults only on first render - sessionStorage restore happens after mount
   // to avoid SSR/client hydration mismatch.
@@ -195,115 +150,7 @@ function DetectionPageContent() {
       commitTabRoute(tab);
     }, TAB_SKELETON_DELAY_MS);
   }, [indicatorTab, clearTabTimers, commitTabRoute]);
-  const [selectedRegionId, setSelectedRegionId] = useState<string | null>(null);
-  const [selectedDate, setSelectedDate] = useState("Last 30 days");
-  const localizedDateOptions = useMemo(() => {
-    const now = new Date();
-    const englishMonths = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-    const fmt = new Intl.DateTimeFormat(locale, { month: "short", year: "numeric" });
-    const result: { value: string; label: string }[] = [];
-    for (let i = 0; i < 6; i++) {
-      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      result.push({ value: `${englishMonths[d.getMonth()]} ${d.getFullYear()}`, label: fmt.format(d) });
-    }
-    result.push(
-      { value: "Last 1 day",   label: t("filters.last1day") },
-      { value: "Last 2 days",  label: t("filters.last2days") },
-      { value: "Last 3 days",  label: t("filters.last3days") },
-      { value: "Last 7 days",  label: t("filters.last7days") },
-      { value: "Last 30 days", label: t("filters.last30days") },
-      { value: "Last 90 days", label: t("filters.last90days") },
-    );
-    return result;
-  }, [locale, t]);
-  const [createModalOpened, { open: openCreateModal, close: closeCreateModal }] = useDisclosure(false);
-  const [filterOpen, setFilterOpen] = useState(false);
-  const [activeSeverities, setActiveSeverities] = useState<Set<string>>(
-    () => new Set(["critical", "high", "medium", "low"]),
-  );
-  const [selectedTypeFilters, setSelectedTypeFilters] = useState<string[]>([]);
-  const hierarchyQuery = api.alerts.getDisasterTypeHierarchy.useQuery(undefined, { staleTime: Infinity, refetchOnWindowFocus: false });
-  const hierarchy = hierarchyQuery.data ?? [];
-  const expandedTypeCodes = selectedTypeFilters.length > 0 ? expandSelectionsToCodes(selectedTypeFilters, hierarchy) : null;
-  const [activeSources, setActiveSources] = useState<Set<string> | null>(null);
-  const isFiltered = activeSeverities.size < 4 || selectedTypeFilters.length > 0 || activeSources !== null;
-  const filterCount = (activeSeverities.size < 4 ? 1 : 0) + (selectedTypeFilters.length > 0 ? 1 : 0) + (activeSources !== null ? 1 : 0);
-
-  const { activeTeamId } = useTeam();
-  const { countries, getCenter, getZoom, getLocationId, tree, isLoading: isLocationsLoading } = useLocations();
-  const {
-    countries: teamCountries,
-    countryName: workingCountryName,
-    setWorkingCountry,
-    scopeReady,
-  } = useTeamCountry();
-
-  // Country the user picked. Scoped teams use the working-country cookie;
-  // multi-country unset (All Countries) means every assigned country.
-  const [pickedCountry, setPickedCountry] = useState("");
-  const teamCountryNames = useMemo(() => teamCountries.map((c) => c.name), [teamCountries]);
-  // An Agent navigation deep link's country holds for this visit only and
-  // doesn't touch the working country; picking a country drops it. Its place
-  // is matched by id against this page's locations tree and the active
-  // team's scope: only a place the page can show ever overrides.
-  const detectionDeepLink = useMemo(() => readDetectionDeepLink(searchParams), [searchParams]);
-  const linkScope = useMemo(
-    () =>
-      resolveLinkScope({
-        countryId: detectionDeepLink.countryId,
-        regionId: detectionDeepLink.regionId,
-        tree,
-        teamCountryNames,
-        scopeReady,
-      }),
-    [detectionDeepLink.countryId, detectionDeepLink.regionId, tree, teamCountryNames, scopeReady],
-  );
-  const linkCountry = linkScope.status === "honoured" ? linkScope.country : undefined;
-  const selectedCountry = resolveSelectedCountry(
-    teamCountryNames,
-    linkCountry ?? workingCountryName ?? pickedCountry,
-    scopeReady,
-  );
-  const lastFocusedCountry = useLastFocusedCountry(selectedCountry);
-  
-  const handleCountryChange = useCallback(
-    (value: string) => {
-      // Picking a country ends a deep link's override.
-      if (detectionDeepLink.countryId) {
-        const rest = withoutDeepLink(new URLSearchParams(searchParams.toString()), DETECTION_DEEP_LINK_PARAMS);
-        router.replace(`/detection${rest}`, { scroll: false });
-      }
-      if (value === ALL_COUNTRIES) {
-        setPickedCountry(ALL_COUNTRIES);
-        setWorkingCountry("", ALL_COUNTRIES);
-      } else if (teamCountries.length > 0) {
-        const location = teamCountries.find((c) => c.name === value);
-        if (location) setWorkingCountry(location.id);
-      } else {
-        setPickedCountry(value);
-        setWorkingCountry(getLocationId(value) ?? value, value);
-      }
-      // Reset region when country changes
-      setSelectedRegionId(null);
-    },
-    [teamCountries, setWorkingCountry, getLocationId, detectionDeepLink.countryId, searchParams, router],
-  );
-  
-  const countryOptions = useMemo(() => {
-    if (!scopeReady) {
-      return workingCountryName ? [workingCountryName] : [];
-    }
-    return pickerCountryOptions(countries, teamCountryNames);
-  }, [scopeReady, workingCountryName, countries, teamCountryNames]);
-  useReportStaleCountryPick(
-    countryOptions,
-    linkCountry ?? workingCountryName ?? pickedCountry,
-    selectedCountry,
-  );
-
-  const [boundaryLevel, setBoundaryLevel] = useState<"none" | "A0" | "A1" | "A2">("A1");
-
-  // Restore tab/filters from sessionStorage after mount (URL tab still wins).
+  // Restore the tab from sessionStorage after mount (URL tab still wins).
   useEffect(() => {
     const fromUrl = searchParams.get("tab");
     if (!fromUrl) {
@@ -316,91 +163,48 @@ function DetectionPageContent() {
         }
       } catch { /* sessionStorage unavailable */ }
     }
-
-    const storedFilters = readStoredFilters();
-    // Country lives in the working-country cookie. Do not restore it from
-    // session here: on the first mount `teamCountries` is still empty, so a
-    // leftover "Venezuela" would look like an unscoped pick and pin Detection
-    // after Map already switched to All Countries.
-    if (storedFilters.regionId !== undefined) setSelectedRegionId(storedFilters.regionId ?? null);
-    if (storedFilters.date) setSelectedDate(storedFilters.date);
-    if (storedFilters.severities) setActiveSeverities(new Set(storedFilters.severities));
-    if (storedFilters.typeFilters) setSelectedTypeFilters(storedFilters.typeFilters);
-    if (storedFilters.sources !== undefined) {
-      setActiveSources(storedFilters.sources ? new Set(storedFilters.sources) : null);
-    }
-    if (storedFilters.boundaryLevel) setBoundaryLevel(storedFilters.boundaryLevel);
-    setStorageReady(true);
     // Mount-only restore; searchParams read intentionally for initial URL tab check.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // An Agent navigation deep link, after the stored defaults so it wins. A
-  // fresh move applies its filters like picking them by hand (a new country
-  // resets the region); a revisit (details and back, a reload, Back) brings
-  // back the filters chosen during that visit. From then on they are
-  // ordinary filter state; only the country stays in the URL, as this
-  // visit's override, and a region it set goes with it.
-  const linkedRegionRef = useRef(false);
-  useAgentDeepLink({
-    path: "/detection",
-    params: DETECTION_DEEP_LINK_PARAMS,
-    oneShot: DETECTION_ONE_SHOT_PARAMS,
-    scope: linkScope,
-    apply: (fresh) => {
-      if (linkScope.status !== "honoured") return;
-      if (!fresh) {
-        const visit = readStoredFilters(LINK_FILTERS_STORAGE_KEY);
-        if (visit.countryId !== detectionDeepLink.countryId) return;
-        setSelectedRegionId(visit.regionId ?? null);
-        linkedRegionRef.current = !!visit.regionId;
-        if (visit.date) setSelectedDate(visit.date);
-        if (visit.severities) setActiveSeverities(new Set(visit.severities));
-        if (visit.typeFilters) setSelectedTypeFilters(visit.typeFilters);
-        if (visit.sources !== undefined) setActiveSources(visit.sources ? new Set(visit.sources) : null);
-        if (visit.boundaryLevel) setBoundaryLevel(visit.boundaryLevel);
-        return;
-      }
-      setSelectedRegionId(linkScope.region?.id ?? null);
-      linkedRegionRef.current = !!linkScope.region;
-      if (detectionDeepLink.date) setSelectedDate(detectionDeepLink.date);
-      if (detectionDeepLink.severities) setActiveSeverities(new Set(detectionDeepLink.severities));
-    },
-    onGone: () => {
-      if (linkedRegionRef.current) setSelectedRegionId(null);
-      linkedRegionRef.current = false;
-    },
-  });
+  const filters = useDetectionFilters({ agentDeepLinkPath: "/detection" });
+  const {
+    country: selectedCountry,
+    regionId: selectedRegionId,
+    date: selectedDate,
+    severities: activeSeverities,
+    setSeverities: setActiveSeverities,
+    typeFilters: selectedTypeFilters,
+    setTypeFilters: setSelectedTypeFilters,
+    hierarchy,
+    expandedTypeCodes,
+    sources: activeSources,
+    setSources: setActiveSources,
+    boundaryLevel,
+    setBoundaryLevel,
+    teamCountries,
+    scopeReady,
+    getLocationId,
+    getCenter,
+    getZoom,
+    teamId: activeTeamId,
+    selectedLocationId,
+    locationsReady,
+    fromIso,
+    effectiveTo,
+    severityMin,
+    severityMax,
+    snapshotTime,
+    refreshSnapshot,
+    filter: sharedFilter,
+    filterKey,
+  } = filters;
+  const lastFocusedCountry = useLastFocusedCountry(selectedCountry);
 
-  // Mirror filter selections into sessionStorage so they survive navigating
-  // to a signal/event detail page and back (that route change unmounts this
-  // component, resetting the useState defaults above without this). During
-  // a deep-linked visit they go under the link instead: they hold for that
-  // visit and never become the page's defaults.
-  useEffect(() => {
-    if (!storageReady || linkScope.status === "pending") return;
-    try {
-      const toStore: StoredFilters = {
-        country: selectedCountry,
-        regionId: selectedRegionId,
-        date: selectedDate,
-        severities: Array.from(activeSeverities),
-        typeFilters: selectedTypeFilters,
-        sources: activeSources ? Array.from(activeSources) : null,
-        boundaryLevel,
-      };
-      if (linkScope.status === "honoured") {
-        sessionStorage.setItem(
-          LINK_FILTERS_STORAGE_KEY,
-          JSON.stringify({ ...toStore, countryId: detectionDeepLink.countryId }),
-        );
-      } else {
-        sessionStorage.setItem(FILTERS_STORAGE_KEY, JSON.stringify(toStore));
-      }
-    } catch {
-      /* sessionStorage unavailable (SSR or private mode) */
-    }
-  }, [storageReady, linkScope.status, detectionDeepLink.countryId, selectedCountry, selectedRegionId, selectedDate, activeSeverities, selectedTypeFilters, activeSources, boundaryLevel]);
+  const [createModalOpened, { open: openCreateModal, close: closeCreateModal }] = useDisclosure(false);
+  const [filterOpen, setFilterOpen] = useState(false);
+  const isFiltered = activeSeverities.size < 4 || selectedTypeFilters.length > 0 || activeSources !== null;
+  const filterCount = (activeSeverities.size < 4 ? 1 : 0) + (selectedTypeFilters.length > 0 ? 1 : 0) + (activeSources !== null ? 1 : 0);
 
   const selectedCountryId = useMemo(
     () => (selectedCountry !== ALL_COUNTRIES ? getLocationId(selectedCountry) : null),
@@ -472,47 +276,6 @@ function DetectionPageContent() {
     () => (selectedRegionId ? (regionQuery.data?.geometry ?? null) : null),
     [selectedRegionId, regionQuery.data],
   );
-
-  const selectedLocationId = useMemo(
-    () => selectedRegionId ?? getLocationId(selectedCountry),
-    [selectedCountry, selectedRegionId, getLocationId],
-  );
-
-  // Don't fire feed queries until the location tree has loaded. Without this
-  // guard, the queries fire with locationId=undefined (no filter) during the
-  // brief window before the tree resolves, returning results from all countries.
-  const locationsReady = !isLocationsLoading || !!selectedLocationId;
-
-  const currentCountryStates = useMemo(
-    () => tree.find((c) => c.name === selectedCountry)?.states ?? [],
-    [tree, selectedCountry],
-  );
-
-  const dateRange = useMemo(() => parseDateFilter(selectedDate), [selectedDate]);
-  const fromIso = useMemo(() => dateRange.start.toISOString(), [dateRange]);
-  const toIso = useMemo(() => dateRange.end.toISOString(), [dateRange]);
-
-  // Snapshot time: freezes the upper bound of all feed queries so that new
-  // items arriving mid-session don't shift offsets and cause duplicates when
-  // the user loads more. Resets whenever filters or sort change.
-  const [snapshotTime, setSnapshotTime] = useState(() => new Date().toISOString());
-  // Rolling presets ("Last N days") follow snapshotTime so refresh expands
-  // the window to include new events. Fixed-range presets ("Mon YYYY") keep
-  // their explicit upper bound - snapshotTime is irrelevant there because
-  // the range is in the past and no new events can fall into it.
-  const isRollingPreset = /^Last \d+ days?$/i.test(selectedDate);
-  const effectiveTo = isRollingPreset ? snapshotTime : toIso;
-
-  const SEV_NUM: Record<string, number> = { low: 2, medium: 3, high: 4, critical: 5 };
-  const { severityMin, severityMax } = useMemo(() => {
-    if (activeSeverities.size === 0 || activeSeverities.size === 4) {
-      return { severityMin: undefined, severityMax: undefined };
-    }
-    const nums = [...activeSeverities].map((s) => SEV_NUM[s]).filter((n): n is number => typeof n === "number");
-    if (nums.length === 0) return { severityMin: undefined, severityMax: undefined };
-    const min = Math.min(...nums) === 2 ? 1 : Math.min(...nums);
-    return { severityMin: min, severityMax: Math.max(...nums) };
-  }, [activeSeverities]);
 
   // ── Per-feed sort state ────────────────────────────────────────────────────
   const [eventsSort, setEventsSort] = useState<EventSortOrder>("newest");
@@ -604,16 +367,6 @@ function DetectionPageContent() {
     }
   }, [activeTab, signalsItems]);
 
-  const sharedFilter = {
-    teamId: activeTeamId,
-    locationId: selectedLocationId ?? undefined,
-    from: fromIso,
-    to: effectiveTo,
-    severityMin,
-    severityMax,
-    eventTypes: expandedTypeCodes ?? undefined,
-  };
-
   // ── Main feed queries ──────────────────────────────────────────────────────
   // staleTime: Infinity prevents re-fetching on tab switch.
   // _v (version) is part of the React Query cache key, so incrementing it on
@@ -686,28 +439,16 @@ function DetectionPageContent() {
   }, [signalsQuery.data]);
 
   // ── Reset effects ──────────────────────────────────────────────────────────
-  // FILTER changes: reset snapshot + items. A new snapshotTime means a new
-  // frozen window, so the user sees results from the correct time range.
+  // FILTER changes (filterKey): reset items. useDetectionFilters also moves
+  // the snapshot, so the user sees results from the correct time range.
   // SORT changes: reset items only, keep the existing snapshotTime. This
   // ensures switching sort and switching back always queries the same dataset.
-  const FILTER_DEPS = [selectedLocationId, fromIso, toIso, activeTeamId, severityMin, severityMax, expandedTypeCodes?.join(",")] as const;
-
-  // Snapshot is shared across all three feeds, so we set it once. Previously
-  // each per-feed reset effect called setSnapshotTime independently, which
-  // scheduled three setState calls per filter change with three slightly
-  // different timestamps.
-  useEffect(() => {
-    setSnapshotTime(new Date().toISOString());
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [...FILTER_DEPS, activeSources]);
-
   useEffect(() => {
     eventsAppending.current = false;
     setEventsOffset(0);
     setEventsItems([]);
     setEventsVersion((v) => v + 1);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [...FILTER_DEPS]);
+  }, [filterKey]);
 
   useEffect(() => {
     eventsAppending.current = false;
@@ -721,8 +462,7 @@ function DetectionPageContent() {
     setAlertsOffset(0);
     setAlertsItems([]);
     setAlertsVersion((v) => v + 1);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [...FILTER_DEPS]);
+  }, [filterKey]);
 
   useEffect(() => {
     alertsAppending.current = false;
@@ -736,8 +476,7 @@ function DetectionPageContent() {
     setSignalsOffset(0);
     setSignalsItems([]);
     setSignalsVersion((v) => v + 1);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [...FILTER_DEPS, activeSources]);
+  }, [filterKey, activeSources]);
 
   useEffect(() => {
     signalsAppending.current = false;
@@ -772,31 +511,28 @@ function DetectionPageContent() {
   // the cached value, the accumulation effect doesn't fire, and the list
   // we just cleared above stays blank.
   const refreshEvents = useCallback(() => {
-    const now = new Date().toISOString();
-    setSnapshotTime(now);
+    refreshSnapshot();
     eventsAppending.current = false;
     setEventsOffset(0);
     setEventsItems([]);
     setEventsVersion((v) => v + 1);
-  }, []);
+  }, [refreshSnapshot]);
 
   const refreshAlerts = useCallback(() => {
-    const now = new Date().toISOString();
-    setSnapshotTime(now);
+    refreshSnapshot();
     alertsAppending.current = false;
     setAlertsOffset(0);
     setAlertsItems([]);
     setAlertsVersion((v) => v + 1);
-  }, []);
+  }, [refreshSnapshot]);
 
   const refreshSignals = useCallback(() => {
-    const now = new Date().toISOString();
-    setSnapshotTime(now);
+    refreshSnapshot();
     signalsAppending.current = false;
     setSignalsOffset(0);
     setSignalsItems([]);
     setSignalsVersion((v) => v + 1);
-  }, []);
+  }, [refreshSnapshot]);
 
   // ── "New items" polls: lightweight queries with from=snapshotTime ──────────
   // Only the active tab polls so we don't waste bandwidth on hidden tabs.
@@ -843,7 +579,7 @@ function DetectionPageContent() {
   // ── History tab - paginated per source, all three sources accumulated ──────
   const historyFeed = useHistoryFeed(sharedFilter, {
     enabled: locationsReady && activeTab === "history",
-    resetKey: toIso,
+    resetKey: filterKey,
   });
   const historyInitialLoading = historyFeed.loading;
 
@@ -970,19 +706,19 @@ function DetectionPageContent() {
         <Box data-tour="detection-filters">
         <FilterBar
           country={selectedCountry}
-          onCountryChange={handleCountryChange}
-          countries={countryOptions}
+          onCountryChange={filters.onCountryChange}
+          countries={filters.countryOptions}
           regionsContent={
             <RegionPicker
-              states={currentCountryStates}
+              states={filters.regionStates}
               value={selectedRegionId}
-              onChange={setSelectedRegionId}
+              onChange={filters.onRegionChange}
               label={t("filters.region")}
             />
           }
           date={selectedDate}
-          onDateChange={setSelectedDate}
-          dateOptions={localizedDateOptions}
+          onDateChange={filters.onDateChange}
+          dateOptions={filters.dateOptions}
         >
           <Box>
             <Text size="xs" c="#737373" tt="uppercase" style={{ fontSize: 10, letterSpacing: "0.05em", marginBottom: 5 }}>{t("filters.filter")}</Text>
