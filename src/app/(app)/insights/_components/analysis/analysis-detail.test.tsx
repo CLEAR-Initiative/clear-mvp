@@ -618,6 +618,56 @@ describe("AnalysisDetail evidence journey", () => {
     expect(card()).toHaveTextContent("analysis.layout.evidenceNew");
   });
 
+  it("shows files waiting behind another upload as uploading, with no Retry", async () => {
+    let finishFirst: (res: Response) => void = () => {};
+    const fetchMock = vi
+      .fn()
+      .mockReturnValueOnce(new Promise<Response>((resolve) => (finishFirst = resolve)))
+      .mockResolvedValue(new Response(JSON.stringify({ reportId: "manual:b" }), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    renderDetail(createdScope(created()));
+    fireEvent.change(screen.getByTestId("analysis-evidence-input"), {
+      target: {
+        files: [
+          new File(["%PDF-1.4"], "a.pdf", { type: "application/pdf" }),
+          new File(["%PDF-1.4"], "b.pdf", { type: "application/pdf" }),
+        ],
+      },
+    });
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    const stages = () => screen.getAllByTestId("evidence-journey").map((el) => el.getAttribute("data-stage"));
+    expect(stages()).toEqual(["uploading", "uploading"]);
+    expect(screen.queryByRole("button", { name: "analysis.layout.journey.retry" })).toBeNull();
+
+    finishFirst(new Response(JSON.stringify({ reportId: "manual:a" }), { status: 200 }));
+    await vi.waitFor(() => expect(stages()).toEqual(["processing", "processing"]));
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("times a successful retry from the retry, not from the failed attempt", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    try {
+      // Added before the 06:00 update, retried after it: the update could not have used the file.
+      vi.setSystemTime(new Date("2026-09-27T05:00:00Z"));
+      const fetchMock = vi
+        .fn()
+        .mockResolvedValueOnce(new Response("{}", { status: 400 }))
+        .mockResolvedValueOnce(new Response(JSON.stringify({ reportId: "manual:abc" }), { status: 200 }));
+      vi.stubGlobal("fetch", fetchMock);
+      renderDetail(createdScope(created()));
+      fireEvent.change(screen.getByTestId("analysis-evidence-input"), {
+        target: { files: [new File(["%PDF-1.4"], "brief.pdf", { type: "application/pdf" })] },
+      });
+      await vi.waitFor(() => expect(journey()).toHaveAttribute("data-stage", "failed"));
+
+      vi.setSystemTime(new Date("2026-09-27T07:00:00Z"));
+      fireEvent.click(screen.getByRole("button", { name: "analysis.layout.journey.retry" }));
+      await vi.waitFor(() => expect(journey()).toHaveAttribute("data-stage", "processing"));
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("shows the citation number and drops NEW once the analysis cites the file", () => {
     threadData = { title: null, comments: [], documents: [doc("2026-09-27T05:00:00Z")] };
     analysisResult = { data: { ...analysis(), sources: [source("r1"), source("manual:abc")] }, isLoading: false, isError: false };
