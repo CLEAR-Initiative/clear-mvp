@@ -66,28 +66,35 @@ function EventDetailPageContent({
     void utils.comments.list.prefetch({ entityId: activeId, entityType: "event" });
   }, [activeId, utils]);
 
-  // Prefetch ±1 around the *committed* id only — never the scrub cursor.
-  // Scrubbing 4→60 would otherwise fire a trail of get/comments prefetches
-  // and starve the settled destination (GH #148).
-  const committedNeighbors = useMemo(
-    () => getListNavigation(orderedIds, activeId),
-    [orderedIds, activeId],
-  );
-  useEffect(() => {
-    for (const id of [committedNeighbors.prevId, committedNeighbors.nextId]) {
-      if (!id || prefetchedRef.current.has(id)) continue;
-      prefetchedRef.current.add(id);
-      prefetchDetail(id);
-    }
-  }, [committedNeighbors.prevId, committedNeighbors.nextId, prefetchDetail]);
-
+  // Own request rather than the shared batch: a batch resolves only when its
+  // slowest procedure does, and the first one also carries the nav list,
+  // locations tree and team lookups.
   const eventQuery = api.events.get.useQuery(
     { id: activeId },
     {
       enabled: !!activeId,
       placeholderData: keepPreviousData,
+      trpc: { context: { skipBatch: true } },
     },
   );
+  const eventLoaded = eventQuery.data?.id === activeId;
+
+  // Prefetch ±1 around the *committed* id only — never the scrub cursor.
+  // Scrubbing 4→60 would otherwise fire a trail of get/comments prefetches
+  // and starve the settled destination (GH #148). Waits for the current event
+  // so the prefetches never compete with it.
+  const committedNeighbors = useMemo(
+    () => getListNavigation(orderedIds, activeId),
+    [orderedIds, activeId],
+  );
+  useEffect(() => {
+    if (!eventLoaded) return;
+    for (const id of [committedNeighbors.prevId, committedNeighbors.nextId]) {
+      if (!id || prefetchedRef.current.has(id)) continue;
+      prefetchedRef.current.add(id);
+      prefetchDetail(id);
+    }
+  }, [eventLoaded, committedNeighbors.prevId, committedNeighbors.nextId, prefetchDetail]);
 
   const isPending = deriveEntityPending(activeId, eventQuery.data);
 
@@ -96,10 +103,18 @@ function EventDetailPageContent({
     { enabled: !!activeId && !!activeTeamId && !isPending },
   );
 
+  // Fly the minimap as soon as the id changes. The nav list is usually not
+  // fetched (stored Detection ids win), so fall back to the event itself:
+  // the live query once it matches (so a refetch can move the map), else the
+  // prefetched copy while it is still pending.
   const navigationMapCenter = useMemo(() => {
-    const item = navigation.listItems.find((e) => e.id === activeId);
+    const item =
+      navigation.listItems.find((e) => e.id === activeId) ??
+      (eventQuery.data?.id === activeId
+        ? eventQuery.data
+        : utils.events.get.getData({ id: activeId }));
     return item ? getEventMapCenter(item) ?? undefined : undefined;
-  }, [activeId, navigation.listItems]);
+  }, [activeId, navigation.listItems, eventQuery.data, utils]);
 
   const navigatePrev = useCallback(() => {
     if (navigation.prevId) navigateTo(navigation.prevId);
