@@ -9,6 +9,7 @@ import { MetricsBodySkeleton } from "~/components/ui/metrics-page-skeleton";
 import { api } from "~/trpc/react";
 import { filterSources } from "~/lib/location-precision";
 import { metricsQueryInput, type MetricsFilterValues } from "./metrics-filters";
+import { useMetricsUrl } from "./metrics-url-state";
 import { PrecisionTiles } from "./precision-tiles";
 import { PrecisionBySource } from "./precision-by-source";
 import { PrecisionWeekly } from "./precision-weekly";
@@ -38,7 +39,8 @@ const NO_RETRY = new Set(["BAD_REQUEST", "FORBIDDEN", "UNAUTHORIZED"]);
 export function LocationPrecisionSection({ filters }: { filters: MetricsFilterValues }) {
   const t = useTranslations("metrics.precision");
   const format = useFormatter();
-  const [sources, setSources] = useState<string[]>([]);
+  const url = useMetricsUrl();
+  const [sources, setSources] = useState<string[]>(url.state.sources);
   const query = api.metrics.locationPrecision.useQuery(metricsQueryInput(filters), {
     refetchOnWindowFocus: false,
     placeholderData: keepPreviousData,
@@ -74,7 +76,10 @@ export function LocationPrecisionSection({ filters }: { filters: MetricsFilterVa
           placeholder={sources.length === 0 ? t("sources.placeholder") : undefined}
           data={all?.bySource.map((row) => row.source) ?? []}
           value={sources}
-          onChange={setSources}
+          onChange={(value) => {
+            setSources(value);
+            url.update({ sources: value });
+          }}
           disabled={!all}
           searchable
           clearable

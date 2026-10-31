@@ -39,6 +39,13 @@ vi.mock("~/trpc/react", () => ({
     },
   },
 }));
+let search = "";
+const replace = vi.fn();
+vi.mock("next/navigation", () => ({
+  usePathname: () => "/metrics",
+  useRouter: () => ({ replace }),
+  useSearchParams: () => new URLSearchParams(search),
+}));
 // jsdom lays nothing out, so give the chart a fixed size to draw into.
 vi.mock("recharts", async () => {
   const actual = await vi.importActual<typeof import("recharts")>("recharts");
@@ -69,6 +76,8 @@ afterEach(() => {
   seriesStates = {};
   definitionsState = {};
   annotationsState = {};
+  search = "";
+  replace.mockClear();
   useSeries.mockClear();
   useDefinitions.mockClear();
   useAnnotations.mockClear();
@@ -251,6 +260,46 @@ describe("ProgressOverTime, after review", () => {
     wrap(<ProgressOverTime filters={filters("2026-10-27", "2026-10-30")} />);
     expect(screen.getByText("Couldn't load the changes: Metrics are for platform admins")).toBeInTheDocument();
     expect(screen.queryByText("No change recorded in this range yet.")).not.toBeInTheDocument();
+  });
+});
+
+describe("ProgressOverTime, overview tiles and URL state", () => {
+  it("shows every registry metric at a glance and selects one on click, writing it to the URL", () => {
+    seriesStates["*"] = { data: { status: "ok", series: daily(27, 31) } };
+    wrap(<ProgressOverTime filters={filters("2026-10-27", "2026-10-31")} />);
+    expect(screen.getByText("At a glance")).toBeInTheDocument();
+    for (const name of ["Detected by next day", "Detected same day", "At district or finer"]) {
+      expect(screen.getByRole("button", { name: `Show ${name}` })).toBeInTheDocument();
+    }
+    expect(screen.getByRole("button", { name: "Show At district or finer" })).toHaveAttribute("aria-pressed", "true");
+    // Each tile reads the weekly series, ungrouped; the latest day with data is 31 Oct, 39 of 60 plus 50 of 51 = 80%.
+    expect(seriesCalls().some((input) => input.metric === "DETECTED_SAME_DAY" && input.granularity === "WEEK" && input.groupBy === undefined)).toBe(true);
+    expect(screen.getByTestId("tile-value-DISTRICT_OR_FINER")).toHaveTextContent("80%");
+    fireEvent.click(screen.getByRole("button", { name: "Show Detected same day" }));
+    expect(screen.getByRole("button", { name: "Show Detected same day" })).toHaveAttribute("aria-pressed", "true");
+    expect(seriesCalls().some((input) => input.metric === "DETECTED_SAME_DAY" && input.granularity === "DAY")).toBe(true);
+    expect(replace).toHaveBeenCalledWith("/metrics?metric=DETECTED_SAME_DAY", { scroll: false });
+  });
+
+  it("reads the metric, bucket size and grouping from the URL on load", () => {
+    search = "metric=DETECTED_SAME_DAY&granularity=month&lines=all&from=2026-10-01";
+    seriesStates["*"] = { data: { status: "ok", series: { ...daily(27, 31), metric: "DETECTED_SAME_DAY", groups: [], buckets: daily(27, 31).buckets.filter((b) => b.group === "sudan-war-x").map((b) => ({ ...b, group: null })) } } };
+    wrap(<ProgressOverTime filters={filters("2026-10-01", "2026-10-31")} />);
+    expect(screen.getByRole("textbox", { name: "Metric" })).toHaveValue("Detected same day");
+    expect(screen.getByLabelText("Month")).toBeChecked();
+    expect(seriesCalls()[0]).toMatchObject({ metric: "DETECTED_SAME_DAY", granularity: "MONTH" });
+    fireEvent.click(screen.getByLabelText("Week"));
+    expect(replace).toHaveBeenCalledWith("/metrics?metric=DETECTED_SAME_DAY&granularity=week&lines=all&from=2026-10-01", { scroll: false });
+  });
+
+  it("copies the page's link", async () => {
+    const writeText = vi.fn(async () => undefined);
+    Object.assign(navigator, { clipboard: { writeText } });
+    seriesStates["*"] = { data: { status: "ok", series: daily(27, 31) } };
+    wrap(<ProgressOverTime filters={filters("2026-10-27", "2026-10-31")} />);
+    fireEvent.click(screen.getByText("Copy link"));
+    expect(writeText).toHaveBeenCalledWith(window.location.href);
+    expect(await screen.findByText("Link copied")).toBeInTheDocument();
   });
 });
 

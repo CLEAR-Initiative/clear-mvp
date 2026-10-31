@@ -48,6 +48,8 @@ import {
   type TotalBucket,
 } from "~/lib/metric-series";
 import { metricsQueryInput, type MetricsFilterValues } from "./metrics-filters";
+import { MetricTiles } from "./metric-tiles";
+import { useMetricsUrl } from "./metrics-url-state";
 import { SeriesChart, type MarkerGroup, type SeriesLine, type SeriesPoint } from "./series-chart";
 import { useShareFormat } from "./use-share-format";
 
@@ -151,9 +153,25 @@ export function ProgressOverTime({ filters }: { filters: MetricsFilterValues }) 
   const format = useFormatter();
   const pct = useShareFormat();
   const utils = api.useUtils();
-  const [chosen, setChosen] = useState<MetricKey>(DEFAULT_METRIC);
-  const [granularityChoice, setGranularityChoice] = useState<Granularity | null>(null);
-  const [perSource, setPerSource] = useState(true);
+  // Metric, bucket size and grouping live in the URL too, so a view can be shared and reloaded.
+  const url = useMetricsUrl();
+  const [chosen, setChosen] = useState<MetricKey>(url.state.metric ?? DEFAULT_METRIC);
+  const [granularityChoice, setGranularityChoice] = useState<Granularity | null>(url.state.granularity);
+  const [perSource, setPerSource] = useState(url.state.lines !== "all");
+  const [copied, setCopied] = useState(false);
+  const pickMetric = (key: MetricKey) => {
+    setChosen(key);
+    url.update({ metric: key });
+  };
+  const copyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setCopied(false);
+    }
+  };
   const [table, setTable] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
   const [draft, setDraft] = useState<{ when: string; label: string; link: string; metricKeys: string[] }>({ when: "", label: "", link: "", metricKeys: [] });
@@ -269,14 +287,19 @@ export function ProgressOverTime({ filters }: { filters: MetricsFilterValues }) 
 
   return (
     <Stack gap={16} component="section" aria-labelledby="progress-over-time-title">
-      <Box style={{ minWidth: 0 }}>
-        <Text id="progress-over-time-title" component="h2" size="lg" fw={700} c="var(--color-text-primary)">
-          {t("title")}
-        </Text>
-        <Text size="sm" c="var(--color-text-secondary)" maw={720}>
-          {t("subtitle")}
-        </Text>
-      </Box>
+      <Group justify="space-between" align="flex-start" wrap="wrap" gap={12}>
+        <Box style={{ minWidth: 0 }}>
+          <Text id="progress-over-time-title" component="h2" size="lg" fw={700} c="var(--color-text-primary)">
+            {t("title")}
+          </Text>
+          <Text size="sm" c="var(--color-text-secondary)" maw={720}>
+            {t("subtitle")}
+          </Text>
+        </Box>
+        <Button size="compact-xs" variant="light" onClick={() => void copyLink()} aria-live="polite">
+          {copied ? t("copied") : t("copyLink")}
+        </Button>
+      </Group>
       <Group gap={12} align="flex-end" wrap="wrap">
         <Select
           label={t("metric.label")}
@@ -285,7 +308,7 @@ export function ProgressOverTime({ filters }: { filters: MetricsFilterValues }) 
             items: group.definitions.map((d) => ({ value: d.key, label: nameOf(d) })),
           }))}
           value={definition?.key ?? null}
-          onChange={(value) => value && setChosen(value)}
+          onChange={(value) => value && pickMetric(value)}
           allowDeselect={false}
           disabled={!definitions}
           placeholder={definitions ? undefined : t("loading")}
@@ -300,7 +323,10 @@ export function ProgressOverTime({ filters }: { filters: MetricsFilterValues }) 
             size="xs"
             aria-labelledby="progress-granularity-label"
             value={granularity}
-            onChange={(value) => setGranularityChoice(value as Granularity)}
+            onChange={(value) => {
+              setGranularityChoice(value as Granularity);
+              url.update({ granularity: value as Granularity });
+            }}
             data={GRANULARITIES.map((g) => ({ value: g, label: t(`granularity.${g}`) }))}
           />
         </Box>
@@ -309,11 +335,17 @@ export function ProgressOverTime({ filters }: { filters: MetricsFilterValues }) 
             size="xs"
             label={t("perSource")}
             checked={perSource}
-            onChange={(event) => setPerSource(event.currentTarget.checked)}
+            onChange={(event) => {
+              setPerSource(event.currentTarget.checked);
+              url.update({ lines: event.currentTarget.checked ? "source" : "all" });
+            }}
             pb={6}
           />
         )}
       </Group>
+      {definitions && definitions.length > 0 && (
+        <MetricTiles definitions={definitions} selected={metric} onSelect={pickMetric} locationId={input.locationId} nameOf={nameOf} />
+      )}
       {error ? (
         <Alert styles={noticeStyles("critical")} icon={<IconAlertTriangle size={16} />} title={t("error.title")}>
           {error.message}
