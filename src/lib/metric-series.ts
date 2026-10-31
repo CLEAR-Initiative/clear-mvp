@@ -1,12 +1,13 @@
 /**
  * One metric at a time, over time: the series behind the /metrics "Progress
- * over time" section. clear-api serves each metric's `series` by day, ISO week
- * or calendar month (clear-api ADR-0014) and owns every definition; this
- * module names the metrics the page can pick, turns each query's counts into
- * one bucket shape (numerator over denominator, per group), and adds the
- * reading aids: totals across groups, the default bucket size for a range,
- * deploy markers per bucket, and a before-and-after around the latest marker.
- * Never recompute which events or signals count here.
+ * over time" section. clear-api keeps the metric registry (its ADR-0015):
+ * `metricDefinitions` lists what can be plotted and `metricSeries` reads any
+ * entry as numerator over denominator per bucket, by day, ISO week or
+ * calendar month (ADR-0014), optionally grouped by source. clear-api owns
+ * every definition; this module only adds the reading aids: totals across
+ * groups, the default bucket size for a range, deploy markers per bucket, and
+ * a before-and-after around the latest marker. Never recompute which events
+ * or signals count here.
  */
 
 import { share } from "./detection-metrics";
@@ -15,29 +16,42 @@ import { DEPLOY_MARKERS, EMPHASIS_SOURCE, type DeployMarkerKey } from "./locatio
 export const GRANULARITIES = ["DAY", "WEEK", "MONTH"] as const;
 export type Granularity = (typeof GRANULARITIES)[number];
 
-export const METRIC_KEYS = ["detectedByNextDay", "detectedSameDay", "districtOrFiner"] as const;
-export type MetricKey = (typeof METRIC_KEYS)[number];
+/** The registry keys this app has translations for; any other key clear-api lists works with its English name. */
+export const KNOWN_METRIC_KEYS = ["DETECTED_BY_NEXT_DAY", "DETECTED_SAME_DAY", "DISTRICT_OR_FINER"] as const;
+export type KnownMetricKey = (typeof KNOWN_METRIC_KEYS)[number];
+/** A `MetricKey` value from clear-api's registry. */
+export type MetricKey = string;
 
-export type MetricDimension = "timeliness" | "accuracy";
+/** The Notion Metrics table's dimensions, in its order. */
+export const METRIC_DIMENSIONS = ["TIMELINESS", "ACCURACY", "COVERAGE", "RELIABILITY", "USEFULNESS"] as const;
+export type MetricDimension = (typeof METRIC_DIMENSIONS)[number];
 
-/** What the page knows about a metric: where its series comes from and how it is grouped. */
+/** What a metric's denominator counts. */
+export const METRIC_UNITS = ["EVENTS", "SIGNALS"] as const;
+export type MetricUnit = (typeof METRIC_UNITS)[number];
+
+/** The metric the section opens on, when clear-api lists it. */
+export const DEFAULT_METRIC: MetricKey = "DISTRICT_OR_FINER";
+
+/** One registry entry, as clear-api's `metricDefinitions` returns it. */
 export interface MetricDefinition {
   key: MetricKey;
-  /** The Notion Metrics dimension the metric sits under; the selector groups by it. */
+  /** clear-api's English name, shown when this app has no translation for the key. */
+  name: string;
   dimension: MetricDimension;
-  /** Which clear-api query serves the series. */
-  source: "detection" | "locationPrecision";
-  /** True when clear-api returns one series per data source. */
-  perSource: boolean;
-  /** The group to emphasise when drawing per-source lines. */
-  emphasis: string | null;
+  unit: MetricUnit;
+  /** The method in one paragraph. */
+  description: string;
+  /** The instant that puts a row in a bucket. */
+  timeBasis: string;
+  /** True when the series can be read per data source. */
+  groupable: boolean;
+  /** The ADR that owns the definition. */
+  adr: string;
 }
 
-export const METRICS: Record<MetricKey, MetricDefinition> = {
-  detectedByNextDay: { key: "detectedByNextDay", dimension: "timeliness", source: "detection", perSource: false, emphasis: null },
-  detectedSameDay: { key: "detectedSameDay", dimension: "timeliness", source: "detection", perSource: false, emphasis: null },
-  districtOrFiner: { key: "districtOrFiner", dimension: "accuracy", source: "locationPrecision", perSource: true, emphasis: EMPHASIS_SOURCE },
-};
+/** `metrics.definitions`'s result: the registry, or clear-api not serving it yet. */
+export type MetricDefinitionsResult = { status: "ok"; definitions: MetricDefinition[] } | { status: "unavailable" };
 
 /** One bucket of one group: the metric is `numerator / denominator`. */
 export interface SeriesBucket {
@@ -47,18 +61,19 @@ export interface SeriesBucket {
   label: string;
   /** True when the range covers only part of the bucket. */
   isPartial: boolean;
-  /** The data source for a per-source metric, null for a single series. */
+  /** The data source under `groupBy: SOURCE`, null for an ungrouped series. */
   group: string | null;
   numerator: number;
   denominator: number;
 }
 
+/** clear-api's `MetricSeries` payload: already the shape the page reads. */
 export interface MetricSeries {
   metric: MetricKey;
   granularity: Granularity;
   from: string;
   to: string;
-  /** Group names in clear-api's order (most signals first), empty for a single series. */
+  /** Group names in clear-api's order (most signals first), empty when ungrouped. */
   groups: string[];
   /** Group by group, ascending buckets within each, zero-filled by clear-api. */
   buckets: SeriesBucket[];
@@ -67,59 +82,17 @@ export interface MetricSeries {
 /** `metrics.series`'s result: the series, or clear-api not serving it yet. */
 export type MetricSeriesResult = { status: "ok"; series: MetricSeries } | { status: "unavailable" };
 
-/** clear-api's `detectionMetrics`, as the series document selects it. */
-export interface GqlDetectionSeries {
-  from: string;
-  to: string;
-  granularity: Granularity;
-  series: Array<{ start: string; label: string; isPartial: boolean; counted: number; sameDay: number; byNextDay: number }>;
+/** The registry grouped for the selector, in the Notion table's dimension order; a dimension with no metric is left out. */
+export function definitionsByDimension(definitions: readonly MetricDefinition[]): Array<{ dimension: MetricDimension; definitions: MetricDefinition[] }> {
+  return METRIC_DIMENSIONS.map((dimension) => ({
+    dimension,
+    definitions: definitions.filter((definition) => definition.dimension === dimension),
+  })).filter((group) => group.definitions.length > 0);
 }
 
-/** clear-api's `locationPrecisionMetrics`, as the series document selects it. */
-export interface GqlLocationPrecisionSeries {
-  from: string;
-  to: string;
-  granularity: Granularity;
-  bySource: Array<{ source: string; total: number }>;
-  series: Array<{ start: string; label: string; isPartial: boolean; source: string; total: number; district: number; point: number }>;
-}
-
-/** A time-to-detection share per bucket: same day or by next day, over the counted events. */
-export function detectionSeries(metric: "detectedSameDay" | "detectedByNextDay", raw: GqlDetectionSeries): MetricSeries {
-  return {
-    metric,
-    granularity: raw.granularity,
-    from: raw.from,
-    to: raw.to,
-    groups: [],
-    buckets: raw.series.map((row) => ({
-      start: row.start,
-      label: row.label,
-      isPartial: row.isPartial,
-      group: null,
-      numerator: metric === "detectedSameDay" ? row.sameDay : row.byNextDay,
-      denominator: row.counted,
-    })),
-  };
-}
-
-/** District or finer per source and bucket, over the source's located signals. */
-export function precisionSeries(raw: GqlLocationPrecisionSeries): MetricSeries {
-  return {
-    metric: "districtOrFiner",
-    granularity: raw.granularity,
-    from: raw.from,
-    to: raw.to,
-    groups: raw.bySource.map((row) => row.source),
-    buckets: raw.series.map((row) => ({
-      start: row.start,
-      label: row.label,
-      isPartial: row.isPartial,
-      group: row.source,
-      numerator: row.district + row.point,
-      denominator: row.total,
-    })),
-  };
+/** The line to emphasise on a grouped metric: the text-only feed the geocoding work exists for, when it is among the groups. */
+export function emphasisFor(definition: MetricDefinition | null | undefined, groups: readonly string[]): string | null {
+  return definition?.groupable && groups.includes(EMPHASIS_SOURCE) ? EMPHASIS_SOURCE : null;
 }
 
 /** One bucket with every group added up: the "all sources" line. */
@@ -131,7 +104,7 @@ export interface TotalBucket {
   denominator: number;
 }
 
-/** The groups summed per bucket, ascending; a single series is returned as is. */
+/** The groups summed per bucket, ascending; an ungrouped series is returned as is. */
 export function totalsByBucket(series: MetricSeries): TotalBucket[] {
   const byStart = new Map<string, TotalBucket>();
   for (const bucket of series.buckets) {
@@ -193,19 +166,30 @@ export interface SeriesMarker {
   /** When it reached the pipeline, ISO 8601 UTC. */
   at: string;
   key: DeployMarkerKey;
-  /** The metrics the change bears on. */
+  /** The registry keys the change bears on. */
   metrics: readonly MetricKey[];
 }
 
-/** The deploy markers, tagged with the metric each one is expected to move. */
+/** The deploy markers, tagged with the metric each one is expected to move. A static list until Exponential #1278. */
 export const MARKERS: readonly SeriesMarker[] = DEPLOY_MARKERS.map((marker) => ({
   ...marker,
-  metrics: ["districtOrFiner"] as const,
+  metrics: ["DISTRICT_OR_FINER"] as const,
 }));
 
 /** The markers that bear on `metric`, oldest first. */
 export function markersFor(metric: MetricKey, markers: readonly SeriesMarker[] = MARKERS): SeriesMarker[] {
   return markers.filter((marker) => marker.metrics.includes(metric)).sort((a, b) => a.at.localeCompare(b.at));
+}
+
+/** The markers for the metric whose instant lies inside the range, oldest first. A bucket can reach past the selected dates; a marker outside them is not drawn. */
+export function markersInRange(metric: MetricKey, from: string, to: string, markers: readonly SeriesMarker[] = MARKERS): SeriesMarker[] {
+  return markersFor(metric, markers).filter((marker) => marker.at >= from && marker.at <= to);
+}
+
+/** The latest marker for the metric inside the range, or null. */
+export function latestMarkerInRange(metric: MetricKey, from: string, to: string, markers: readonly SeriesMarker[] = MARKERS): SeriesMarker | null {
+  const inRange = markersInRange(metric, from, to, markers);
+  return inRange.length > 0 ? inRange[inRange.length - 1]! : null;
 }
 
 /** The markers that fall in each bucket, keyed by the bucket's label; buckets with none are left out. */
@@ -240,6 +224,16 @@ export interface BeforeAfter {
 }
 
 /**
+ * Where the before-and-after's daily read starts: 00:00 UTC seven days before
+ * the marker's day, whatever the page's range starts on, so a range opened
+ * close to the marker does not clip the baseline.
+ */
+export function comparisonFrom(marker: SeriesMarker): string {
+  const markerDay = Math.floor(Date.parse(marker.at) / DAY_MS);
+  return new Date((markerDay - BEFORE_AFTER_DAYS) * DAY_MS).toISOString();
+}
+
+/**
  * The share over the seven whole days before the marker's day against the
  * days after it, from daily buckets. The marker's own day is left out: it
  * mixes the two states.
@@ -264,25 +258,4 @@ export function beforeAfter(dayBuckets: readonly TotalBucket[], marker: SeriesMa
     after: { ...after, share: share(after.numerator, after.denominator) },
     tooFew: before.denominator < BEFORE_AFTER_MIN_N || after.denominator < BEFORE_AFTER_MIN_N,
   };
-}
-
-/** The markers for the metric whose instant lies inside the range, oldest first. A bucket can reach past the selected dates; a marker outside them is not drawn. */
-export function markersInRange(metric: MetricKey, from: string, to: string, markers: readonly SeriesMarker[] = MARKERS): SeriesMarker[] {
-  return markersFor(metric, markers).filter((marker) => marker.at >= from && marker.at <= to);
-}
-
-/** The latest marker for the metric inside the range, or null. */
-export function latestMarkerInRange(metric: MetricKey, from: string, to: string, markers: readonly SeriesMarker[] = MARKERS): SeriesMarker | null {
-  const inRange = markersInRange(metric, from, to, markers);
-  return inRange.length > 0 ? inRange[inRange.length - 1]! : null;
-}
-
-/**
- * Where the before-and-after's daily read starts: 00:00 UTC seven days before
- * the marker's day, whatever the page's range starts on, so a range opened
- * close to the marker does not clip the baseline.
- */
-export function comparisonFrom(marker: SeriesMarker): string {
-  const markerDay = Math.floor(Date.parse(marker.at) / DAY_MS);
-  return new Date((markerDay - BEFORE_AFTER_DAYS) * DAY_MS).toISOString();
 }

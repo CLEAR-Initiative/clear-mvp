@@ -3610,13 +3610,16 @@
         "label": "Métrique"
       },
       "dimensions": {
-        "timeliness": "Rapidité",
-        "accuracy": "Exactitude"
+        "TIMELINESS": "Rapidité",
+        "ACCURACY": "Exactitude",
+        "COVERAGE": "Couverture",
+        "RELIABILITY": "Fiabilité",
+        "USEFULNESS": "Utilité"
       },
       "metrics": {
-        "detectedByNextDay": "Détecté le lendemain au plus tard",
-        "detectedSameDay": "Détecté le jour même",
-        "districtOrFiner": "Au district ou plus fin"
+        "DETECTED_BY_NEXT_DAY": "Détecté le lendemain au plus tard",
+        "DETECTED_SAME_DAY": "Détecté le jour même",
+        "DISTRICT_OR_FINER": "Au district ou plus fin"
       },
       "granularity": {
         "label": "Intervalles",
@@ -3651,8 +3654,9 @@
         "changes": "Changements dans cet intervalle"
       },
       "units": {
-        "events": "n = {n, plural, one {# événement mesuré} other {# événements mesurés}}",
-        "signals": "n = {n, plural, one {# signal} other {# signaux}}"
+        "EVENTS": "n = {n, plural, one {# événement mesuré} other {# événements mesurés}}",
+        "SIGNALS": "n = {n, plural, one {# signal} other {# signaux}}",
+        "DEFAULT": "n = {n, number}"
       },
       "chip": {
         "title": "Depuis {marker} ({date}) :",
@@ -3663,12 +3667,15 @@
         "title": "Impossible de charger la série"
       },
       "unavailable": {
-        "title": "Séries par jour, semaine et mois pas encore déployées",
-        "body": "L'API CLEAR de cet environnement ne sert pas encore les séries de métriques par jour, semaine ou mois (clear-api ADR-0014). Les cartes ci-dessous fonctionnent toujours."
+        "title": "Registre des métriques pas encore déployé",
+        "body": "L'API CLEAR de cet environnement ne sert pas encore le registre des métriques ni leurs séries (clear-api ADR-0014 et ADR-0015). Les cartes ci-dessous fonctionnent toujours."
       },
       "empty": {
         "title": "Rien à tracer sur cette période",
         "body": "Aucun événement mesuré ni signal localisé ne tombe dans cette période pour cette métrique."
+      },
+      "definition": {
+        "timeBasis": "Base temporelle : {timeBasis} · {adr}"
       }
     },
     "precision": {

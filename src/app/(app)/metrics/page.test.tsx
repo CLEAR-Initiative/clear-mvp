@@ -25,6 +25,7 @@ vi.mock("~/trpc/react", () => ({
     metrics: {
       detection: { useQuery: (...args: unknown[]) => useQuery(...args) },
       locationPrecision: { useQuery: (...args: unknown[]) => usePrecisionQuery(...args) },
+      definitions: { useQuery: (...args: unknown[]) => useSeriesQuery(...args) },
       series: { useQuery: (...args: unknown[]) => useSeriesQuery(...args) },
     },
   },
