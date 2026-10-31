@@ -4,6 +4,7 @@ import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { cookieHeaders, graphqlFetch } from "~/server/api/graphql";
 import { toTrpcError } from "~/server/api/routers/tasks";
 import { isPlatformAdmin } from "~/lib/roles";
+import { testRecipientSchema } from "~/lib/brief/test-recipient";
 import type {
   Brief,
   BriefItem,
@@ -232,7 +233,7 @@ export const briefsRouter = createTRPCRouter({
    * provider refused it.
    */
   sendTest: adminProcedure
-    .input(z.object({ id, to: z.string().trim().toLowerCase().email().max(254).optional() }))
+    .input(z.object({ id, to: testRecipientSchema.optional() }))
     .mutation(async ({ ctx, input }) => {
       const data = input.to
         ? await call<{ sendBriefTest: boolean }>(ctx, SEND_BRIEF_TEST_TO, { id: input.id, to: input.to })

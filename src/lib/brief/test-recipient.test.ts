@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { normaliseTestRecipient, readTestRecipient, writeTestRecipient } from "./test-recipient";
+import { normaliseTestRecipient, readTestRecipient, testRecipientSchema, writeTestRecipient } from "./test-recipient";
 
 afterEach(() => {
   localStorage.clear();
@@ -11,9 +11,13 @@ describe("normaliseTestRecipient", () => {
     expect(normaliseTestRecipient("  Tester@Example.ORG ")).toBe("tester@example.org");
   });
 
-  it.each(["", "   ", "not-an-email", "a@b", "a b@c.org", `${"a".repeat(250)}@b.org`])("rejects %j", (raw) => {
-    expect(normaliseTestRecipient(raw)).toBeNull();
-  });
+  it.each(["", "   ", "not-an-email", "a@b", "a b@c.org", "a..b@example.org", `${"a".repeat(250)}@b.org`])(
+    "rejects %j, as sendTest's input check does",
+    (raw) => {
+      expect(normaliseTestRecipient(raw)).toBeNull();
+      expect(testRecipientSchema.safeParse(raw).success).toBe(false);
+    },
+  );
 });
 
 describe("test recipient storage", () => {
@@ -30,8 +34,8 @@ describe("test recipient storage", () => {
     expect(readTestRecipient("u1")).toBeNull();
   });
 
-  it("ignores a stored value that isn't an address", () => {
-    localStorage.setItem("clear-brief-test-recipient:u1", "<script>x</script>");
+  it.each(["<script>x</script>", "a..b@example.org"])("ignores a stored value sendTest would refuse: %j", (stored) => {
+    localStorage.setItem("clear-brief-test-recipient:u1", stored);
     expect(readTestRecipient("u1")).toBeNull();
   });
 

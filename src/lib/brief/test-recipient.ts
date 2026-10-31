@@ -10,10 +10,16 @@
  * right beside it.
  */
 
+import { z } from "zod";
+
 const STORAGE_PREFIX = "clear-brief-test-recipient";
-/** Same loose shape check and length cap as clear-api's. */
-const EMAIL_SHAPE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const MAX_EMAIL_LENGTH = 254;
+
+/**
+ * The one check for a test address: the popover saves with it, a stored
+ * value is read back with it, and the sendTest procedure takes it as input,
+ * so nothing saved here is refused on send. Stricter than clear-api's.
+ */
+export const testRecipientSchema = z.string().trim().toLowerCase().email().max(254);
 
 function storageKey(userId: string): string {
   return `${STORAGE_PREFIX}:${userId}`;
@@ -21,8 +27,8 @@ function storageKey(userId: string): string {
 
 /** Trimmed and lower-cased, or null when it isn't an email address. */
 export function normaliseTestRecipient(raw: string): string | null {
-  const email = raw.trim().toLowerCase();
-  return email.length <= MAX_EMAIL_LENGTH && EMAIL_SHAPE.test(email) ? email : null;
+  const parsed = testRecipientSchema.safeParse(raw);
+  return parsed.success ? parsed.data : null;
 }
 
 export function readTestRecipient(userId: string): string | null {
