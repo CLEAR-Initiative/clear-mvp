@@ -22,11 +22,15 @@ const usePrecisionQuery = vi.fn((..._args: unknown[]) => ({ isFetching: false, e
 const useSeriesQuery = vi.fn((..._args: unknown[]) => ({ isFetching: false, error: null }));
 vi.mock("~/trpc/react", () => ({
   api: {
+    useUtils: () => ({ metrics: { annotations: { invalidate: vi.fn() } } }),
     metrics: {
       detection: { useQuery: (...args: unknown[]) => useQuery(...args) },
       locationPrecision: { useQuery: (...args: unknown[]) => usePrecisionQuery(...args) },
       definitions: { useQuery: (...args: unknown[]) => useSeriesQuery(...args) },
       series: { useQuery: (...args: unknown[]) => useSeriesQuery(...args) },
+      annotations: { useQuery: (...args: unknown[]) => useSeriesQuery(...args) },
+      createAnnotation: { useMutation: () => ({ mutate: vi.fn(), isPending: false, error: null }) },
+      deleteAnnotation: { useMutation: () => ({ mutate: vi.fn(), isPending: false, error: null }) },
     },
   },
 }));

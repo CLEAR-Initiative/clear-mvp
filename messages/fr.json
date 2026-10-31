@@ -3676,6 +3676,25 @@
       },
       "definition": {
         "timeBasis": "Base temporelle : {timeBasis} · {adr}"
+      },
+      "annotations": {
+        "title": "Changements sur la période",
+        "add": "Ajouter un changement",
+        "when": "Quand (UTC)",
+        "label": "Libellé",
+        "link": "Lien (facultatif)",
+        "metrics": "Métriques",
+        "save": "Enregistrer",
+        "cancel": "Annuler",
+        "remove": "Retirer",
+        "removeNamed": "Retirer {label}",
+        "empty": "Aucun changement enregistré sur cette période.",
+        "unavailable": "L'API CLEAR de cet environnement ne sert pas encore les annotations de métriques (clear-api ADR-0016).",
+        "columns": {
+          "when": "Quand",
+          "label": "Changement",
+          "metrics": "Métriques"
+        }
       }
     },
     "precision": {
@@ -3752,12 +3771,7 @@
           "n": "{n, plural, one {# signal} other {# signaux}}",
           "partial": "Semaine partielle : encore en cours"
         },
-        "markers": {
-          "geocodeInArea": "Géocodage dans la zone du modèle",
-          "arabicGazetteer": "Noms arabes du gazetier",
-          "darfur24Locator": "darfur24 localisé depuis le texte",
-          "locationV3Prompt": "Lieu de l'incident plutôt que zone d'impact (prompt v3)"
-        }
+        "severalChanges": "{n, plural, one {# changement} other {# changements}}"
       },
       "method": {
         "title": "Comment la précision de localisation est mesurée",
