@@ -17,10 +17,12 @@ import {
 } from "~/lib/location-precision";
 import {
   GRANULARITIES,
+  type MetricAnnotationsResult,
   type MetricDefinition,
   type MetricDefinitionsResult,
   type MetricSeries,
   type MetricSeriesResult,
+  type SeriesMarker,
 } from "~/lib/metric-series";
 
 /**
@@ -80,6 +82,25 @@ export const METRIC_SERIES_QUERY = `
       groups
       buckets { start label isPartial group numerator denominator }
     }
+  }
+`;
+
+/** The annotation documents (clear-api ADR-0016): the changes that should move a metric, as rows. */
+export const METRIC_ANNOTATIONS_QUERY = `
+  query MetricAnnotations($input: MetricAnnotationsInput) {
+    metricAnnotations(input: $input) { id at label description link metricKeys }
+  }
+`;
+
+export const CREATE_METRIC_ANNOTATION_MUTATION = `
+  mutation CreateMetricAnnotation($input: CreateMetricAnnotationInput!) {
+    createMetricAnnotation(input: $input) { id at label description link metricKeys }
+  }
+`;
+
+export const DELETE_METRIC_ANNOTATION_MUTATION = `
+  mutation DeleteMetricAnnotation($id: ID!) {
+    deleteMetricAnnotation(id: $id)
   }
 `;
 
@@ -206,4 +227,70 @@ export const metricsRouter = createTRPCRouter({
         toTrpcError(err);
       }
     }),
+
+  /** The changes recorded against a metric in a range (clear-api ADR-0016),
+   * oldest first; drawn as markers. `unavailable` while clear-api does not
+   * serve `metricAnnotations` yet. */
+  annotations: protectedProcedure
+    .input(
+      z
+        .object({
+          from: z.string().datetime({ offset: true }).optional(),
+          to: z.string().datetime({ offset: true }).optional(),
+          metric: z.string().min(1).max(64).optional(),
+        })
+        .optional(),
+    )
+    .query(async ({ ctx, input }): Promise<MetricAnnotationsResult> => {
+      if (!isPlatformAdmin(ctx.user.role)) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Metrics are for platform admins" });
+      }
+      const variables: Record<string, string> = {};
+      if (input?.from) variables.from = input.from;
+      if (input?.to) variables.to = input.to;
+      if (input?.metric) variables.metric = input.metric;
+      try {
+        const data = await graphqlFetch<{ metricAnnotations: SeriesMarker[] }>(METRIC_ANNOTATIONS_QUERY, { input: variables }, cookieHeaders(ctx));
+        return { status: "ok", annotations: data.metricAnnotations };
+      } catch (err) {
+        if (isGraphqlSchemaUnavailable(err)) return { status: "unavailable" };
+        toTrpcError(err);
+      }
+    }),
+
+  /** Record a change that should move a metric. clear-api validates and logs it. */
+  createAnnotation: protectedProcedure
+    .input(
+      z.object({
+        at: z.string().datetime({ offset: true }),
+        label: z.string().trim().min(1).max(120),
+        description: z.string().trim().max(1000).optional(),
+        link: z.string().trim().url().max(500).optional(),
+        metricKeys: z.array(z.string().min(1).max(64)).min(1).max(20),
+      }),
+    )
+    .mutation(async ({ ctx, input }): Promise<SeriesMarker> => {
+      if (!isPlatformAdmin(ctx.user.role)) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Metrics are for platform admins" });
+      }
+      try {
+        const data = await graphqlFetch<{ createMetricAnnotation: SeriesMarker }>(CREATE_METRIC_ANNOTATION_MUTATION, { input }, cookieHeaders(ctx));
+        return data.createMetricAnnotation;
+      } catch (err) {
+        toTrpcError(err);
+      }
+    }),
+
+  /** Remove a recorded change. clear-api logs it. */
+  deleteAnnotation: protectedProcedure.input(z.object({ id: z.string().min(1) })).mutation(async ({ ctx, input }): Promise<boolean> => {
+    if (!isPlatformAdmin(ctx.user.role)) {
+      throw new TRPCError({ code: "FORBIDDEN", message: "Metrics are for platform admins" });
+    }
+    try {
+      const data = await graphqlFetch<{ deleteMetricAnnotation: boolean }>(DELETE_METRIC_ANNOTATION_MUTATION, { id: input.id }, cookieHeaders(ctx));
+      return data.deleteMetricAnnotation;
+    } catch (err) {
+      toTrpcError(err);
+    }
+  }),
 });

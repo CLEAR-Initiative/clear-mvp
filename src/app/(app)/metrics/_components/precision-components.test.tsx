@@ -83,13 +83,19 @@ describe("PrecisionBySource", () => {
 });
 
 describe("PrecisionWeekly", () => {
-  it("draws one line per source, marks the deploy week, and offers the table", () => {
-    const { container } = wrap(<PrecisionWeekly metrics={withShares(RAW)} />);
+  it("draws one line per source, marks the week of each recorded change, and offers the table", () => {
+    const markers = [
+      { id: "a1", at: "2026-10-29T18:33:00.000Z", label: "Geocoding inside the model's area", description: null, link: null, metricKeys: ["DISTRICT_OR_FINER"] },
+      { id: "a2", at: "2026-10-31T13:13:00.000Z", label: "darfur24 located from text", description: null, link: null, metricKeys: ["DISTRICT_OR_FINER"] },
+      { id: "a3", at: "2026-10-31T13:45:00.000Z", label: "Arabic gazetteer names", description: null, link: null, metricKeys: ["DISTRICT_OR_FINER"] },
+    ];
+    const { container } = wrap(<PrecisionWeekly metrics={withShares(RAW)} markers={markers} />);
     expect(screen.getByText("Weekly trend")).toBeInTheDocument();
     expect(screen.getByLabelText("Legend")).toHaveTextContent("sudan-war-x");
     expect(screen.getByLabelText("Legend")).toHaveTextContent("dataminr");
-    // The 29 Oct deploy falls in W44, which is in the data, so its marker is drawn.
-    expect(container.textContent).toContain("Geocoding inside the model's area");
+    // All three changes fall in W44, which is in the data: one line, one label naming the count.
+    expect(container.textContent).toContain("3 changes");
+    expect(container.textContent).not.toContain("Geocoding inside the model's area");
     fireEvent.click(screen.getByText("Table view"));
     expect(screen.getByText("2026-W43")).toBeInTheDocument();
     expect(screen.getByText("2026-W44 (partial)")).toBeInTheDocument();

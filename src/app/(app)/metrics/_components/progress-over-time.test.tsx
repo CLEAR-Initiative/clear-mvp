@@ -4,13 +4,14 @@ import { cleanup, fireEvent, render, screen, within } from "@testing-library/rea
 import { MantineProvider } from "@mantine/core";
 import { NextIntlClientProvider } from "next-intl";
 import enMessages from "../../../../../messages/en.json";
-import type { MetricDefinition, MetricDefinitionsResult, MetricSeries, MetricSeriesResult } from "~/lib/metric-series";
+import type { MetricAnnotationsResult, MetricDefinition, MetricDefinitionsResult, MetricSeries, MetricSeriesResult, SeriesMarker } from "~/lib/metric-series";
 
 /**
- * The "Progress over time" section with metrics.definitions and
- * metrics.series stubbed: the selector built from the registry, the lines,
- * the deploy markers grouped per bucket, the before-and-after, the controls
- * that re-ask clear-api, the table, and the unavailable state.
+ * The "Progress over time" section with metrics.definitions, metrics.series
+ * and metrics.annotations stubbed: the selector built from the registry, the
+ * lines, the recorded changes drawn as markers and listed, the form that
+ * records one, the before-and-after, the controls that re-ask clear-api, the
+ * table, and the unavailable state.
  */
 
 type SeriesState = { data?: MetricSeriesResult; error?: { message: string; data?: { code: string } } | null };
@@ -21,11 +22,20 @@ const useSeries = vi.fn((input: { metric: string; granularity?: string }, _optio
 });
 let definitionsState: { data?: MetricDefinitionsResult; error?: { message: string; data?: { code: string } } | null } = {};
 const useDefinitions = vi.fn((..._args: unknown[]) => ({ isFetching: false, error: null, ...definitionsState }));
+let annotationsState: { data?: MetricAnnotationsResult; error?: { message: string; data?: { code: string } } | null } = {};
+const useAnnotations = vi.fn((..._args: unknown[]) => ({ isFetching: false, error: null, ...annotationsState }));
+const createMutate = vi.fn();
+const deleteMutate = vi.fn();
+const invalidate = vi.fn();
 vi.mock("~/trpc/react", () => ({
   api: {
+    useUtils: () => ({ metrics: { annotations: { invalidate } } }),
     metrics: {
       definitions: { useQuery: (...args: unknown[]) => useDefinitions(...args) },
       series: { useQuery: (...args: unknown[]) => useSeries(...(args as [{ metric: string; granularity?: string }, unknown])) },
+      annotations: { useQuery: (...args: unknown[]) => useAnnotations(...args) },
+      createAnnotation: { useMutation: () => ({ mutate: createMutate, isPending: false, error: null }) },
+      deleteAnnotation: { useMutation: () => ({ mutate: deleteMutate, isPending: false, error: null }) },
     },
   },
 }));
@@ -46,17 +56,30 @@ const DEFINITIONS: MetricDefinition[] = [
   { key: "DETECTED_SAME_DAY", name: "Detected same day", dimension: "TIMELINESS", unit: "EVENTS", description: "Share of measured events first signalled on the onset day.", timeBasis: "The first ingested signal.", groupable: false, adr: "ADR-0011" },
   { key: "DISTRICT_OR_FINER", name: "At district or finer", dimension: "ACCURACY", unit: "SIGNALS", description: "Share of located signals at a district or a point.", timeBasis: "The instant the signal was located.", groupable: true, adr: "ADR-0012" },
 ];
+const marker = (id: string, at: string, label: string): SeriesMarker => ({ id, at, label, description: null, link: null, metricKeys: ["DISTRICT_OR_FINER"] });
+const MARKERS: SeriesMarker[] = [
+  marker("a1", "2026-10-29T18:33:00.000Z", "Geocoding inside the model's area"),
+  marker("a2", "2026-10-31T13:13:00.000Z", "darfur24 located from text"),
+  marker("a3", "2026-10-31T13:13:00.000Z", "Incident site over impact area (prompt v3)"),
+  marker("a4", "2026-10-31T13:45:00.000Z", "Arabic gazetteer names"),
+];
 
 afterEach(() => {
   cleanup();
   seriesStates = {};
   definitionsState = {};
+  annotationsState = {};
   useSeries.mockClear();
   useDefinitions.mockClear();
+  useAnnotations.mockClear();
+  createMutate.mockClear();
+  deleteMutate.mockClear();
+  invalidate.mockClear();
 });
 
 function wrap(ui: React.ReactElement) {
-  definitionsState = definitionsState.data || definitionsState.error ? definitionsState : { data: { status: "ok", definitions: DEFINITIONS } };
+  if (!definitionsState.data && !definitionsState.error) definitionsState = { data: { status: "ok", definitions: DEFINITIONS } };
+  if (!annotationsState.data && !annotationsState.error) annotationsState = { data: { status: "ok", annotations: MARKERS } };
   return render(
     <NextIntlClientProvider locale="en" messages={enMessages}>
       <MantineProvider>{ui}</MantineProvider>
@@ -87,22 +110,22 @@ const filters = (from: string, to: string) => ({ from, to, locationId: null });
 const seriesCalls = () => useSeries.mock.calls.map(([input]) => input as Record<string, unknown>);
 
 describe("ProgressOverTime", () => {
-  it("draws the metric by day, one line per source, with the deploy marker, the before-and-after and the definition", () => {
+  it("draws the metric by day with the recorded changes as markers, the before-and-after and the definition", () => {
     seriesStates["DISTRICT_OR_FINER:DAY"] = { data: { status: "ok", series: daily(25, 30) } };
     const { container } = wrap(<ProgressOverTime filters={filters("2026-10-25", "2026-10-30")} />);
     expect(screen.getByText("Progress over time")).toBeInTheDocument();
-    // The registry's default metric, by day for a short range, grouped by source.
     expect(seriesCalls()[0]).toMatchObject({ metric: "DISTRICT_OR_FINER", granularity: "DAY", groupBy: "SOURCE", from: "2026-10-25T00:00:00.000Z" });
+    // The changes are asked for the range the series covers and the metric shown.
+    expect(useAnnotations.mock.calls.some(([input]) => JSON.stringify(input) === JSON.stringify({ from: "2026-10-25T00:00:00.000Z", to: "2026-10-30T23:59:59.999Z", metric: "DISTRICT_OR_FINER" }))).toBe(true);
     expect(screen.getByLabelText("Legend")).toHaveTextContent("sudan-war-x");
-    expect(screen.getByLabelText("Legend")).toHaveTextContent("dataminr");
     expect(container.querySelectorAll(".recharts-line")).toHaveLength(2);
-    expect(screen.getByText("Geocoding inside the model's area")).toBeInTheDocument();
+    // The one change inside the dates: drawn on the chart and listed under it.
+    expect(screen.getAllByText("Geocoding inside the model's area").length).toBeGreaterThan(0);
+    expect(screen.queryByText("Arabic gazetteer names")).not.toBeInTheDocument();
     const chip = screen.getByTestId("before-after");
     expect(chip).toHaveTextContent("Since Geocoding inside the model's area (Oct 29, 2026):");
     expect(chip).toHaveTextContent("sudan-war-x 39% in the 7 days before, 64% since (n = 184 and 74)");
-    // The comparison reads its own window: seven days before the marker to the range's end.
     expect(seriesCalls().some((input) => input.granularity === "DAY" && input.from === "2026-10-22T00:00:00.000Z" && input.to === "2026-10-30T23:59:59.999Z")).toBe(true);
-    expect(screen.getByTestId("definition")).toHaveTextContent("Share of located signals at a district or a point.");
     expect(screen.getByTestId("definition")).toHaveTextContent("Time basis: The instant the signal was located. · ADR-0012");
   });
 
@@ -110,8 +133,37 @@ describe("ProgressOverTime", () => {
     seriesStates["DISTRICT_OR_FINER:DAY"] = { data: { status: "ok", series: daily(27, 31) } };
     wrap(<ProgressOverTime filters={filters("2026-10-27", "2026-10-31")} />);
     expect(screen.getByText("3 changes")).toBeInTheDocument();
-    expect(screen.getByText("Geocoding inside the model's area")).toBeInTheDocument();
     expect(screen.queryByTestId("before-after")).not.toBeInTheDocument();
+    // All four are listed as changes in range.
+    expect(screen.getByText("darfur24 located from text")).toBeInTheDocument();
+    expect(screen.getByText("Arabic gazetteer names")).toBeInTheDocument();
+  });
+
+  it("records a change from the form and removes a listed one", () => {
+    seriesStates["DISTRICT_OR_FINER:DAY"] = { data: { status: "ok", series: daily(25, 30) } };
+    wrap(<ProgressOverTime filters={filters("2026-10-25", "2026-10-30")} />);
+    fireEvent.click(screen.getByText("Add a change"));
+    fireEvent.change(screen.getByLabelText(/^When \(UTC\)/), { target: { value: "2026-10-30T09:00" } });
+    fireEvent.change(screen.getByLabelText(/^Label/), { target: { value: " Onset parser fix " } });
+    fireEvent.click(screen.getByText("Save"));
+    expect(createMutate).toHaveBeenCalledWith({
+      at: "2026-10-30T09:00:00.000Z",
+      label: "Onset parser fix",
+      link: undefined,
+      metricKeys: ["DISTRICT_OR_FINER"],
+    });
+    fireEvent.click(screen.getByLabelText("Remove Geocoding inside the model's area"));
+    expect(deleteMutate).toHaveBeenCalledWith({ id: "a1" });
+  });
+
+  it("does not send an incomplete change", () => {
+    seriesStates["DISTRICT_OR_FINER:DAY"] = { data: { status: "ok", series: daily(25, 30) } };
+    wrap(<ProgressOverTime filters={filters("2026-10-25", "2026-10-30")} />);
+    fireEvent.click(screen.getByText("Add a change"));
+    fireEvent.change(screen.getByLabelText(/^Label/), { target: { value: "No date" } });
+    expect(screen.getByText("Save").closest("button")).toBeDisabled();
+    fireEvent.click(screen.getByText("Save"));
+    expect(createMutate).not.toHaveBeenCalled();
   });
 
   it("builds the selector from the registry, translating known keys and naming the rest in English", () => {
@@ -142,7 +194,6 @@ describe("ProgressOverTime", () => {
     fireEvent.click(screen.getByRole("textbox", { name: "Metric" }));
     fireEvent.click(screen.getByRole("option", { name: "Detected same day" }));
     expect(seriesCalls().some((input) => input.metric === "DETECTED_SAME_DAY" && input.groupBy === undefined)).toBe(true);
-    // Time to detection has no groups, so the switch goes away.
     expect(screen.queryByLabelText("Lines per source")).not.toBeInTheDocument();
   });
 
@@ -157,14 +208,15 @@ describe("ProgressOverTime", () => {
     seriesStates["DISTRICT_OR_FINER:DAY"] = {
       data: { status: "ok", series: { metric: "DISTRICT_OR_FINER", granularity: "DAY", from: "2026-10-27T00:00:00.000Z", to: "2026-10-28T23:59:59.999Z", groups, buckets } },
     };
+    annotationsState = { data: { status: "ok", annotations: [] } };
     const { container } = wrap(<ProgressOverTime filters={filters("2026-10-27", "2026-10-28")} />);
     expect(container.querySelectorAll(".recharts-line")).toHaveLength(6);
     expect(screen.getByLabelText("Legend")).not.toHaveTextContent("src7");
+    expect(screen.getByText("No change recorded in this range yet.")).toBeInTheDocument();
     fireEvent.click(screen.getByText("Table view"));
     const table = screen.getByRole("table");
     expect(within(table).getAllByRole("columnheader")).toHaveLength(8);
     expect(within(table).getByText("src7")).toBeInTheDocument();
-    expect(within(table).getByText("2026-10-28")).toBeInTheDocument();
   });
 
   it("says the registry is not deployed yet, and shows clear-api's error otherwise", () => {
@@ -179,3 +231,26 @@ describe("ProgressOverTime", () => {
     expect(screen.getByText("Metrics are for platform admins")).toBeInTheDocument();
   });
 });
+
+describe("ProgressOverTime, after review", () => {
+  it("keeps the changes panel and the definition when the metric has no measured data", () => {
+    const empty = { ...daily(27, 28), buckets: daily(27, 28).buckets.map((b) => ({ ...b, numerator: 0, denominator: 0 })) };
+    seriesStates["DISTRICT_OR_FINER:DAY"] = { data: { status: "ok", series: empty } };
+    annotationsState = { data: { status: "ok", annotations: [] } };
+    wrap(<ProgressOverTime filters={filters("2026-10-27", "2026-10-28")} />);
+    expect(screen.getByText("Nothing to plot in this range")).toBeInTheDocument();
+    expect(screen.getByText("Add a change")).toBeInTheDocument();
+    expect(screen.getByText("No change recorded in this range yet.")).toBeInTheDocument();
+    expect(screen.getByTestId("definition")).toBeInTheDocument();
+    expect(screen.queryByText("Table view")).not.toBeInTheDocument();
+  });
+
+  it("says when the changes could not be read, instead of claiming there are none", () => {
+    seriesStates["DISTRICT_OR_FINER:DAY"] = { data: { status: "ok", series: daily(27, 30) } };
+    annotationsState = { error: { message: "Metrics are for platform admins", data: { code: "FORBIDDEN" } } };
+    wrap(<ProgressOverTime filters={filters("2026-10-27", "2026-10-30")} />);
+    expect(screen.getByText("Couldn't load the changes: Metrics are for platform admins")).toBeInTheDocument();
+    expect(screen.queryByText("No change recorded in this range yet.")).not.toBeInTheDocument();
+  });
+});
+

@@ -3676,6 +3676,27 @@
       },
       "definition": {
         "timeBasis": "الأساس الزمني: {timeBasis} · {adr}"
+      },
+      "annotations": {
+        "title": "التغييرات في النطاق",
+        "add": "إضافة تغيير",
+        "when": "متى (UTC)",
+        "label": "التسمية",
+        "link": "رابط (اختياري)",
+        "metrics": "المقاييس",
+        "save": "حفظ",
+        "cancel": "إلغاء",
+        "remove": "إزالة",
+        "removeNamed": "إزالة {label}",
+        "empty": "لم يُسجَّل أي تغيير في هذا النطاق بعد.",
+        "unavailable": "واجهة CLEAR البرمجية في هذه البيئة لا تقدّم بعد تعليقات المقاييس (clear-api ADR-0016).",
+        "columns": {
+          "when": "متى",
+          "label": "التغيير",
+          "metrics": "المقاييس"
+        },
+        "error": "تعذّر تحميل التغييرات: {message}",
+        "loading": "جارٍ تحميل التغييرات…"
       }
     },
     "precision": {
@@ -3752,12 +3773,7 @@
           "n": "{n, plural, one {إشارة واحدة} other {# إشارة}}",
           "partial": "أسبوع جزئي: ما زال جاريًا"
         },
-        "markers": {
-          "geocodeInArea": "الترميز الجغرافي داخل منطقة النموذج",
-          "arabicGazetteer": "الأسماء العربية في المعجم الجغرافي",
-          "darfur24Locator": "تحديد موقع darfur24 من النص",
-          "locationV3Prompt": "موقع الحادث بدلًا من منطقة الأثر (الموجّه v3)"
-        }
+        "severalChanges": "{n, plural, zero {لا تغييرات} one {تغيير واحد} two {تغييران} few {# تغييرات} many {# تغييرًا} other {# تغيير}}"
       },
       "method": {
         "title": "كيف تُقاس دقة تحديد الموقع",

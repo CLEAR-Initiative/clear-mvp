@@ -3,15 +3,16 @@
  * over time" section. clear-api keeps the metric registry (its ADR-0015):
  * `metricDefinitions` lists what can be plotted and `metricSeries` reads any
  * entry as numerator over denominator per bucket, by day, ISO week or
- * calendar month (ADR-0014), optionally grouped by source. clear-api owns
- * every definition; this module only adds the reading aids: totals across
- * groups, the default bucket size for a range, deploy markers per bucket, and
+ * calendar month (ADR-0014), optionally grouped by source. The changes that
+ * should move a metric are rows too (`metricAnnotations`, ADR-0016). clear-api
+ * owns every definition; this module only adds the reading aids: totals
+ * across groups, the default bucket size for a range, markers per bucket, and
  * a before-and-after around the latest marker. Never recompute which events
  * or signals count here.
  */
 
 import { share } from "./detection-metrics";
-import { DEPLOY_MARKERS, EMPHASIS_SOURCE, type DeployMarkerKey } from "./location-precision";
+import { EMPHASIS_SOURCE } from "./location-precision";
 
 export const GRANULARITIES = ["DAY", "WEEK", "MONTH"] as const;
 export type Granularity = (typeof GRANULARITIES)[number];
@@ -81,6 +82,34 @@ export interface MetricSeries {
 
 /** `metrics.series`'s result: the series, or clear-api not serving it yet. */
 export type MetricSeriesResult = { status: "ok"; series: MetricSeries } | { status: "unavailable" };
+
+/**
+ * A change that should move a metric, as clear-api's `metricAnnotations`
+ * returns it (ADR-0016): a deploy, a data import, a prompt version. Drawn as a
+ * marker in the bucket holding its instant.
+ */
+export interface SeriesMarker {
+  id: string;
+  /** When it reached this environment, ISO 8601 UTC. */
+  at: string;
+  label: string;
+  description: string | null;
+  link: string | null;
+  /** The registry keys the change bears on. */
+  metricKeys: string[];
+}
+
+/** `metrics.annotations`'s result: the markers, or clear-api not serving them yet. */
+export type MetricAnnotationsResult = { status: "ok"; annotations: SeriesMarker[] } | { status: "unavailable" };
+
+/** What the admin form sends to record a change. */
+export interface NewSeriesMarker {
+  at: string;
+  label: string;
+  link?: string;
+  description?: string;
+  metricKeys: string[];
+}
 
 /** The registry grouped for the selector, in the Notion table's dimension order; a dimension with no metric is left out. */
 export function definitionsByDimension(definitions: readonly MetricDefinition[]): Array<{ dimension: MetricDimension; definitions: MetricDefinition[] }> {
@@ -161,33 +190,18 @@ export function bucketEnd(start: string, granularity: Granularity): number {
   }
 }
 
-/** A change that should move a metric, placed on its chart. */
-export interface SeriesMarker {
-  /** When it reached the pipeline, ISO 8601 UTC. */
-  at: string;
-  key: DeployMarkerKey;
-  /** The registry keys the change bears on. */
-  metrics: readonly MetricKey[];
-}
-
-/** The deploy markers, tagged with the metric each one is expected to move. A static list until Exponential #1278. */
-export const MARKERS: readonly SeriesMarker[] = DEPLOY_MARKERS.map((marker) => ({
-  ...marker,
-  metrics: ["DISTRICT_OR_FINER"] as const,
-}));
-
 /** The markers that bear on `metric`, oldest first. */
-export function markersFor(metric: MetricKey, markers: readonly SeriesMarker[] = MARKERS): SeriesMarker[] {
-  return markers.filter((marker) => marker.metrics.includes(metric)).sort((a, b) => a.at.localeCompare(b.at));
+export function markersFor(metric: MetricKey, markers: readonly SeriesMarker[]): SeriesMarker[] {
+  return markers.filter((marker) => marker.metricKeys.includes(metric)).sort((a, b) => a.at.localeCompare(b.at));
 }
 
 /** The markers for the metric whose instant lies inside the range, oldest first. A bucket can reach past the selected dates; a marker outside them is not drawn. */
-export function markersInRange(metric: MetricKey, from: string, to: string, markers: readonly SeriesMarker[] = MARKERS): SeriesMarker[] {
+export function markersInRange(metric: MetricKey, from: string, to: string, markers: readonly SeriesMarker[]): SeriesMarker[] {
   return markersFor(metric, markers).filter((marker) => marker.at >= from && marker.at <= to);
 }
 
 /** The latest marker for the metric inside the range, or null. */
-export function latestMarkerInRange(metric: MetricKey, from: string, to: string, markers: readonly SeriesMarker[] = MARKERS): SeriesMarker | null {
+export function latestMarkerInRange(metric: MetricKey, from: string, to: string, markers: readonly SeriesMarker[]): SeriesMarker | null {
   const inRange = markersInRange(metric, from, to, markers);
   return inRange.length > 0 ? inRange[inRange.length - 1]! : null;
 }
@@ -258,4 +272,18 @@ export function beforeAfter(dayBuckets: readonly TotalBucket[], marker: SeriesMa
     after: { ...after, share: share(after.numerator, after.denominator) },
     tooFew: before.denominator < BEFORE_AFTER_MIN_N || after.denominator < BEFORE_AFTER_MIN_N,
   };
+}
+
+/**
+ * A `datetime-local` value (`2026-10-31T13:13`, seconds optional) read as UTC,
+ * or an ISO instant with its own zone, as an ISO instant; null for anything
+ * else. The shape is checked first: `Date` parses too much on its own.
+ */
+export function utcInstantFromLocalInput(value: string): string | null {
+  const trimmed = value.trim();
+  const local = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d{1,3})?)?$/;
+  const zoned = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d{1,3})?)?(Z|[+-]\d{2}:\d{2})$/;
+  if (!local.test(trimmed) && !zoned.test(trimmed)) return null;
+  const at = new Date(local.test(trimmed) ? `${trimmed}${trimmed.length === 16 ? ":00" : ""}Z` : trimmed);
+  return Number.isNaN(at.getTime()) ? null : at.toISOString();
 }

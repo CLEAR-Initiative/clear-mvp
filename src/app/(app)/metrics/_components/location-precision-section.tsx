@@ -48,6 +48,12 @@ export function LocationPrecisionSection({ filters }: { filters: MetricsFilterVa
   // The page already shows clear-api's range message by the date fields.
   const rangeError = query.error?.data?.code === "BAD_REQUEST";
   const all = result?.status === "ok" ? result.metrics : null;
+  // The changes recorded against location precision in this range (clear-api ADR-0016).
+  const annotations = api.metrics.annotations.useQuery(
+    { from: all?.from, to: all?.to, metric: "DISTRICT_OR_FINER" },
+    { enabled: all !== null, refetchOnWindowFocus: false, retry: (count, err) => !NO_RETRY.has(err.data?.code ?? "") && count < 2 },
+  );
+  const markers = annotations.data?.status === "ok" ? annotations.data.annotations : [];
   const metrics = all ? filterSources(all, sources) : null;
   const utcDay = (iso: string) => format.dateTime(new Date(iso), { dateStyle: "medium", timeZone: "UTC" });
 
@@ -98,7 +104,7 @@ export function LocationPrecisionSection({ filters }: { filters: MetricsFilterVa
               <PrecisionTiles metrics={metrics} />
               <SimpleGrid cols={{ base: 1, lg: 2 }} spacing={16}>
                 <PrecisionBySource metrics={metrics} />
-                <PrecisionWeekly metrics={metrics} />
+                <PrecisionWeekly metrics={metrics} markers={markers} />
               </SimpleGrid>
             </>
           )}

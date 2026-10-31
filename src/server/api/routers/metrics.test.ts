@@ -331,3 +331,65 @@ describe("metrics.definitions and metrics.series", () => {
     });
   });
 });
+
+const ANNOTATION = {
+  id: "ann-1",
+  at: "2026-10-29T18:33:00.000Z",
+  label: "Geocoding inside the model's area",
+  description: null,
+  link: "https://github.com/CLEAR-Initiative/clear-pipeline/pull/140",
+  metricKeys: ["DISTRICT_OR_FINER"],
+};
+
+describe("metrics.annotations, createAnnotation and deleteAnnotation", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+    graphqlFetch.mockReset();
+  });
+
+  it("lists the changes in a range for a metric, as clear-api returns them", async () => {
+    signedInAs("admin");
+    graphqlFetch.mockResolvedValueOnce({ metricAnnotations: [ANNOTATION] });
+    const result = await caller().metrics.annotations({ from: "2026-10-26T00:00:00.000Z", to: "2026-11-01T23:59:59.999Z", metric: "DISTRICT_OR_FINER" });
+    const [query, vars] = graphqlFetch.mock.calls[0] as [string, Record<string, unknown>];
+    expect(query).toContain("metricAnnotations(input: $input) { id at label description link metricKeys }");
+    expect(vars).toEqual({ input: { from: "2026-10-26T00:00:00.000Z", to: "2026-11-01T23:59:59.999Z", metric: "DISTRICT_OR_FINER" } });
+    expect(result).toEqual({ status: "ok", annotations: [ANNOTATION] });
+    graphqlFetch.mockResolvedValueOnce({ metricAnnotations: [] });
+    await caller().metrics.annotations();
+    expect(graphqlFetch.mock.calls[1]![1]).toEqual({ input: {} });
+  });
+
+  it("records and removes a change through clear-api's mutations", async () => {
+    signedInAs("admin");
+    graphqlFetch.mockResolvedValueOnce({ createMetricAnnotation: { ...ANNOTATION, id: "ann-2", label: "Prompt v3" } });
+    const created = await caller().metrics.createAnnotation({ at: "2026-10-31T13:13:00.000Z", label: "Prompt v3", metricKeys: ["DISTRICT_OR_FINER"] });
+    const [mutation, vars] = graphqlFetch.mock.calls[0] as [string, Record<string, unknown>];
+    expect(mutation).toContain("mutation CreateMetricAnnotation($input: CreateMetricAnnotationInput!)");
+    expect(vars).toEqual({ input: { at: "2026-10-31T13:13:00.000Z", label: "Prompt v3", metricKeys: ["DISTRICT_OR_FINER"] } });
+    expect(created).toMatchObject({ id: "ann-2", label: "Prompt v3" });
+    graphqlFetch.mockResolvedValueOnce({ deleteMetricAnnotation: true });
+    expect(await caller().metrics.deleteAnnotation({ id: "ann-2" })).toBe(true);
+    expect(graphqlFetch.mock.calls[1]![1]).toEqual({ id: "ann-2" });
+  });
+
+  it("refuses an incomplete change before calling clear-api, and a non-admin for everything", async () => {
+    signedInAs("admin");
+    await expect(caller().metrics.createAnnotation({ at: "2026-10-31T13:13:00.000Z", label: "  ", metricKeys: ["DISTRICT_OR_FINER"] })).rejects.toMatchObject({ code: "BAD_REQUEST" });
+    await expect(caller().metrics.createAnnotation({ at: "2026-10-31T13:13:00.000Z", label: "x", metricKeys: [] })).rejects.toMatchObject({ code: "BAD_REQUEST" });
+    await expect(caller().metrics.createAnnotation({ at: "2026-10-31T13:13:00.000Z", label: "x", link: "not a url", metricKeys: ["DISTRICT_OR_FINER"] })).rejects.toMatchObject({ code: "BAD_REQUEST" });
+    expect(graphqlFetch).not.toHaveBeenCalled();
+    signedInAs("analyst");
+    await expect(caller().metrics.annotations()).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(caller().metrics.createAnnotation({ at: "2026-10-31T13:13:00.000Z", label: "x", metricKeys: ["DISTRICT_OR_FINER"] })).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(caller().metrics.deleteAnnotation({ id: "ann-1" })).rejects.toMatchObject({ code: "FORBIDDEN" });
+    expect(graphqlFetch).not.toHaveBeenCalled();
+  });
+
+  it("returns the unavailable state while clear-api lacks annotations", async () => {
+    signedInAs("admin");
+    graphqlFetch.mockRejectedValueOnce(new GraphQLRequestError('Cannot query field "metricAnnotations" on type "Query".', "GRAPHQL_VALIDATION_FAILED"));
+    await expect(caller().metrics.annotations({ metric: "DISTRICT_OR_FINER" })).resolves.toEqual({ status: "unavailable" });
+  });
+});

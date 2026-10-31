@@ -3676,6 +3676,27 @@
       },
       "definition": {
         "timeBasis": "Time basis: {timeBasis} · {adr}"
+      },
+      "annotations": {
+        "title": "Changes in range",
+        "add": "Add a change",
+        "when": "When (UTC)",
+        "label": "Label",
+        "link": "Link (optional)",
+        "metrics": "Metrics",
+        "save": "Save",
+        "cancel": "Cancel",
+        "remove": "Remove",
+        "removeNamed": "Remove {label}",
+        "empty": "No change recorded in this range yet.",
+        "unavailable": "This environment's CLEAR API doesn't serve metric annotations yet (clear-api ADR-0016).",
+        "columns": {
+          "when": "When",
+          "label": "Change",
+          "metrics": "Metrics"
+        },
+        "error": "Couldn't load the changes: {message}",
+        "loading": "Loading changes…"
       }
     },
     "precision": {
@@ -3752,12 +3773,7 @@
           "n": "{n, plural, one {# signal} other {# signals}}",
           "partial": "Partial week: still in progress"
         },
-        "markers": {
-          "geocodeInArea": "Geocoding inside the model's area",
-          "arabicGazetteer": "Arabic gazetteer names",
-          "darfur24Locator": "darfur24 located from text",
-          "locationV3Prompt": "Incident site over impact area (prompt v3)"
-        }
+        "severalChanges": "{n, plural, one {# change} other {# changes}}"
       },
       "method": {
         "title": "How location precision is measured",

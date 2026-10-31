@@ -14,7 +14,8 @@ import {
   YAxis,
 } from "recharts";
 import { CardSection } from "~/components/ui";
-import { DEPLOY_MARKERS, EMPHASIS_SOURCE, weekOf, type LocationPrecisionMetrics } from "~/lib/location-precision";
+import { EMPHASIS_SOURCE, weekOf, type LocationPrecisionMetrics } from "~/lib/location-precision";
+import type { SeriesMarker } from "~/lib/metric-series";
 import { AXIS_TICK, ChartTooltipCard, GRID_STROKE } from "./chart-tooltip";
 import { toPct } from "./precision-levels";
 import { useShareFormat } from "./use-share-format";
@@ -49,9 +50,9 @@ function marker(color: string) {
 }
 
 /** Share of each ISO week's located signals at district or finer, one line
- * per source with the text-only feed emphasised, and a marker on the week
- * each geocoding deploy landed in. */
-export function PrecisionWeekly({ metrics }: { metrics: LocationPrecisionMetrics }) {
+ * per source with the text-only feed emphasised, and a marker on each week a
+ * recorded change landed in (several in one week share one label). */
+export function PrecisionWeekly({ metrics, markers = [] }: { metrics: LocationPrecisionMetrics; markers?: SeriesMarker[] }) {
   const t = useTranslations("metrics.precision.weekly");
   const format = useFormatter();
   const pct = useShareFormat();
@@ -74,9 +75,17 @@ export function PrecisionWeekly({ metrics }: { metrics: LocationPrecisionMetrics
     }
     return point;
   });
-  const markers = DEPLOY_MARKERS.map((m) => ({ ...m, weekStart: weekOf(weekStarts, m.at) }))
-    .filter((m): m is typeof m & { weekStart: string } => m.weekStart !== null)
-    .map((m) => ({ ...m, label: data.find((p) => p.weekStart === m.weekStart)!.label }));
+  const markerWeeks = new Map<string, string[]>();
+  for (const marker of markers) {
+    const weekStart = weekOf(weekStarts, marker.at);
+    if (!weekStart) continue;
+    markerWeeks.set(weekStart, [...(markerWeeks.get(weekStart) ?? []), marker.label]);
+  }
+  const markerGroups = [...markerWeeks].map(([weekStart, names]) => ({
+    weekStart,
+    label: data.find((p) => p.weekStart === weekStart)!.label,
+    text: names.length === 1 ? names[0]! : t("severalChanges", { n: names.length }),
+  }));
   const strokeOf = (source: string) => (source === EMPHASIS_SOURCE ? EMPHASIS_STROKE : OTHER_STROKE);
 
   return (
@@ -132,13 +141,13 @@ export function PrecisionWeekly({ metrics }: { metrics: LocationPrecisionMetrics
               tickLine={false}
               axisLine={false}
             />
-            {markers.map((m) => (
+            {markerGroups.map((m) => (
               <ReferenceLine
-                key={m.key}
+                key={m.weekStart}
                 x={m.label}
                 stroke="var(--color-border-dark)"
                 strokeDasharray="3 2"
-                label={{ value: t(`markers.${m.key}`), position: "insideTopLeft", fill: AXIS_TICK.fill, fontSize: 10 }}
+                label={{ value: m.text, position: "insideTopLeft", fill: AXIS_TICK.fill, fontSize: 10 }}
               />
             ))}
             <Tooltip

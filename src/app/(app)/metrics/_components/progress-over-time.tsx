@@ -2,7 +2,22 @@
 
 import { useState } from "react";
 import { useFormatter, useTranslations } from "next-intl";
-import { Alert, Box, Group, SegmentedControl, Select, Stack, Switch, Table, Text, UnstyledButton } from "@mantine/core";
+import {
+  Alert,
+  Anchor,
+  Box,
+  Button,
+  Group,
+  MultiSelect,
+  SegmentedControl,
+  Select,
+  Stack,
+  Switch,
+  Table,
+  Text,
+  TextInput,
+  UnstyledButton,
+} from "@mantine/core";
 import { IconAlertTriangle, IconInfoCircle } from "@tabler/icons-react";
 import { CardSection } from "~/components/ui";
 import { MetricsBodySkeleton } from "~/components/ui/metrics-page-skeleton";
@@ -22,12 +37,14 @@ import {
   markersByBucket,
   markersInRange,
   totalsByBucket,
+  utcInstantFromLocalInput,
   type Granularity,
   type KnownMetricKey,
   type MetricDefinition,
   type MetricKey,
   type MetricSeries,
   type MetricUnit,
+  type SeriesMarker,
   type TotalBucket,
 } from "~/lib/metric-series";
 import { metricsQueryInput, type MetricsFilterValues } from "./metrics-filters";
@@ -121,23 +138,25 @@ const isKnown = (key: MetricKey): key is KnownMetricKey => (KNOWN_METRIC_KEYS as
 const isKnownUnit = (unit: string): unit is MetricUnit => (METRIC_UNITS as readonly string[]).includes(unit);
 
 /**
- * One metric at a time, over time (Exponential #1276, #1277): a metric from
- * clear-api's registry (`metricDefinitions`, ADR-0015), read by day, week or
- * month from `metricSeries` (ADR-0014), with the deploy markers that bear on
- * it and a before-and-after around the latest one. Shares the page's range
- * and country. Names are translated when this app knows the key; otherwise
- * the registry's English name shows, so a new metric appears without a
- * frontend change.
+ * One metric at a time, over time (Exponential #1276, #1277, #1278): a metric
+ * from clear-api's registry (`metricDefinitions`, ADR-0015), read by day, week
+ * or month from `metricSeries` (ADR-0014), with the changes recorded against
+ * it (`metricAnnotations`, ADR-0016) drawn as markers and a before-and-after
+ * around the latest one. Admins record a change from here. Shares the page's
+ * range and country. Names are translated when this app knows the key;
+ * otherwise the registry's English name shows.
  */
 export function ProgressOverTime({ filters }: { filters: MetricsFilterValues }) {
   const t = useTranslations("metrics.progress");
-  const tMarkers = useTranslations("metrics.precision.weekly.markers");
   const format = useFormatter();
   const pct = useShareFormat();
+  const utils = api.useUtils();
   const [chosen, setChosen] = useState<MetricKey>(DEFAULT_METRIC);
   const [granularityChoice, setGranularityChoice] = useState<Granularity | null>(null);
   const [perSource, setPerSource] = useState(true);
   const [table, setTable] = useState(false);
+  const [formOpen, setFormOpen] = useState(false);
+  const [draft, setDraft] = useState<{ when: string; label: string; link: string; metricKeys: string[] }>({ when: "", label: "", link: "", metricKeys: [] });
 
   const registry = api.metrics.definitions.useQuery(undefined, {
     refetchOnWindowFocus: false,
@@ -149,6 +168,10 @@ export function ProgressOverTime({ filters }: { filters: MetricsFilterValues }) 
     : null;
   const metric = definition?.key ?? chosen;
   const nameOf = (d: MetricDefinition) => (isKnown(d.key) ? t(`metrics.${d.key}`) : d.name);
+  const nameOfKey = (key: MetricKey) => {
+    const d = definitions?.find((entry) => entry.key === key);
+    return d ? nameOf(d) : key;
+  };
 
   const input = metricsQueryInput(filters);
   const granularity = granularityChoice ?? defaultGranularity(input.from, input.to);
@@ -165,10 +188,20 @@ export function ProgressOverTime({ filters }: { filters: MetricsFilterValues }) 
   );
   const result = chart.data;
   const series = result?.status === "ok" ? result.series : null;
+  // The changes recorded against this metric inside the range the series covers.
+  const annotations = api.metrics.annotations.useQuery(
+    { from: series?.from, to: series?.to, metric },
+    {
+      enabled: series !== null,
+      refetchOnWindowFocus: false,
+      retry: (count, err) => !NO_RETRY.has(err.data?.code ?? "") && count < 2,
+    },
+  );
+  const markers: SeriesMarker[] = annotations.data?.status === "ok" ? annotations.data.annotations : [];
   // The before-and-after reads whole days over its own window: seven days
   // before the latest marker up to the range's end, whatever the page's
   // range starts on, so a range opened close to the marker is not clipped.
-  const latestMarker = series ? latestMarkerInRange(metric, series.from, series.to) : null;
+  const latestMarker = series ? latestMarkerInRange(metric, series.from, series.to, markers) : null;
   const daily = api.metrics.series.useQuery(
     { ...input, metric, granularity: "DAY", groupBy, from: latestMarker ? comparisonFrom(latestMarker) : undefined, to: series?.to },
     {
@@ -181,19 +214,44 @@ export function ProgressOverTime({ filters }: { filters: MetricsFilterValues }) 
   // The page already shows clear-api's range message by the date fields.
   const rangeError = chart.error?.data?.code === "BAD_REQUEST";
 
+  const invalidateMarkers = () => void utils.metrics.annotations.invalidate();
+  const createMarker = api.metrics.createAnnotation.useMutation({
+    onSuccess: () => {
+      invalidateMarkers();
+      setFormOpen(false);
+      setDraft({ when: "", label: "", link: "", metricKeys: [] });
+    },
+  });
+  const removeMarker = api.metrics.deleteAnnotation.useMutation({ onSuccess: invalidateMarkers });
+  const draftAt = utcInstantFromLocalInput(draft.when);
+  const draftValid = draftAt !== null && draft.label.trim().length > 0 && draft.metricKeys.length > 0;
+  const openForm = () => {
+    setDraft({ when: "", label: "", link: "", metricKeys: [metric] });
+    setFormOpen(true);
+  };
+  const submitMarker = () => {
+    if (!draftValid || !draftAt) return;
+    createMarker.mutate({
+      at: draftAt,
+      label: draft.label.trim(),
+      link: draft.link.trim() || undefined,
+      metricKeys: draft.metricKeys,
+    });
+  };
+
   const axisLabel = (start: string) =>
     granularity === "MONTH"
       ? format.dateTime(new Date(start), { month: "short", year: "2-digit", timeZone: "UTC" })
       : format.dateTime(new Date(start), { day: "numeric", month: "short", timeZone: "UTC" });
   const emphasis = emphasisFor(definition, series?.groups ?? []);
   const view = series ? buildView(series, emphasis, t("allSources"), axisLabel) : null;
-  const markerGroups: MarkerGroup[] =
-    view && series
-      ? [...markersByBucket(view.points, markersInRange(metric, series.from, series.to), granularity)].map(([label, markers]) => ({
-          axisLabel: view.points.find((point) => point.label === label)!.axisLabel,
-          names: markers.map((m) => tMarkers(m.key)),
-        }))
-      : [];
+  const inRange = series ? markersInRange(metric, series.from, series.to, markers) : [];
+  const markerGroups: MarkerGroup[] = view
+    ? [...markersByBucket(view.points, inRange, granularity)].map(([label, group]) => ({
+        axisLabel: view.points.find((point) => point.label === label)!.axisLabel,
+        names: group.map((m) => m.label),
+      }))
+    : [];
 
   const focus = dailySeries ? emphasisFor(definition, dailySeries.groups) : null;
   const dayTotals: TotalBucket[] | null = dailySeries
@@ -205,6 +263,7 @@ export function ProgressOverTime({ filters }: { filters: MetricsFilterValues }) 
   const unit = (n: number) =>
     definition && isKnownUnit(definition.unit) ? t(`units.${definition.unit}`, { n }) : t("units.DEFAULT", { n });
   const utcDay = (iso: string) => format.dateTime(new Date(iso), { dateStyle: "medium", timeZone: "UTC" });
+  const utcInstant = (iso: string) => format.dateTime(new Date(iso), { dateStyle: "medium", timeStyle: "short", timeZone: "UTC" });
   const error = registry.error ?? (rangeError ? null : chart.error);
   const unavailable = registry.data?.status === "unavailable" || result?.status === "unavailable";
 
@@ -264,15 +323,11 @@ export function ProgressOverTime({ filters }: { filters: MetricsFilterValues }) 
           {t("unavailable.body")}
         </Alert>
       ) : rangeError ? null : definition && series && view ? (
-        view.empty ? (
-          <Alert styles={noticeStyles("info")} icon={<IconInfoCircle size={16} />} title={t("empty.title")}>
-            {t("empty.body")}
-          </Alert>
-        ) : (
           <CardSection
             title={nameOf(definition)}
             subtitle={t("card.subtitle", { buckets: t(`bucketsOf.${granularity}`), from: utcDay(series.from), to: utcDay(series.to) })}
             action={
+              view.empty ? undefined : (
               <Group gap={12} wrap="wrap" aria-label={t("legend")}>
                 {view.lines.map((line) => (
                   <Group key={line.key} gap={6} wrap="nowrap">
@@ -308,12 +363,19 @@ export function ProgressOverTime({ filters }: { filters: MetricsFilterValues }) 
                   </Text>
                 </UnstyledButton>
               </Group>
+              )
             }
           >
+            {view.empty ? (
+              <Alert styles={noticeStyles("info")} icon={<IconInfoCircle size={16} />} title={t("empty.title")}>
+                {t("empty.body")}
+              </Alert>
+            ) : (
+              <>
             {comparison && !comparison.tooFew && (
               <Text size="sm" c="var(--color-text-secondary)" mb={8} style={{ fontVariantNumeric: "tabular-nums" }} data-testid="before-after">
                 <Text span fw={600} c="var(--color-text-primary)">
-                  {t("chip.title", { marker: tMarkers(comparison.marker.key), date: utcDay(comparison.marker.at) })}
+                  {t("chip.title", { marker: comparison.marker.label, date: utcDay(comparison.marker.at) })}
                 </Text>{" "}
                 {t("chip.body", {
                   group: focus ?? t("allSources"),
@@ -359,11 +421,145 @@ export function ProgressOverTime({ filters }: { filters: MetricsFilterValues }) 
                 </Table>
               </Box>
             )}
+              </>
+            )}
+            <Box mt={16} component="section" aria-labelledby="progress-changes-title">
+              <Group justify="space-between" align="center" mb={6}>
+                <Text id="progress-changes-title" size="sm" fw={600} c="var(--color-text-primary)">
+                  {t("annotations.title")}
+                </Text>
+                {!formOpen && (
+                  <Button size="compact-xs" variant="light" onClick={openForm}>
+                    {t("annotations.add")}
+                  </Button>
+                )}
+              </Group>
+              {annotations.error ? (
+                <Text size="xs" c="var(--color-critical)" role="alert">
+                  {t("annotations.error", { message: annotations.error.message })}
+                </Text>
+              ) : annotations.data?.status === "unavailable" ? (
+                <Text size="xs" c="var(--color-text-muted)">
+                  {t("annotations.unavailable")}
+                </Text>
+              ) : !annotations.data ? (
+                <Text size="xs" c="var(--color-text-muted)">
+                  {t("annotations.loading")}
+                </Text>
+              ) : inRange.length === 0 && !formOpen ? (
+                <Text size="xs" c="var(--color-text-muted)">
+                  {t("annotations.empty")}
+                </Text>
+              ) : inRange.length > 0 ? (
+                <Table fz="xs" withRowBorders={false} style={{ fontVariantNumeric: "tabular-nums" }}>
+                  <Table.Thead>
+                    <Table.Tr>
+                      <Table.Th>{t("annotations.columns.when")}</Table.Th>
+                      <Table.Th>{t("annotations.columns.label")}</Table.Th>
+                      <Table.Th>{t("annotations.columns.metrics")}</Table.Th>
+                      <Table.Th />
+                    </Table.Tr>
+                  </Table.Thead>
+                  <Table.Tbody>
+                    {inRange.map((marker) => (
+                      <Table.Tr key={marker.id}>
+                        <Table.Td>{utcInstant(marker.at)}</Table.Td>
+                        <Table.Td>
+                          {marker.link ? (
+                            <Anchor href={marker.link} target="_blank" rel="noreferrer" size="xs" c="var(--color-accent)">
+                              {marker.label}
+                            </Anchor>
+                          ) : (
+                            marker.label
+                          )}
+                        </Table.Td>
+                        <Table.Td>{marker.metricKeys.map(nameOfKey).join(", ")}</Table.Td>
+                        <Table.Td ta="right">
+                          <UnstyledButton
+                            onClick={() => removeMarker.mutate({ id: marker.id })}
+                            disabled={removeMarker.isPending}
+                            aria-label={t("annotations.removeNamed", { label: marker.label })}
+                          >
+                            <Text size="xs" fw={600} c="var(--color-critical)">
+                              {t("annotations.remove")}
+                            </Text>
+                          </UnstyledButton>
+                        </Table.Td>
+                      </Table.Tr>
+                    ))}
+                  </Table.Tbody>
+                </Table>
+              ) : null}
+              {formOpen && (
+                <Box
+                  component="form"
+                  mt={8}
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    submitMarker();
+                  }}
+                >
+                  <Group gap={12} align="flex-end" wrap="wrap">
+                    <TextInput
+                      type="datetime-local"
+                      label={t("annotations.when")}
+                      value={draft.when}
+                      onChange={(event) => setDraft({ ...draft, when: event.currentTarget.value })}
+                      size="xs"
+                      required
+                      w={{ base: "100%", xs: 200 }}
+                    />
+                    <TextInput
+                      label={t("annotations.label")}
+                      value={draft.label}
+                      onChange={(event) => setDraft({ ...draft, label: event.currentTarget.value })}
+                      maxLength={120}
+                      size="xs"
+                      required
+                      w={{ base: "100%", xs: 280 }}
+                    />
+                    <TextInput
+                      label={t("annotations.link")}
+                      value={draft.link}
+                      onChange={(event) => setDraft({ ...draft, link: event.currentTarget.value })}
+                      placeholder="https://"
+                      size="xs"
+                      w={{ base: "100%", xs: 260 }}
+                    />
+                    <MultiSelect
+                      label={t("annotations.metrics")}
+                      data={(definitions ?? []).map((d) => ({ value: d.key, label: nameOf(d) }))}
+                      value={draft.metricKeys}
+                      onChange={(metricKeys) => setDraft({ ...draft, metricKeys })}
+                      size="xs"
+                      w={{ base: "100%", xs: 280 }}
+                    />
+                    <Group gap={8} pb={2}>
+                      <Button type="submit" size="compact-xs" disabled={!draftValid || createMarker.isPending} loading={createMarker.isPending}>
+                        {t("annotations.save")}
+                      </Button>
+                      <Button size="compact-xs" variant="subtle" onClick={() => setFormOpen(false)}>
+                        {t("annotations.cancel")}
+                      </Button>
+                    </Group>
+                  </Group>
+                  {createMarker.error && (
+                    <Text size="xs" c="var(--color-critical)" mt={6} role="alert">
+                      {createMarker.error.message}
+                    </Text>
+                  )}
+                </Box>
+              )}
+              {removeMarker.error && (
+                <Text size="xs" c="var(--color-critical)" mt={6} role="alert">
+                  {removeMarker.error.message}
+                </Text>
+              )}
+            </Box>
             <Text size="xs" c="var(--color-text-muted)" mt={12} data-testid="definition">
               {definition.description} {t("definition.timeBasis", { timeBasis: definition.timeBasis, adr: definition.adr })}
             </Text>
           </CardSection>
-        )
       ) : (
         <Box aria-busy aria-label={t("loading")}>
           <MetricsBodySkeleton />
