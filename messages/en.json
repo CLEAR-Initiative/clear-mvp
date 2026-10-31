@@ -3602,6 +3602,98 @@
       "country": "Country",
       "allCountries": "All countries",
       "hint": "Days are UTC. Leave the dates empty for the last 12 weeks."
+    },
+    "precision": {
+      "title": "Location precision",
+      "subtitle": "How finely the pipeline placed the signals it located. Grouping keys on district, so a signal at district or finer can join an event; one left at state or country level always becomes its own event.",
+      "loading": "Loading location precision…",
+      "range": "Showing {from} to {to}",
+      "error": {
+        "title": "Couldn't load location precision"
+      },
+      "unavailable": {
+        "title": "Location precision not deployed yet",
+        "body": "This environment's CLEAR API doesn't serve location precision yet. The section fills in once it does."
+      },
+      "empty": {
+        "title": "No signals located in this range",
+        "body": "Nothing was ingested and located in this range for the selected sources."
+      },
+      "sources": {
+        "label": "Sources",
+        "placeholder": "All sources"
+      },
+      "tiles": {
+        "fine": {
+          "label": "At district or finer"
+        },
+        "emphasis": {
+          "label": "{source} at district or finer"
+        },
+        "noLocation": {
+          "label": "No location"
+        },
+        "corrections": {
+          "label": "Location challenges",
+          "sub": "{open, number} open · {decided, number} decided"
+        },
+        "ofSignals": "{n, number} of {total, number} signals",
+        "none": "none in range"
+      },
+      "levels": {
+        "noLocation": "No location",
+        "country": "Country",
+        "state": "State",
+        "district": "District",
+        "point": "Point"
+      },
+      "bySource": {
+        "title": "Where each source lands",
+        "subtitle": "Signals located in range, by the level of their location, coarse to fine",
+        "legend": "Legend",
+        "tooltip": "{count, number} · {share}",
+        "n": "n = {n, plural, one {# signal} other {# signals}}",
+        "showTable": "Table view",
+        "hideTable": "Hide table",
+        "columns": {
+          "source": "Source",
+          "signals": "Signals",
+          "fine": "District or finer"
+        }
+      },
+      "weekly": {
+        "title": "Weekly trend",
+        "subtitle": "Share of each ISO week's located signals at district or finer, per source",
+        "legend": "Legend",
+        "partial": "partial",
+        "deployMarker": "deploy",
+        "showTable": "Table view",
+        "hideTable": "Hide table",
+        "columns": {
+          "week": "Week"
+        },
+        "tooltip": {
+          "week": "{week} · from {start}",
+          "n": "{n, plural, one {# signal} other {# signals}}",
+          "partial": "Partial week: still in progress"
+        },
+        "markers": {
+          "geocodeInArea": "Geocoding inside the model's area",
+          "arabicGazetteer": "Arabic gazetteer names",
+          "darfur24Locator": "darfur24 located from text"
+        }
+      },
+      "method": {
+        "title": "How location precision is measured",
+        "intro": "Location precision is how finely the pipeline placed the signals it located, read from the location stored on each signal.",
+        "points": {
+          "counted": "A signal counts when a pipeline ingested it (not submitted or filed by hand) and it is neither retracted nor dummy. Each counts once, under the level of its location: none, country, state, district, or a point inside a district.",
+          "level": "The location is the signal's general location, or for a displacement signal its origin. District or finer means district plus point, which is what grouping can use.",
+          "week": "A signal belongs to the ISO week it was located in (processed, else collected), so a pipeline deploy shows up in the week it happened. A re-processed signal moves to the week it was re-located in.",
+          "correctness": "This measures how fine a location is, not whether it is right. Location challenges filed in the range are shown as a proxy until an analyst-checked sample exists.",
+          "definition": "clear-api defines the metric (ADR-0012) and returns counts; this page only turns them into shares."
+        }
+      }
     }
   },
   "usageAnalytics": {

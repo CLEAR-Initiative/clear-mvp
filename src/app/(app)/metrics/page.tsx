@@ -14,6 +14,7 @@ import { WeeklyTrend } from "./_components/weekly-trend";
 import { ExclusionsCard } from "./_components/exclusions-card";
 import { MethodNote } from "./_components/method-note";
 import { MetricsFilters, metricsQueryInput, type MetricsFilterValues } from "./_components/metrics-filters";
+import { LocationPrecisionSection } from "./_components/location-precision-section";
 
 /** An Alert in theme tokens: the semantic colour marks the edge and icon,
  * the text stays in text tokens so it reads in light and dark. */
@@ -96,6 +97,9 @@ export default function MetricsPage() {
             <MetricsBodySkeleton />
           </Box>
         )}
+        <Box mt={32}>
+          <LocationPrecisionSection filters={filters} />
+        </Box>
       </Box>
     </Box>
   );
