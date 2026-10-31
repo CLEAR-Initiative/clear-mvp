@@ -3697,7 +3697,20 @@
         },
         "error": "Impossible de charger les changements : {message}",
         "loading": "Chargement des changements…"
-      }
+      },
+      "overview": {
+        "title": "En un coup d'œil",
+        "subtitle": "Chaque métrique sur les 12 dernières semaines, par semaine, selon le filtre pays. Choisissez-en une pour la voir ci-dessous.",
+        "current": "{week}",
+        "currentPartial": "{week}, à ce jour",
+        "noData": "Pas de données sur les 12 dernières semaines",
+        "loading": "Chargement…",
+        "error": "Chargement impossible",
+        "unavailable": "Non servi par cette API",
+        "select": "Afficher {metric}"
+      },
+      "copyLink": "Copier le lien",
+      "copied": "Lien copié"
     },
     "precision": {
       "title": "Précision de localisation",

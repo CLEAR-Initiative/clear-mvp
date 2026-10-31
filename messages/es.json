@@ -3697,7 +3697,20 @@
         },
         "error": "No se pudieron cargar los cambios: {message}",
         "loading": "Cargando cambios…"
-      }
+      },
+      "overview": {
+        "title": "De un vistazo",
+        "subtitle": "Cada métrica en las últimas 12 semanas, por semana, según el filtro de país. Elija una para verla abajo.",
+        "current": "{week}",
+        "currentPartial": "{week}, hasta ahora",
+        "noData": "Sin datos en las últimas 12 semanas",
+        "loading": "Cargando…",
+        "error": "No se pudo cargar",
+        "unavailable": "No disponible en esta API",
+        "select": "Mostrar {metric}"
+      },
+      "copyLink": "Copiar enlace",
+      "copied": "Enlace copiado"
     },
     "precision": {
       "title": "Precisión de ubicación",

@@ -52,6 +52,13 @@ vi.mock("recharts", async () => {
       React.cloneElement(children, { width: 640, height: 240 }),
   };
 });
+let search = "";
+const replace = vi.fn();
+vi.mock("next/navigation", () => ({
+  usePathname: () => "/metrics",
+  useRouter: () => ({ replace }),
+  useSearchParams: () => new URLSearchParams(search),
+}));
 
 const { default: MetricsPage } = await import("./page");
 
@@ -59,6 +66,8 @@ afterEach(() => {
   cleanup();
   queryState = {};
   precisionState = {};
+  search = "";
+  replace.mockClear();
   tree = TREE;
   useQuery.mockClear();
   usePrecisionQuery.mockClear();
@@ -185,5 +194,19 @@ describe("MetricsPage", () => {
     renderPage();
     expect(screen.getByRole("textbox", { name: "Country" })).toBeDisabled();
     expect(useQuery.mock.calls.at(-1)![0]).toEqual({});
+  });
+
+  it("restores the range and country from the URL and writes a change back to it", () => {
+    search = "from=2026-10-20&to=2026-10-27&location=loc-sdn&metric=DISTRICT_OR_FINER";
+    queryState = { data: { status: "ok", metrics: withShares(NONE_MEASURED) } };
+    renderPage();
+    expect(useQuery.mock.calls.at(-1)![0]).toEqual({
+      from: "2026-10-20T00:00:00.000Z",
+      to: "2026-10-27T23:59:59.999Z",
+      locationId: "loc-sdn",
+    });
+    expect(screen.getByLabelText("From")).toHaveValue("2026-10-20");
+    fireEvent.change(screen.getByLabelText("To"), { target: { value: "2026-10-31" } });
+    expect(replace).toHaveBeenCalledWith("/metrics?from=2026-10-20&to=2026-10-31&location=loc-sdn&metric=DISTRICT_OR_FINER", { scroll: false });
   });
 });

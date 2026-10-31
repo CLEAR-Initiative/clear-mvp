@@ -3697,7 +3697,20 @@
         },
         "error": "Couldn't load the changes: {message}",
         "loading": "Loading changes…"
-      }
+      },
+      "overview": {
+        "title": "At a glance",
+        "subtitle": "Each metric over the last 12 weeks, by week, under the country filter. Pick one to see it below.",
+        "current": "{week}",
+        "currentPartial": "{week}, so far",
+        "noData": "No data in the last 12 weeks",
+        "loading": "Loading…",
+        "error": "Couldn't load",
+        "unavailable": "Not served by this API",
+        "select": "Show {metric}"
+      },
+      "copyLink": "Copy link",
+      "copied": "Link copied"
     },
     "precision": {
       "title": "Location precision",

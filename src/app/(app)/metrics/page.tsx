@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { useFormatter, useTranslations } from "next-intl";
 import { keepPreviousData } from "@tanstack/react-query";
 import { Alert, Box, SimpleGrid, Stack, Text } from "@mantine/core";
@@ -15,6 +15,7 @@ import { ExclusionsCard } from "./_components/exclusions-card";
 import { MethodNote } from "./_components/method-note";
 import { MetricsFilters, metricsQueryInput, type MetricsFilterValues } from "./_components/metrics-filters";
 import { LocationPrecisionSection } from "./_components/location-precision-section";
+import { MetricsUrlProvider, filtersFromUrl, useMetricsUrl } from "./_components/metrics-url-state";
 import { ProgressOverTime } from "./_components/progress-over-time";
 
 /** An Alert in theme tokens: the semantic colour marks the edge and icon,
@@ -40,10 +41,28 @@ const NO_RETRY = new Set(["BAD_REQUEST", "FORBIDDEN", "UNAUTHORIZED"]);
  * only formats it.
  */
 export default function MetricsPage() {
+  // useSearchParams() suspends while the request's search is unknown; the
+  // provider owns the page's URL writes so quick successive changes all land.
+  return (
+    <Suspense fallback={null}>
+      <MetricsUrlProvider>
+        <MetricsPageBody />
+      </MetricsUrlProvider>
+    </Suspense>
+  );
+}
+
+function MetricsPageBody() {
   const t = useTranslations("metrics");
   const format = useFormatter();
   const utcDay = (iso: string) => format.dateTime(new Date(iso), { dateStyle: "medium", timeZone: "UTC" });
-  const [filters, setFilters] = useState<MetricsFilterValues>({ from: "", to: "", locationId: null });
+  // The range and country come from the URL on load and go back to it on every change (#1279).
+  const url = useMetricsUrl();
+  const [filters, setFilters] = useState<MetricsFilterValues>(() => filtersFromUrl(url.state));
+  const changeFilters = (values: MetricsFilterValues) => {
+    setFilters(values);
+    url.update({ from: values.from, to: values.to, locationId: values.locationId });
+  };
   const query = api.metrics.detection.useQuery(metricsQueryInput(filters), {
     refetchOnWindowFocus: false,
     placeholderData: keepPreviousData,
@@ -61,7 +80,7 @@ export default function MetricsPage() {
 
       <Box p={{ base: 16, sm: 24 }}>
         <Box mb={16}>
-          <MetricsFilters values={filters} onChange={setFilters} error={rangeError} />
+          <MetricsFilters values={filters} onChange={changeFilters} error={rangeError} />
         </Box>
         <Box mb={32}>
           <ProgressOverTime filters={filters} />
