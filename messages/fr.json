@@ -3932,6 +3932,113 @@
           "definition": "clear-api définit la métrique (ADR-0012) et renvoie des comptes ; cette page ne fait que les convertir en parts."
         }
       }
+    },
+    "detection": {
+      "title": "Délai de détection"
+    },
+    "agent": {
+      "title": "Agent CLEAR",
+      "scope": "Tous les pays, sur la période ci-dessus. Le filtre pays ne s'applique pas à l'Agent.",
+      "loading": "Chargement des métriques de l'Agent…",
+      "error": {
+        "title": "Impossible de charger les métriques de l'Agent"
+      },
+      "unavailable": {
+        "title": "API des métriques de l'Agent pas encore déployée",
+        "body": "L'API CLEAR de cet environnement ne sert pas encore l'usage de l'Agent. La section se remplira dès que ce sera le cas."
+      },
+      "range": "Affichage du {from} au {to}",
+      "empty": {
+        "title": "Aucun tour de l'Agent sur cette période",
+        "body": "{unrecorded, plural, =0 {Personne n'a rien demandé à l'Agent sur cette période.} one {Une réponse a été écrite mais son usage n'a jamais été enregistré ; rien d'autre ne s'est passé.} other {# réponses ont été écrites mais leur usage n'a jamais été enregistré ; rien d'autre ne s'est passé.}}"
+      },
+      "budget": "Budget {limit} par utilisateur et par jour · {hits, plural, =0 {aucun jour-utilisateur ne l'a atteint} one {# jour-utilisateur l'a atteint} other {# jours-utilisateur l'ont atteint}}.",
+      "unrecorded": "{n, plural, one {# réponse n'a pas d'usage enregistré et n'est pas comptée.} other {# réponses n'ont pas d'usage enregistré et ne sont pas comptées.}}",
+      "tiles": {
+        "spend": {
+          "label": "Dépense",
+          "sub": "{perConversation} par conversation"
+        },
+        "costPerTurn": {
+          "label": "Coût par tour",
+          "sub": "p95 {p95}"
+        },
+        "latency": {
+          "label": "Latence médiane",
+          "sub": "p95 {p95}"
+        },
+        "turns": {
+          "label": "Tours",
+          "sub": "{conversations, plural, one {# conversation} other {# conversations}} · {users, plural, one {# utilisateur} other {# utilisateurs}}"
+        }
+      },
+      "weekly": {
+        "legend": "Légende",
+        "modelChanged": "changement de modèle",
+        "partial": "partielle",
+        "costPerTurnUsd": {
+          "title": "Coût par tour, par semaine",
+          "subtitle": "Coût moyen d'un tour, USD",
+          "series": "Coût par tour"
+        },
+        "latencyMedianMs": {
+          "title": "Latence par semaine",
+          "subtitle": "Secondes médianes jusqu'à une réponse",
+          "series": "Latence médiane"
+        },
+        "inputTokensPerTurn": {
+          "title": "Tokens d'entrée par semaine",
+          "subtitle": "Tokens d'entrée moyens par tour, toutes étapes cumulées",
+          "series": "Tokens d'entrée par tour"
+        },
+        "tooltip": {
+          "week": "{week} · à partir du {start}",
+          "n": "n = {n, plural, one {# tour} other {# tours}}",
+          "models": "Modèles : {models}",
+          "modelChanged": "Changement de modèle cette semaine",
+          "partial": "Semaine partielle : en cours"
+        }
+      },
+      "breakdown": {
+        "title": "À quoi sert l'Agent",
+        "subtitle": "{perTurn} appels d'outils par tour · {many, plural, one {# tour} other {# tours}} avec plus de 5 · {none, plural, one {# tour} other {# tours}} sans aucun",
+        "tools": "Outils",
+        "pages": "Demandé depuis",
+        "models": "Modèles",
+        "empty": "Rien sur cette période",
+        "unknown": "inconnu",
+        "other": "{n, plural, one {# autre} other {# autres}}",
+        "columns": {
+          "tool": "Outil",
+          "calls": "Appels",
+          "turns": "Tours",
+          "page": "Page",
+          "model": "Modèle",
+          "cost": "Coût"
+        }
+      },
+      "questions": {
+        "title": "Questions récentes",
+        "subtitle": "Ce que les gens ont demandé, du plus récent au plus ancien, sans l'auteur",
+        "show": "Afficher les {n} dernières",
+        "audit": "Charger les questions est une lecture administrateur de ces conversations et est journalisé comme tel.",
+        "loading": "Chargement…",
+        "unavailable": "L'API CLEAR de cet environnement ne sert pas encore les questions.",
+        "none": "Aucune question sur cette période.",
+        "unknownPage": "sans page"
+      },
+      "method": {
+        "title": "Comment c'est mesuré",
+        "intro": "L'usage de l'Agent CLEAR, tel que clear-api l'enregistre à chaque tour.",
+        "points": {
+          "turn": "Un tour est une réponse donnée par l'Agent, avec le modèle, les tokens, le coût et la latence enregistrés pour elle.",
+          "inRange": "Un tour appartient au jour et à la semaine où son usage a été enregistré, la même horloge que le budget quotidien.",
+          "tokens": "Les tokens d'entrée sont cumulés sur chaque étape de la boucle d'outils d'un tour ; un tour peut donc en déclarer bien plus qu'une seule requête n'en contient.",
+          "pages": "La page d'origine d'une question est la première partie de la route depuis laquelle elle a été posée ; les identifiants sont omis.",
+          "questions": "Le texte des questions n'est lu que lorsque vous demandez à le voir, et cette lecture est journalisée comme une lecture administrateur de ces conversations.",
+          "definition": "La définition complète est l'ADR-0013 de clear-api, « Agent usage metrics »."
+        }
+      }
     }
   },
   "usageAnalytics": {

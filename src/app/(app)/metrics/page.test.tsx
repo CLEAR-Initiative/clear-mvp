@@ -5,6 +5,7 @@ import { MantineProvider } from "@mantine/core";
 import { NextIntlClientProvider } from "next-intl";
 import enMessages from "../../../../messages/en.json";
 import { withShares, type DetectionMetricsResult, type GqlDetectionMetrics } from "~/lib/detection-metrics";
+import type { AgentMetrics, AgentMetricsResult, AgentQuestionsResult } from "~/lib/agent-metrics";
 
 /** The /metrics page's states, with metrics.detection stubbed. */
 
@@ -20,6 +21,13 @@ let precisionState: { data?: unknown; error?: { message: string; data?: { code: 
 const usePrecisionQuery = vi.fn((..._args: unknown[]) => ({ isFetching: false, error: null, ...precisionState }));
 // "Progress over time" has its own query too; left loading here, its own tests cover its states.
 const useSeriesQuery = vi.fn((..._args: unknown[]) => ({ isFetching: false, error: null }));
+let agentState: {
+  data?: AgentMetricsResult;
+  error?: { message: string; data?: { code: string } } | null;
+} = {};
+const useAgentQuery = vi.fn((..._args: unknown[]) => ({ isFetching: false, error: null, ...agentState }));
+let questionsState: { data?: AgentQuestionsResult; error?: { message: string } | null; isPending?: boolean } = {};
+const useQuestionsQuery = vi.fn((..._args: unknown[]) => ({ isPending: false, error: null, ...questionsState }));
 vi.mock("~/trpc/react", () => ({
   api: {
     useUtils: () => ({ metrics: { annotations: { invalidate: vi.fn() } } }),
@@ -31,6 +39,8 @@ vi.mock("~/trpc/react", () => ({
       annotations: { useQuery: (...args: unknown[]) => useSeriesQuery(...args) },
       createAnnotation: { useMutation: () => ({ mutate: vi.fn(), isPending: false, error: null }) },
       deleteAnnotation: { useMutation: () => ({ mutate: vi.fn(), isPending: false, error: null }) },
+      agent: { useQuery: (...args: unknown[]) => useAgentQuery(...args) },
+      agentQuestions: { useQuery: (...args: unknown[]) => useQuestionsQuery(...args) },
     },
   },
 }));
@@ -66,11 +76,15 @@ afterEach(() => {
   cleanup();
   queryState = {};
   precisionState = {};
+  agentState = {};
+  questionsState = {};
   search = "";
   replace.mockClear();
   tree = TREE;
   useQuery.mockClear();
   usePrecisionQuery.mockClear();
+  useAgentQuery.mockClear();
+  useQuestionsQuery.mockClear();
 });
 
 function renderPage() {
@@ -208,5 +222,149 @@ describe("MetricsPage", () => {
     expect(screen.getByLabelText("From")).toHaveValue("2026-10-20");
     fireEvent.change(screen.getByLabelText("To"), { target: { value: "2026-10-31" } });
     expect(replace).toHaveBeenCalledWith("/metrics?from=2026-10-20&to=2026-10-31&location=loc-sdn&metric=DISTRICT_OR_FINER", { scroll: false });
+  });
+});
+
+const AGENT: AgentMetrics = {
+  from: "2026-07-20T00:00:00.000Z",
+  to: "2026-10-14T12:00:00.000Z",
+  turns: 34,
+  turnsUnrecorded: 1,
+  conversations: 14,
+  newConversations: 12,
+  users: 5,
+  totalCostUsd: 7.51,
+  costPerTurnUsd: 0.2208,
+  costPerTurnP95Usd: 0.52,
+  costPerConversationUsd: 0.536,
+  latencyMedianMs: 26513,
+  latencyP95Ms: 45000,
+  totalInputTokens: 3194000,
+  totalOutputTokens: 112000,
+  inputTokensPerTurn: 93955,
+  outputTokensPerTurn: 3291,
+  toolCallsPerTurn: 3.4,
+  turnsWithoutTools: 3,
+  turnsWithManyToolCalls: 4,
+  budgetLimitUsd: 2,
+  budgetHits: 0,
+  byModel: [{ model: "anthropic/claude-sonnet-5-5", turns: 34, costUsd: 7.51, inputTokens: 3194000, outputTokens: 112000 }],
+  byTool: [
+    { tool: "clear_list_events", calls: 30, turns: 22 },
+    { tool: "clear_find_location", calls: 25, turns: 9 },
+  ],
+  byPage: [
+    { page: "/dashboard", turns: 14 },
+    { page: "unknown", turns: 2 },
+  ],
+  weekly: [
+    {
+      isoWeek: "2026-W41",
+      weekStart: "2026-10-05T00:00:00.000Z",
+      isPartial: false,
+      turns: 10,
+      conversations: 4,
+      users: 3,
+      costUsd: 2.29,
+      costPerTurnUsd: 0.229,
+      latencyMedianMs: 25000,
+      inputTokensPerTurn: 90000,
+      toolCallsPerTurn: 3.1,
+      models: ["anthropic/claude-sonnet-5-5"],
+    },
+    {
+      isoWeek: "2026-W42",
+      weekStart: "2026-10-12T00:00:00.000Z",
+      isPartial: true,
+      turns: 4,
+      conversations: 2,
+      users: 2,
+      costUsd: 0.5,
+      costPerTurnUsd: 0.125,
+      latencyMedianMs: 12000,
+      inputTokensPerTurn: 40000,
+      toolCallsPerTurn: 2,
+      models: ["anthropic/claude-haiku-5-5"],
+    },
+  ],
+};
+
+describe("MetricsPage, CLEAR Agent section", () => {
+  it("asks for the Agent metrics with the dates only, never the country", async () => {
+    queryState = { data: { status: "ok", metrics: withShares(NONE_MEASURED) } };
+    agentState = { data: { status: "ok", metrics: AGENT } };
+    renderPage();
+    expect(useAgentQuery.mock.calls.at(-1)![0]).toEqual({});
+    fireEvent.change(screen.getByLabelText("From"), { target: { value: "2026-01-05" } });
+    fireEvent.click(screen.getByRole("textbox", { name: "Country" }));
+    fireEvent.click(await screen.findByRole("option", { name: "Sudan" }));
+    expect(useAgentQuery.mock.calls.at(-1)![0]).toEqual({ from: "2026-01-05T00:00:00.000Z" });
+    expect(useQuery.mock.calls.at(-1)![0]).toEqual({ from: "2026-01-05T00:00:00.000Z", locationId: "loc-sdn" });
+  });
+
+  it("shows the tiles, the three weekly charts, the breakdowns and the model change", () => {
+    queryState = { data: { status: "ok", metrics: withShares(NONE_MEASURED) } };
+    agentState = { data: { status: "ok", metrics: AGENT } };
+    renderPage();
+    expect(screen.getByRole("heading", { name: "CLEAR Agent" })).toBeInTheDocument();
+    expect(screen.getByText("Cost per turn")).toBeInTheDocument();
+    expect(screen.getByText("$0.221")).toBeInTheDocument();
+    expect(screen.getByText("Median latency")).toBeInTheDocument();
+    expect(screen.getByText("26.5 sec")).toBeInTheDocument();
+    expect(screen.getByText("14 conversations · 5 users")).toBeInTheDocument();
+    expect(screen.getByText("Cost per turn by week")).toBeInTheDocument();
+    expect(screen.getByText("Latency by week")).toBeInTheDocument();
+    expect(screen.getByText("Input tokens by week")).toBeInTheDocument();
+    // W42 switched to Haiku: every chart carries the legend entry.
+    expect(screen.getAllByText("model changed")).toHaveLength(3);
+    expect(screen.getByText("What the Agent is used for")).toBeInTheDocument();
+    expect(screen.getByText("clear_find_location")).toBeInTheDocument();
+    expect(
+      screen.getByText("Budget $2.00 per user per day · no user-day reached it. 1 answer has no usage record and is not counted."),
+    ).toBeInTheDocument();
+  });
+
+  it("loads the recent questions only when asked, and lists them without a user", () => {
+    queryState = { data: { status: "ok", metrics: withShares(NONE_MEASURED) } };
+    agentState = { data: { status: "ok", metrics: AGENT } };
+    questionsState = {
+      data: {
+        status: "ok",
+        from: AGENT.from,
+        to: AGENT.to,
+        questions: [{ askedAt: "2026-10-06T09:00:00.000Z", question: "What's new in the last 24 hours?", page: "/dashboard" }],
+      },
+    };
+    renderPage();
+    expect(useQuestionsQuery.mock.calls.at(-1)![1]).toMatchObject({ enabled: false });
+    expect(screen.queryByText("What's new in the last 24 hours?")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Show the last 20" }));
+    expect(useQuestionsQuery.mock.calls.at(-1)![0]).toEqual({ first: 20 });
+    expect(useQuestionsQuery.mock.calls.at(-1)![1]).toMatchObject({ enabled: true });
+    expect(screen.getByText("What's new in the last 24 hours?")).toBeInTheDocument();
+  });
+
+  it("with no turns, says so and still explains the method", () => {
+    queryState = { data: { status: "ok", metrics: withShares(NONE_MEASURED) } };
+    agentState = { data: { status: "ok", metrics: { ...AGENT, turns: 0, turnsUnrecorded: 0, weekly: [] } } };
+    renderPage();
+    expect(screen.getByText("No Agent turns in this range")).toBeInTheDocument();
+    expect(screen.queryByText("Cost per turn by week")).not.toBeInTheDocument();
+    expect(screen.getAllByText("How this is measured")).toHaveLength(2);
+  });
+
+  it("says the Agent metrics API is not deployed yet, apart from the detection metrics", () => {
+    queryState = { data: { status: "ok", metrics: withShares(NONE_MEASURED) } };
+    agentState = { data: { status: "unavailable" } };
+    renderPage();
+    expect(screen.getByText("Agent metrics API not deployed yet")).toBeInTheDocument();
+    expect(screen.queryByText("Metrics API not deployed yet")).not.toBeInTheDocument();
+  });
+
+  it("hides the Agent section while the dates are refused, since the filters show the error", () => {
+    queryState = { error: { message: "The range can span at most 364 days", data: { code: "BAD_REQUEST" } } };
+    renderPage();
+    expect(screen.queryByRole("heading", { name: "CLEAR Agent" })).not.toBeInTheDocument();
+    expect(useAgentQuery).not.toHaveBeenCalled();
   });
 });

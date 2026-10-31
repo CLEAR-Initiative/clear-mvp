@@ -13,32 +13,27 @@ import { TtdHistogram } from "./_components/ttd-histogram";
 import { WeeklyTrend } from "./_components/weekly-trend";
 import { ExclusionsCard } from "./_components/exclusions-card";
 import { MethodNote } from "./_components/method-note";
-import { MetricsFilters, metricsQueryInput, type MetricsFilterValues } from "./_components/metrics-filters";
+import {
+  agentQueryInput,
+  MetricsFilters,
+  metricsQueryInput,
+  type MetricsFilterValues,
+} from "./_components/metrics-filters";
 import { LocationPrecisionSection } from "./_components/location-precision-section";
 import { MetricsUrlProvider, filtersFromUrl, useMetricsUrl } from "./_components/metrics-url-state";
 import { ProgressOverTime } from "./_components/progress-over-time";
-
-/** An Alert in theme tokens: the semantic colour marks the edge and icon,
- * the text stays in text tokens so it reads in light and dark. */
-function noticeStyles(tone: "critical" | "warning" | "info") {
-  return {
-    root: {
-      background: `var(--color-${tone}-light)`,
-      borderInlineStart: `3px solid var(--color-${tone})`,
-    },
-    icon: { color: `var(--color-${tone})` },
-    title: { color: "var(--color-text-primary)" },
-    message: { color: "var(--color-text-secondary)" },
-  };
-}
+import { AgentSection } from "./_components/agent-section";
+import { noticeStyles } from "./_components/notice-styles";
 
 const NO_RETRY = new Set(["BAD_REQUEST", "FORBIDDEN", "UNAUTHORIZED"]);
 
 /**
  * Admin-only platform metrics: one metric over time by day, week or month
  * (clear-api ADR-0014), then time to detection (ADR-0011) and location
- * precision (ADR-0012) in full. clear-api decides what counts; this page
- * only formats it.
+ * precision (ADR-0012) in full, and the CLEAR Agent's usage (ADR-0013), what
+ * it costs and how fast it answers. clear-api decides what counts; this page
+ * only formats it. One date range drives every section; the country filter
+ * does not apply to the Agent.
  */
 export default function MetricsPage() {
   // useSearchParams() suspends while the request's search is unknown; the
@@ -85,45 +80,55 @@ function MetricsPageBody() {
         <Box mb={32}>
           <ProgressOverTime filters={filters} />
         </Box>
-        {rangeError ? null : query.error ? (
-          <Alert styles={noticeStyles("critical")} icon={<IconAlertTriangle size={16} />} title={t("error.title")}>
-            {query.error.message}
-          </Alert>
-        ) : result?.status === "unavailable" ? (
-          <Alert styles={noticeStyles("warning")} icon={<IconAlertTriangle size={16} />} title={t("unavailable.title")}>
-            {t("unavailable.body")}
-          </Alert>
-        ) : result?.status === "ok" ? (
-          <Stack gap={16}>
-            <Text size="xs" c="var(--color-text-muted)">
-              {t("range", { from: utcDay(result.metrics.from), to: utcDay(result.metrics.to) })}
-            </Text>
-            {result.metrics.counted === 0 ? (
-              <Alert styles={noticeStyles("info")} icon={<IconInfoCircle size={16} />} title={t("empty.title")}>
-                {t("empty.body", { inRange: result.metrics.eventsInRange })}
-              </Alert>
-            ) : (
-              <>
-                <StatTiles metrics={result.metrics} />
-                <SimpleGrid cols={{ base: 1, lg: 2 }} spacing={16}>
-                  <TtdHistogram metrics={result.metrics} />
-                  <WeeklyTrend metrics={result.metrics} />
-                </SimpleGrid>
-              </>
-            )}
-            <SimpleGrid cols={{ base: 1, lg: 2 }} spacing={16}>
-              <ExclusionsCard metrics={result.metrics} />
-              <MethodNote />
-            </SimpleGrid>
-          </Stack>
-        ) : (
-          <Box aria-busy aria-label={t("loading")}>
-            <MetricsBodySkeleton />
-          </Box>
-        )}
+        <Stack gap={12} component="section" aria-labelledby="metrics-detection-heading">
+          <Text id="metrics-detection-heading" component="h2" fw={600} c="var(--color-text-primary)" style={{ fontSize: 16 }}>
+            {t("detection.title")}
+          </Text>
+          {rangeError ? null : query.error ? (
+            <Alert styles={noticeStyles("critical")} icon={<IconAlertTriangle size={16} />} title={t("error.title")}>
+              {query.error.message}
+            </Alert>
+          ) : result?.status === "unavailable" ? (
+            <Alert styles={noticeStyles("warning")} icon={<IconAlertTriangle size={16} />} title={t("unavailable.title")}>
+              {t("unavailable.body")}
+            </Alert>
+          ) : result?.status === "ok" ? (
+            <Stack gap={16}>
+              <Text size="xs" c="var(--color-text-muted)">
+                {t("range", { from: utcDay(result.metrics.from), to: utcDay(result.metrics.to) })}
+              </Text>
+              {result.metrics.counted === 0 ? (
+                <Alert styles={noticeStyles("info")} icon={<IconInfoCircle size={16} />} title={t("empty.title")}>
+                  {t("empty.body", { inRange: result.metrics.eventsInRange })}
+                </Alert>
+              ) : (
+                <>
+                  <StatTiles metrics={result.metrics} />
+                  <SimpleGrid cols={{ base: 1, lg: 2 }} spacing={16}>
+                    <TtdHistogram metrics={result.metrics} />
+                    <WeeklyTrend metrics={result.metrics} />
+                  </SimpleGrid>
+                </>
+              )}
+              <SimpleGrid cols={{ base: 1, lg: 2 }} spacing={16}>
+                <ExclusionsCard metrics={result.metrics} />
+                <MethodNote />
+              </SimpleGrid>
+            </Stack>
+          ) : (
+            <Box aria-busy aria-label={t("loading")}>
+              <MetricsBodySkeleton />
+            </Box>
+          )}
+        </Stack>
         <Box mt={32}>
           <LocationPrecisionSection filters={filters} />
         </Box>
+        {rangeError ? null : (
+          <Box mt={32}>
+            <AgentSection input={agentQueryInput(filters)} />
+          </Box>
+        )}
       </Box>
     </Box>
   );

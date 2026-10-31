@@ -393,3 +393,115 @@ describe("metrics.annotations, createAnnotation and deleteAnnotation", () => {
     await expect(caller().metrics.annotations({ metric: "DISTRICT_OR_FINER" })).resolves.toEqual({ status: "unavailable" });
   });
 });
+
+const AGENT = {
+  from: "2026-07-20T00:00:00.000Z",
+  to: "2026-10-14T12:00:00.000Z",
+  turns: 34,
+  turnsUnrecorded: 1,
+  conversations: 14,
+  newConversations: 12,
+  users: 5,
+  totalCostUsd: 7.51,
+  costPerTurnUsd: 0.22,
+  costPerTurnP95Usd: 0.52,
+  costPerConversationUsd: 0.54,
+  latencyMedianMs: 26000,
+  latencyP95Ms: 45000,
+  totalInputTokens: 3194000,
+  totalOutputTokens: 112000,
+  inputTokensPerTurn: 93955,
+  outputTokensPerTurn: 3291,
+  toolCallsPerTurn: 3.4,
+  turnsWithoutTools: 3,
+  turnsWithManyToolCalls: 4,
+  budgetLimitUsd: 2,
+  budgetHits: 0,
+  byModel: [{ model: "anthropic/claude-sonnet-5-5", turns: 34, costUsd: 7.51, inputTokens: 3194000, outputTokens: 112000 }],
+  byTool: [{ tool: "clear_list_events", calls: 30, turns: 22 }],
+  byPage: [{ page: "/dashboard", turns: 14 }],
+  weekly: [
+    {
+      isoWeek: "2026-W41",
+      weekStart: "2026-10-05T00:00:00.000Z",
+      isPartial: false,
+      turns: 10,
+      conversations: 4,
+      users: 3,
+      costUsd: 2.29,
+      costPerTurnUsd: 0.229,
+      latencyMedianMs: 25000,
+      inputTokensPerTurn: 90000,
+      toolCallsPerTurn: 3.1,
+      models: ["anthropic/claude-sonnet-5-5"],
+    },
+  ],
+};
+
+describe("metrics.agent", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+    graphqlFetch.mockReset();
+  });
+
+  it("forwards the dates only, never a location, and returns clear-api's payload as is", async () => {
+    signedInAs("admin");
+    graphqlFetch.mockResolvedValueOnce({ agentMetrics: AGENT });
+    const result = await caller().metrics.agent({ from: "2026-07-01T00:00:00.000Z", to: "2026-09-30T23:59:59.999Z" });
+    const [query, vars, headers] = graphqlFetch.mock.calls[0] as [string, Record<string, unknown>, Record<string, string>];
+    expect(query).toContain("query AgentMetrics($input: AgentMetricsInput)");
+    expect(query).toContain("agentMetrics(input: $input)");
+    expect(query).not.toContain("recentQuestions");
+    expect(vars).toEqual({ input: { from: "2026-07-01T00:00:00.000Z", to: "2026-09-30T23:59:59.999Z" } });
+    expect(headers).toEqual({ Cookie: "better-auth.session_token=x" });
+    expect(result).toEqual({ status: "ok", metrics: AGENT });
+  });
+
+  it("leaves out what was not given, so clear-api applies its default range", async () => {
+    signedInAs("admin");
+    graphqlFetch.mockResolvedValueOnce({ agentMetrics: AGENT });
+    await caller().metrics.agent();
+    expect(graphqlFetch.mock.calls[0]![1]).toEqual({ input: {} });
+  });
+
+  it("rejects a non-admin without calling clear-api", async () => {
+    for (const role of ["analyst", "viewer", "pending"]) {
+      signedInAs(role);
+      await expect(caller().metrics.agent()).rejects.toMatchObject({ code: "FORBIDDEN" });
+      await expect(caller().metrics.agentQuestions({})).rejects.toMatchObject({ code: "FORBIDDEN" });
+    }
+    expect(graphqlFetch).not.toHaveBeenCalled();
+  });
+
+  it("returns the unavailable state while clear-api lacks the field", async () => {
+    signedInAs("admin");
+    graphqlFetch.mockRejectedValueOnce(
+      new GraphQLRequestError('Cannot query field "agentMetrics" on type "Query".', "GRAPHQL_VALIDATION_FAILED"),
+    );
+    await expect(caller().metrics.agent()).resolves.toEqual({ status: "unavailable" });
+    graphqlFetch.mockRejectedValueOnce(
+      new GraphQLRequestError('Cannot query field "agentMetrics" on type "Query".', "GRAPHQL_VALIDATION_FAILED"),
+    );
+    await expect(caller().metrics.agentQuestions({})).resolves.toEqual({ status: "unavailable" });
+  });
+
+  it("asks for the questions in their own query, with the count, and returns them with the range", async () => {
+    signedInAs("admin");
+    const questions = [{ askedAt: "2026-10-06T09:00:00.000Z", question: "What's new in the last 24 hours?", page: "/dashboard" }];
+    graphqlFetch.mockResolvedValueOnce({ agentMetrics: { from: AGENT.from, to: AGENT.to, recentQuestions: questions } });
+    const result = await caller().metrics.agentQuestions({ from: "2026-07-01T00:00:00.000Z", first: 5 });
+    const [query, vars] = graphqlFetch.mock.calls[0] as [string, Record<string, unknown>];
+    expect(query).toContain("recentQuestions(first: $first)");
+    expect(vars).toEqual({ input: { from: "2026-07-01T00:00:00.000Z" }, first: 5 });
+    expect(result).toEqual({ status: "ok", from: AGENT.from, to: AGENT.to, questions });
+  });
+
+  it("defaults to 20 questions and refuses more than 50", async () => {
+    signedInAs("admin");
+    graphqlFetch.mockResolvedValueOnce({ agentMetrics: { from: AGENT.from, to: AGENT.to, recentQuestions: [] } });
+    await caller().metrics.agentQuestions({});
+    expect(graphqlFetch.mock.calls[0]![1]).toEqual({ input: {}, first: 20 });
+    await expect(caller().metrics.agentQuestions({ first: 51 })).rejects.toMatchObject({ code: "BAD_REQUEST" });
+  });
+});

@@ -36,6 +36,19 @@ A user's daily allowance of **CLEAR Agent** usage. Once spent, the CLEAR Agent d
 turns until it resets.
 _Avoid_: "quota", "credits", "rate limit" (a rate limit is about bursts, the budget is about spend).
 
+**Agent metrics**:
+The **CLEAR Agent** section of the admin `/metrics` page: spend, cost per **Turn**, latency,
+tokens, tool calls, and what people ask, by ISO week, with a marker where the answering model
+changed. clear-api defines and computes it (`agentMetrics`, clear-api ADR-0013); this app only
+charts it. Question text is shown only on an explicit click, and clear-api logs that read.
+_Avoid_: "usage dashboard", "cost page" (it is one section of `/metrics`).
+
+**Turn**:
+One answer the **CLEAR Agent** gave, with the model, tokens, cost and latency recorded for it.
+The unit of the **Agent budget** and of **Agent metrics**; clear-api's term.
+_Avoid_: "request" (one turn makes several model requests), "message" (a turn is the answer plus
+its usage).
+
 **Current view**:
 What the user is looking at when they send a turn — the page, the Event/Signal/Crisis on
 screen, and the active map or detection filters — expressed as identifiers and filters, never
