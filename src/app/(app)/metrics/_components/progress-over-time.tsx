@@ -323,15 +323,11 @@ export function ProgressOverTime({ filters }: { filters: MetricsFilterValues }) 
           {t("unavailable.body")}
         </Alert>
       ) : rangeError ? null : definition && series && view ? (
-        view.empty ? (
-          <Alert styles={noticeStyles("info")} icon={<IconInfoCircle size={16} />} title={t("empty.title")}>
-            {t("empty.body")}
-          </Alert>
-        ) : (
           <CardSection
             title={nameOf(definition)}
             subtitle={t("card.subtitle", { buckets: t(`bucketsOf.${granularity}`), from: utcDay(series.from), to: utcDay(series.to) })}
             action={
+              view.empty ? undefined : (
               <Group gap={12} wrap="wrap" aria-label={t("legend")}>
                 {view.lines.map((line) => (
                   <Group key={line.key} gap={6} wrap="nowrap">
@@ -367,8 +363,15 @@ export function ProgressOverTime({ filters }: { filters: MetricsFilterValues }) 
                   </Text>
                 </UnstyledButton>
               </Group>
+              )
             }
           >
+            {view.empty ? (
+              <Alert styles={noticeStyles("info")} icon={<IconInfoCircle size={16} />} title={t("empty.title")}>
+                {t("empty.body")}
+              </Alert>
+            ) : (
+              <>
             {comparison && !comparison.tooFew && (
               <Text size="sm" c="var(--color-text-secondary)" mb={8} style={{ fontVariantNumeric: "tabular-nums" }} data-testid="before-after">
                 <Text span fw={600} c="var(--color-text-primary)">
@@ -418,6 +421,8 @@ export function ProgressOverTime({ filters }: { filters: MetricsFilterValues }) 
                 </Table>
               </Box>
             )}
+              </>
+            )}
             <Box mt={16} component="section" aria-labelledby="progress-changes-title">
               <Group justify="space-between" align="center" mb={6}>
                 <Text id="progress-changes-title" size="sm" fw={600} c="var(--color-text-primary)">
@@ -429,9 +434,17 @@ export function ProgressOverTime({ filters }: { filters: MetricsFilterValues }) 
                   </Button>
                 )}
               </Group>
-              {annotations.data?.status === "unavailable" ? (
+              {annotations.error ? (
+                <Text size="xs" c="var(--color-critical)" role="alert">
+                  {t("annotations.error", { message: annotations.error.message })}
+                </Text>
+              ) : annotations.data?.status === "unavailable" ? (
                 <Text size="xs" c="var(--color-text-muted)">
                   {t("annotations.unavailable")}
+                </Text>
+              ) : !annotations.data ? (
+                <Text size="xs" c="var(--color-text-muted)">
+                  {t("annotations.loading")}
                 </Text>
               ) : inRange.length === 0 && !formOpen ? (
                 <Text size="xs" c="var(--color-text-muted)">
@@ -547,7 +560,6 @@ export function ProgressOverTime({ filters }: { filters: MetricsFilterValues }) 
               {definition.description} {t("definition.timeBasis", { timeBasis: definition.timeBasis, adr: definition.adr })}
             </Text>
           </CardSection>
-        )
       ) : (
         <Box aria-busy aria-label={t("loading")}>
           <MetricsBodySkeleton />

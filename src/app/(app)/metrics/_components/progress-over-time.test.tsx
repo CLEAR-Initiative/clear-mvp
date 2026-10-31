@@ -231,3 +231,26 @@ describe("ProgressOverTime", () => {
     expect(screen.getByText("Metrics are for platform admins")).toBeInTheDocument();
   });
 });
+
+describe("ProgressOverTime, after review", () => {
+  it("keeps the changes panel and the definition when the metric has no measured data", () => {
+    const empty = { ...daily(27, 28), buckets: daily(27, 28).buckets.map((b) => ({ ...b, numerator: 0, denominator: 0 })) };
+    seriesStates["DISTRICT_OR_FINER:DAY"] = { data: { status: "ok", series: empty } };
+    annotationsState = { data: { status: "ok", annotations: [] } };
+    wrap(<ProgressOverTime filters={filters("2026-10-27", "2026-10-28")} />);
+    expect(screen.getByText("Nothing to plot in this range")).toBeInTheDocument();
+    expect(screen.getByText("Add a change")).toBeInTheDocument();
+    expect(screen.getByText("No change recorded in this range yet.")).toBeInTheDocument();
+    expect(screen.getByTestId("definition")).toBeInTheDocument();
+    expect(screen.queryByText("Table view")).not.toBeInTheDocument();
+  });
+
+  it("says when the changes could not be read, instead of claiming there are none", () => {
+    seriesStates["DISTRICT_OR_FINER:DAY"] = { data: { status: "ok", series: daily(27, 30) } };
+    annotationsState = { error: { message: "Metrics are for platform admins", data: { code: "FORBIDDEN" } } };
+    wrap(<ProgressOverTime filters={filters("2026-10-27", "2026-10-30")} />);
+    expect(screen.getByText("Couldn't load the changes: Metrics are for platform admins")).toBeInTheDocument();
+    expect(screen.queryByText("No change recorded in this range yet.")).not.toBeInTheDocument();
+  });
+});
+

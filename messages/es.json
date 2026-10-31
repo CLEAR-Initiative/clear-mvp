@@ -3694,7 +3694,9 @@
           "when": "Cuándo",
           "label": "Cambio",
           "metrics": "Métricas"
-        }
+        },
+        "error": "No se pudieron cargar los cambios: {message}",
+        "loading": "Cargando cambios…"
       }
     },
     "precision": {
