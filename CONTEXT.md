@@ -80,6 +80,8 @@ _Avoid_: using Alert for any raw Signal; "notification" (product push/tagging is
 
 **Time to detection** (TTD): defined by clear-api (its `CONTEXT.md` "Time to detection" entry and ADR-0011), shown read-only on the admin `/metrics` page, never recomputed here.
 
+**Progress over time**: the first section of the admin `/metrics` page. One metric at a time (today "Detected by next day", "Detected same day", "At district or finer"), read by day, ISO week or calendar month from clear-api's `series` fields (its ADR-0014) through `metrics.series`, as numerator over denominator per bucket and source. The deploy markers drawn on it are a static list in `src/lib/location-precision.ts` until they become data (Exponential #1278); the before-and-after beside the chart compares the seven whole days before the latest marker with the days after it. Nothing about what counts is decided here.
+
 ### Review
 
 **Inbox**:

@@ -3603,6 +3603,74 @@
       "allCountries": "All countries",
       "hint": "Days are UTC. Leave the dates empty for the last 12 weeks."
     },
+    "progress": {
+      "title": "Progress over time",
+      "subtitle": "One metric at a time, by day, week or month. A hollow point is a bucket the range only partly covers; the tooltip shows n.",
+      "metric": {
+        "label": "Metric"
+      },
+      "dimensions": {
+        "timeliness": "Timeliness",
+        "accuracy": "Accuracy"
+      },
+      "metrics": {
+        "detectedByNextDay": "Detected by next day",
+        "detectedSameDay": "Detected same day",
+        "districtOrFiner": "At district or finer"
+      },
+      "granularity": {
+        "label": "Buckets",
+        "DAY": "Day",
+        "WEEK": "Week",
+        "MONTH": "Month"
+      },
+      "bucketsOf": {
+        "DAY": "Days",
+        "WEEK": "ISO weeks",
+        "MONTH": "Months"
+      },
+      "card": {
+        "subtitle": "{buckets} from {from} to {to}"
+      },
+      "perSource": "Lines per source",
+      "allSources": "All sources",
+      "legend": "Legend",
+      "partial": "partial",
+      "deployMarker": "deploy",
+      "showTable": "Table view",
+      "hideTable": "Hide table",
+      "columns": {
+        "bucket": "Bucket"
+      },
+      "markers": {
+        "several": "{n, plural, one {# change} other {# changes}}"
+      },
+      "tooltip": {
+        "week": "{week} · from {start}",
+        "partial": "Partial bucket: the range covers only part of it",
+        "changes": "Changes in this bucket"
+      },
+      "units": {
+        "events": "n = {n, plural, one {# measured event} other {# measured events}}",
+        "signals": "n = {n, plural, one {# signal} other {# signals}}"
+      },
+      "chip": {
+        "title": "Since {marker} ({date}):",
+        "body": "{group} {before} in the 7 days before, {after} since (n = {nBefore, number} and {nAfter, number})"
+      },
+      "loading": "Loading the series…",
+      "error": {
+        "title": "Couldn't load the series"
+      },
+      "unavailable": {
+        "title": "Day, week and month series not deployed yet",
+        "body": "This environment's CLEAR API doesn't serve metric series by day, week or month yet (clear-api ADR-0014). The cards below still work."
+      },
+      "empty": {
+        "title": "Nothing to plot in this range",
+        "body": "No measured events or located signals fall in this range for this metric."
+      }
+    },
     "precision": {
       "title": "Location precision",
       "subtitle": "How finely the pipeline placed the signals it located. Grouping keys on district, so a signal at district or finer can join an event; one left at state or country level always becomes its own event.",
@@ -3680,7 +3748,8 @@
         "markers": {
           "geocodeInArea": "Geocoding inside the model's area",
           "arabicGazetteer": "Arabic gazetteer names",
-          "darfur24Locator": "darfur24 located from text"
+          "darfur24Locator": "darfur24 located from text",
+          "locationV3Prompt": "Incident site over impact area (prompt v3)"
         }
       },
       "method": {

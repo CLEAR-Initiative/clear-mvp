@@ -3603,6 +3603,74 @@
       "allCountries": "Tous les pays",
       "hint": "Les jours sont en UTC. Laissez les dates vides pour les 12 dernières semaines."
     },
+    "progress": {
+      "title": "Progression dans le temps",
+      "subtitle": "Une métrique à la fois, par jour, semaine ou mois. Un point creux est un intervalle que la période ne couvre qu'en partie ; l'infobulle indique n.",
+      "metric": {
+        "label": "Métrique"
+      },
+      "dimensions": {
+        "timeliness": "Rapidité",
+        "accuracy": "Exactitude"
+      },
+      "metrics": {
+        "detectedByNextDay": "Détecté le lendemain au plus tard",
+        "detectedSameDay": "Détecté le jour même",
+        "districtOrFiner": "Au district ou plus fin"
+      },
+      "granularity": {
+        "label": "Intervalles",
+        "DAY": "Jour",
+        "WEEK": "Semaine",
+        "MONTH": "Mois"
+      },
+      "bucketsOf": {
+        "DAY": "Jours",
+        "WEEK": "Semaines ISO",
+        "MONTH": "Mois"
+      },
+      "card": {
+        "subtitle": "{buckets} du {from} au {to}"
+      },
+      "perSource": "Une ligne par source",
+      "allSources": "Toutes les sources",
+      "legend": "Légende",
+      "partial": "partiel",
+      "deployMarker": "déploiement",
+      "showTable": "Vue tableau",
+      "hideTable": "Masquer le tableau",
+      "columns": {
+        "bucket": "Intervalle"
+      },
+      "markers": {
+        "several": "{n, plural, one {# changement} other {# changements}}"
+      },
+      "tooltip": {
+        "week": "{week} · à partir du {start}",
+        "partial": "Intervalle partiel : la période n'en couvre qu'une partie",
+        "changes": "Changements dans cet intervalle"
+      },
+      "units": {
+        "events": "n = {n, plural, one {# événement mesuré} other {# événements mesurés}}",
+        "signals": "n = {n, plural, one {# signal} other {# signaux}}"
+      },
+      "chip": {
+        "title": "Depuis {marker} ({date}) :",
+        "body": "{group} {before} sur les 7 jours précédents, {after} depuis (n = {nBefore, number} et {nAfter, number})"
+      },
+      "loading": "Chargement de la série…",
+      "error": {
+        "title": "Impossible de charger la série"
+      },
+      "unavailable": {
+        "title": "Séries par jour, semaine et mois pas encore déployées",
+        "body": "L'API CLEAR de cet environnement ne sert pas encore les séries de métriques par jour, semaine ou mois (clear-api ADR-0014). Les cartes ci-dessous fonctionnent toujours."
+      },
+      "empty": {
+        "title": "Rien à tracer sur cette période",
+        "body": "Aucun événement mesuré ni signal localisé ne tombe dans cette période pour cette métrique."
+      }
+    },
     "precision": {
       "title": "Précision de localisation",
       "subtitle": "Avec quelle finesse le pipeline a placé les signaux qu'il a localisés. Le regroupement se fait par district : un signal au district ou plus fin peut rejoindre un événement ; un signal laissé au niveau de l'État ou du pays devient toujours son propre événement.",
@@ -3680,7 +3748,8 @@
         "markers": {
           "geocodeInArea": "Géocodage dans la zone du modèle",
           "arabicGazetteer": "Noms arabes du gazetier",
-          "darfur24Locator": "darfur24 localisé depuis le texte"
+          "darfur24Locator": "darfur24 localisé depuis le texte",
+          "locationV3Prompt": "Lieu de l'incident plutôt que zone d'impact (prompt v3)"
         }
       },
       "method": {

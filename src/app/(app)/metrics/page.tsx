@@ -15,6 +15,7 @@ import { ExclusionsCard } from "./_components/exclusions-card";
 import { MethodNote } from "./_components/method-note";
 import { MetricsFilters, metricsQueryInput, type MetricsFilterValues } from "./_components/metrics-filters";
 import { LocationPrecisionSection } from "./_components/location-precision-section";
+import { ProgressOverTime } from "./_components/progress-over-time";
 
 /** An Alert in theme tokens: the semantic colour marks the edge and icon,
  * the text stays in text tokens so it reads in light and dark. */
@@ -33,9 +34,10 @@ function noticeStyles(tone: "critical" | "warning" | "info") {
 const NO_RETRY = new Set(["BAD_REQUEST", "FORBIDDEN", "UNAUTHORIZED"]);
 
 /**
- * Admin-only platform metrics. Today: time to detection (clear-api
- * ADR-0011) — how soon after an event's onset CLEAR received its first
- * signal. clear-api decides what counts; this page only formats it.
+ * Admin-only platform metrics: one metric over time by day, week or month
+ * (clear-api ADR-0014), then time to detection (ADR-0011) and location
+ * precision (ADR-0012) in full. clear-api decides what counts; this page
+ * only formats it.
  */
 export default function MetricsPage() {
   const t = useTranslations("metrics");
@@ -60,6 +62,9 @@ export default function MetricsPage() {
       <Box p={{ base: 16, sm: 24 }}>
         <Box mb={16}>
           <MetricsFilters values={filters} onChange={setFilters} error={rangeError} />
+        </Box>
+        <Box mb={32}>
+          <ProgressOverTime filters={filters} />
         </Box>
         {rangeError ? null : query.error ? (
           <Alert styles={noticeStyles("critical")} icon={<IconAlertTriangle size={16} />} title={t("error.title")}>
