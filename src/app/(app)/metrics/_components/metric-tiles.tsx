@@ -84,7 +84,8 @@ function MetricTile({
       retry: (count, err) => !NO_RETRY.has(err.data?.code ?? "") && count < 2,
     },
   );
-  const series = query.data?.status === "ok" ? query.data.series : null;
+  const result = query.data;
+  const series = result?.status === "ok" ? result.series : null;
   const totals = series ? totalsByBucket(series) : [];
   const latest = latestReading(totals);
   const points = totals.map((bucket) => ({
@@ -92,13 +93,19 @@ function MetricTile({
     value: bucket.denominator > 0 ? Math.round((bucket.numerator / bucket.denominator) * 1000) / 10 : null,
   }));
   const color = selected ? "var(--color-accent)" : "var(--color-text-muted)";
+  // Without a reading, say why: a failed read, an API without the registry,
+  // a series with nothing measured, or a read still pending.
   const caption = latest
     ? latest.isPartial
       ? t("currentPartial", { week: latest.label })
       : t("current", { week: latest.label })
-    : query.data
-      ? t("noData")
-      : t("loading");
+    : query.error
+      ? t("error")
+      : result?.status === "unavailable"
+        ? t("unavailable")
+        : result
+          ? t("noData")
+          : t("loading");
 
   return (
     <UnstyledButton
@@ -121,7 +128,7 @@ function MetricTile({
       <Text size="xl" fw={700} c="var(--color-text-primary)" style={{ fontVariantNumeric: "tabular-nums", lineHeight: 1.1 }} data-testid={`tile-value-${definition.key}`}>
         {latest ? pct(latest.share) : "—"}
       </Text>
-      <Text size="xs" c="var(--color-text-muted)">
+      <Text size="xs" c="var(--color-text-muted)" title={!latest && query.error ? query.error.message : undefined}>
         {caption}
       </Text>
       <Box h={40} mt={4} dir="ltr" aria-hidden>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo } from "react";
+import { createContext, useCallback, useContext, useMemo, useRef, type ReactNode } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { GRANULARITIES, type Granularity, type MetricKey } from "~/lib/metric-series";
 import type { MetricsFilterValues } from "./metrics-filters";
@@ -10,7 +10,8 @@ import type { MetricsFilterValues } from "./metrics-filters";
  * view can be shared, reloaded, or linked from a Notion metric row:
  * `?from=2026-10-25&to=2026-10-31&location=<id>&metric=DISTRICT_OR_FINER&granularity=day&lines=source&sources=sudan-war-x,dataminr`.
  * Components keep their own state, read it from the URL once on mount and
- * write every change back; the URL is never re-read while the page lives.
+ * write every change back through {@link MetricsUrlProvider}; the URL is
+ * never re-read while the page lives.
  */
 export interface MetricsUrlState {
   /** `YYYY-MM-DD` or "" for clear-api's default range. */
@@ -77,18 +78,53 @@ export function filtersFromUrl(state: MetricsUrlState): MetricsFilterValues {
   return { from: state.from, to: state.to, locationId: state.locationId };
 }
 
-/** The URL state on mount, and a way to write a patch of it back without a scroll or a history entry. */
-export function useMetricsUrl(): { state: MetricsUrlState; update: (patch: Partial<MetricsUrlState>) => void } {
+interface MetricsUrl {
+  /** The state of the URL as the router last committed it. */
+  state: MetricsUrlState;
+  /** Writes a patch of it back, without a scroll or a history entry. */
+  update: (patch: Partial<MetricsUrlState>) => void;
+}
+
+const MetricsUrlContext = createContext<MetricsUrl | null>(null);
+
+/** How many of the page's own searches to remember as the chain a write may continue. */
+const CHAIN_LENGTH = 20;
+
+/**
+ * Owns the page's URL writes. Three components write (the filters, the
+ * explorer, the source picker) and the router commits each `replace` a tick
+ * later, so a write that merged into the committed search would drop a write
+ * still in flight: pick a metric, then a bucket size, and the link kept only
+ * the bucket size. Every write merges into the page's last write instead, for
+ * as long as the committed search is one this page wrote or wrote from; a
+ * search from elsewhere (a link into the page) starts the chain again.
+ */
+export function MetricsUrlProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
-  const state = useMemo(() => parseMetricsUrl(new URLSearchParams(params?.toString() ?? "")), [params]);
+  const committed = params?.toString() ?? "";
+  const state = useMemo(() => parseMetricsUrl(new URLSearchParams(committed)), [committed]);
+  const chain = useRef<{ latest: string | null; searches: string[] }>({ latest: null, searches: [] });
   const update = useCallback(
     (patch: Partial<MetricsUrlState>) => {
-      const search = metricsUrlSearch(patch, new URLSearchParams(params?.toString() ?? ""));
+      const c = chain.current;
+      const latest = c.latest;
+      const continues = latest !== null && c.searches.includes(committed);
+      const search = metricsUrlSearch(patch, new URLSearchParams(continues ? latest : committed));
+      c.searches = continues ? [...c.searches.slice(1 - CHAIN_LENGTH), search] : [committed, search];
+      c.latest = search;
       router.replace(search ? `${pathname}?${search}` : pathname, { scroll: false });
     },
-    [params, pathname, router],
+    [committed, pathname, router],
   );
-  return { state, update };
+  const value = useMemo(() => ({ state, update }), [state, update]);
+  return <MetricsUrlContext.Provider value={value}>{children}</MetricsUrlContext.Provider>;
+}
+
+/** The URL state on mount, and a way to write a patch of it back; needs a {@link MetricsUrlProvider} above. */
+export function useMetricsUrl(): MetricsUrl {
+  const value = useContext(MetricsUrlContext);
+  if (!value) throw new Error("useMetricsUrl needs a MetricsUrlProvider above it");
+  return value;
 }

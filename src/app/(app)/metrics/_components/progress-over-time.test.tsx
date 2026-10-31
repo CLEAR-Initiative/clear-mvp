@@ -57,6 +57,7 @@ vi.mock("recharts", async () => {
 });
 
 const { ProgressOverTime } = await import("./progress-over-time");
+const { MetricsUrlProvider } = await import("./metrics-url-state");
 
 const DEFINITIONS: MetricDefinition[] = [
   { key: "DETECTED_BY_NEXT_DAY", name: "Detected by next day", dimension: "TIMELINESS", unit: "EVENTS", description: "Share of measured events first signalled by the next day.", timeBasis: "The first ingested signal.", groupable: false, adr: "ADR-0011" },
@@ -91,7 +92,9 @@ function wrap(ui: React.ReactElement) {
   if (!annotationsState.data && !annotationsState.error) annotationsState = { data: { status: "ok", annotations: MARKERS } };
   return render(
     <NextIntlClientProvider locale="en" messages={enMessages}>
-      <MantineProvider>{ui}</MantineProvider>
+      <MantineProvider>
+        <MetricsUrlProvider>{ui}</MetricsUrlProvider>
+      </MantineProvider>
     </NextIntlClientProvider>,
   );
 }

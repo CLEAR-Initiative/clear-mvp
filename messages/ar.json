@@ -3705,6 +3705,8 @@
         "currentPartial": "{week}، حتى الآن",
         "noData": "لا بيانات في الأسابيع الاثني عشر الأخيرة",
         "loading": "جارٍ التحميل…",
+        "error": "تعذّر التحميل",
+        "unavailable": "غير متاح من واجهة API هذه",
         "select": "عرض {metric}"
       },
       "copyLink": "نسخ الرابط",

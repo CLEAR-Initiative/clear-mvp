@@ -15,7 +15,7 @@ import { ExclusionsCard } from "./_components/exclusions-card";
 import { MethodNote } from "./_components/method-note";
 import { MetricsFilters, metricsQueryInput, type MetricsFilterValues } from "./_components/metrics-filters";
 import { LocationPrecisionSection } from "./_components/location-precision-section";
-import { filtersFromUrl, useMetricsUrl } from "./_components/metrics-url-state";
+import { MetricsUrlProvider, filtersFromUrl, useMetricsUrl } from "./_components/metrics-url-state";
 import { ProgressOverTime } from "./_components/progress-over-time";
 
 /** An Alert in theme tokens: the semantic colour marks the edge and icon,
@@ -41,10 +41,13 @@ const NO_RETRY = new Set(["BAD_REQUEST", "FORBIDDEN", "UNAUTHORIZED"]);
  * only formats it.
  */
 export default function MetricsPage() {
-  // useSearchParams() suspends while the request's search is unknown.
+  // useSearchParams() suspends while the request's search is unknown; the
+  // provider owns the page's URL writes so quick successive changes all land.
   return (
     <Suspense fallback={null}>
-      <MetricsPageBody />
+      <MetricsUrlProvider>
+        <MetricsPageBody />
+      </MetricsUrlProvider>
     </Suspense>
   );
 }

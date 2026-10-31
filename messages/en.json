@@ -3705,6 +3705,8 @@
         "currentPartial": "{week}, so far",
         "noData": "No data in the last 12 weeks",
         "loading": "Loading…",
+        "error": "Couldn't load",
+        "unavailable": "Not served by this API",
         "select": "Show {metric}"
       },
       "copyLink": "Copy link",
