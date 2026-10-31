@@ -3610,13 +3610,16 @@
         "label": "Metric"
       },
       "dimensions": {
-        "timeliness": "Timeliness",
-        "accuracy": "Accuracy"
+        "TIMELINESS": "Timeliness",
+        "ACCURACY": "Accuracy",
+        "COVERAGE": "Coverage",
+        "RELIABILITY": "Reliability",
+        "USEFULNESS": "Usefulness"
       },
       "metrics": {
-        "detectedByNextDay": "Detected by next day",
-        "detectedSameDay": "Detected same day",
-        "districtOrFiner": "At district or finer"
+        "DETECTED_BY_NEXT_DAY": "Detected by next day",
+        "DETECTED_SAME_DAY": "Detected same day",
+        "DISTRICT_OR_FINER": "At district or finer"
       },
       "granularity": {
         "label": "Buckets",
@@ -3651,8 +3654,9 @@
         "changes": "Changes in this bucket"
       },
       "units": {
-        "events": "n = {n, plural, one {# measured event} other {# measured events}}",
-        "signals": "n = {n, plural, one {# signal} other {# signals}}"
+        "EVENTS": "n = {n, plural, one {# measured event} other {# measured events}}",
+        "SIGNALS": "n = {n, plural, one {# signal} other {# signals}}",
+        "DEFAULT": "n = {n, number}"
       },
       "chip": {
         "title": "Since {marker} ({date}):",
@@ -3663,12 +3667,15 @@
         "title": "Couldn't load the series"
       },
       "unavailable": {
-        "title": "Day, week and month series not deployed yet",
-        "body": "This environment's CLEAR API doesn't serve metric series by day, week or month yet (clear-api ADR-0014). The cards below still work."
+        "title": "Metric registry not deployed yet",
+        "body": "This environment's CLEAR API doesn't serve the metric registry and its series yet (clear-api ADR-0014 and ADR-0015). The cards below still work."
       },
       "empty": {
         "title": "Nothing to plot in this range",
         "body": "No measured events or located signals fall in this range for this metric."
+      },
+      "definition": {
+        "timeBasis": "Time basis: {timeBasis} · {adr}"
       }
     },
     "precision": {

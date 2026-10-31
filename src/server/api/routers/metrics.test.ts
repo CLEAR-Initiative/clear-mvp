@@ -231,89 +231,103 @@ describe("metrics.locationPrecision", () => {
   });
 });
 
-const DETECTION_SERIES = {
-  from: "2026-10-05T00:00:00.000Z",
-  to: "2026-10-11T23:59:59.999Z",
+const SERIES = {
+  metric: "DISTRICT_OR_FINER",
   granularity: "DAY",
-  series: [
-    { start: "2026-10-05T00:00:00.000Z", label: "2026-10-05", isPartial: false, counted: 4, sameDay: 1, byNextDay: 3 },
-    { start: "2026-10-06T00:00:00.000Z", label: "2026-10-06", isPartial: false, counted: 0, sameDay: 0, byNextDay: 0 },
-  ],
-};
-
-const PRECISION_SERIES = {
   from: "2026-10-26T00:00:00.000Z",
-  to: "2026-11-08T23:59:59.999Z",
-  granularity: "WEEK",
-  bySource: [
-    { source: "sudan-war-x", total: 20 },
-    { source: "dataminr", total: 10 },
-  ],
-  series: [
-    { start: "2026-10-26T00:00:00.000Z", label: "2026-W44", isPartial: false, source: "sudan-war-x", total: 20, district: 6, point: 2 },
-    { start: "2026-10-26T00:00:00.000Z", label: "2026-W44", isPartial: false, source: "dataminr", total: 10, district: 0, point: 9 },
+  to: "2026-10-27T23:59:59.999Z",
+  groups: ["sudan-war-x", "dataminr"],
+  buckets: [
+    { start: "2026-10-26T00:00:00.000Z", label: "2026-10-26", isPartial: false, group: "sudan-war-x", numerator: 8, denominator: 20 },
+    { start: "2026-10-27T00:00:00.000Z", label: "2026-10-27", isPartial: false, group: "sudan-war-x", numerator: 6, denominator: 10 },
+    { start: "2026-10-26T00:00:00.000Z", label: "2026-10-26", isPartial: false, group: "dataminr", numerator: 9, denominator: 10 },
+    { start: "2026-10-27T00:00:00.000Z", label: "2026-10-27", isPartial: false, group: "dataminr", numerator: 0, denominator: 0 },
   ],
 };
+const DEFINITIONS = [
+  { key: "DETECTED_BY_NEXT_DAY", name: "Detected by next day", dimension: "TIMELINESS", unit: "EVENTS", description: "d", timeBasis: "t", groupable: false, adr: "ADR-0011" },
+  { key: "DISTRICT_OR_FINER", name: "At district or finer", dimension: "ACCURACY", unit: "SIGNALS", description: "d", timeBasis: "t", groupable: true, adr: "ADR-0012" },
+];
 
-describe("metrics.series", () => {
+describe("metrics.definitions and metrics.series", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
     graphqlFetch.mockReset();
   });
 
-  it("asks detectionMetrics for a time-to-detection metric, with the granularity, and reads the share", async () => {
+  it("lists the registry for an admin, as clear-api returns it", async () => {
     signedInAs("admin");
-    graphqlFetch.mockResolvedValueOnce({ detectionMetrics: DETECTION_SERIES });
+    graphqlFetch.mockResolvedValueOnce({ metricDefinitions: DEFINITIONS });
+    const result = await caller().metrics.definitions();
+    const [query, vars] = graphqlFetch.mock.calls[0] as [string, Record<string, unknown>];
+    expect(query).toContain("metricDefinitions { key name dimension unit description timeBasis groupable adr }");
+    expect(vars).toEqual({});
+    expect(result).toEqual({ status: "ok", definitions: DEFINITIONS });
+  });
+
+  it("asks metricSeries with the metric, bucket size, grouping and range, and passes the series through", async () => {
+    signedInAs("admin");
+    graphqlFetch.mockResolvedValueOnce({ metricSeries: SERIES });
     const result = await caller().metrics.series({
-      metric: "detectedSameDay",
+      metric: "DISTRICT_OR_FINER",
       granularity: "DAY",
-      from: "2026-10-05T00:00:00.000Z",
-      to: "2026-10-11T23:59:59.999Z",
+      groupBy: "SOURCE",
+      from: "2026-10-26T00:00:00.000Z",
+      to: "2026-10-27T23:59:59.999Z",
       locationId: "loc-sdn",
+      sourceNames: ["sudan-war-x", "dataminr"],
     });
-    const [query, vars] = graphqlFetch.mock.calls[0] as [string, Record<string, unknown>];
-    expect(query).toContain("query DetectionSeries($input: DetectionMetricsInput)");
-    expect(query).toContain("series { start label isPartial counted sameDay byNextDay }");
+    const [query, vars, headers] = graphqlFetch.mock.calls[0] as [string, Record<string, unknown>, Record<string, string>];
+    expect(query).toContain("query MetricSeries($input: MetricSeriesInput!)");
+    expect(query).toContain("buckets { start label isPartial group numerator denominator }");
     expect(vars).toEqual({
-      input: { from: "2026-10-05T00:00:00.000Z", to: "2026-10-11T23:59:59.999Z", locationId: "loc-sdn", granularity: "DAY" },
+      input: {
+        metric: "DISTRICT_OR_FINER",
+        granularity: "DAY",
+        groupBy: "SOURCE",
+        from: "2026-10-26T00:00:00.000Z",
+        to: "2026-10-27T23:59:59.999Z",
+        locationId: "loc-sdn",
+        sourceNames: ["sudan-war-x", "dataminr"],
+      },
     });
-    if (result.status !== "ok") throw new Error("expected ok");
-    expect(result.series).toMatchObject({ metric: "detectedSameDay", granularity: "DAY", groups: [] });
-    expect(result.series.buckets[0]).toEqual({ start: "2026-10-05T00:00:00.000Z", label: "2026-10-05", isPartial: false, group: null, numerator: 1, denominator: 4 });
+    expect(headers).toEqual({ Cookie: "better-auth.session_token=x" });
+    expect(result).toEqual({ status: "ok", series: SERIES });
   });
 
-  it("asks locationPrecisionMetrics for district or finer, per source, leaving out what was not given", async () => {
+  it("sends only the metric when nothing else was given, so clear-api applies its defaults", async () => {
     signedInAs("admin");
-    graphqlFetch.mockResolvedValueOnce({ locationPrecisionMetrics: PRECISION_SERIES });
-    const result = await caller().metrics.series({ metric: "districtOrFiner" });
-    const [query, vars] = graphqlFetch.mock.calls[0] as [string, Record<string, unknown>];
-    expect(query).toContain("query LocationPrecisionSeries($input: LocationPrecisionMetricsInput)");
-    expect(vars).toEqual({ input: {} });
-    if (result.status !== "ok") throw new Error("expected ok");
-    expect(result.series.groups).toEqual(["sudan-war-x", "dataminr"]);
-    expect(result.series.buckets).toEqual([
-      { start: "2026-10-26T00:00:00.000Z", label: "2026-W44", isPartial: false, group: "sudan-war-x", numerator: 8, denominator: 20 },
-      { start: "2026-10-26T00:00:00.000Z", label: "2026-W44", isPartial: false, group: "dataminr", numerator: 9, denominator: 10 },
-    ]);
+    graphqlFetch.mockResolvedValueOnce({ metricSeries: { ...SERIES, groups: [], buckets: [] } });
+    await caller().metrics.series({ metric: "DETECTED_BY_NEXT_DAY" });
+    expect(graphqlFetch.mock.calls[0]![1]).toEqual({ input: { metric: "DETECTED_BY_NEXT_DAY" } });
   });
 
-  it("rejects a non-admin without calling clear-api, and an unknown metric before that", async () => {
+  it("rejects a non-admin without calling clear-api", async () => {
     signedInAs("analyst");
-    await expect(caller().metrics.series({ metric: "districtOrFiner" })).rejects.toMatchObject({ code: "FORBIDDEN" });
-    expect(graphqlFetch).not.toHaveBeenCalled();
-    signedInAs("admin");
-    await expect(
-      caller().metrics.series({ metric: "somethingElse" as "districtOrFiner" }),
-    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
+    await expect(caller().metrics.definitions()).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(caller().metrics.series({ metric: "DISTRICT_OR_FINER" })).rejects.toMatchObject({ code: "FORBIDDEN" });
     expect(graphqlFetch).not.toHaveBeenCalled();
   });
 
-  it("returns the unavailable state while clear-api lacks the series field", async () => {
+  it("returns the unavailable state while clear-api lacks the registry", async () => {
     signedInAs("admin");
     graphqlFetch.mockRejectedValueOnce(
-      new GraphQLRequestError('Cannot query field "series" on type "DetectionMetrics".', "GRAPHQL_VALIDATION_FAILED"),
+      new GraphQLRequestError('Cannot query field "metricDefinitions" on type "Query".', "GRAPHQL_VALIDATION_FAILED"),
     );
-    await expect(caller().metrics.series({ metric: "detectedByNextDay" })).resolves.toEqual({ status: "unavailable" });
+    await expect(caller().metrics.definitions()).resolves.toEqual({ status: "unavailable" });
+    graphqlFetch.mockRejectedValueOnce(
+      new GraphQLRequestError('Cannot query field "metricSeries" on type "Query".', "GRAPHQL_VALIDATION_FAILED"),
+    );
+    await expect(caller().metrics.series({ metric: "DETECTED_BY_NEXT_DAY" })).resolves.toEqual({ status: "unavailable" });
+  });
+
+  it("surfaces clear-api's refusal of a grouping or an unknown metric with its message", async () => {
+    signedInAs("admin");
+    graphqlFetch.mockRejectedValueOnce(new GraphQLRequestError("`DETECTED_SAME_DAY` has no groups; leave `groupBy` out.", "BAD_USER_INPUT"));
+    await expect(caller().metrics.series({ metric: "DETECTED_SAME_DAY", groupBy: "SOURCE" })).rejects.toMatchObject({
+      code: "BAD_REQUEST",
+      message: "`DETECTED_SAME_DAY` has no groups; leave `groupBy` out.",
+    });
   });
 });

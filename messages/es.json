@@ -3610,13 +3610,16 @@
         "label": "Métrica"
       },
       "dimensions": {
-        "timeliness": "Rapidez",
-        "accuracy": "Exactitud"
+        "TIMELINESS": "Rapidez",
+        "ACCURACY": "Exactitud",
+        "COVERAGE": "Cobertura",
+        "RELIABILITY": "Fiabilidad",
+        "USEFULNESS": "Utilidad"
       },
       "metrics": {
-        "detectedByNextDay": "Detectado como máximo al día siguiente",
-        "detectedSameDay": "Detectado el mismo día",
-        "districtOrFiner": "A nivel de distrito o más fino"
+        "DETECTED_BY_NEXT_DAY": "Detectado como máximo al día siguiente",
+        "DETECTED_SAME_DAY": "Detectado el mismo día",
+        "DISTRICT_OR_FINER": "A nivel de distrito o más fino"
       },
       "granularity": {
         "label": "Intervalos",
@@ -3651,8 +3654,9 @@
         "changes": "Cambios en este intervalo"
       },
       "units": {
-        "events": "n = {n, plural, one {# evento medido} other {# eventos medidos}}",
-        "signals": "n = {n, plural, one {# señal} other {# señales}}"
+        "EVENTS": "n = {n, plural, one {# evento medido} other {# eventos medidos}}",
+        "SIGNALS": "n = {n, plural, one {# señal} other {# señales}}",
+        "DEFAULT": "n = {n, number}"
       },
       "chip": {
         "title": "Desde {marker} ({date}):",
@@ -3663,12 +3667,15 @@
         "title": "No se pudo cargar la serie"
       },
       "unavailable": {
-        "title": "Series por día, semana y mes aún no desplegadas",
-        "body": "La API de CLEAR de este entorno aún no sirve series de métricas por día, semana o mes (clear-api ADR-0014). Las tarjetas de abajo siguen funcionando."
+        "title": "Registro de métricas aún no desplegado",
+        "body": "La API de CLEAR de este entorno aún no sirve el registro de métricas ni sus series (clear-api ADR-0014 y ADR-0015). Las tarjetas de abajo siguen funcionando."
       },
       "empty": {
         "title": "Nada que representar en este periodo",
         "body": "Ningún evento medido ni señal localizada cae en este periodo para esta métrica."
+      },
+      "definition": {
+        "timeBasis": "Base temporal: {timeBasis} · {adr}"
       }
     },
     "precision": {

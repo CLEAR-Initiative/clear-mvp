@@ -3610,13 +3610,16 @@
         "label": "المقياس"
       },
       "dimensions": {
-        "timeliness": "السرعة",
-        "accuracy": "الدقة"
+        "TIMELINESS": "السرعة",
+        "ACCURACY": "الدقة",
+        "COVERAGE": "التغطية",
+        "RELIABILITY": "الموثوقية",
+        "USEFULNESS": "الفائدة"
       },
       "metrics": {
-        "detectedByNextDay": "رُصد في اليوم التالي على الأكثر",
-        "detectedSameDay": "رُصد في اليوم نفسه",
-        "districtOrFiner": "على مستوى المحلية أو أدق"
+        "DETECTED_BY_NEXT_DAY": "رُصد في اليوم التالي على الأكثر",
+        "DETECTED_SAME_DAY": "رُصد في اليوم نفسه",
+        "DISTRICT_OR_FINER": "على مستوى المحلية أو أدق"
       },
       "granularity": {
         "label": "الفترات",
@@ -3651,8 +3654,9 @@
         "changes": "التغييرات في هذه الفترة"
       },
       "units": {
-        "events": "n = {n, plural, zero {لا أحداث مقيسة} one {حدث مقيس واحد} two {حدثان مقيسان} few {# أحداث مقيسة} many {# حدثًا مقيسًا} other {# حدث مقيس}}",
-        "signals": "n = {n, plural, zero {لا إشارات} one {إشارة واحدة} two {إشارتان} few {# إشارات} many {# إشارة} other {# إشارة}}"
+        "EVENTS": "n = {n, plural, zero {لا أحداث مقيسة} one {حدث مقيس واحد} two {حدثان مقيسان} few {# أحداث مقيسة} many {# حدثًا مقيسًا} other {# حدث مقيس}}",
+        "SIGNALS": "n = {n, plural, zero {لا إشارات} one {إشارة واحدة} two {إشارتان} few {# إشارات} many {# إشارة} other {# إشارة}}",
+        "DEFAULT": "n = {n, number}"
       },
       "chip": {
         "title": "منذ {marker} ({date}):",
@@ -3663,12 +3667,15 @@
         "title": "تعذّر تحميل السلسلة"
       },
       "unavailable": {
-        "title": "السلاسل اليومية والأسبوعية والشهرية غير منشورة بعد",
-        "body": "واجهة CLEAR البرمجية في هذه البيئة لا تقدّم بعد سلاسل المقاييس باليوم أو الأسبوع أو الشهر (clear-api ADR-0014). البطاقات أدناه لا تزال تعمل."
+        "title": "سجل المقاييس غير منشور بعد",
+        "body": "واجهة CLEAR البرمجية في هذه البيئة لا تقدّم بعد سجل المقاييس ولا سلاسله (clear-api ADR-0014 وADR-0015). البطاقات أدناه لا تزال تعمل."
       },
       "empty": {
         "title": "لا شيء لرسمه في هذا النطاق",
         "body": "لا تقع أحداث مقيسة أو إشارات محددة الموقع في هذا النطاق لهذا المقياس."
+      },
+      "definition": {
+        "timeBasis": "الأساس الزمني: {timeBasis} · {adr}"
       }
     },
     "precision": {

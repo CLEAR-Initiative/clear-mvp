@@ -8,21 +8,26 @@ import { CardSection } from "~/components/ui";
 import { MetricsBodySkeleton } from "~/components/ui/metrics-page-skeleton";
 import { api } from "~/trpc/react";
 import {
+  DEFAULT_METRIC,
   GRANULARITIES,
-  METRICS,
-  METRIC_KEYS,
+  KNOWN_METRIC_KEYS,
+  METRIC_UNITS,
   beforeAfter,
   bucketsOfGroup,
   comparisonFrom,
   defaultGranularity,
+  definitionsByDimension,
+  emphasisFor,
   latestMarkerInRange,
   markersByBucket,
   markersInRange,
   totalsByBucket,
   type Granularity,
-  type MetricDimension,
+  type KnownMetricKey,
+  type MetricDefinition,
   type MetricKey,
   type MetricSeries,
+  type MetricUnit,
   type TotalBucket,
 } from "~/lib/metric-series";
 import { metricsQueryInput, type MetricsFilterValues } from "./metrics-filters";
@@ -36,7 +41,6 @@ const MUTED = "var(--color-text-muted)";
 /** Dash patterns that tell the muted lines apart beyond hue. */
 const DASHES = [undefined, "6 3", "2 3", "8 3 2 3", "4 2", "1 3"] as const;
 const NO_RETRY = new Set(["BAD_REQUEST", "FORBIDDEN", "UNAUTHORIZED"]);
-const DIMENSIONS: readonly MetricDimension[] = ["timeliness", "accuracy"];
 
 const toPct = (numerator: number, denominator: number) =>
   denominator > 0 ? Math.round((numerator / denominator) * 1000) / 10 : null;
@@ -55,20 +59,20 @@ function noticeStyles(tone: "critical" | "warning" | "info") {
 }
 
 /**
- * The lines and points the chart draws for a series: one line per source
- * (the emphasised one always among them) or one summed line. Shares are only
- * ever numerator over denominator; nothing about what counts changes here.
+ * The lines and points the chart draws for a series: one line per group (the
+ * emphasised one always among the six drawn; every group in the table) or
+ * one line for an ungrouped series. Shares are only ever numerator over
+ * denominator; nothing about what counts changes here.
  */
 export function buildView(
   series: MetricSeries,
-  perSource: boolean,
   emphasis: string | null,
   allLabel: string,
   axisLabel: (start: string) => string,
 ): { lines: SeriesLine[]; columns: SeriesLine[]; points: SeriesPoint[]; empty: boolean } {
   const totals = totalsByBucket(series);
   const empty = totals.every((bucket) => bucket.denominator === 0);
-  if (!perSource) {
+  if (series.groups.length === 0) {
     const all: SeriesLine[] = [{ key: "all", label: allLabel, color: ACCENT, width: 2.5 }];
     return {
       lines: all,
@@ -84,8 +88,6 @@ export function buildView(
       empty,
     };
   }
-  // The chart draws the first six sources (the emphasised one always among
-  // them); the table shows every source, in clear-api's order.
   let drawn = series.groups.slice(0, MAX_LINES);
   if (emphasis && series.groups.includes(emphasis) && !drawn.includes(emphasis)) {
     drawn = [...drawn.slice(0, MAX_LINES - 1), emphasis];
@@ -115,29 +117,48 @@ export function buildView(
   return { lines, columns, points, empty };
 }
 
+const isKnown = (key: MetricKey): key is KnownMetricKey => (KNOWN_METRIC_KEYS as readonly string[]).includes(key);
+const isKnownUnit = (unit: string): unit is MetricUnit => (METRIC_UNITS as readonly string[]).includes(unit);
+
 /**
- * One metric at a time, over time (Exponential #1276): a metric picked from
- * the Notion list, read by day, week or month from clear-api's `series`
- * (ADR-0014), with the deploy markers that bear on it and a before-and-after
- * around the latest one. Shares the page's range and country.
+ * One metric at a time, over time (Exponential #1276, #1277): a metric from
+ * clear-api's registry (`metricDefinitions`, ADR-0015), read by day, week or
+ * month from `metricSeries` (ADR-0014), with the deploy markers that bear on
+ * it and a before-and-after around the latest one. Shares the page's range
+ * and country. Names are translated when this app knows the key; otherwise
+ * the registry's English name shows, so a new metric appears without a
+ * frontend change.
  */
 export function ProgressOverTime({ filters }: { filters: MetricsFilterValues }) {
   const t = useTranslations("metrics.progress");
   const tMarkers = useTranslations("metrics.precision.weekly.markers");
   const format = useFormatter();
   const pct = useShareFormat();
-  const [metric, setMetric] = useState<MetricKey>("districtOrFiner");
+  const [chosen, setChosen] = useState<MetricKey>(DEFAULT_METRIC);
   const [granularityChoice, setGranularityChoice] = useState<Granularity | null>(null);
   const [perSource, setPerSource] = useState(true);
   const [table, setTable] = useState(false);
 
-  const definition = METRICS[metric];
+  const registry = api.metrics.definitions.useQuery(undefined, {
+    refetchOnWindowFocus: false,
+    retry: (count, err) => !NO_RETRY.has(err.data?.code ?? "") && count < 2,
+  });
+  const definitions = registry.data?.status === "ok" ? registry.data.definitions : null;
+  const definition: MetricDefinition | null = definitions
+    ? (definitions.find((d) => d.key === chosen) ?? definitions[0] ?? null)
+    : null;
+  const metric = definition?.key ?? chosen;
+  const nameOf = (d: MetricDefinition) => (isKnown(d.key) ? t(`metrics.${d.key}`) : d.name);
+
   const input = metricsQueryInput(filters);
   const granularity = granularityChoice ?? defaultGranularity(input.from, input.to);
+  const grouped = !!definition?.groupable && perSource;
+  const groupBy = grouped ? ("SOURCE" as const) : undefined;
   // No placeholder data: a stale series under a new metric's title would mislead.
   const chart = api.metrics.series.useQuery(
-    { ...input, metric, granularity },
+    { ...input, metric, granularity, groupBy },
     {
+      enabled: definition !== null,
       refetchOnWindowFocus: false,
       retry: (count, err) => !NO_RETRY.has(err.data?.code ?? "") && count < 2,
     },
@@ -149,7 +170,7 @@ export function ProgressOverTime({ filters }: { filters: MetricsFilterValues }) 
   // range starts on, so a range opened close to the marker is not clipped.
   const latestMarker = series ? latestMarkerInRange(metric, series.from, series.to) : null;
   const daily = api.metrics.series.useQuery(
-    { ...input, metric, granularity: "DAY", from: latestMarker ? comparisonFrom(latestMarker) : undefined, to: series?.to },
+    { ...input, metric, granularity: "DAY", groupBy, from: latestMarker ? comparisonFrom(latestMarker) : undefined, to: series?.to },
     {
       enabled: latestMarker !== null,
       refetchOnWindowFocus: false,
@@ -159,29 +180,33 @@ export function ProgressOverTime({ filters }: { filters: MetricsFilterValues }) 
   const dailySeries = daily.data?.status === "ok" ? daily.data.series : null;
   // The page already shows clear-api's range message by the date fields.
   const rangeError = chart.error?.data?.code === "BAD_REQUEST";
-  const perSourceLines = definition.perSource && perSource;
 
   const axisLabel = (start: string) =>
     granularity === "MONTH"
       ? format.dateTime(new Date(start), { month: "short", year: "2-digit", timeZone: "UTC" })
       : format.dateTime(new Date(start), { day: "numeric", month: "short", timeZone: "UTC" });
-  const view = series ? buildView(series, perSourceLines, definition.emphasis, t("allSources"), axisLabel) : null;
-  const markerGroups: MarkerGroup[] = view && series
-    ? [...markersByBucket(view.points, markersInRange(metric, series.from, series.to), granularity)].map(([label, markers]) => ({
-        axisLabel: view.points.find((point) => point.label === label)!.axisLabel,
-        names: markers.map((m) => tMarkers(m.key)),
-      }))
-    : [];
+  const emphasis = emphasisFor(definition, series?.groups ?? []);
+  const view = series ? buildView(series, emphasis, t("allSources"), axisLabel) : null;
+  const markerGroups: MarkerGroup[] =
+    view && series
+      ? [...markersByBucket(view.points, markersInRange(metric, series.from, series.to), granularity)].map(([label, markers]) => ({
+          axisLabel: view.points.find((point) => point.label === label)!.axisLabel,
+          names: markers.map((m) => tMarkers(m.key)),
+        }))
+      : [];
 
-  const focus = perSourceLines && definition.emphasis && series?.groups.includes(definition.emphasis) ? definition.emphasis : null;
+  const focus = dailySeries ? emphasisFor(definition, dailySeries.groups) : null;
   const dayTotals: TotalBucket[] | null = dailySeries
     ? focus
       ? bucketsOfGroup(dailySeries, focus).map(({ start, label, isPartial, numerator, denominator }) => ({ start, label, isPartial, numerator, denominator }))
       : totalsByBucket(dailySeries)
     : null;
   const comparison = latestMarker && dayTotals ? beforeAfter(dayTotals, latestMarker) : null;
-  const unit = (n: number) => t(definition.source === "detection" ? "units.events" : "units.signals", { n });
+  const unit = (n: number) =>
+    definition && isKnownUnit(definition.unit) ? t(`units.${definition.unit}`, { n }) : t("units.DEFAULT", { n });
   const utcDay = (iso: string) => format.dateTime(new Date(iso), { dateStyle: "medium", timeZone: "UTC" });
+  const error = registry.error ?? (rangeError ? null : chart.error);
+  const unavailable = registry.data?.status === "unavailable" || result?.status === "unavailable";
 
   return (
     <Stack gap={16} component="section" aria-labelledby="progress-over-time-title">
@@ -196,16 +221,15 @@ export function ProgressOverTime({ filters }: { filters: MetricsFilterValues }) 
       <Group gap={12} align="flex-end" wrap="wrap">
         <Select
           label={t("metric.label")}
-          data={DIMENSIONS.map((dimension) => ({
-            group: t(`dimensions.${dimension}`),
-            items: METRIC_KEYS.filter((key) => METRICS[key].dimension === dimension).map((key) => ({
-              value: key,
-              label: t(`metrics.${key}`),
-            })),
+          data={definitionsByDimension(definitions ?? []).map((group) => ({
+            group: t(`dimensions.${group.dimension}`),
+            items: group.definitions.map((d) => ({ value: d.key, label: nameOf(d) })),
           }))}
-          value={metric}
-          onChange={(value) => value && setMetric(value as MetricKey)}
+          value={definition?.key ?? null}
+          onChange={(value) => value && setChosen(value)}
           allowDeselect={false}
+          disabled={!definitions}
+          placeholder={definitions ? undefined : t("loading")}
           size="xs"
           w={{ base: "100%", xs: 260 }}
         />
@@ -221,7 +245,7 @@ export function ProgressOverTime({ filters }: { filters: MetricsFilterValues }) 
             data={GRANULARITIES.map((g) => ({ value: g, label: t(`granularity.${g}`) }))}
           />
         </Box>
-        {definition.perSource && (
+        {definition?.groupable && (
           <Switch
             size="xs"
             label={t("perSource")}
@@ -231,22 +255,22 @@ export function ProgressOverTime({ filters }: { filters: MetricsFilterValues }) 
           />
         )}
       </Group>
-      {rangeError ? null : chart.error ? (
+      {error ? (
         <Alert styles={noticeStyles("critical")} icon={<IconAlertTriangle size={16} />} title={t("error.title")}>
-          {chart.error.message}
+          {error.message}
         </Alert>
-      ) : result?.status === "unavailable" ? (
+      ) : unavailable ? (
         <Alert styles={noticeStyles("warning")} icon={<IconAlertTriangle size={16} />} title={t("unavailable.title")}>
           {t("unavailable.body")}
         </Alert>
-      ) : series && view ? (
+      ) : rangeError ? null : definition && series && view ? (
         view.empty ? (
           <Alert styles={noticeStyles("info")} icon={<IconInfoCircle size={16} />} title={t("empty.title")}>
             {t("empty.body")}
           </Alert>
         ) : (
           <CardSection
-            title={t(`metrics.${metric}`)}
+            title={nameOf(definition)}
             subtitle={t("card.subtitle", { buckets: t(`bucketsOf.${granularity}`), from: utcDay(series.from), to: utcDay(series.to) })}
             action={
               <Group gap={12} wrap="wrap" aria-label={t("legend")}>
@@ -335,6 +359,9 @@ export function ProgressOverTime({ filters }: { filters: MetricsFilterValues }) 
                 </Table>
               </Box>
             )}
+            <Text size="xs" c="var(--color-text-muted)" mt={12} data-testid="definition">
+              {definition.description} {t("definition.timeBasis", { timeBasis: definition.timeBasis, adr: definition.adr })}
+            </Text>
           </CardSection>
         )
       ) : (
