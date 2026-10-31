@@ -3718,9 +3718,22 @@
     },
     "send": {
       "test": "Send test to me",
+      "testToAddress": "Send test",
       "testSent": "Test sent to your email address.",
+      "testSentTo": "Test sent to {email}.",
       "testRefused": "The email provider refused the test.",
       "testError": "Couldn't send the test: {message}",
+      "testRecipient": {
+        "open": "Test email address",
+        "label": "Send tests to",
+        "placeholder": "you@example.org",
+        "hint": "Saved in this browser only. Leave blank to send to your own address.",
+        "invalid": "Enter a valid email address.",
+        "save": "Save",
+        "reset": "Use my address",
+        "tooltip": "Sends to {email}",
+        "notStored": "This browser didn't let us save the address. It applies until you leave the page."
+      },
       "open": "Send…",
       "title": "Send Brief",
       "list": "Recipient list",

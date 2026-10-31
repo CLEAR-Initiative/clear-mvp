@@ -3718,9 +3718,22 @@
     },
     "send": {
       "test": "M'envoyer un test",
+      "testToAddress": "Envoyer un test",
       "testSent": "Test envoyé à votre adresse e-mail.",
+      "testSentTo": "Test envoyé à {email}.",
       "testRefused": "Le fournisseur d'e-mail a refusé le test.",
       "testError": "Impossible d'envoyer le test : {message}",
+      "testRecipient": {
+        "open": "Adresse e-mail de test",
+        "label": "Envoyer les tests à",
+        "placeholder": "vous@exemple.org",
+        "hint": "Enregistrée dans ce navigateur uniquement. Laissez vide pour utiliser votre propre adresse.",
+        "invalid": "Saisissez une adresse e-mail valide.",
+        "save": "Enregistrer",
+        "reset": "Utiliser mon adresse",
+        "tooltip": "Envoi à {email}",
+        "notStored": "Ce navigateur n'a pas permis d'enregistrer l'adresse. Elle s'applique jusqu'à ce que vous quittiez la page."
+      },
       "open": "Envoyer…",
       "title": "Envoyer le Brief",
       "list": "Liste de destinataires",

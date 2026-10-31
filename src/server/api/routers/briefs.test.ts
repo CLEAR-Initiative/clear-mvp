@@ -169,6 +169,21 @@ describe("briefs router", () => {
     });
   }
 
+  it("sends a test to a chosen address, trimmed and lower-cased", async () => {
+    stubSession("admin");
+    graphqlFetch.mockResolvedValueOnce({ sendBriefTest: true });
+    await caller().briefs.sendTest({ id: "b1", to: " Tester@Example.org " });
+    const [query, vars] = graphqlFetch.mock.calls[0]!;
+    expect(query).toContain("mutation SendBriefTestTo(");
+    expect(vars).toEqual({ id: "b1", to: "tester@example.org" });
+  });
+
+  it("refuses a malformed test address without calling clear-api", async () => {
+    stubSession("admin");
+    await expect(caller().briefs.sendTest({ id: "b1", to: "not-an-email" })).rejects.toMatchObject({ code: "BAD_REQUEST" });
+    expect(graphqlFetch).not.toHaveBeenCalled();
+  });
+
   it("pages the list by its cursor", async () => {
     stubSession("admin");
     graphqlFetch.mockResolvedValueOnce({ briefs: [] });

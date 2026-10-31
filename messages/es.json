@@ -3718,9 +3718,22 @@
     },
     "send": {
       "test": "Enviarme una prueba",
+      "testToAddress": "Enviar prueba",
       "testSent": "Prueba enviada a tu correo electrónico.",
+      "testSentTo": "Prueba enviada a {email}.",
       "testRefused": "El proveedor de correo rechazó la prueba.",
       "testError": "No se pudo enviar la prueba: {message}",
+      "testRecipient": {
+        "open": "Correo de prueba",
+        "label": "Enviar las pruebas a",
+        "placeholder": "tu@ejemplo.org",
+        "hint": "Se guarda solo en este navegador. Déjalo vacío para usar tu propio correo.",
+        "invalid": "Introduce un correo electrónico válido.",
+        "save": "Guardar",
+        "reset": "Usar mi correo",
+        "tooltip": "Se envía a {email}",
+        "notStored": "Este navegador no permitió guardar el correo. Se aplica hasta que salgas de la página."
+      },
       "open": "Enviar…",
       "title": "Enviar Brief",
       "list": "Lista de destinatarios",
