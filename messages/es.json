@@ -3602,6 +3602,98 @@
       "country": "País",
       "allCountries": "Todos los países",
       "hint": "Los días están en UTC. Deje las fechas vacías para las últimas 12 semanas."
+    },
+    "precision": {
+      "title": "Precisión de ubicación",
+      "subtitle": "Con qué finura el pipeline ubicó las señales que localizó. La agrupación se hace por distrito: una señal a nivel de distrito o más fino puede unirse a un evento; una que queda a nivel de estado o país siempre forma su propio evento.",
+      "loading": "Cargando la precisión de ubicación…",
+      "range": "Mostrando del {from} al {to}",
+      "error": {
+        "title": "No se pudo cargar la precisión de ubicación"
+      },
+      "unavailable": {
+        "title": "Precisión de ubicación aún no desplegada",
+        "body": "La API de CLEAR de este entorno aún no sirve la precisión de ubicación. La sección se completará cuando lo haga."
+      },
+      "empty": {
+        "title": "Ninguna señal localizada en este rango",
+        "body": "Nada fue ingerido y localizado en este rango para las fuentes seleccionadas."
+      },
+      "sources": {
+        "label": "Fuentes",
+        "placeholder": "Todas las fuentes"
+      },
+      "tiles": {
+        "fine": {
+          "label": "A nivel de distrito o más fino"
+        },
+        "emphasis": {
+          "label": "{source} a nivel de distrito o más fino"
+        },
+        "noLocation": {
+          "label": "Sin ubicación"
+        },
+        "corrections": {
+          "label": "Impugnaciones de ubicación",
+          "sub": "{open, number} abiertas · {decided, number} resueltas"
+        },
+        "ofSignals": "{n, number} de {total, number} señales",
+        "none": "ninguna en el rango"
+      },
+      "levels": {
+        "noLocation": "Sin ubicación",
+        "country": "País",
+        "state": "Estado",
+        "district": "Distrito",
+        "point": "Punto"
+      },
+      "bySource": {
+        "title": "Dónde cae cada fuente",
+        "subtitle": "Señales localizadas en el rango, por nivel de su ubicación, de más grueso a más fino",
+        "legend": "Leyenda",
+        "tooltip": "{count, number} · {share}",
+        "n": "n = {n, plural, one {# señal} other {# señales}}",
+        "showTable": "Vista de tabla",
+        "hideTable": "Ocultar tabla",
+        "columns": {
+          "source": "Fuente",
+          "signals": "Señales",
+          "fine": "Distrito o más fino"
+        }
+      },
+      "weekly": {
+        "title": "Tendencia semanal",
+        "subtitle": "Proporción de las señales localizadas de cada semana ISO a nivel de distrito o más fino, por fuente",
+        "legend": "Leyenda",
+        "partial": "parcial",
+        "deployMarker": "despliegue",
+        "showTable": "Vista de tabla",
+        "hideTable": "Ocultar tabla",
+        "columns": {
+          "week": "Semana"
+        },
+        "tooltip": {
+          "week": "{week} · desde el {start}",
+          "n": "{n, plural, one {# señal} other {# señales}}",
+          "partial": "Semana parcial: aún en curso"
+        },
+        "markers": {
+          "geocodeInArea": "Geocodificación dentro del área del modelo",
+          "arabicGazetteer": "Nombres árabes del nomenclátor",
+          "darfur24Locator": "darfur24 localizado desde el texto"
+        }
+      },
+      "method": {
+        "title": "Cómo se mide la precisión de ubicación",
+        "intro": "La precisión de ubicación es la finura con la que el pipeline ubicó las señales que localizó, leída de la ubicación guardada en cada señal.",
+        "points": {
+          "counted": "Una señal cuenta cuando un pipeline la ingirió (no enviada ni cargada a mano) y no está retractada ni es ficticia. Cada una cuenta una vez, según el nivel de su ubicación: ninguna, país, estado, distrito o un punto dentro de un distrito.",
+          "level": "La ubicación es la ubicación general de la señal o, para una señal de desplazamiento, su origen. Distrito o más fino significa distrito más punto, que es lo que la agrupación puede usar.",
+          "week": "Una señal pertenece a la semana ISO en que fue localizada (procesada, o si no, recopilada), de modo que un despliegue del pipeline aparece en la semana en que ocurrió. Una señal reprocesada pasa a la semana en que fue relocalizada.",
+          "correctness": "Esto mide cuán fina es una ubicación, no si es correcta. Las impugnaciones de ubicación presentadas en el rango se muestran como indicador indirecto hasta que exista una muestra revisada por analistas.",
+          "definition": "clear-api define la métrica (ADR-0012) y devuelve recuentos; esta página solo los convierte en proporciones."
+        }
+      }
     }
   },
   "usageAnalytics": {

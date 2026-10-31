@@ -3602,6 +3602,98 @@
       "country": "Pays",
       "allCountries": "Tous les pays",
       "hint": "Les jours sont en UTC. Laissez les dates vides pour les 12 dernières semaines."
+    },
+    "precision": {
+      "title": "Précision de localisation",
+      "subtitle": "Avec quelle finesse le pipeline a placé les signaux qu'il a localisés. Le regroupement se fait par district : un signal au district ou plus fin peut rejoindre un événement ; un signal laissé au niveau de l'État ou du pays devient toujours son propre événement.",
+      "loading": "Chargement de la précision de localisation…",
+      "range": "Affichage du {from} au {to}",
+      "error": {
+        "title": "Impossible de charger la précision de localisation"
+      },
+      "unavailable": {
+        "title": "Précision de localisation pas encore déployée",
+        "body": "L'API CLEAR de cet environnement ne sert pas encore la précision de localisation. La section se remplira dès que ce sera le cas."
+      },
+      "empty": {
+        "title": "Aucun signal localisé sur cette période",
+        "body": "Rien n'a été ingéré et localisé sur cette période pour les sources sélectionnées."
+      },
+      "sources": {
+        "label": "Sources",
+        "placeholder": "Toutes les sources"
+      },
+      "tiles": {
+        "fine": {
+          "label": "Au district ou plus fin"
+        },
+        "emphasis": {
+          "label": "{source} au district ou plus fin"
+        },
+        "noLocation": {
+          "label": "Sans localisation"
+        },
+        "corrections": {
+          "label": "Contestations de localisation",
+          "sub": "{open, number} ouvertes · {decided, number} tranchées"
+        },
+        "ofSignals": "{n, number} sur {total, number} signaux",
+        "none": "aucun sur la période"
+      },
+      "levels": {
+        "noLocation": "Sans localisation",
+        "country": "Pays",
+        "state": "État",
+        "district": "District",
+        "point": "Point"
+      },
+      "bySource": {
+        "title": "Où atterrit chaque source",
+        "subtitle": "Signaux localisés sur la période, par niveau de leur localisation, du plus grossier au plus fin",
+        "legend": "Légende",
+        "tooltip": "{count, number} · {share}",
+        "n": "n = {n, plural, one {# signal} other {# signaux}}",
+        "showTable": "Vue tableau",
+        "hideTable": "Masquer le tableau",
+        "columns": {
+          "source": "Source",
+          "signals": "Signaux",
+          "fine": "District ou plus fin"
+        }
+      },
+      "weekly": {
+        "title": "Tendance hebdomadaire",
+        "subtitle": "Part des signaux localisés de chaque semaine ISO au district ou plus fin, par source",
+        "legend": "Légende",
+        "partial": "partielle",
+        "deployMarker": "déploiement",
+        "showTable": "Vue tableau",
+        "hideTable": "Masquer le tableau",
+        "columns": {
+          "week": "Semaine"
+        },
+        "tooltip": {
+          "week": "{week} · à partir du {start}",
+          "n": "{n, plural, one {# signal} other {# signaux}}",
+          "partial": "Semaine partielle : encore en cours"
+        },
+        "markers": {
+          "geocodeInArea": "Géocodage dans la zone du modèle",
+          "arabicGazetteer": "Noms arabes du gazetier",
+          "darfur24Locator": "darfur24 localisé depuis le texte"
+        }
+      },
+      "method": {
+        "title": "Comment la précision de localisation est mesurée",
+        "intro": "La précision de localisation est la finesse avec laquelle le pipeline a placé les signaux qu'il a localisés, lue dans la localisation enregistrée sur chaque signal.",
+        "points": {
+          "counted": "Un signal compte lorsqu'un pipeline l'a ingéré (ni soumis ni saisi à la main) et qu'il n'est ni rétracté ni factice. Chacun compte une fois, au niveau de sa localisation : aucune, pays, État, district ou un point dans un district.",
+          "level": "La localisation est la localisation générale du signal ou, pour un signal de déplacement, son origine. District ou plus fin signifie district plus point, ce que le regroupement peut utiliser.",
+          "week": "Un signal appartient à la semaine ISO où il a été localisé (traité, sinon collecté), de sorte qu'un déploiement du pipeline apparaît dans la semaine où il a eu lieu. Un signal retraité passe dans la semaine où il a été relocalisé.",
+          "correctness": "Ceci mesure la finesse d'une localisation, pas sa justesse. Les contestations de localisation déposées sur la période sont affichées comme indicateur indirect tant qu'un échantillon vérifié par un analyste n'existe pas.",
+          "definition": "clear-api définit la métrique (ADR-0012) et renvoie des comptes ; cette page ne fait que les convertir en parts."
+        }
+      }
     }
   },
   "usageAnalytics": {

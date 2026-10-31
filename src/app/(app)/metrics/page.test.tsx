@@ -14,8 +14,17 @@ let queryState: {
   isFetching?: boolean;
 } = {};
 const useQuery = vi.fn((..._args: unknown[]) => ({ isFetching: false, error: null, ...queryState }));
+// Location precision has its own query; the page tests pin the TTD states and
+// only check that the section renders (its own tests cover its states).
+let precisionState: { data?: unknown; error?: { message: string; data?: { code: string } } | null } = {};
+const usePrecisionQuery = vi.fn((..._args: unknown[]) => ({ isFetching: false, error: null, ...precisionState }));
 vi.mock("~/trpc/react", () => ({
-  api: { metrics: { detection: { useQuery: (...args: unknown[]) => useQuery(...args) } } },
+  api: {
+    metrics: {
+      detection: { useQuery: (...args: unknown[]) => useQuery(...args) },
+      locationPrecision: { useQuery: (...args: unknown[]) => usePrecisionQuery(...args) },
+    },
+  },
 }));
 // The location tree as useLocations serves it; empty when locations.tree
 // failed, while `countries` falls back to names with no ids.
@@ -41,8 +50,10 @@ const { default: MetricsPage } = await import("./page");
 afterEach(() => {
   cleanup();
   queryState = {};
+  precisionState = {};
   tree = TREE;
   useQuery.mockClear();
+  usePrecisionQuery.mockClear();
 });
 
 function renderPage() {
@@ -146,6 +157,16 @@ describe("MetricsPage", () => {
     fireEvent.click(screen.getByRole("textbox", { name: "Country" }));
     fireEvent.click(await screen.findByRole("option", { name: "Sudan" }));
     expect(useQuery.mock.calls.at(-1)![0]).toEqual({ locationId: "loc-sdn" });
+  });
+
+  it("renders the location precision section below time to detection, sharing the filters", () => {
+    queryState = { data: { status: "ok", metrics: withShares(NONE_MEASURED) } };
+    precisionState = { data: { status: "unavailable" } };
+    renderPage();
+    expect(screen.getByRole("heading", { name: "Location precision" })).toBeInTheDocument();
+    expect(screen.getByText("Location precision not deployed yet")).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("From"), { target: { value: "2026-01-05" } });
+    expect(usePrecisionQuery.mock.calls.at(-1)![0]).toEqual({ from: "2026-01-05T00:00:00.000Z" });
   });
 
   it("offers no country when the location tree did not load, rather than names without ids", () => {

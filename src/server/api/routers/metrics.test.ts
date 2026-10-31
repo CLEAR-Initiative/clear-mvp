@@ -151,3 +151,82 @@ describe("metrics router", () => {
     });
   });
 });
+
+const PRECISION = {
+  from: "2026-10-26T00:00:00.000Z",
+  to: "2026-11-08T23:59:59.999Z",
+  signalsInRange: 30,
+  bySource: [
+    { source: "sudan-war-x", total: 20, noLocation: 2, country: 4, state: 6, district: 6, point: 2 },
+    { source: "dataminr", total: 10, noLocation: 0, country: 1, state: 0, district: 0, point: 9 },
+  ],
+  weekly: [
+    { isoWeek: "2026-W44", weekStart: "2026-10-26T00:00:00.000Z", source: "sudan-war-x", total: 20, noLocation: 2, country: 4, state: 6, district: 6, point: 2, isPartial: false },
+    { isoWeek: "2026-W44", weekStart: "2026-10-26T00:00:00.000Z", source: "dataminr", total: 10, noLocation: 0, country: 1, state: 0, district: 0, point: 9, isPartial: false },
+  ],
+  corrections: { open: 2, accepted: 1, corrected: 0, declined: 1, superseded: 0 },
+};
+
+describe("metrics.locationPrecision", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+    graphqlFetch.mockReset();
+  });
+
+  it("forwards the range, location and sources as the query's input", async () => {
+    signedInAs("admin");
+    graphqlFetch.mockResolvedValueOnce({ locationPrecisionMetrics: PRECISION });
+    await caller().metrics.locationPrecision({
+      from: "2026-10-26T00:00:00.000Z",
+      to: "2026-11-08T23:59:59.999Z",
+      locationId: "loc-sdn",
+      sourceNames: ["sudan-war-x", "dataminr"],
+    });
+    const [query, vars, headers] = graphqlFetch.mock.calls[0] as [string, Record<string, unknown>, Record<string, string>];
+    expect(query).toContain("query LocationPrecisionMetrics($input: LocationPrecisionMetricsInput)");
+    expect(query).toContain("locationPrecisionMetrics(input: $input)");
+    expect(vars).toEqual({
+      input: {
+        from: "2026-10-26T00:00:00.000Z",
+        to: "2026-11-08T23:59:59.999Z",
+        locationId: "loc-sdn",
+        sourceNames: ["sudan-war-x", "dataminr"],
+      },
+    });
+    expect(headers).toEqual({ Cookie: "better-auth.session_token=x" });
+  });
+
+  it("leaves out what was not given, so clear-api applies its defaults", async () => {
+    signedInAs("admin");
+    graphqlFetch.mockResolvedValueOnce({ locationPrecisionMetrics: PRECISION });
+    await caller().metrics.locationPrecision();
+    expect(graphqlFetch.mock.calls[0]![1]).toEqual({ input: {} });
+  });
+
+  it("adds the shares and totals to clear-api's counts", async () => {
+    signedInAs("admin");
+    graphqlFetch.mockResolvedValueOnce({ locationPrecisionMetrics: PRECISION });
+    const result = await caller().metrics.locationPrecision();
+    if (result.status !== "ok") throw new Error("expected ok");
+    expect(result.metrics.totals).toMatchObject({ total: 30, fine: 17 });
+    expect(result.metrics.bySource[0]).toMatchObject({ source: "sudan-war-x", fineShare: 0.4 });
+    expect(result.metrics.corrections).toMatchObject({ decided: 2, total: 4 });
+  });
+
+  it("rejects a non-admin without calling clear-api", async () => {
+    for (const role of ["analyst", "viewer", "pending"]) {
+      signedInAs(role);
+      await expect(caller().metrics.locationPrecision()).rejects.toMatchObject({ code: "FORBIDDEN" });
+    }
+    expect(graphqlFetch).not.toHaveBeenCalled();
+  });
+
+  it("returns the unavailable state while clear-api lacks the field", async () => {
+    signedInAs("admin");
+    graphqlFetch.mockRejectedValueOnce(
+      new GraphQLRequestError('Cannot query field "locationPrecisionMetrics" on type "Query".', "GRAPHQL_VALIDATION_FAILED"),
+    );
+    await expect(caller().metrics.locationPrecision()).resolves.toEqual({ status: "unavailable" });
+  });
+});
