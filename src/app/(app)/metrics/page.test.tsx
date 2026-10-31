@@ -18,11 +18,14 @@ const useQuery = vi.fn((..._args: unknown[]) => ({ isFetching: false, error: nul
 // only check that the section renders (its own tests cover its states).
 let precisionState: { data?: unknown; error?: { message: string; data?: { code: string } } | null } = {};
 const usePrecisionQuery = vi.fn((..._args: unknown[]) => ({ isFetching: false, error: null, ...precisionState }));
+// "Progress over time" has its own query too; left loading here, its own tests cover its states.
+const useSeriesQuery = vi.fn((..._args: unknown[]) => ({ isFetching: false, error: null }));
 vi.mock("~/trpc/react", () => ({
   api: {
     metrics: {
       detection: { useQuery: (...args: unknown[]) => useQuery(...args) },
       locationPrecision: { useQuery: (...args: unknown[]) => usePrecisionQuery(...args) },
+      series: { useQuery: (...args: unknown[]) => useSeriesQuery(...args) },
     },
   },
 }));
@@ -106,7 +109,8 @@ describe("MetricsPage", () => {
     queryState = { data: { status: "ok", metrics: withShares(NONE_MEASURED) } };
     renderPage();
     expect(screen.getByText("No measurable events in this range")).toBeInTheDocument();
-    expect(screen.queryByText("Detected by next day")).not.toBeInTheDocument();
+    // The tiles stay away; the metric selector above also names "Detected by next day", so test a tile-only text.
+    expect(screen.queryByText("Events measured")).not.toBeInTheDocument();
     expect(screen.getByText("No ingested signal")).toBeInTheDocument();
     expect(screen.getByText("How this is measured")).toBeInTheDocument();
   });
@@ -125,7 +129,8 @@ describe("MetricsPage", () => {
       },
     };
     renderPage();
-    expect(screen.getByText("Detected by next day")).toBeInTheDocument();
+    expect(screen.getByText("Events measured")).toBeInTheDocument();
+    expect(screen.getByText("3 of 4 measured")).toBeInTheDocument();
     expect(screen.getByText("Days from onset to first signal")).toBeInTheDocument();
     expect(screen.getByText("Weekly trend")).toBeInTheDocument();
     expect(screen.getByText("Not measured")).toBeInTheDocument();

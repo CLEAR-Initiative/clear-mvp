@@ -230,3 +230,90 @@ describe("metrics.locationPrecision", () => {
     await expect(caller().metrics.locationPrecision()).resolves.toEqual({ status: "unavailable" });
   });
 });
+
+const DETECTION_SERIES = {
+  from: "2026-10-05T00:00:00.000Z",
+  to: "2026-10-11T23:59:59.999Z",
+  granularity: "DAY",
+  series: [
+    { start: "2026-10-05T00:00:00.000Z", label: "2026-10-05", isPartial: false, counted: 4, sameDay: 1, byNextDay: 3 },
+    { start: "2026-10-06T00:00:00.000Z", label: "2026-10-06", isPartial: false, counted: 0, sameDay: 0, byNextDay: 0 },
+  ],
+};
+
+const PRECISION_SERIES = {
+  from: "2026-10-26T00:00:00.000Z",
+  to: "2026-11-08T23:59:59.999Z",
+  granularity: "WEEK",
+  bySource: [
+    { source: "sudan-war-x", total: 20 },
+    { source: "dataminr", total: 10 },
+  ],
+  series: [
+    { start: "2026-10-26T00:00:00.000Z", label: "2026-W44", isPartial: false, source: "sudan-war-x", total: 20, district: 6, point: 2 },
+    { start: "2026-10-26T00:00:00.000Z", label: "2026-W44", isPartial: false, source: "dataminr", total: 10, district: 0, point: 9 },
+  ],
+};
+
+describe("metrics.series", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+    graphqlFetch.mockReset();
+  });
+
+  it("asks detectionMetrics for a time-to-detection metric, with the granularity, and reads the share", async () => {
+    signedInAs("admin");
+    graphqlFetch.mockResolvedValueOnce({ detectionMetrics: DETECTION_SERIES });
+    const result = await caller().metrics.series({
+      metric: "detectedSameDay",
+      granularity: "DAY",
+      from: "2026-10-05T00:00:00.000Z",
+      to: "2026-10-11T23:59:59.999Z",
+      locationId: "loc-sdn",
+    });
+    const [query, vars] = graphqlFetch.mock.calls[0] as [string, Record<string, unknown>];
+    expect(query).toContain("query DetectionSeries($input: DetectionMetricsInput)");
+    expect(query).toContain("series { start label isPartial counted sameDay byNextDay }");
+    expect(vars).toEqual({
+      input: { from: "2026-10-05T00:00:00.000Z", to: "2026-10-11T23:59:59.999Z", locationId: "loc-sdn", granularity: "DAY" },
+    });
+    if (result.status !== "ok") throw new Error("expected ok");
+    expect(result.series).toMatchObject({ metric: "detectedSameDay", granularity: "DAY", groups: [] });
+    expect(result.series.buckets[0]).toEqual({ start: "2026-10-05T00:00:00.000Z", label: "2026-10-05", isPartial: false, group: null, numerator: 1, denominator: 4 });
+  });
+
+  it("asks locationPrecisionMetrics for district or finer, per source, leaving out what was not given", async () => {
+    signedInAs("admin");
+    graphqlFetch.mockResolvedValueOnce({ locationPrecisionMetrics: PRECISION_SERIES });
+    const result = await caller().metrics.series({ metric: "districtOrFiner" });
+    const [query, vars] = graphqlFetch.mock.calls[0] as [string, Record<string, unknown>];
+    expect(query).toContain("query LocationPrecisionSeries($input: LocationPrecisionMetricsInput)");
+    expect(vars).toEqual({ input: {} });
+    if (result.status !== "ok") throw new Error("expected ok");
+    expect(result.series.groups).toEqual(["sudan-war-x", "dataminr"]);
+    expect(result.series.buckets).toEqual([
+      { start: "2026-10-26T00:00:00.000Z", label: "2026-W44", isPartial: false, group: "sudan-war-x", numerator: 8, denominator: 20 },
+      { start: "2026-10-26T00:00:00.000Z", label: "2026-W44", isPartial: false, group: "dataminr", numerator: 9, denominator: 10 },
+    ]);
+  });
+
+  it("rejects a non-admin without calling clear-api, and an unknown metric before that", async () => {
+    signedInAs("analyst");
+    await expect(caller().metrics.series({ metric: "districtOrFiner" })).rejects.toMatchObject({ code: "FORBIDDEN" });
+    expect(graphqlFetch).not.toHaveBeenCalled();
+    signedInAs("admin");
+    await expect(
+      caller().metrics.series({ metric: "somethingElse" as "districtOrFiner" }),
+    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
+    expect(graphqlFetch).not.toHaveBeenCalled();
+  });
+
+  it("returns the unavailable state while clear-api lacks the series field", async () => {
+    signedInAs("admin");
+    graphqlFetch.mockRejectedValueOnce(
+      new GraphQLRequestError('Cannot query field "series" on type "DetectionMetrics".', "GRAPHQL_VALIDATION_FAILED"),
+    );
+    await expect(caller().metrics.series({ metric: "detectedByNextDay" })).resolves.toEqual({ status: "unavailable" });
+  });
+});

@@ -15,6 +15,15 @@ import {
   type GqlLocationPrecisionMetrics,
   type LocationPrecisionResult,
 } from "~/lib/location-precision";
+import {
+  GRANULARITIES,
+  METRIC_KEYS,
+  detectionSeries,
+  precisionSeries,
+  type GqlDetectionSeries,
+  type GqlLocationPrecisionSeries,
+  type MetricSeriesResult,
+} from "~/lib/metric-series";
 
 /**
  * Platform metrics for the admin /metrics page. A thin proxy over
@@ -50,6 +59,32 @@ export const LOCATION_PRECISION_QUERY = `
       bySource { source total noLocation country state district point }
       weekly { isoWeek weekStart source total noLocation country state district point isPartial }
       corrections { open accepted corrected declined superseded }
+    }
+  }
+`;
+
+/** The series documents (clear-api ADR-0014): only what the "Progress over
+ * time" section reads, so the older cards' documents stay as they are and
+ * keep working while this one is `unavailable`. */
+export const DETECTION_SERIES_QUERY = `
+  query DetectionSeries($input: DetectionMetricsInput) {
+    detectionMetrics(input: $input) {
+      from
+      to
+      granularity
+      series { start label isPartial counted sameDay byNextDay }
+    }
+  }
+`;
+
+export const LOCATION_PRECISION_SERIES_QUERY = `
+  query LocationPrecisionSeries($input: LocationPrecisionMetricsInput) {
+    locationPrecisionMetrics(input: $input) {
+      from
+      to
+      granularity
+      bySource { source total }
+      series { start label isPartial source total district point }
     }
   }
 `;
@@ -119,6 +154,52 @@ export const metricsRouter = createTRPCRouter({
           cookieHeaders(ctx),
         );
         return { status: "ok", metrics: withPrecisionShares(data.locationPrecisionMetrics) };
+      } catch (err) {
+        if (isGraphqlSchemaUnavailable(err)) return { status: "unavailable" };
+        toTrpcError(err);
+      }
+    }),
+
+  /** One metric's series by day, ISO week or calendar month (clear-api
+   * ADR-0014), as numerator over denominator per bucket and group. The
+   * metric names which clear-api query serves it. `unavailable` while
+   * clear-api does not serve `series` yet. */
+  series: protectedProcedure
+    .input(
+      z.object({
+        metric: z.enum(METRIC_KEYS),
+        granularity: z.enum(GRANULARITIES).optional(),
+        from: z.string().datetime({ offset: true }).optional(),
+        to: z.string().datetime({ offset: true }).optional(),
+        locationId: z.string().min(1).optional(),
+        sourceNames: z.array(z.string().min(1)).max(50).optional(),
+      }),
+    )
+    .query(async ({ ctx, input }): Promise<MetricSeriesResult> => {
+      if (!isPlatformAdmin(ctx.user.role)) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Metrics are for platform admins" });
+      }
+      const variables: Record<string, string | string[]> = {};
+      if (input.from) variables.from = input.from;
+      if (input.to) variables.to = input.to;
+      if (input.locationId) variables.locationId = input.locationId;
+      if (input.granularity) variables.granularity = input.granularity;
+      try {
+        if (input.metric === "districtOrFiner") {
+          if (input.sourceNames?.length) variables.sourceNames = input.sourceNames;
+          const data = await graphqlFetch<{ locationPrecisionMetrics: GqlLocationPrecisionSeries }>(
+            LOCATION_PRECISION_SERIES_QUERY,
+            { input: variables },
+            cookieHeaders(ctx),
+          );
+          return { status: "ok", series: precisionSeries(data.locationPrecisionMetrics) };
+        }
+        const data = await graphqlFetch<{ detectionMetrics: GqlDetectionSeries }>(
+          DETECTION_SERIES_QUERY,
+          { input: variables },
+          cookieHeaders(ctx),
+        );
+        return { status: "ok", series: detectionSeries(input.metric, data.detectionMetrics) };
       } catch (err) {
         if (isGraphqlSchemaUnavailable(err)) return { status: "unavailable" };
         toTrpcError(err);

@@ -71,15 +71,18 @@ export type LocationPrecisionResult =
 /** The source the weekly chart emphasises: the text-only feed the geocoding work exists for. */
 export const EMPHASIS_SOURCE = "sudan-war-x";
 
+export type DeployMarkerKey = "geocodeInArea" | "darfur24Locator" | "locationV3Prompt" | "arabicGazetteer";
+
 /**
- * When a change that should move the metric reached the pipeline. Shown on the
- * weekly chart so a step has its cause next to it. A static list for now; the
- * plan is to read release tags later (Exponential #1260).
+ * When a change that should move the metric reached the dev pipeline (UTC).
+ * Shown on the charts so a step has its cause next to it. A static list for
+ * now; markers become data in Exponential #1278.
  */
-export const DEPLOY_MARKERS: ReadonlyArray<{ at: string; key: "geocodeInArea" | "arabicGazetteer" | "darfur24Locator" }> = [
+export const DEPLOY_MARKERS: ReadonlyArray<{ at: string; key: DeployMarkerKey }> = [
   { at: "2026-10-29T18:33:00Z", key: "geocodeInArea" },
+  { at: "2026-10-31T13:13:00Z", key: "darfur24Locator" },
+  { at: "2026-10-31T13:13:00Z", key: "locationV3Prompt" },
   { at: "2026-10-31T13:45:00Z", key: "arabicGazetteer" },
-  { at: "2026-10-31T14:00:00Z", key: "darfur24Locator" },
 ];
 
 function levelShares(counts: GqlLevelCounts): LevelShares {
