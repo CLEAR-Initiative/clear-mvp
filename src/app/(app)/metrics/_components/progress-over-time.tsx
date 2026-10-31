@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useFormatter, useTranslations } from "next-intl";
-import { keepPreviousData } from "@tanstack/react-query";
 import { Alert, Box, Group, SegmentedControl, Select, Stack, Switch, Table, Text, UnstyledButton } from "@mantine/core";
 import { IconAlertTriangle, IconInfoCircle } from "@tabler/icons-react";
 import { CardSection } from "~/components/ui";
@@ -14,10 +13,11 @@ import {
   METRIC_KEYS,
   beforeAfter,
   bucketsOfGroup,
+  comparisonFrom,
   defaultGranularity,
   latestMarkerInRange,
   markersByBucket,
-  markersFor,
+  markersInRange,
   totalsByBucket,
   type Granularity,
   type MetricDimension,
@@ -65,12 +65,14 @@ export function buildView(
   emphasis: string | null,
   allLabel: string,
   axisLabel: (start: string) => string,
-): { lines: SeriesLine[]; points: SeriesPoint[]; empty: boolean } {
+): { lines: SeriesLine[]; columns: SeriesLine[]; points: SeriesPoint[]; empty: boolean } {
   const totals = totalsByBucket(series);
   const empty = totals.every((bucket) => bucket.denominator === 0);
   if (!perSource) {
+    const all: SeriesLine[] = [{ key: "all", label: allLabel, color: ACCENT, width: 2.5 }];
     return {
-      lines: [{ key: "all", label: allLabel, color: ACCENT, width: 2.5 }],
+      lines: all,
+      columns: all,
       points: totals.map((bucket) => ({
         start: bucket.start,
         label: bucket.label,
@@ -82,17 +84,20 @@ export function buildView(
       empty,
     };
   }
-  let groups = series.groups.slice(0, MAX_LINES);
-  if (emphasis && series.groups.includes(emphasis) && !groups.includes(emphasis)) {
-    groups = [...groups.slice(0, MAX_LINES - 1), emphasis];
+  // The chart draws the first six sources (the emphasised one always among
+  // them); the table shows every source, in clear-api's order.
+  let drawn = series.groups.slice(0, MAX_LINES);
+  if (emphasis && series.groups.includes(emphasis) && !drawn.includes(emphasis)) {
+    drawn = [...drawn.slice(0, MAX_LINES - 1), emphasis];
   }
-  const lines: SeriesLine[] = groups.map((group, i) => ({
+  const columns: SeriesLine[] = series.groups.map((group, i) => ({
     key: group,
     label: group,
     color: group === emphasis ? ACCENT : MUTED,
     width: group === emphasis ? 2.5 : 1.5,
     dash: group === emphasis ? undefined : DASHES[i % DASHES.length],
   }));
+  const lines = columns.filter((column) => drawn.includes(column.key));
   const points: SeriesPoint[] = totals.map((bucket) => {
     const point: SeriesPoint = {
       start: bucket.start,
@@ -100,14 +105,14 @@ export function buildView(
       axisLabel: axisLabel(bucket.start),
       isPartial: bucket.isPartial,
     };
-    for (const group of groups) {
+    for (const group of series.groups) {
       const cell = series.buckets.find((b) => b.group === group && b.start === bucket.start);
       point[group] = cell ? toPct(cell.numerator, cell.denominator) : null;
       point[`n:${group}`] = cell?.denominator ?? 0;
     }
     return point;
   });
-  return { lines, points, empty };
+  return { lines, columns, points, empty };
 }
 
 /**
@@ -129,26 +134,29 @@ export function ProgressOverTime({ filters }: { filters: MetricsFilterValues }) 
   const definition = METRICS[metric];
   const input = metricsQueryInput(filters);
   const granularity = granularityChoice ?? defaultGranularity(input.from, input.to);
+  // No placeholder data: a stale series under a new metric's title would mislead.
   const chart = api.metrics.series.useQuery(
     { ...input, metric, granularity },
     {
-      refetchOnWindowFocus: false,
-      placeholderData: keepPreviousData,
-      retry: (count, err) => !NO_RETRY.has(err.data?.code ?? "") && count < 2,
-    },
-  );
-  // The before-and-after reads whole days whatever the chart shows.
-  const daily = api.metrics.series.useQuery(
-    { ...input, metric, granularity: "DAY" },
-    {
-      enabled: granularity !== "DAY",
       refetchOnWindowFocus: false,
       retry: (count, err) => !NO_RETRY.has(err.data?.code ?? "") && count < 2,
     },
   );
   const result = chart.data;
   const series = result?.status === "ok" ? result.series : null;
-  const dailySeries = granularity === "DAY" ? series : daily.data?.status === "ok" ? daily.data.series : null;
+  // The before-and-after reads whole days over its own window: seven days
+  // before the latest marker up to the range's end, whatever the page's
+  // range starts on, so a range opened close to the marker is not clipped.
+  const latestMarker = series ? latestMarkerInRange(metric, series.from, series.to) : null;
+  const daily = api.metrics.series.useQuery(
+    { ...input, metric, granularity: "DAY", from: latestMarker ? comparisonFrom(latestMarker) : undefined, to: series?.to },
+    {
+      enabled: latestMarker !== null,
+      refetchOnWindowFocus: false,
+      retry: (count, err) => !NO_RETRY.has(err.data?.code ?? "") && count < 2,
+    },
+  );
+  const dailySeries = daily.data?.status === "ok" ? daily.data.series : null;
   // The page already shows clear-api's range message by the date fields.
   const rangeError = chart.error?.data?.code === "BAD_REQUEST";
   const perSourceLines = definition.perSource && perSource;
@@ -158,14 +166,13 @@ export function ProgressOverTime({ filters }: { filters: MetricsFilterValues }) 
       ? format.dateTime(new Date(start), { month: "short", year: "2-digit", timeZone: "UTC" })
       : format.dateTime(new Date(start), { day: "numeric", month: "short", timeZone: "UTC" });
   const view = series ? buildView(series, perSourceLines, definition.emphasis, t("allSources"), axisLabel) : null;
-  const markerGroups: MarkerGroup[] = view
-    ? [...markersByBucket(view.points, markersFor(metric), granularity)].map(([label, markers]) => ({
+  const markerGroups: MarkerGroup[] = view && series
+    ? [...markersByBucket(view.points, markersInRange(metric, series.from, series.to), granularity)].map(([label, markers]) => ({
         axisLabel: view.points.find((point) => point.label === label)!.axisLabel,
         names: markers.map((m) => tMarkers(m.key)),
       }))
     : [];
 
-  const latestMarker = series ? latestMarkerInRange(metric, series.from, series.to) : null;
   const focus = perSourceLines && definition.emphasis && series?.groups.includes(definition.emphasis) ? definition.emphasis : null;
   const dayTotals: TotalBucket[] | null = dailySeries
     ? focus
@@ -300,7 +307,7 @@ export function ProgressOverTime({ filters }: { filters: MetricsFilterValues }) 
                   <Table.Thead>
                     <Table.Tr>
                       <Table.Th>{t("columns.bucket")}</Table.Th>
-                      {view.lines.map((line) => (
+                      {view.columns.map((line) => (
                         <Table.Th key={line.key} ta="right">
                           {line.label}
                         </Table.Th>
@@ -314,7 +321,7 @@ export function ProgressOverTime({ filters }: { filters: MetricsFilterValues }) 
                           {point.label}
                           {point.isPartial ? ` (${t("partial")})` : ""}
                         </Table.Td>
-                        {view.lines.map((line) => {
+                        {view.columns.map((line) => {
                           const value = point[line.key] as number | null;
                           return (
                             <Table.Td key={line.key} ta="right">

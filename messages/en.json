@@ -3647,7 +3647,7 @@
       },
       "tooltip": {
         "week": "{week} · from {start}",
-        "partial": "Partial bucket: still in progress",
+        "partial": "Partial bucket: the range covers only part of it",
         "changes": "Changes in this bucket"
       },
       "units": {

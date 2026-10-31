@@ -266,8 +266,23 @@ export function beforeAfter(dayBuckets: readonly TotalBucket[], marker: SeriesMa
   };
 }
 
+/** The markers for the metric whose instant lies inside the range, oldest first. A bucket can reach past the selected dates; a marker outside them is not drawn. */
+export function markersInRange(metric: MetricKey, from: string, to: string, markers: readonly SeriesMarker[] = MARKERS): SeriesMarker[] {
+  return markersFor(metric, markers).filter((marker) => marker.at >= from && marker.at <= to);
+}
+
 /** The latest marker for the metric inside the range, or null. */
 export function latestMarkerInRange(metric: MetricKey, from: string, to: string, markers: readonly SeriesMarker[] = MARKERS): SeriesMarker | null {
-  const inRange = markersFor(metric, markers).filter((marker) => marker.at >= from && marker.at <= to);
+  const inRange = markersInRange(metric, from, to, markers);
   return inRange.length > 0 ? inRange[inRange.length - 1]! : null;
+}
+
+/**
+ * Where the before-and-after's daily read starts: 00:00 UTC seven days before
+ * the marker's day, whatever the page's range starts on, so a range opened
+ * close to the marker does not clip the baseline.
+ */
+export function comparisonFrom(marker: SeriesMarker): string {
+  const markerDay = Math.floor(Date.parse(marker.at) / DAY_MS);
+  return new Date((markerDay - BEFORE_AFTER_DAYS) * DAY_MS).toISOString();
 }

@@ -3647,7 +3647,7 @@
       },
       "tooltip": {
         "week": "{week} · desde el {start}",
-        "partial": "Intervalo parcial: aún en curso",
+        "partial": "Intervalo parcial: el periodo solo cubre una parte",
         "changes": "Cambios en este intervalo"
       },
       "units": {

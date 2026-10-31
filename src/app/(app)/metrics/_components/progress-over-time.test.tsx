@@ -127,3 +127,56 @@ describe("ProgressOverTime", () => {
     expect(screen.getByText("Metrics are for platform admins")).toBeInTheDocument();
   });
 });
+
+describe("ProgressOverTime, after review", () => {
+  it("reads the comparison over the seven days before the marker, whatever the page range starts on", () => {
+    states["districtOrFiner:DAY"] = { data: { status: "ok", series: daily(27, 30) } };
+    wrap(<ProgressOverTime filters={filters("2026-10-27", "2026-10-30")} />);
+    expect(
+      useQuery.mock.calls.some(
+        ([input]) =>
+          input.granularity === "DAY" &&
+          (input as { from?: string }).from === "2026-10-22T00:00:00.000Z" &&
+          (input as { to?: string }).to === "2026-10-30T23:59:59.999Z",
+      ),
+    ).toBe(true);
+  });
+
+  it("leaves out a marker outside the selected dates even when its bucket is drawn", () => {
+    const month: MetricSeries = {
+      metric: "districtOrFiner",
+      granularity: "MONTH",
+      from: "2026-10-01T00:00:00.000Z",
+      to: "2026-10-20T23:59:59.999Z",
+      groups: ["sudan-war-x"],
+      buckets: [{ start: "2026-10-01T00:00:00.000Z", label: "2026-10", isPartial: true, group: "sudan-war-x", numerator: 30, denominator: 100 }],
+    };
+    states["*"] = { data: { status: "ok", series: month } };
+    wrap(<ProgressOverTime filters={filters("2026-10-01", "2026-10-20")} />);
+    fireEvent.click(screen.getByLabelText("Month"));
+    expect(screen.queryByText("Geocoding inside the model's area")).not.toBeInTheDocument();
+    expect(screen.queryByText(/changes$/)).not.toBeInTheDocument();
+    expect(screen.queryByTestId("before-after")).not.toBeInTheDocument();
+  });
+
+  it("lists every source in the table, beyond the six lines the chart draws", () => {
+    const groups = Array.from({ length: 7 }, (_, i) => `src${i + 1}`);
+    const buckets: MetricSeries["buckets"] = [];
+    for (const group of groups) {
+      for (const d of [27, 28]) {
+        buckets.push({ start: `2026-10-${d}T00:00:00.000Z`, label: `2026-10-${d}`, isPartial: false, group, numerator: 5, denominator: 10 });
+      }
+    }
+    states["districtOrFiner:DAY"] = {
+      data: { status: "ok", series: { metric: "districtOrFiner", granularity: "DAY", from: "2026-10-27T00:00:00.000Z", to: "2026-10-28T23:59:59.999Z", groups, buckets } },
+    };
+    const { container } = wrap(<ProgressOverTime filters={filters("2026-10-27", "2026-10-28")} />);
+    expect(container.querySelectorAll(".recharts-line")).toHaveLength(6);
+    expect(screen.getByLabelText("Legend")).not.toHaveTextContent("src7");
+    fireEvent.click(screen.getByText("Table view"));
+    const table = screen.getByRole("table");
+    expect(within(table).getAllByRole("columnheader")).toHaveLength(8);
+    expect(within(table).getByText("src7")).toBeInTheDocument();
+  });
+});
+
