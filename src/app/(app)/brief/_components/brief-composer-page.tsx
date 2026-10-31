@@ -5,7 +5,7 @@ import { useFormatter, useTranslations } from "next-intl";
 import Link from "next/link";
 import { Box, Button, Center, Grid, Group, Loader, Stack, Text } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
-import { IconMailForward, IconSend } from "@tabler/icons-react";
+import { IconSend } from "@tabler/icons-react";
 import { PageHeader } from "~/components/ui";
 import { api } from "~/trpc/react";
 import type { Brief } from "~/lib/brief/types";
@@ -20,6 +20,7 @@ import type { PreviewTarget } from "../_lib/preview-target";
 import { SendBriefModal } from "./send-brief-modal";
 import { BriefPdfButton } from "./brief-pdf-button";
 import { BriefCopyButton } from "./brief-copy-button";
+import { BriefTestButton } from "./brief-test-button";
 
 const NO_RETRY = new Set(["BAD_REQUEST", "FORBIDDEN", "UNAUTHORIZED", "NOT_FOUND"]);
 
@@ -116,15 +117,6 @@ function Composer({ brief }: { brief: Brief }) {
     if (target.kind === "event") setPreviewEventId(target.eventId);
     else window.open(`/signal/${encodeURIComponent(target.signalId)}`, "_blank", "noopener");
   }, []);
-  const sendTest = api.briefs.sendTest.useMutation({
-    onSuccess: (accepted) =>
-      notifications.show(
-        accepted
-          ? { color: "green", message: t("send.testSent") }
-          : { color: "red", message: t("send.testRefused") },
-      ),
-    onError: (err) => notifications.show({ color: "red", message: t("send.testError", { message: err.message }) }),
-  });
 
   return (
     <Box>
@@ -133,16 +125,7 @@ function Composer({ brief }: { brief: Brief }) {
         {editable && <SaveIndicator status={saveStatus} />}
         <BriefCopyButton beforeCopy={saveAll} />
         <BriefPdfButton beforeBuild={saveAll} />
-        <Button
-          size="xs"
-          variant="default"
-          leftSection={<IconMailForward size={14} />}
-          loading={sendTest.isPending}
-          onClick={() => void saveAll().then((saved) => saved && sendTest.mutate({ id: brief.id }))}
-          data-testid="brief-send-test"
-        >
-          {t("send.test")}
-        </Button>
+        <BriefTestButton briefId={brief.id} beforeSend={saveAll} />
         {editable && (
           <Button size="xs" leftSection={<IconSend size={14} />} onClick={() => setSending(true)} data-testid="brief-send">
             {t("send.open")}

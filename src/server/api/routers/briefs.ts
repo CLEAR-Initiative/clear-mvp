@@ -87,6 +87,11 @@ export const REORDER_BRIEF_ITEMS = `
 export const SEND_BRIEF_TEST = `
   mutation SendBriefTest($id: String!) { sendBriefTest(id: $id) }
 `;
+// A separate operation, so a test to the caller still works against a
+// clear-api that doesn't take \`to\` yet.
+export const SEND_BRIEF_TEST_TO = `
+  mutation SendBriefTestTo($id: String!, $to: String!) { sendBriefTest(id: $id, to: $to) }
+`;
 export const SEND_BRIEF = `
   mutation SendBrief($id: String!, $recipientListId: String!) {
     sendBrief(id: $id, recipientListId: $recipientListId) { sent failed }
@@ -222,11 +227,18 @@ export const briefsRouter = createTRPCRouter({
       return data.reorderBriefItems;
     }),
 
-  /** Emails the Brief to the caller only. False when the provider refused it. */
-  sendTest: adminProcedure.input(z.object({ id })).mutation(async ({ ctx, input }) => {
-    const data = await call<{ sendBriefTest: boolean }>(ctx, SEND_BRIEF_TEST, { id: input.id });
-    return data.sendBriefTest;
-  }),
+  /**
+   * Emails the Brief to \`to\`, or to the caller without one. False when the
+   * provider refused it.
+   */
+  sendTest: adminProcedure
+    .input(z.object({ id, to: z.string().trim().toLowerCase().email().max(254).optional() }))
+    .mutation(async ({ ctx, input }) => {
+      const data = input.to
+        ? await call<{ sendBriefTest: boolean }>(ctx, SEND_BRIEF_TEST_TO, { id: input.id, to: input.to })
+        : await call<{ sendBriefTest: boolean }>(ctx, SEND_BRIEF_TEST, { id: input.id });
+      return data.sendBriefTest;
+    }),
 
   /** Freezes the Brief and emails the list; failures are reported, not retried. */
   send: adminProcedure
