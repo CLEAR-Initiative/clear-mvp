@@ -3619,7 +3619,11 @@
       "metrics": {
         "DETECTED_BY_NEXT_DAY": "Detected by next day",
         "DETECTED_SAME_DAY": "Detected same day",
-        "DISTRICT_OR_FINER": "At district or finer"
+        "ALERTED_BY_NEXT_DAY": "Alerted by next day",
+        "ALERTED_SAME_DAY": "Alerted same day",
+        "DISTRICT_OR_FINER": "At district or finer",
+        "SOURCES_ON_SCHEDULE": "Sources on schedule",
+        "EVENTS_ESCALATED": "Events escalated"
       },
       "granularity": {
         "label": "Buckets",
@@ -3656,6 +3660,7 @@
       "units": {
         "EVENTS": "n = {n, plural, one {# measured event} other {# measured events}}",
         "SIGNALS": "n = {n, plural, one {# signal} other {# signals}}",
+        "SOURCE_DAYS": "n = {n, plural, one {# source-day} other {# source-days}}",
         "DEFAULT": "n = {n, number}"
       },
       "chip": {

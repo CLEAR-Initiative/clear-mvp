@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
+import enMessages from "../../messages/en.json";
 import {
+  KNOWN_METRIC_KEYS,
+  METRIC_UNITS,
   beforeAfter,
   bucketEnd,
   bucketsOfGroup,
@@ -176,5 +179,13 @@ describe("utcInstantFromLocalInput", () => {
     expect(utcInstantFromLocalInput("2026-10-31T13:13:00Z")).toBe("2026-10-31T13:13:00.000Z");
     expect(utcInstantFromLocalInput("")).toBeNull();
     expect(utcInstantFromLocalInput("not a date")).toBeNull();
+  });
+});
+
+describe("known metric keys and units", () => {
+  it("each carry a translated name and a unit message, so a registry key is only 'known' once it reads in every locale", () => {
+    const messages = enMessages.metrics.progress as { metrics: Record<string, string>; units: Record<string, string> };
+    for (const key of KNOWN_METRIC_KEYS) expect(messages.metrics[key], key).toBeTruthy();
+    for (const unit of METRIC_UNITS) expect(messages.units[unit], unit).toBeTruthy();
   });
 });

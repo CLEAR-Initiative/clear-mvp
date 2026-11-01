@@ -3619,7 +3619,11 @@
       "metrics": {
         "DETECTED_BY_NEXT_DAY": "Detectado como máximo al día siguiente",
         "DETECTED_SAME_DAY": "Detectado el mismo día",
-        "DISTRICT_OR_FINER": "A nivel de distrito o más fino"
+        "ALERTED_BY_NEXT_DAY": "Alertado como máximo al día siguiente",
+        "ALERTED_SAME_DAY": "Alertado el mismo día",
+        "DISTRICT_OR_FINER": "A nivel de distrito o más fino",
+        "SOURCES_ON_SCHEDULE": "Fuentes al día",
+        "EVENTS_ESCALATED": "Eventos escalados"
       },
       "granularity": {
         "label": "Intervalos",
@@ -3656,6 +3660,7 @@
       "units": {
         "EVENTS": "n = {n, plural, one {# evento medido} other {# eventos medidos}}",
         "SIGNALS": "n = {n, plural, one {# señal} other {# señales}}",
+        "SOURCE_DAYS": "n = {n, plural, one {# fuente-día} other {# fuentes-día}}",
         "DEFAULT": "n = {n, number}"
       },
       "chip": {

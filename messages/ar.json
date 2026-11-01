@@ -3619,7 +3619,11 @@
       "metrics": {
         "DETECTED_BY_NEXT_DAY": "رُصد في اليوم التالي على الأكثر",
         "DETECTED_SAME_DAY": "رُصد في اليوم نفسه",
-        "DISTRICT_OR_FINER": "على مستوى المحلية أو أدق"
+        "ALERTED_BY_NEXT_DAY": "نُبِّه عنه في اليوم التالي على الأكثر",
+        "ALERTED_SAME_DAY": "نُبِّه عنه في اليوم نفسه",
+        "DISTRICT_OR_FINER": "على مستوى المحلية أو أدق",
+        "SOURCES_ON_SCHEDULE": "المصادر الملتزمة بجدولها",
+        "EVENTS_ESCALATED": "الأحداث المصعَّدة"
       },
       "granularity": {
         "label": "الفترات",
@@ -3656,6 +3660,7 @@
       "units": {
         "EVENTS": "n = {n, plural, zero {لا أحداث مقيسة} one {حدث مقيس واحد} two {حدثان مقيسان} few {# أحداث مقيسة} many {# حدثًا مقيسًا} other {# حدث مقيس}}",
         "SIGNALS": "n = {n, plural, zero {لا إشارات} one {إشارة واحدة} two {إشارتان} few {# إشارات} many {# إشارة} other {# إشارة}}",
+        "SOURCE_DAYS": "n = {n, plural, zero {لا أيام مصادر} one {يوم مصدر واحد} two {يوما مصدر} few {# أيام مصادر} many {# يوم مصدر} other {# يوم مصدر}}",
         "DEFAULT": "n = {n, number}"
       },
       "chip": {

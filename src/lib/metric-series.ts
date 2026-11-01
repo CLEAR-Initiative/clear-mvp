@@ -18,7 +18,15 @@ export const GRANULARITIES = ["DAY", "WEEK", "MONTH"] as const;
 export type Granularity = (typeof GRANULARITIES)[number];
 
 /** The registry keys this app has translations for; any other key clear-api lists works with its English name. */
-export const KNOWN_METRIC_KEYS = ["DETECTED_BY_NEXT_DAY", "DETECTED_SAME_DAY", "DISTRICT_OR_FINER"] as const;
+export const KNOWN_METRIC_KEYS = [
+  "DETECTED_BY_NEXT_DAY",
+  "DETECTED_SAME_DAY",
+  "ALERTED_BY_NEXT_DAY",
+  "ALERTED_SAME_DAY",
+  "DISTRICT_OR_FINER",
+  "SOURCES_ON_SCHEDULE",
+  "EVENTS_ESCALATED",
+] as const;
 export type KnownMetricKey = (typeof KNOWN_METRIC_KEYS)[number];
 /** A `MetricKey` value from clear-api's registry. */
 export type MetricKey = string;
@@ -27,8 +35,8 @@ export type MetricKey = string;
 export const METRIC_DIMENSIONS = ["TIMELINESS", "ACCURACY", "COVERAGE", "RELIABILITY", "USEFULNESS"] as const;
 export type MetricDimension = (typeof METRIC_DIMENSIONS)[number];
 
-/** What a metric's denominator counts. */
-export const METRIC_UNITS = ["EVENTS", "SIGNALS"] as const;
+/** What a metric's denominator counts: Events, Signals, or source-days (one per expected source per measured day). */
+export const METRIC_UNITS = ["EVENTS", "SIGNALS", "SOURCE_DAYS"] as const;
 export type MetricUnit = (typeof METRIC_UNITS)[number];
 
 /** The metric the section opens on, when clear-api lists it. */
