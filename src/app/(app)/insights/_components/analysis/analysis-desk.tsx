@@ -223,6 +223,8 @@ export function AnalysisDesk({
       added.push({ id, name: file.name, addedAt: new Date().toISOString(), pending: true });
     }
     rememberFiles((current) => [...current, ...added]);
+    // Files wait their turn as uploading, not failed: no Retry before the first attempt.
+    setUploading((current) => new Set([...current, ...added.map((row) => row.id)]));
     for (const [index, file] of pdfs.entries()) {
       const local = added[index];
       if (local) await upload(local, file);
@@ -250,12 +252,15 @@ export function AnalysisDesk({
       const res = await fetch("/api/analysis/evidence", { method: "POST", body });
       if (!res.ok) return;
       const uploaded = (await res.json()) as { reportId?: string | null };
-      if (uploaded.reportId) {
-        await saveAnalysisFile(storageKey, uploaded.reportId, file);
-        rememberFiles((current) =>
-          current.map((row) => (row.id === local.id ? { ...row, reportId: uploaded.reportId ?? undefined } : row)),
-        );
-      }
+      if (uploaded.reportId) await saveAnalysisFile(storageKey, uploaded.reportId, file);
+      // The card's time is when the upload succeeded, so a retry is not compared
+      // with an analysis update from before it.
+      const uploadedAt = new Date().toISOString();
+      rememberFiles((current) =>
+        current.map((row) =>
+          row.id === local.id ? { ...row, addedAt: uploadedAt, reportId: uploaded.reportId ?? undefined } : row,
+        ),
+      );
       const fresh = await thread.refetch();
       const saved = fresh.data?.documents.find((item) => item.fileName === local.name && item.url);
       if (saved) rememberFiles((current) => dropConfirmed(current, new Set([local.id])));
