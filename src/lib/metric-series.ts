@@ -24,6 +24,9 @@ export const KNOWN_METRIC_KEYS = [
   "ALERTED_BY_NEXT_DAY",
   "ALERTED_SAME_DAY",
   "DISTRICT_OR_FINER",
+  "SIGNALS_GROUPED",
+  "EVENTS_WITH_ONE_SIGNAL",
+  "ACLED_EVENTS_ALERTED",
   "SOURCES_ON_SCHEDULE",
   "EVENTS_ESCALATED",
 ] as const;
@@ -35,8 +38,8 @@ export type MetricKey = string;
 export const METRIC_DIMENSIONS = ["TIMELINESS", "ACCURACY", "COVERAGE", "RELIABILITY", "USEFULNESS"] as const;
 export type MetricDimension = (typeof METRIC_DIMENSIONS)[number];
 
-/** What a metric's denominator counts: Events, Signals, or source-days (one per expected source per measured day). */
-export const METRIC_UNITS = ["EVENTS", "SIGNALS", "SOURCE_DAYS"] as const;
+/** What a metric's denominator counts: Events, Signals, source-days (one per expected source per measured day), or ACLED events. */
+export const METRIC_UNITS = ["EVENTS", "SIGNALS", "SOURCE_DAYS", "ACLED_EVENTS"] as const;
 export type MetricUnit = (typeof METRIC_UNITS)[number];
 
 /** The metric the section opens on, when clear-api lists it. */

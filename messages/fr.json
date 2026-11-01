@@ -3622,6 +3622,9 @@
         "ALERTED_BY_NEXT_DAY": "Alerte émise le lendemain au plus tard",
         "ALERTED_SAME_DAY": "Alerte émise le jour même",
         "DISTRICT_OR_FINER": "Au district ou plus fin",
+        "SIGNALS_GROUPED": "Signaux regroupés",
+        "EVENTS_WITH_ONE_SIGNAL": "Événements à un seul signal",
+        "ACLED_EVENTS_ALERTED": "Événements ACLED alertés à proximité",
         "SOURCES_ON_SCHEDULE": "Sources dans les délais",
         "EVENTS_ESCALATED": "Événements escaladés"
       },
@@ -3661,6 +3664,7 @@
         "EVENTS": "n = {n, plural, one {# événement mesuré} other {# événements mesurés}}",
         "SIGNALS": "n = {n, plural, one {# signal} other {# signaux}}",
         "SOURCE_DAYS": "n = {n, plural, one {# source-jour} other {# sources-jours}}",
+        "ACLED_EVENTS": "n = {n, plural, one {# événement ACLED} other {# événements ACLED}}",
         "DEFAULT": "n = {n, number}"
       },
       "chip": {
