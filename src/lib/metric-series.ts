@@ -58,6 +58,8 @@ export interface MetricDefinition {
   timeBasis: string;
   /** True when the series can be read per data source. */
   groupable: boolean;
+  /** False for a metric that reads every country (source health), so the page's country filter does not apply to it; absent means true. */
+  locationScoped?: boolean;
   /** The ADR that owns the definition. */
   adr: string;
 }

@@ -3716,10 +3716,12 @@
         "loading": "Loading…",
         "error": "Couldn't load",
         "unavailable": "Not served by this API",
-        "select": "Show {metric}"
+        "select": "Show {metric}",
+        "everyCountry": "every country"
       },
       "copyLink": "Copy link",
-      "copied": "Link copied"
+      "copied": "Link copied",
+      "everyCountry": "Reads every country: the country filter does not apply to this metric."
     },
     "precision": {
       "title": "Location precision",

@@ -3716,10 +3716,12 @@
         "loading": "جارٍ التحميل…",
         "error": "تعذّر التحميل",
         "unavailable": "غير متاح من واجهة API هذه",
-        "select": "عرض {metric}"
+        "select": "عرض {metric}",
+        "everyCountry": "كل البلدان"
       },
       "copyLink": "نسخ الرابط",
-      "copied": "تم نسخ الرابط"
+      "copied": "تم نسخ الرابط",
+      "everyCountry": "يقرأ كل البلدان: لا ينطبق مرشّح البلد على هذا المقياس."
     },
     "precision": {
       "title": "دقة تحديد الموقع",

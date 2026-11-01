@@ -192,12 +192,16 @@ export function ProgressOverTime({ filters }: { filters: MetricsFilterValues }) 
   };
 
   const input = metricsQueryInput(filters);
+  // A metric that reads every country (source health) ignores the country filter: read it without the
+  // country and say so, rather than show a global number under a country's heading.
+  const everyCountry = definition?.locationScoped === false;
+  const scopedInput = everyCountry ? { from: input.from, to: input.to } : input;
   const granularity = granularityChoice ?? defaultGranularity(input.from, input.to);
   const grouped = !!definition?.groupable && perSource;
   const groupBy = grouped ? ("SOURCE" as const) : undefined;
   // No placeholder data: a stale series under a new metric's title would mislead.
   const chart = api.metrics.series.useQuery(
-    { ...input, metric, granularity, groupBy },
+    { ...scopedInput, metric, granularity, groupBy },
     {
       enabled: definition !== null,
       refetchOnWindowFocus: false,
@@ -221,7 +225,7 @@ export function ProgressOverTime({ filters }: { filters: MetricsFilterValues }) 
   // range starts on, so a range opened close to the marker is not clipped.
   const latestMarker = series ? latestMarkerInRange(metric, series.from, series.to, markers) : null;
   const daily = api.metrics.series.useQuery(
-    { ...input, metric, granularity: "DAY", groupBy, from: latestMarker ? comparisonFrom(latestMarker) : undefined, to: series?.to },
+    { ...scopedInput, metric, granularity: "DAY", groupBy, from: latestMarker ? comparisonFrom(latestMarker) : undefined, to: series?.to },
     {
       enabled: latestMarker !== null,
       refetchOnWindowFocus: false,
@@ -588,6 +592,11 @@ export function ProgressOverTime({ filters }: { filters: MetricsFilterValues }) 
                 </Text>
               )}
             </Box>
+            {everyCountry && input.locationId && (
+              <Text size="xs" c="var(--color-text-secondary)" mt={12} data-testid="every-country">
+                {t("everyCountry")}
+              </Text>
+            )}
             <Text size="xs" c="var(--color-text-muted)" mt={12} data-testid="definition">
               {definition.description} {t("definition.timeBasis", { timeBasis: definition.timeBasis, adr: definition.adr })}
             </Text>
