@@ -68,7 +68,7 @@ export const LOCATION_PRECISION_QUERY = `
  * working while these are `unavailable`. */
 export const METRIC_DEFINITIONS_QUERY = `
   query MetricDefinitions {
-    metricDefinitions { key name dimension unit description timeBasis groupable adr }
+    metricDefinitions { key name dimension unit description timeBasis groupable locationScoped adr }
   }
 `;
 

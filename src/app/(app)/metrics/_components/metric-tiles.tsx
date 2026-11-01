@@ -78,7 +78,7 @@ function MetricTile({
   const t = useTranslations("metrics.progress.overview");
   const pct = useShareFormat();
   const query = api.metrics.series.useQuery(
-    { metric: definition.key, granularity: "WEEK", ...(locationId ? { locationId } : {}) },
+    { metric: definition.key, granularity: "WEEK", ...(locationId && definition.locationScoped !== false ? { locationId } : {}) },
     {
       refetchOnWindowFocus: false,
       retry: (count, err) => !NO_RETRY.has(err.data?.code ?? "") && count < 2,
@@ -95,6 +95,8 @@ function MetricTile({
   const color = selected ? "var(--color-accent)" : "var(--color-text-muted)";
   // Without a reading, say why: a failed read, an API without the registry,
   // a series with nothing measured, or a read still pending.
+  // A metric that reads every country says so when a country is selected, since the page's filter did not apply.
+  const scopeNote = definition.locationScoped === false && locationId ? t("everyCountry") : null;
   const caption = latest
     ? latest.isPartial
       ? t("currentPartial", { week: latest.label })
@@ -129,7 +131,7 @@ function MetricTile({
         {latest ? pct(latest.share) : "—"}
       </Text>
       <Text size="xs" c="var(--color-text-muted)" title={!latest && query.error ? query.error.message : undefined}>
-        {caption}
+        {scopeNote ? `${caption} · ${scopeNote}` : caption}
       </Text>
       <Box h={40} mt={4} dir="ltr" aria-hidden>
         {points.length > 1 && (

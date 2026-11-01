@@ -3716,10 +3716,12 @@
         "loading": "Chargement…",
         "error": "Chargement impossible",
         "unavailable": "Non servi par cette API",
-        "select": "Afficher {metric}"
+        "select": "Afficher {metric}",
+        "everyCountry": "tous les pays"
       },
       "copyLink": "Copier le lien",
-      "copied": "Lien copié"
+      "copied": "Lien copié",
+      "everyCountry": "Lit tous les pays : le filtre par pays ne s'applique pas à cette métrique."
     },
     "precision": {
       "title": "Précision de localisation",

@@ -125,9 +125,12 @@ describe("MetricTiles", () => {
     expect(onSelect).toHaveBeenCalledWith("FAILED");
   });
 
-  it("asks clear-api for each metric by week, under the page's country only", () => {
-    wrap(<MetricTiles definitions={DEFINITIONS.slice(0, 2)} selected="MEASURED" onSelect={() => undefined} locationId="loc-sdn" nameOf={(d) => d.name} />);
+  it("asks clear-api for each metric by week, under the page's country only, except a metric that reads every country", () => {
+    const global = { ...definition("GLOBAL", "Global"), locationScoped: false };
+    wrap(<MetricTiles definitions={[...DEFINITIONS.slice(0, 2), global]} selected="MEASURED" onSelect={() => undefined} locationId="loc-sdn" nameOf={(d) => d.name} />);
     expect(useSeries).toHaveBeenCalledWith({ metric: "MEASURED", granularity: "WEEK", locationId: "loc-sdn" }, expect.anything());
     expect(useSeries).toHaveBeenCalledWith({ metric: "FAILED", granularity: "WEEK", locationId: "loc-sdn" }, expect.anything());
+    expect(useSeries).toHaveBeenCalledWith({ metric: "GLOBAL", granularity: "WEEK" }, expect.anything());
+    expect(screen.getByRole("button", { name: "Show Global" })).toHaveTextContent("every country");
   });
 });

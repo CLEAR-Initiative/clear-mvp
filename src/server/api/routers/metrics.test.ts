@@ -261,7 +261,7 @@ describe("metrics.definitions and metrics.series", () => {
     graphqlFetch.mockResolvedValueOnce({ metricDefinitions: DEFINITIONS });
     const result = await caller().metrics.definitions();
     const [query, vars] = graphqlFetch.mock.calls[0] as [string, Record<string, unknown>];
-    expect(query).toContain("metricDefinitions { key name dimension unit description timeBasis groupable adr }");
+    expect(query).toContain("metricDefinitions { key name dimension unit description timeBasis groupable locationScoped adr }");
     expect(vars).toEqual({});
     expect(result).toEqual({ status: "ok", definitions: DEFINITIONS });
   });

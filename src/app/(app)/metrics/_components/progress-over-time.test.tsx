@@ -64,6 +64,18 @@ const DEFINITIONS: MetricDefinition[] = [
   { key: "DETECTED_SAME_DAY", name: "Detected same day", dimension: "TIMELINESS", unit: "EVENTS", description: "Share of measured events first signalled on the onset day.", timeBasis: "The first ingested signal.", groupable: false, adr: "ADR-0011" },
   { key: "DISTRICT_OR_FINER", name: "At district or finer", dimension: "ACCURACY", unit: "SIGNALS", description: "Share of located signals at a district or a point.", timeBasis: "The instant the signal was located.", groupable: true, adr: "ADR-0012" },
 ];
+/** Source health reads every country: the page's country filter must not reach it. */
+const EVERY_COUNTRY: MetricDefinition = {
+  key: "SOURCES_ON_SCHEDULE",
+  name: "Sources on schedule",
+  dimension: "RELIABILITY",
+  unit: "SOURCE_DAYS",
+  description: "Share of source-days on schedule.",
+  timeBasis: "Each UTC day.",
+  groupable: true,
+  locationScoped: false,
+  adr: "ADR-0017",
+};
 const marker = (id: string, at: string, label: string): SeriesMarker => ({ id, at, label, description: null, link: null, metricKeys: ["DISTRICT_OR_FINER"] });
 const MARKERS: SeriesMarker[] = [
   marker("a1", "2026-10-29T18:33:00.000Z", "Geocoding inside the model's area"),
@@ -306,3 +318,19 @@ describe("ProgressOverTime, overview tiles and URL state", () => {
   });
 });
 
+
+describe("ProgressOverTime and a metric that reads every country", () => {
+  it("reads it without the country filter and says so, while scoped metrics keep the country", () => {
+    definitionsState = { data: { status: "ok", definitions: [...DEFINITIONS, EVERY_COUNTRY] } };
+    seriesStates["*"] = { data: { status: "ok", series: { ...daily(27, 31), metric: "SOURCES_ON_SCHEDULE" } } };
+    search = "metric=SOURCES_ON_SCHEDULE";
+    wrap(<ProgressOverTime filters={{ from: "2026-10-27", to: "2026-10-31", locationId: "loc-sdn" }} />);
+    const chartCalls = seriesCalls().filter((input) => input.metric === "SOURCES_ON_SCHEDULE");
+    expect(chartCalls.length).toBeGreaterThan(0);
+    expect(chartCalls.every((input) => input.locationId === undefined)).toBe(true);
+    expect(screen.getByTestId("every-country")).toHaveTextContent("Reads every country: the country filter does not apply to this metric.");
+    expect(seriesCalls().some((input) => input.metric === "DISTRICT_OR_FINER" && input.locationId === "loc-sdn")).toBe(true);
+    // The tile says so too, in a word.
+    expect(screen.getByRole("button", { name: "Show Sources on schedule" })).toHaveTextContent("every country");
+  });
+});
