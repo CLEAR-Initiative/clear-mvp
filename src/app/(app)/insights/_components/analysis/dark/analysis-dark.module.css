@@ -1355,6 +1355,20 @@
   border-top: 1px solid var(--sa-line-soft);
 }
 
+/* Lines the body up with the section title text: the header's 24px padding,
+   the 36px icon tile and the 14px gap after it. */
+.sectionBodyInset {
+  border-top: 1px solid var(--sa-line-soft);
+  padding: 24px 24px 24px 74px;
+}
+
+@media (max-width: 48em) {
+  /* Phone width can't spare the indent. */
+  .sectionBodyInset {
+    padding-left: 24px;
+  }
+}
+
 .catLayout {
   display: flex;
   flex-wrap: wrap;

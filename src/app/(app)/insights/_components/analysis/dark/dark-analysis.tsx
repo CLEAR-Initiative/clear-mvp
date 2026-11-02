@@ -581,6 +581,7 @@ function Fold({
   testId,
   className,
   flush,
+  inset,
   children,
 }: {
   id: string;
@@ -602,6 +603,8 @@ function Fold({
   className?: string;
   /** Drop the body inset so a split panel can reach the card edges. */
   flush?: boolean;
+  /** Start the body where the title text starts, not under the icon tile. */
+  inset?: boolean;
   children: ReactNode;
 }) {
   const [open, setOpen] = useState(defaultOpen);
@@ -622,7 +625,10 @@ function Fold({
           <IconChevronDown size={16} />
         </span>
       </button>
-      <Collapse open={open} className={flush ? styles.sectionBodyFlush : styles.sectionBody}>
+      <Collapse
+        open={open}
+        className={flush ? styles.sectionBodyFlush : inset ? styles.sectionBodyInset : styles.sectionBody}
+      >
         {children}
       </Collapse>
     </section>
@@ -1236,6 +1242,7 @@ export function AnalysisOverview({
           updated={!!noteFor("hazards") || !!noteFor("vulnerabilities")}
           updatedLabel={updatedLabel}
           testId="analysis-section-hazards"
+          inset
         >
           <div className={styles.subsections}>
             {shocks.hazards.length > 0 && (
@@ -1298,6 +1305,7 @@ export function AnalysisOverview({
           updated={!!noteFor("access")}
           updatedLabel={updatedLabel}
           testId="analysis-section-access"
+          inset
         >
           <TopicCards
             groups={accessGroups}
