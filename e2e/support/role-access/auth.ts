@@ -9,6 +9,7 @@
  */
 import { request, type Browser, type BrowserContext } from "@playwright/test";
 import { BASE_URL } from "../data";
+import { watchForCrashes } from "../test";
 import { CREDS, MATRIX_FLAGS, type Persona, type Creds } from "./personas";
 
 /** Playwright's storageState shape, inferred (not a named public export). */
@@ -57,6 +58,7 @@ export async function contextFor(
   const state = await storageStateFor(persona);
   if (!state) return null;
   const ctx = await browser.newContext({ storageState: state, locale: "en" });
+  watchForCrashes(ctx);
   await ctx.addCookies([{ name: "NEXT_LOCALE", value: "en", url: BASE_URL }]);
   return ctx;
 }

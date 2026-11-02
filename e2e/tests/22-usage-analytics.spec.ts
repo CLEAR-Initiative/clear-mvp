@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { test, expect } from "../support/test";
+import { test, expect, watchForCrashes } from "../support/test";
 import { ANALYST } from "../support/data";
 
 /**
@@ -66,6 +66,7 @@ test.describe("Usage analytics (case 22)", () => {
         baseURL: test.info().project.use.baseURL,
         storageState: { cookies: [], origins: [] },
       });
+      watchForCrashes(other);
       try {
         const otherPage = await other.newPage();
         await signIn(otherPage);
