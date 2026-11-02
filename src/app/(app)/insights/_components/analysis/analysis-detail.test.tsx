@@ -1,6 +1,6 @@
 import React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { MantineProvider } from "@mantine/core";
 import type { Analysis } from "~/server/api/mappers/analysis";
 import type { CreatedAnalysis } from "~/server/api/mappers/analysis";
@@ -133,7 +133,7 @@ function analysis(overrides: Partial<Analysis["crisis"]> = {}, scope: Partial<An
     figures: { displaced: null, affected: null, inNeed: null, returnees: null, fundingRequired: null, fundingReceived: null },
     contextRisks: [],
     hazards: { hazards: [], vulnerabilities: [] },
-    displacement: { push: [], return: [] },
+    displacement: { push: [], return: [], summary: null, findings: [], dataCheck: null, flows: [], mapSince: null },
     sectors: [],
     sources: [],
     changes: { comparedTo: null, notes: {} },
@@ -522,6 +522,91 @@ describe("AnalysisDetail map", () => {
 });
 
 describe("Analysis detail layout", () => {
+  it("merges hazards, aggravating and mitigating factors into Shocks and hazards", () => {
+    const row = analysis();
+    row.hazards = {
+      hazards: [
+        { text: "Cholera: 114 dead since late June.", refs: [] },
+        { text: "Drone strikes: markets hit.", refs: [] },
+      ],
+      vulnerabilities: [{ text: "Water stations down: 1 of 13 working.", refs: [] }],
+      hazardsSummary: "Conflict is the main hazard.",
+      aggravating: [
+        { text: "Currency collapse: pound down 89%.", refs: [], topic: "economic_fragility", scope: null },
+        { text: "Land degradation: deserts spreading.", refs: [], topic: "environment_technology", scope: "Sudan-wide" },
+      ],
+      mitigating: [],
+    };
+    analysisResult.data = row;
+    renderDetail(COUNTRY);
+
+    const section = screen.getByTestId("analysis-section-hazards");
+    const toggle = within(section).getAllByRole("button")[0]!;
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(toggle).toHaveTextContent("analysis.findings.shocks");
+    expect(toggle).toHaveTextContent('analysis.findings.hazardsCount:{"count":2}');
+    expect(toggle).toHaveTextContent('analysis.findings.aggravatingCount:{"count":2}');
+    expect(toggle).toHaveTextContent("Conflict is the main hazard.");
+    expect(screen.queryByTestId("analysis-section-vulnerabilities")).not.toBeInTheDocument();
+
+    fireEvent.click(toggle);
+    expect(section.querySelector('[data-kind="health"]')).not.toBeNull();
+    const aggravating = screen.getByTestId("analysis-sub-aggravating");
+    expect(aggravating.querySelector('[data-topic="economic_fragility"]')).toHaveTextContent("analysis.topics.economic_fragility");
+    expect(aggravating).toHaveTextContent("Sudan-wide");
+    // The old vulnerabilities list gives way to the topic cards.
+    expect(section).not.toHaveTextContent("Water stations down");
+    // No mitigating findings: the gap is named instead of hidden.
+    expect(screen.getByTestId("analysis-sub-mitigating")).toHaveTextContent("analysis.findings.noneFound");
+  });
+
+  it("keeps the vulnerabilities list for analyses made before the split", () => {
+    const row = analysis();
+    row.hazards = {
+      hazards: [{ text: "Cholera outbreak.", refs: [] }],
+      vulnerabilities: [{ text: "Water stations down: 1 of 13 working.", refs: [] }],
+      vulnerabilitiesSummary: "Basic systems have broken down.",
+    };
+    analysisResult.data = row;
+    renderDetail(COUNTRY);
+
+    fireEvent.click(within(screen.getByTestId("analysis-section-hazards")).getAllByRole("button")[0]!);
+    const legacy = screen.getByTestId("analysis-sub-vulnerabilities");
+    expect(legacy).toHaveTextContent("Water stations down");
+    expect(legacy).toHaveTextContent("Basic systems have broken down.");
+    expect(screen.queryByTestId("analysis-sub-aggravating")).not.toBeInTheDocument();
+  });
+
+  it("shows humanitarian access as topic cards, or as two lists for older analyses", () => {
+    const row = analysis();
+    row.access = {
+      items: [
+        { text: "Airspace closed: four airports only.", refs: [], topic: "physical", scope: null },
+        { text: "Checkpoints: fees and frozen permits.", refs: [], topic: "security", scope: null },
+      ],
+      barriers: [],
+      constraints: [],
+      summary: "Fighting cuts aid off.",
+    };
+    analysisResult.data = row;
+    renderDetail(COUNTRY);
+
+    const section = screen.getByTestId("analysis-section-access");
+    const toggle = within(section).getAllByRole("button")[0]!;
+    expect(toggle).toHaveTextContent("analysis.access.title");
+    expect(toggle).toHaveTextContent("Fighting cuts aid off.");
+    fireEvent.click(toggle);
+    expect(section.querySelector('[data-topic="physical"]')).toHaveTextContent("Airspace closed");
+    expect(section.querySelector('[data-topic="security"]')).toHaveTextContent("analysis.topics.security");
+
+    cleanup();
+    row.access = { items: [], barriers: [{ text: "Blocked convoys.", refs: [] }], constraints: [], summary: null };
+    analysisResult.data = row;
+    renderDetail(COUNTRY);
+    fireEvent.click(within(screen.getByTestId("analysis-section-access")).getAllByRole("button")[0]!);
+    expect(screen.getByTestId("analysis-section-access").querySelector('[data-topic="barriers"]')).toHaveTextContent("Blocked convoys.");
+  });
+
   it("paints the redesign and dismisses change notes", () => {
     const row = analysis();
     row.changes = { comparedTo: "2026-09-01T00:00:00Z", notes: { summary: "Cholera line revised.", hazards: "Storm added." } };
@@ -539,7 +624,7 @@ describe("Analysis detail layout", () => {
     expect(screen.getByTestId("analysis-changes")).toHaveTextContent("analysis.layout.sections.hazards");
     expect(screen.getByTestId("analysis-highlights")).toBeInTheDocument();
     expect(screen.getByTestId("analysis-section-hazards")).toBeInTheDocument();
-    expect(screen.getByTestId("analysis-section-vulnerabilities")).toBeInTheDocument();
+    expect(screen.queryByTestId("analysis-section-vulnerabilities")).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "analysis.layout.dismissChanges" }));
     expect(screen.queryByTestId("analysis-changes")).not.toBeInTheDocument();

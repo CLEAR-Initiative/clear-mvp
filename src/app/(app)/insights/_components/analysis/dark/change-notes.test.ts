@@ -7,6 +7,7 @@ describe("sectionForChangeKey", () => {
     expect(sectionForChangeKey("context_risks.security")).toBe("contexts");
     expect(sectionForChangeKey("hazards")).toBe("hazards");
     expect(sectionForChangeKey("displacement.push")).toBe("displacement");
+    expect(sectionForChangeKey("humanitarian_access")).toBe("access");
     expect(sectionForChangeKey("scenarios.most_likely")).toBe("forecast");
     expect(sectionForChangeKey("sectors.health")).toBe("figures");
     expect(sectionForChangeKey("funding_received")).toBe("figures");

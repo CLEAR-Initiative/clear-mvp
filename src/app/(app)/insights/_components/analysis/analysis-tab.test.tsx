@@ -209,7 +209,7 @@ function analysis(overrides: Partial<Analysis> = {}): Analysis {
       { key: "security", label: "Security", items: ["Drone strikes on markets.", "Frontlines active."], refs: [], lineRefs: {} },
     ],
     hazards: { hazards: [{ text: "Cholera outbreak.", refs: [2] }], vulnerabilities: [] },
-    displacement: { push: [{ text: "Conflict drives movement.", refs: [] }], return: [] },
+    displacement: { push: [{ text: "Conflict drives movement.", refs: [] }], return: [], summary: null, findings: [], dataCheck: null, flows: [], mapSince: null },
     sectors: [
       {
         id: "health",

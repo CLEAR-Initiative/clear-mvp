@@ -5,22 +5,46 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode }
 import Link from "next/link";
 import { useFormatter, useNow, useTranslations } from "next-intl";
 import {
+  IconAffiliate,
   IconAlertTriangle,
   IconArrowBarRight,
+  IconBarrierBlock,
+  IconBox,
   IconBuilding,
+  IconBuildingBank,
+  IconBuildingBridge,
   IconCash,
+  IconChecklist,
   IconChevronDown,
   IconCloud,
   IconCopy,
+  IconDroplet,
   IconFlag,
+  IconFlame,
+  IconGrain,
   IconHeart,
+  IconHeartHandshake,
   IconInfoCircle,
+  IconMapPinOff,
+  IconPackage,
   IconPencil,
+  IconPlant2,
+  IconRoadOff,
   IconScale,
   IconShield,
+  IconShieldCheck,
   IconSparkles,
+  IconSpeakerphone,
+  IconSun,
+  IconSwords,
   IconTimeline,
+  IconTrendingDown,
+  IconTruckDelivery,
+  IconUnlink,
   IconUsers,
+  IconUsersGroup,
+  IconVirus,
+  IconWalk,
   IconWorld,
   IconX,
   type Icon,
@@ -29,9 +53,13 @@ import { compactNumber, type SaBullet, type SaSource } from "~/server/api/mapper
 import type { Analysis, AnalysisEvents, AnalysisFigures } from "~/server/api/mappers/analysis";
 import { fundingSplit, kpiValues, splitSubject, timelineLayout } from "~/lib/analysis-view";
 import { leadingFigure } from "./leading-figure";
+import { hazardKind, type HazardKind } from "./hazard-kind";
+import { ACCESS_TOPICS, AGGRAVATING_TOPICS, MITIGATING_TOPICS, groupByTopic } from "./taxonomy-topics";
+import { TopicCards } from "./topic-cards";
 import { Citations } from "../../situation/citations";
 import { planSentenceSegments, planSummaryParagraphs, leadSentences } from "../../situation/summary-citations";
 import { ScopeMap } from "../scope-map";
+import { DisplacementBody, displacementMeta } from "./displacement-section";
 import { SectionChange } from "../../situation/section-change";
 import styles from "./analysis-dark.module.css";
 import { CHANGE_ANCHOR, type ChangeSection } from "./change-notes";
@@ -110,13 +138,61 @@ const CATEGORY_ICON: Record<string, Icon> = {
   environment: IconCloud,
   infrastructure: IconBuilding,
   legal: IconScale,
+  legal_policy: IconScale,
   political: IconFlag,
   security: IconShield,
   society: IconHeart,
+  socio_culture: IconHeart,
+  humanitarian_coordination: IconAffiliate,
 };
 
 function categoryIcon(key: string): Icon {
   return CATEGORY_ICON[key] ?? IconWorld;
+}
+
+const HAZARD_ICON: Record<HazardKind, Icon> = {
+  conflict: IconAlertTriangle,
+  health: IconVirus,
+  food: IconGrain,
+  drought: IconSun,
+  water: IconDroplet,
+  fire: IconFlame,
+  other: IconAlertTriangle,
+};
+
+/** Card icons for the taxonomy topics in Shocks and hazards and in Humanitarian access. */
+const TOPIC_ICON: Record<string, Icon> = {
+  economic_fragility: IconTrendingDown,
+  environment_technology: IconPlant2,
+  governance_policy: IconBuildingBank,
+  social_inequality: IconUsersGroup,
+  resource_shortfalls: IconBox,
+  coordination_failures: IconUnlink,
+  preparedness: IconChecklist,
+  risk_reduction: IconShieldCheck,
+  recovery_support: IconHeartHandshake,
+  protective_infrastructure: IconBuildingBridge,
+  public_warning: IconSpeakerphone,
+  response_surge: IconTruckDelivery,
+  people_facing_gaps: IconMapPinOff,
+  physical: IconRoadOff,
+  security: IconSwords,
+  relief_to_population: IconPackage,
+  population_to_relief: IconWalk,
+  barriers: IconBarrierBlock,
+  constraints: IconRoadOff,
+};
+
+type TopicKey =
+  | (typeof AGGRAVATING_TOPICS)[number]
+  | (typeof MITIGATING_TOPICS)[number]
+  | (typeof ACCESS_TOPICS)[number]
+  | "barriers"
+  | "constraints"
+  | "other";
+
+function topicIcon(topic: string): Icon {
+  return TOPIC_ICON[topic] ?? IconAlertTriangle;
 }
 
 function cardsFromRisk(risk: { items: string[]; refs: number[]; lineRefs: Record<string, number[]> }): ContextCard[] {
@@ -488,6 +564,8 @@ function Collapse({ open, children, className }: { open: boolean; children: Reac
   );
 }
 
+const ICON_TILE = { accent: styles.sectionIcon, ai: styles.sectionIconAi, info: styles.sectionIconInfo };
+
 function Fold({
   id,
   title,
@@ -495,6 +573,7 @@ function Fold({
   icon,
   iconTone = "accent",
   tag,
+  summary,
   defaultOpen,
   updated,
   freshLabel,
@@ -508,10 +587,12 @@ function Fold({
   title: string;
   meta: string;
   icon: ReactNode;
-  /** Forecast uses the purple icon tile. */
-  iconTone?: "accent" | "ai";
+  /** Forecast uses the purple icon tile, Displacement the blue one. */
+  iconTone?: "accent" | "ai" | "info";
   /** Small pill beside the title, such as "Projections, not observed". */
   tag?: string;
+  /** A one-sentence takeaway under the meta line, visible while collapsed. */
+  summary?: string | null;
   defaultOpen: boolean;
   updated?: boolean;
   /** "N new" pill. Takes the place of the updated chip when the handoff has a count. */
@@ -527,14 +608,15 @@ function Fold({
   return (
     <section id={id} className={className ?? styles.card} data-testid={testId}>
       <button type="button" className={styles.sectionButton} aria-expanded={open} onClick={() => setOpen((value) => !value)}>
-        <span className={iconTone === "ai" ? styles.sectionIconAi : styles.sectionIcon}>{icon}</span>
-        <span style={{ display: "flex", flexDirection: "column", gap: 2, flex: 1, minWidth: 0 }}>
-          <span style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8 }}>
+        <span className={ICON_TILE[iconTone]}>{icon}</span>
+        <span style={{ display: "flex", flexDirection: "column", gap: summary ? 3 : 2, flex: 1, minWidth: 0 }}>
+          <span style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: summary ? "8px 10px" : 8 }}>
             <span className={styles.sectionTitle}>{title}</span>
             {tag && <span className={styles.forecastTag}>{tag}</span>}
             {freshLabel ? <Updated label={freshLabel} /> : updated ? <Updated label={updatedLabel} /> : null}
           </span>
           <span className={styles.sectionMeta}>{meta}</span>
+          {summary && <span className={styles.sectionSummary}>{summary}</span>}
         </span>
         <span className={styles.chev} style={{ transform: open ? "rotate(180deg)" : undefined }}>
           <IconChevronDown size={16} />
@@ -575,10 +657,13 @@ function BulletList({
   items,
   sources,
   onOpen,
+  hazards,
 }: {
   items: SaBullet[];
   sources: SaSource[];
   onOpen: () => void;
+  /** Hazard cards: an icon tile for the kind, and "Show all N hazards". */
+  hazards?: boolean;
 }) {
   const t = useTranslations("analysis.findings");
   const [all, setAll] = useState(false);
@@ -586,9 +671,16 @@ function BulletList({
   const tail = items.slice(PREVIEW);
   const renderItem = (item: SaBullet, i: number) => {
     const { subject, body } = splitSubject(item.text);
+    const kind = hazards ? hazardKind(subject ?? item.text, subject ? body : "") : null;
+    const KindIcon = kind ? HAZARD_ICON[kind] : null;
     return (
       <div key={i} className={styles.item}>
-        <div>
+        {KindIcon && (
+          <span className={styles.hazardTile} data-kind={kind}>
+            <KindIcon size={15} stroke={1.8} />
+          </span>
+        )}
+        <div style={{ minWidth: 0 }}>
           <div className={styles.itemTitle}>{subject ?? item.text}</div>
           {subject && (
             <div className={styles.itemText}>
@@ -614,7 +706,7 @@ function BulletList({
       )}
       {items.length > PREVIEW && (
         <button type="button" className={styles.more} aria-expanded={all} onClick={() => setAll((value) => !value)}>
-          {all ? t("showLess") : t("showAll", { count: items.length })}
+          {all ? t("showLess") : hazards ? t("showAllHazards", { count: items.length }) : t("showAll", { count: items.length })}
           <IconChevronDown size={14} className={styles.twist} style={{ transform: all ? "rotate(180deg)" : undefined }} />
         </button>
       )}
@@ -711,6 +803,30 @@ export function AnalysisOverview({
   const findingCount = categories.reduce((n, risk) => n + risk.items.length, 0);
   const markNew = Boolean(freshLabel);
   const SelectedIcon = selected ? categoryIcon(selected.key) : null;
+
+  // Shocks and hazards: the hazards, then what makes the shock worse and what reduces it.
+  const shocks = data.hazards;
+  const aggravating = shocks.aggravating ?? [];
+  const mitigating = shocks.mitigating ?? [];
+  // Analyses made before that split keep their single vulnerabilities list.
+  const legacyVulnerabilities = aggravating.length + mitigating.length === 0 ? shocks.vulnerabilities : [];
+  const shockMeta = [
+    shocks.hazards.length > 0 ? t("findings.hazardsCount", { count: shocks.hazards.length }) : null,
+    aggravating.length > 0 ? t("findings.aggravatingCount", { count: aggravating.length }) : null,
+    mitigating.length > 0 ? t("findings.mitigatingCount", { count: mitigating.length }) : null,
+    legacyVulnerabilities.length > 0 ? t("layout.vulnerabilitiesMeta", { count: legacyVulnerabilities.length }) : null,
+  ].filter((part): part is string => part !== null);
+  // groupByTopic only yields the listed topics or "other", so every card topic has a label.
+  const topicLabel = (topic: string) => t(`topics.${topic as TopicKey}`);
+
+  // Humanitarian access: one card per access topic, or the two raw lists for older analyses.
+  const accessGroups = data.access?.items.length
+    ? groupByTopic(data.access.items, ACCESS_TOPICS)
+    : [
+        { topic: "barriers", items: data.access?.barriers ?? [] },
+        { topic: "constraints", items: data.access?.constraints ?? [] },
+      ].filter((group) => group.items.length > 0);
+  const accessCount = accessGroups.reduce((n, group) => n + group.items.length, 0);
 
   const timeline = useMemo(() => {
     if ((!showTimeline && isCountry) || !events) return null;
@@ -1109,67 +1225,125 @@ export function AnalysisOverview({
         </Fold>
       )}
 
-      {data.hazards.hazards.length > 0 && (
+      {shockMeta.length > 0 && (
         <Fold
           id={CHANGE_ANCHOR.hazards}
-          title={t("findings.hazards")}
-          meta={t("findings.count", { count: data.hazards.hazards.length })}
+          title={t("findings.shocks")}
+          meta={shockMeta.join(" · ")}
+          summary={shocks.hazardsSummary}
           icon={<IconAlertTriangle size={18} />}
           defaultOpen={false}
-          updated={!!noteFor("hazards")}
+          updated={!!noteFor("hazards") || !!noteFor("vulnerabilities")}
           updatedLabel={updatedLabel}
           testId="analysis-section-hazards"
         >
-          <BulletList items={data.hazards.hazards} sources={data.sources} onOpen={onOpenSources} />
+          <div className={styles.subsections}>
+            {shocks.hazards.length > 0 && (
+              <div data-testid="analysis-sub-hazards">
+                <div className={styles.subHead}>
+                  <span className={styles.subTitle}>{t("findings.hazards")}</span>
+                  <span className={styles.subHint}>{t("findings.hazardsHint")}</span>
+                </div>
+                <BulletList items={shocks.hazards} sources={data.sources} onOpen={onOpenSources} hazards />
+              </div>
+            )}
+            {legacyVulnerabilities.length > 0 ? (
+              <div data-testid="analysis-sub-vulnerabilities">
+                <div className={styles.subHead}>
+                  <span className={styles.subTitle}>{t("findings.vulnerabilities")}</span>
+                  {shocks.vulnerabilitiesSummary && <span className={styles.subHint}>{shocks.vulnerabilitiesSummary}</span>}
+                </div>
+                <BulletList items={legacyVulnerabilities} sources={data.sources} onOpen={onOpenSources} />
+              </div>
+            ) : (
+              [
+                { key: "aggravating" as const, items: aggravating, order: AGGRAVATING_TOPICS, tone: "warning" as const },
+                { key: "mitigating" as const, items: mitigating, order: MITIGATING_TOPICS, tone: "positive" as const },
+              ].map((part) => (
+                <div key={part.key} data-testid={`analysis-sub-${part.key}`}>
+                  <div className={styles.subHead}>
+                    <span className={styles.subTitle}>{t(`findings.${part.key}`)}</span>
+                    <span className={styles.subHint}>{t(`findings.${part.key}Hint`)}</span>
+                  </div>
+                  {part.items.length > 0 ? (
+                    <TopicCards
+                      groups={groupByTopic(part.items, part.order)}
+                      labelFor={topicLabel}
+                      iconFor={topicIcon}
+                      tone={part.tone}
+                      sources={data.sources}
+                      onOpen={onOpenSources}
+                    />
+                  ) : (
+                    <p className={styles.subEmpty}>{t("findings.noneFound")}</p>
+                  )}
+                </div>
+              ))
+            )}
+          </div>
           <SectionChange note={noteFor("hazards")} />
-        </Fold>
-      )}
-
-      {data.hazards.vulnerabilities.length > 0 && (
-        <Fold
-          id={CHANGE_ANCHOR.vulnerabilities}
-          title={t("findings.vulnerabilities")}
-          meta={t("layout.vulnerabilitiesMeta", { count: data.hazards.vulnerabilities.length })}
-          icon={<IconShield size={18} color="var(--sa-warning-text)" />}
-          defaultOpen={false}
-          updated={!!noteFor("vulnerabilities")}
-          updatedLabel={updatedLabel}
-          testId="analysis-section-vulnerabilities"
-        >
-          <BulletList items={data.hazards.vulnerabilities} sources={data.sources} onOpen={onOpenSources} />
           <SectionChange note={noteFor("vulnerabilities")} />
         </Fold>
       )}
 
-      {(data.displacement.push.length > 0 || data.displacement.return.length > 0) && (
+      {accessCount > 0 && (
+        <Fold
+          id={CHANGE_ANCHOR.access}
+          title={t("access.title")}
+          meta={t("access.meta", { topics: accessGroups.length, count: accessCount })}
+          summary={data.access?.summary}
+          icon={<IconBarrierBlock size={18} />}
+          iconTone="info"
+          defaultOpen={false}
+          updated={!!noteFor("access")}
+          updatedLabel={updatedLabel}
+          testId="analysis-section-access"
+        >
+          <TopicCards
+            groups={accessGroups}
+            labelFor={topicLabel}
+            iconFor={topicIcon}
+            tone="info"
+            sources={data.sources}
+            onOpen={onOpenSources}
+          />
+          <SectionChange note={noteFor("access")} />
+        </Fold>
+      )}
+
+      {displacementMeta(data.displacement).count > 0 && (
         <Fold
           id={CHANGE_ANCHOR.displacement}
           title={t("findings.displacement")}
-          meta={t("findings.count", { count: data.displacement.push.length + data.displacement.return.length })}
-          icon={<IconArrowBarRight size={18} color="var(--sa-info)" />}
+          meta={
+            displacementMeta(data.displacement).map
+              ? t("findings.displacementMetaMap", { count: displacementMeta(data.displacement).count })
+              : t("findings.count", { count: displacementMeta(data.displacement).count })
+          }
+          summary={data.displacement.summary}
+          icon={<IconArrowBarRight size={18} />}
+          iconTone="info"
           defaultOpen={false}
           updated={!!noteFor("displacement")}
           updatedLabel={updatedLabel}
+          freshLabel={
+            data.displacement.findings.some((f) => f.isNew)
+              ? t("layout.newCount", { count: data.displacement.findings.filter((f) => f.isNew).length })
+              : undefined
+          }
           testId="analysis-section-displacement"
         >
-          <ol className={styles.story}>
-            {[...data.displacement.push, ...data.displacement.return].map((item, i) => {
-              const { subject, body } = splitSubject(item.text);
-              return (
-                <li key={i}>
-                  <span className={styles.num}>{i + 1}</span>
-                  <div>
-                    <div className={styles.itemTitle}>
-                      {subject ?? t(i < data.displacement.push.length ? "findings.push" : "findings.return")}
-                    </div>
-                    <div className={styles.findingText}>
-                      <Cited text={subject ? body : item.text} refs={item.refs} sources={data.sources} onOpen={onOpenSources} />
-                    </div>
-                  </div>
-                </li>
-              );
-            })}
-          </ol>
+          <DisplacementBody
+            displacement={data.displacement}
+            countryId={countryId}
+            countryName={countryName}
+            areaIds={areaIds}
+            scopeName={scopeName}
+            inside={values.inside ?? null}
+            events={events}
+            sources={data.sources}
+            onOpenSources={onOpenSources}
+          />
           <SectionChange note={noteFor("displacement")} />
         </Fold>
       )}

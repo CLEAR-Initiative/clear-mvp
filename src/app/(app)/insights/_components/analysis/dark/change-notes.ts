@@ -5,6 +5,7 @@ export type ChangeSection =
   | "contexts"
   | "hazards"
   | "vulnerabilities"
+  | "access"
   | "displacement"
   | "forecast";
 
@@ -13,7 +14,9 @@ export const CHANGE_ANCHOR: Record<ChangeSection, string> = {
   figures: "analysis-figures",
   contexts: "analysis-contexts",
   hazards: "analysis-hazards",
-  vulnerabilities: "analysis-vulnerabilities",
+  // Vulnerabilities live inside Shocks and hazards now.
+  vulnerabilities: "analysis-hazards",
+  access: "analysis-access",
   displacement: "analysis-displacement",
   forecast: "analysis-forecast",
 };
@@ -24,6 +27,7 @@ const ORDER: ChangeSection[] = [
   "contexts",
   "hazards",
   "vulnerabilities",
+  "access",
   "displacement",
   "forecast",
 ];
@@ -34,6 +38,7 @@ export function sectionForChangeKey(key: string): ChangeSection | null {
   if (key.startsWith("context_risks")) return "contexts";
   if (key === "hazards" || key.startsWith("hazards.")) return "hazards";
   if (key.startsWith("vulnerab")) return "vulnerabilities";
+  if (key.startsWith("humanitarian_access")) return "access";
   if (key.startsWith("displacement")) return "displacement";
   if (key.startsWith("forecast") || key.startsWith("scenarios")) return "forecast";
   if (
