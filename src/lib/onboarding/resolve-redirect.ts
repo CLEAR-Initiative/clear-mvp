@@ -22,6 +22,13 @@ export function resolveOnboardingRedirect(
   return null;
 }
 
+/** Where a bare /welcome visit lands: the profile step until it is done, then settings. */
+export function resolveWelcomeEntry(
+  state: OnboardingTimestamps,
+): "/welcome/profile" | "/welcome/settings" {
+  return state.onboardingProfileCompletedAt ? "/welcome/settings" : "/welcome/profile";
+}
+
 export function shouldAutoStartTour(state: OnboardingTimestamps): boolean {
   return (
     !!state.onboardingSettingsCompletedAt &&
