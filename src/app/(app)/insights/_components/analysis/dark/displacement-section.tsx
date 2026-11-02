@@ -233,8 +233,9 @@ function MovementMap({
     [displacement.flows],
   );
   const places = api.useQueries((q) => placeIds.map((id) => q.locations.getById({ id }, opts)));
-  const placesKey = places.map((p) => (p.data ? 1 : 0)).join("");
-  const areasKey = areas.map((a) => (a.data ? 1 : 0)).join("");
+  // Which locations, and when each loaded: a new set of the same size must still re-run the memos.
+  const placesKey = places.map((p, i) => `${placeIds[i]}:${p.dataUpdatedAt}`).join("|");
+  const areasKey = areas.map((a, i) => `${areaIds[i]}:${a.dataUpdatedAt}`).join("|");
   const countryGeometry = country.data?.geometry as Geometry | null | undefined;
   const config = resolveCountryConfig(countryName);
 
@@ -341,7 +342,7 @@ function MovementMap({
             focusCountryPCode={config?.pCode}
             focusCountryName={countryName}
             focusCountryGeometry={countryGeometry ?? undefined}
-            fitBoundsOnFocus={false}
+            fitBoundsOnFocus={true}
             fitBoundsGeometry={areaIds.length > 0 ? (scope ?? undefined) : undefined}
             adminBoundaryLevel={1}
             showDensityHeatmap={false}

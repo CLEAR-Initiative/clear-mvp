@@ -366,4 +366,21 @@ describe("mapSituationAnalysis displacement", () => {
     expect(d.flows[1]).toMatchObject({ direction: "back", group: "idp", people: null, finding: null, eventId: "ev-7", refs: [1] });
     expect(d.mapSince).toBe("April 2023");
   });
+
+  it("keeps a flow on its finding when an earlier blank finding is dropped", () => {
+    const d = mapSituationAnalysis(
+      withDisplacement({
+        findings: [
+          { label: "", description: "dropped: no label" },
+          { label: "Uneven returns", description: "Khartoum." },
+        ],
+        flows: [
+          { direction: "back", label: "Khartoum", finding: 2 },
+          { direction: "back", label: "Halfway", finding: 1.5 },
+        ],
+      }),
+      "Sudan",
+    ).displacement;
+    expect(d.flows.map((f) => f.finding)).toEqual([1, null]);
+  });
 });

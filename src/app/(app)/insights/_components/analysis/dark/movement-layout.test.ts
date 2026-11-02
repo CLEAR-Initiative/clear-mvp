@@ -111,6 +111,24 @@ describe("layoutMovement", () => {
     expect(f!.badge).toBeNull();
   });
 
+  it("keeps a known place where it is and hides a movement whose known destination is out of view", () => {
+    // Panned so the city sits 4 px from the left edge and the camp is off the map.
+    const panned = { ...view, project: ([lon, lat]: [number, number]) => ({ x: (lon - 25.84) * 25, y: (25 - lat) * 25 }) };
+    const layout = layoutMovement({
+      ...panned,
+      flows: [
+        flow({ direction: "back", from: { id: null, name: null }, to: { id: "city", name: "City" }, people: 500 }),
+        flow({ direction: "back", from: { id: null, name: null }, to: { id: "camp", name: "Camp" }, people: 900, label: "Camp" }),
+      ],
+      scope: country,
+      scopeIds: ["sq"],
+      centers: new Map<string, [number, number]>([["city", [26, 16]], ["camp", [22, 12]]]),
+      badges: new Set(),
+    })!;
+    expect(layout.flows.map((f) => f.label.title)).toEqual(["Flow"]);
+    expect(layout.flows[0]!.ring!.x).toBeCloseTo(4);
+  });
+
   it("leaves out flows it cannot place", () => {
     const layout = layoutMovement({
       ...view,

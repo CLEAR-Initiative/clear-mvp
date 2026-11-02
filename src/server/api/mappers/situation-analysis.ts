@@ -515,8 +515,10 @@ function mapDisplacement(
   raw: SaPayload["displacement"],
   refsFrom: (ids: string[] | undefined) => number[],
 ): SaDisplacement {
-  const findings = (raw?.findings ?? [])
-    .map((f) => ({
+  // The pipeline's 1-based finding number -> the number after blank findings are dropped.
+  const keptNumber = new Map<number, number>();
+  const findings = (raw?.findings ?? []).flatMap((f, i) => {
+    const finding = {
       label: f.label?.trim() ?? "",
       callout: f.callout?.trim() || null,
       text: f.description?.trim() ?? "",
@@ -525,13 +527,16 @@ function mapDisplacement(
       group: group(f.group),
       asOf: f.as_of?.trim() || null,
       isNew: f.is_new === true,
-    }))
-    .filter((f) => f.label && f.text);
+    };
+    if (!finding.label || !finding.text) return [];
+    keptNumber.set(i + 1, keptNumber.size + 1);
+    return [finding];
+  });
   const flows = (raw?.flows ?? []).flatMap((f): SaDisplacementFlow[] => {
     const direction = f.direction === "out" || f.direction === "back" || f.direction === "within" ? f.direction : null;
     const label = f.label?.trim();
     if (!direction || !label) return [];
-    const finding = typeof f.finding === "number" && f.finding >= 1 && f.finding <= findings.length ? f.finding : null;
+    const finding = Number.isInteger(f.finding) ? (keptNumber.get(f.finding as number) ?? null) : null;
     const eventId = (f.source_report_ids ?? []).map((id) => eventIdFromCitation(id)).find(Boolean) ?? null;
     return [
       {

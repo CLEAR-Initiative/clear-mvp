@@ -234,8 +234,14 @@ export function layoutMovement(input: LayoutInput): MovementLayout | null {
     } else {
       return [];
     }
-    end = { x: clamp(end.x, 10, W - 10), y: clamp(end.y, 10, H - 10) };
-    start = { x: clamp(start.x, 10, W - 10), y: clamp(start.y, 10, H - 10) };
+    // A real place stays where it is: pinning it to the edge would put its circle and
+    // name over another place. A movement whose known destination is out of view is
+    // left out; the drawn edge and stub points are kept inside the map.
+    const knownStart = a?.kind === "in" || arrival;
+    const knownEnd = b?.kind === "in";
+    if (knownEnd && (end.x < 0 || end.x > W || end.y < 0 || end.y > H)) return [];
+    if (!knownEnd) end = { x: clamp(end.x, 10, W - 10), y: clamp(end.y, 10, H - 10) };
+    if (!knownStart) start = { x: clamp(start.x, 10, W - 10), y: clamp(start.y, 10, H - 10) };
 
     const kind: FlowKind = flow.direction === "back" ? "back" : flow.people == null ? "unknown" : "out";
     const width = widthFor(flow.people, largest);

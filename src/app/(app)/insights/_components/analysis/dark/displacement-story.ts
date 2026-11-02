@@ -1,5 +1,6 @@
 import { splitSubject } from "~/lib/analysis-view";
 import type {
+  SaBullet,
   SaDisplacement,
   SaDisplacementGroup,
   SaDisplacementTone,
@@ -86,4 +87,10 @@ export function displacementStory(
     summary: d.summary,
     dataCheck: d.dataCheck,
   };
+}
+
+/** The Displacement section as report bullets: the edited findings when there are any, else the older push list. */
+export function displacementBullets(d: SaDisplacement): SaBullet[] {
+  if (d.findings.length === 0) return d.push;
+  return d.findings.map((f) => ({ text: `${f.label}: ${f.callout ? `${f.callout} ` : ""}${f.text}`, refs: f.refs }));
 }

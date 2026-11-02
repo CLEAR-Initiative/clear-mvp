@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { SaDisplacement } from "~/server/api/mappers/situation-analysis";
-import { displacementStory } from "./displacement-story";
+import { displacementBullets, displacementStory } from "./displacement-story";
 
 const groups = { push: "What is forcing people out", return: "Return intentions" };
 
@@ -57,5 +57,20 @@ describe("displacementStory", () => {
 
     const fewPushes = displacementStory(displacement({ push: bullets("Push", 1), return: bullets("Return", 10) }), groups);
     expect(fewPushes.rows.map((r) => r.tone)).toEqual(["out", "back", "back", "back", "back", "back"]);
+  });
+});
+
+describe("displacementBullets", () => {
+  it("reads the edited findings for the report, with label and callout", () => {
+    const d = displacement({
+      findings: [{ label: "Uneven returns", callout: "59% vs <1%", text: "Returns are uneven.", refs: [2], tone: "back", group: "idp", asOf: null, isNew: false }],
+      push: [{ text: "Older bullet.", refs: [1] }],
+    });
+    expect(displacementBullets(d)).toEqual([{ text: "Uneven returns: 59% vs <1% Returns are uneven.", refs: [2] }]);
+  });
+
+  it("falls back to the older push list", () => {
+    const d = displacement({ push: [{ text: "Conflict drives movement.", refs: [1] }] });
+    expect(displacementBullets(d)).toEqual([{ text: "Conflict drives movement.", refs: [1] }]);
   });
 });

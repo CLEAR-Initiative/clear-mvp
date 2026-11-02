@@ -1664,7 +1664,7 @@
 /* Topic cards: one card per taxonomy topic, findings as rows. */
 .topicGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(320px, 100%), 1fr));
   gap: 12px;
   align-items: start;
 }
