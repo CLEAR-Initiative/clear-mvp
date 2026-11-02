@@ -239,6 +239,31 @@ services:
         condition: service_healthy
     restart: "no"
 
+  # One-shot: pending invitations with known tokens for the welcome-flow spec
+  # (case 26), on a dedicated team under the seeded org. Same image and
+  # bind-mount pattern as `seed-ground`. Runs AFTER `seed` (needs the org and
+  # the admin it creates).
+  seed-invite:
+    build:
+      context: ../clear-api
+      target: build
+    image: clear-e2e-seed:latest
+    command: ["bun", "/app/e2e-invite-seed.ts"]
+    volumes:
+      - ./e2e/support/invite-seed.ts:/app/e2e-invite-seed.ts:ro
+    environment:
+      DATABASE_URL: postgres://clear:clear@db:5432/clear
+      BETTER_AUTH_SECRET: E2E_SMOKE_BETTER_AUTH_SECRET_0123456789abcdef
+      BETTER_AUTH_URL: http://localhost:4000
+      CELERY_BROKER_URL: redis://redis:6379/0
+      ADMIN_EMAIL: admin@clearinitiative.io
+      ADMIN_PASSWORD: password123
+      NODE_ENV: production
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: "no"
+
   # Stand-in for NRC Find (the CLEAR Agent's document tool): a tiny node
   # server answering in NRC Find's NDJSON shape. See e2e/support/nrc-find-stub.mjs.
   nrc-find:
