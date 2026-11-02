@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   resolveOnboardingRedirect,
+  resolveWelcomeEntry,
   shouldAutoStartTour,
 } from "~/lib/onboarding/resolve-redirect";
 import type { OnboardingTimestamps } from "~/lib/onboarding/types";
@@ -70,6 +71,25 @@ describe("resolveOnboardingRedirect", () => {
         "/map",
       ),
     ).toBeNull();
+  });
+});
+
+describe("resolveWelcomeEntry", () => {
+  it("sends users without a completed profile to the profile step", () => {
+    expect(resolveWelcomeEntry(empty)).toBe("/welcome/profile");
+    expect(
+      resolveWelcomeEntry({ ...empty, onboardingStartedAt: "2026-07-01T00:00:00.000Z" }),
+    ).toBe("/welcome/profile");
+  });
+
+  it("sends users with a completed profile to the settings step", () => {
+    expect(
+      resolveWelcomeEntry({
+        ...empty,
+        onboardingStartedAt: "2026-07-01T00:00:00.000Z",
+        onboardingProfileCompletedAt: "2026-07-01T00:01:00.000Z",
+      }),
+    ).toBe("/welcome/settings");
   });
 });
 
