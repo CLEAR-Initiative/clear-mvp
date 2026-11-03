@@ -208,7 +208,7 @@ interface ReportContent {
   keyFindings: unknown[];
   contextRisks: { items: unknown[] }[];
   hazards: { hazards: unknown[] };
-  displacement: { push: unknown[] };
+  displacement: { push: unknown[]; findings: unknown[] };
   sectors: { severity: string | null; needs: unknown[]; interventions: unknown[] }[];
   scenarios: {
     description?: string | null;
@@ -227,7 +227,8 @@ export function defaultReportSections(data: ReportContent, eventCount: number): 
     map: eventCount,
     contexts: data.contextRisks.reduce((n, r) => n + r.items.length, 0),
     hazards: data.hazards.hazards.length,
-    displacement: data.displacement.push.length,
+    // What the report prints (`displacementBullets`): the findings, or the push list for older analyses.
+    displacement: data.displacement.findings.length || data.displacement.push.length,
     priorityNeeds: data.sectors.filter((x) => x.severity && x.needs.length > 0).length,
     responseActivities: data.sectors.filter((x) => x.interventions.length > 0).length,
     outlook: null,
