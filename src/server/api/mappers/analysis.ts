@@ -9,6 +9,7 @@
  */
 
 import {
+  eventIdFromCitation,
   mapSituationAnalysis,
   type SaBullet,
   type SaPayload,
@@ -18,11 +19,7 @@ import { toMapPointGeometry } from "~/lib/geo/to-map-point";
 import { scopeLabel, type LabelLocation } from "~/lib/analysis-view";
 
 /** Knowledgebase incident hits cite as `event:<eventId>` (ADR-0006). */
-export const EVENT_CITATION_PREFIX = "event:";
-
-export function eventIdFromCitation(id: string): string | null {
-  return id.startsWith(EVENT_CITATION_PREFIX) ? id.slice(EVENT_CITATION_PREFIX.length) : null;
-}
+export { EVENT_CITATION_PREFIX, eventIdFromCitation } from "~/server/api/mappers/situation-analysis";
 
 interface RawScenarios {
   description?: string | null;

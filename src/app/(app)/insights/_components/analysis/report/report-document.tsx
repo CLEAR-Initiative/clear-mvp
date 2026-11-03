@@ -5,6 +5,7 @@ import { compactNumber } from "~/server/api/mappers/situation-analysis";
 import { splitSubject, type KpiValues } from "~/lib/analysis-view";
 import { pdfSafe, type ReportMap, type ReportSectionKey } from "~/lib/analysis-report";
 import { distinctHeadings, readablePublisher, sourceHeading } from "../../situation/source-heading";
+import { displacementBullets } from "../dark/displacement-story";
 
 /**
  * The PDF can't read the app's CSS variables, so this mirrors the light-theme
@@ -291,13 +292,15 @@ export function ReportDocument({
             <Bullets items={data.hazards.hazards} />
           </>
         );
-      case "displacement":
-        if (data.displacement.push.length === 0) return null;
+      case "displacement": {
+        const items = displacementBullets(data.displacement);
+        if (items.length === 0) return null;
         return (
           <>
-            <Bullets items={data.displacement.push} />
+            <Bullets items={items} />
           </>
         );
+      }
       case "priorityNeeds":
         if (needs.length === 0) return null;
         return (

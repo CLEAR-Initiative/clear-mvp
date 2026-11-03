@@ -237,3 +237,150 @@ describe("mapSituationAnalysis sources", () => {
     ]);
   });
 });
+
+describe("mapSituationAnalysis hazards", () => {
+  it("reads the section summaries and leaves older analyses without them", () => {
+    const base = row(undefined);
+    const withSummaries: SaRow = {
+      ...base,
+      data: {
+        hazards_and_vulnerabilities: {
+          hazards: [{ description: "Cholera: 114 dead." }],
+          hazards_summary: "  Conflict is the main hazard. ",
+          vulnerabilities_summary: " ",
+        },
+      },
+    };
+    expect(mapSituationAnalysis(withSummaries, "Sudan").hazards).toMatchObject({
+      hazards: [{ text: "Cholera: 114 dead." }],
+      hazardsSummary: "Conflict is the main hazard.",
+      vulnerabilitiesSummary: null,
+    });
+    expect(mapSituationAnalysis(base, "Sudan").hazards).toMatchObject({ hazardsSummary: null, vulnerabilitiesSummary: null });
+  });
+
+  it("reads aggravating and mitigating factors with their topic and scope", () => {
+    const sa = mapSituationAnalysis(
+      {
+        ...row(undefined),
+        data: {
+          hazards_and_vulnerabilities: {
+            aggravating_factors: [
+              { description: "Currency collapse: pound down 89%.", topic: "economic_fragility", scope: " Sudan-wide " },
+              { description: "  " },
+            ],
+            mitigating_factors: [{ description: "Cholera supplies: prepositioned.", topic: "" }],
+          },
+          sources: { reports: [{ report_id: "r1", report_title: "OCHA", source_url: null, published_at: null }] },
+        },
+        sourceReportIds: ["r1"],
+      },
+      "Sudan",
+    );
+    expect(sa.hazards.aggravating).toEqual([
+      { text: "Currency collapse: pound down 89%.", refs: [], topic: "economic_fragility", scope: "Sudan-wide" },
+    ]);
+    expect(sa.hazards.mitigating).toEqual([{ text: "Cholera supplies: prepositioned.", refs: [], topic: "other", scope: null }]);
+  });
+});
+
+describe("mapSituationAnalysis humanitarian access", () => {
+  it("reads topic findings, the older two lists and the summary", () => {
+    const sa = mapSituationAnalysis(
+      {
+        ...row(undefined),
+        data: {
+          humanitarian_access: {
+            barriers: [{ description: "Blocked convoys.", source_report_ids: ["r1"] }],
+            constraints: [],
+            items: [{ description: "Airspace closed: four airports.", topic: "physical", source_report_ids: ["r1"] }],
+            summary: " Fighting cuts aid off. ",
+          },
+          sources: { reports: [{ report_id: "r1", report_title: "OCHA", source_url: null, published_at: null }] },
+        },
+        sourceReportIds: ["r1"],
+      },
+      "Sudan",
+    );
+    expect(sa.access).toEqual({
+      items: [{ text: "Airspace closed: four airports.", refs: [1], topic: "physical", scope: null }],
+      barriers: [{ text: "Blocked convoys.", refs: [1] }],
+      constraints: [],
+      summary: "Fighting cuts aid off.",
+    });
+    expect(mapSituationAnalysis(row(undefined), "Sudan").access).toEqual({ items: [], barriers: [], constraints: [], summary: null });
+  });
+});
+
+describe("mapSituationAnalysis displacement", () => {
+  function withDisplacement(displacement: SaRow["data"]["displacement"]): SaRow {
+    return {
+      ...row(undefined),
+      data: {
+        displacement,
+        sources: { reports: [{ report_id: "r1", report_title: "DTM", source_url: null, published_at: null }] },
+      },
+      sourceReportIds: ["r1"],
+    };
+  }
+
+  it("keeps older analyses on push and return bullets", () => {
+    const d = mapSituationAnalysis(
+      withDisplacement({ push_factors: [{ description: "Conflict.", source_report_ids: ["r1"] }] }),
+      "Sudan",
+    ).displacement;
+    expect(d.push).toEqual([{ text: "Conflict.", refs: [1] }]);
+    expect(d).toMatchObject({ summary: null, findings: [], dataCheck: null, flows: [], mapSince: null });
+  });
+
+  it("maps edited findings, the data check, and flows", () => {
+    const d = mapSituationAnalysis(
+      withDisplacement({
+        summary: " Conflict drives most movement. ",
+        findings: [
+          { label: "Uneven returns", callout: "59% vs <1%", description: "Khartoum.", direction: "back", group: "idp", as_of: "Jul 2026", source_report_ids: ["r1"] },
+          { label: "", description: "dropped: no label" },
+          { label: "Movement barriers", callout: "", description: "Rains.", direction: "sideways" },
+        ],
+        data_check: { description: "Returns imply 6.4M.", source_report_ids: ["r1"] },
+        flows: [
+          { direction: "out", to_location_id: "ssd", to_name: "South Sudan", label: "South Sudan >1.3M", people: 1_300_000, finding: 1 },
+          { direction: "back", to_location_id: "khr", label: "Khartoum · 2.6M back", finding: 9, source_report_ids: ["event:ev-7", "r1"] },
+          { direction: "teleport", label: "dropped" },
+          { direction: "out", label: "" },
+        ],
+        map_since: "April 2023",
+      }),
+      "Sudan",
+    ).displacement;
+    expect(d.summary).toBe("Conflict drives most movement.");
+    expect(d.findings).toEqual([
+      { label: "Uneven returns", callout: "59% vs <1%", text: "Khartoum.", refs: [1], tone: "back", group: "idp", asOf: "Jul 2026", isNew: false },
+      { label: "Movement barriers", callout: null, text: "Rains.", refs: [], tone: "neutral", group: null, asOf: null, isNew: false },
+    ]);
+    expect(d.dataCheck).toEqual({ text: "Returns imply 6.4M.", refs: [1] });
+    expect(d.flows).toHaveLength(2);
+    // No group from older answers: a flow to a known location stays inside the country, so IDP.
+    expect(d.flows[0]).toMatchObject({ direction: "out", group: "idp", to: { id: "ssd", name: "South Sudan" }, people: 1_300_000, finding: 1 });
+    // A finding number past the list is not a link.
+    expect(d.flows[1]).toMatchObject({ direction: "back", group: "idp", people: null, finding: null, eventId: "ev-7", refs: [1] });
+    expect(d.mapSince).toBe("April 2023");
+  });
+
+  it("keeps a flow on its finding when an earlier blank finding is dropped", () => {
+    const d = mapSituationAnalysis(
+      withDisplacement({
+        findings: [
+          { label: "", description: "dropped: no label" },
+          { label: "Uneven returns", description: "Khartoum." },
+        ],
+        flows: [
+          { direction: "back", label: "Khartoum", finding: 2 },
+          { direction: "back", label: "Halfway", finding: 1.5 },
+        ],
+      }),
+      "Sudan",
+    ).displacement;
+    expect(d.flows.map((f) => f.finding)).toEqual([1, null]);
+  });
+});
