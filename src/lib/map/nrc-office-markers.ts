@@ -26,7 +26,7 @@ export type NrcOfficeMarkerLabels = {
 /** Outer shell Mapbox owns; inner node holds the 45° rhomboid. */
 export function buildNrcOfficeMarkerElement(
   office: SudanNrcOffice,
-  isDark: boolean,
+  _isDark: boolean,
 ): HTMLDivElement {
   const color = SUDAN_NRC_OFFICE_COLORS[office.officeType];
   const muted = office.status !== "active";
@@ -54,8 +54,9 @@ export function buildNrcOfficeMarkerElement(
     `width:${diamondSize}px`,
     `height:${diamondSize}px`,
     `background:${color}`,
-    `border:2px solid ${isDark ? "#0a0a0a" : "#fff"}`,
-    "box-shadow:0 1px 4px rgba(0,0,0,0.35)",
+    // White in both themes, so dark-blue offices read on dark basemaps.
+    "border:1.5px solid #FFFFFF",
+    "box-shadow:0 1px 4px rgba(0,0,0,0.45)",
     "border-radius:1px",
     "transform:rotate(45deg)",
     "flex-shrink:0",
@@ -95,8 +96,8 @@ export function buildNrcOfficePopupHtml(
   `;
 }
 
-/** In-place theme update — avoids tearing down Mapbox markers on dark-mode toggle. */
-export function paintNrcOfficeMarkerTheme(root: HTMLElement, isDark: boolean): void {
+/** In-place theme update. The border is white in both themes now, so this only resets it. */
+export function paintNrcOfficeMarkerTheme(root: HTMLElement, _isDark: boolean): void {
   const diamond = root.querySelector<HTMLElement>("[data-nrc-diamond]");
-  if (diamond) diamond.style.borderColor = isDark ? "#0a0a0a" : "#fff";
+  if (diamond) diamond.style.borderColor = "#FFFFFF";
 }

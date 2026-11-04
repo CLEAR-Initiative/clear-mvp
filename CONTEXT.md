@@ -416,8 +416,31 @@ Overview / Detection / Insights — not by Full Map or detail Back.
 _Avoid_: "focus country" for the choice (that is the map paint treatment); "selected
 country" without qualifier (ambiguous).
 
+**Operating country**:
+A country where NRC runs a country office (`src/lib/data/nrc-operating-countries.ts`).
+Public fact only: the list comes from NRC's internal country office fact sheet, but
+nothing else from that sheet (staff, people reached, budgets, donors) may enter this
+public repo. Pinned at the capital, not a surveyed office address (Sudan: Port Sudan).
+_Avoid_: "office location" for the pin; mixing it up with **Country scope** (a team's
+bindings).
+
+**Inspected country** (Overview world map, flag `overview_world_map`):
+An **Operating country** clicked on the Overview world map. With the flag on, the Overview
+is that world map whatever the **Working country** (no Detection markers): the "NRC presence
+map" design, with **Operating countries** filled orange and one NRC logo pin each, and a
+zoom floor at the NRC footprint. Clicking a fill or pin zooms to the country, keeps it lit
+while the other NRC countries fade (no dimming mask), shows its offices (Sudan's from the
+annual report data, elsewhere the country office only) and the right panel. The map paints
+it itself, not as the **Focus country**. The right panel shows: INFORM Risk, the country analysis (only when the country is in the team's
+scope, the Insights rule), HDX HAPI figures and ACAPS crisis severity, the same sections for
+every country. Local to the page: it never changes the **Working country** or its cookie.
+Back to world or Escape clears it.
+_Avoid_: setting the **Working country** from a world-map click (a team may not even be
+bound to that country).
+
 **Focus country** (map paint):
-The visual mask/tint treatment of the **Working country** on the map canvas — dim
+The visual mask/tint treatment of the **Working country** (or, on the Overview world
+map, the **Inspected country**) on the map canvas — dim
 non-focus countries, highlight border, optional blue tint (Simple only). A map concept,
 not a product-wide term.
 _Avoid_: calling the working-country choice "focus country" (that name is for the paint).

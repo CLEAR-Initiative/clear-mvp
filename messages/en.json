@@ -1417,6 +1417,74 @@
         "createSignal": "Failed to create signal",
         "createAlert": "Failed to create alert"
       }
+    },
+    "worldMap": {
+      "backToWorld": "Back to world",
+      "presenceEyebrow": "NRC presence",
+      "presenceCount": "countries · click one for details",
+      "countryTooltip": "Country office in {city}",
+      "countryOfficeName": "{city} country office"
+    },
+    "worldPanel": {
+      "office": "NRC country office · {city}",
+      "close": "Back to world",
+      "risk": {
+        "title": "INFORM Risk",
+        "source": "Source: JRC {edition}",
+        "sourceShort": "Source: JRC INFORM Risk",
+        "noData": "No INFORM Risk score for this country.",
+        "unavailable": "INFORM Risk is unavailable right now.",
+        "drivers": "Top drivers",
+        "pillars": {
+          "hazard": "Hazard & exposure",
+          "vulnerability": "Vulnerability",
+          "coping": "Lack of coping capacity"
+        },
+        "class": {
+          "veryHigh": "Very high",
+          "high": "High",
+          "medium": "Medium",
+          "low": "Low",
+          "veryLow": "Very low"
+        }
+      },
+      "analysis": {
+        "title": "Country analysis",
+        "none": "No analysis for this country yet.",
+        "updated": "Updated {when}",
+        "open": "Open analysis"
+      },
+      "figures": {
+        "title": "Humanitarian situation",
+        "sourceOf": "Source: {source}, via HDX HAPI",
+        "noData": "No data from this source",
+        "unavailable": "Unavailable right now",
+        "old": "Over a year old",
+        "peopleInNeed": "People in need",
+        "plan": "{year} response plan",
+        "internallyDisplaced": "Internally displaced",
+        "refugeesHosted": "Refugees and others needing protection",
+        "foodInsecurity": "Food insecurity (IPC 3+)",
+        "shareOfPopulation": "{share} of analysed population · {date}",
+        "funding": "Humanitarian funding",
+        "funded": "{pct}% funded",
+        "appeal": "of {amount} appeal, {year}",
+        "politicalViolence": "Political violence events",
+        "fatalities": "{count, plural, one {# fatality} other {# fatalities}} · {month}"
+      },
+      "severity": {
+        "title": "Crisis severity",
+        "source": "Source: ACAPS INFORM Severity Index",
+        "none": "No crisis tracked by ACAPS for this country.",
+        "unavailable": "Crisis severity is unavailable right now.",
+        "category": {
+          "1": "Very low",
+          "2": "Low",
+          "3": "Medium",
+          "4": "High",
+          "5": "Very high"
+        }
+      }
     }
   },
   "detection": {

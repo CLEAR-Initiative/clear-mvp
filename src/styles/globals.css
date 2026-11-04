@@ -79,6 +79,14 @@
   --shadow-lg: 0 4px 12px rgba(0, 0, 0, 0.10);
 }
 
+/* Overview presence map overlays (design handoff "NRC presence map");
+   dark values live in the dark block below. */
+:root {
+  --map-glass-bg: rgba(255, 255, 255, 0.86);
+  --map-tooltip-bg: rgba(255, 255, 255, 0.97);
+  --map-overlay-shadow: rgba(0, 0, 0, 0.14);
+}
+
 /* ============================================
    Dark mode token overrides
    Mantine sets [data-mantine-color-scheme="dark"] on <html>.
@@ -123,6 +131,11 @@
   --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.5);
   --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.6);
   --shadow-lg: 0 4px 12px rgba(0, 0, 0, 0.5);
+
+  /* Overview presence map overlays (design handoff "NRC presence map") */
+  --map-glass-bg: rgba(26, 26, 26, 0.78);
+  --map-tooltip-bg: rgba(17, 17, 17, 0.94);
+  --map-overlay-shadow: rgba(0, 0, 0, 0.5);
 }
 
 /* Base styles */
