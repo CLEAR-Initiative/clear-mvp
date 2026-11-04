@@ -96,6 +96,12 @@ describe("WorldCountryPanel analysis", () => {
     expect(screen.getByRole("link", { name: /Open analysis/ }).getAttribute("href")).toBe("/insights?country=loc-ve");
   });
 
+  it("matches the API's full DRC name, which the ISO lookup does not know", () => {
+    teamCountries = [{ id: "loc-cd", name: "Democratic Republic of the Congo" }];
+    renderPanel("CD");
+    expect(screen.getByRole("link", { name: /Open analysis/ }).getAttribute("href")).toBe("/insights?country=loc-cd");
+  });
+
   it("lets an unscoped team open any country, like Insights", () => {
     allCountries = [{ id: "loc-md", name: "Moldova" }];
     renderPanel("MD");

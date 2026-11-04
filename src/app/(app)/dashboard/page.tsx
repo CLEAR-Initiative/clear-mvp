@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { Box } from "@mantine/core";
-import { useMediaQuery } from "@mantine/hooks";
+import { useMediaQuery, useViewportSize } from "@mantine/hooks";
 import dynamic from "next/dynamic";
 import { api } from "~/trpc/react";
 import { useTeam } from "~/providers/team-provider";
@@ -44,6 +44,9 @@ import {
 /** Matches RightPanel's `sm:w-[380px]`. */
 const RIGHT_PANEL_WIDTH = 380;
 
+/** Share of the viewport height the country sheet takes on mobile. */
+const MOBILE_SHEET_SHARE = 0.55;
+
 /** App shell reserves these gutters for mobile chrome - bleed the map through them. */
 const MOBILE_TOP_GUTTER = 56;
 const MOBILE_BOTTOM_GUTTER = 72;
@@ -70,6 +73,7 @@ export default function DashboardPage() {
   const { activeTeamId } = useTeam();
   const { getLocationId, getCenter, getZoom } = useLocations();
   const isMobile = useMediaQuery("(max-width: 48em)") === true;
+  const { height: viewportHeight } = useViewportSize();
 
   // Frame the map on the working country. Multi-country unset = all assigned
   // countries and WORLD_VIEW. One binding still pins.
@@ -298,6 +302,9 @@ export default function DashboardPage() {
           operatingCountries={worldMode ? NRC_OPERATING_COUNTRIES : undefined}
           projection={worldMode ? "mercator" : "globe"}
           countryFitInsetRight={worldMode && !isMobile ? RIGHT_PANEL_WIDTH : 0}
+          countryFitInsetBottom={
+            worldMode && isMobile && inspected ? Math.round(viewportHeight * MOBILE_SHEET_SHARE) + MOBILE_BOTTOM_GUTTER : 0
+          }
           onCountrySelect={setInspectedIso}
           selectedOperatingIso={worldMode ? (inspected?.iso2 ?? null) : null}
           onPresenceHover={worldMode ? setPresenceHover : undefined}
@@ -318,7 +325,7 @@ export default function DashboardPage() {
         )}
         {worldMode && !inspected && <PresenceCard count={NRC_OPERATING_COUNTRIES.length} />}
         {inspected && <BackToWorldButton onClick={backToWorld} />}
-        {inspected && <OfficeLegend iso2={inspected.iso2} />}
+        {inspected && !isMobile && <OfficeLegend iso2={inspected.iso2} />}
         {worldMode && presenceHover && <PresenceTooltip hover={presenceHover} />}
         {selectedMarker && (
           <MapMarkerDetail
@@ -350,9 +357,27 @@ export default function DashboardPage() {
         )}
         {/* World map: the panel overlays the map, so the canvas never
             resizes under a country fit (countryFitInsetRight frames around it). */}
-        {worldMode && inspected && (
-          <Box visibleFrom="sm" style={{ position: "absolute", top: 0, right: 0, bottom: 0, zIndex: 4 }}>
+        {worldMode && inspected && !isMobile && (
+          <Box style={{ position: "absolute", top: 0, right: 0, bottom: 0, zIndex: 4 }}>
             <WorldCountryPanel country={inspected} onClose={backToWorld} />
+          </Box>
+        )}
+        {/* Mobile: the same panel as a bottom sheet over the lower map. */}
+        {worldMode && inspected && isMobile && (
+          <Box
+            style={{
+              position: "absolute",
+              left: 0,
+              right: 0,
+              bottom: MOBILE_BOTTOM_GUTTER,
+              height: `${MOBILE_SHEET_SHARE * 100}vh`,
+              zIndex: 4,
+              borderRadius: "12px 12px 0 0",
+              overflow: "hidden",
+              boxShadow: "0 -4px 16px var(--map-overlay-shadow)",
+            }}
+          >
+            <WorldCountryPanel country={inspected} onClose={backToWorld} fullWidth />
           </Box>
         )}
       </Box>

@@ -18,6 +18,8 @@ type MapProps = {
   operatingCountries?: readonly { iso2: string }[];
   onCountrySelect?: (iso2: string) => void;
   selectedOperatingIso?: string | null;
+  countryFitInsetRight?: number;
+  countryFitInsetBottom?: number;
   onPresenceHover?: (hover: unknown) => void;
 };
 const mapProps: { current: MapProps } = { current: {} };
@@ -78,6 +80,12 @@ vi.mock("~/hooks/use-team-country", async (importOriginal) => {
 
 let worldMapFlag = true;
 let flagsLoading = false;
+let mobile = false;
+vi.mock("@mantine/hooks", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@mantine/hooks")>()),
+  useMediaQuery: () => mobile,
+  useViewportSize: () => ({ width: mobile ? 390 : 1440, height: 800 }),
+}));
 vi.mock("~/components/feature-flags-provider", () => ({
   useFeatureEnabled: (key: string) => (key === "overview_world_map" ? worldMapFlag : true),
   useFeatureFlags: () => ({ isLoading: flagsLoading }),
@@ -112,6 +120,7 @@ function renderPage() {
 beforeEach(() => {
   worldMapFlag = true;
   flagsLoading = false;
+  mobile = false;
   working = { id: null, name: null };
   mapProps.current = {};
   setWorkingCountry.mockClear();
@@ -159,6 +168,15 @@ describe("Overview world map", () => {
     expect(screen.getByText("dashboard.worldMap.countryTooltip")).toBeTruthy();
     act(() => mapProps.current.onPresenceHover?.(null));
     expect(screen.queryByText("dashboard.worldMap.countryTooltip")).toBeNull();
+  });
+
+  it("opens the country panel as a bottom sheet on mobile, framing the country above it", () => {
+    mobile = true;
+    renderPage();
+    act(() => mapProps.current.onCountrySelect?.("SD"));
+    expect(screen.getByTestId("panel-country").textContent).toBe("Sudan");
+    expect(mapProps.current.countryFitInsetRight).toBe(0);
+    expect(mapProps.current.countryFitInsetBottom).toBe(Math.round(800 * 0.55) + 72);
   });
 
   it("goes back to the world with the button", () => {

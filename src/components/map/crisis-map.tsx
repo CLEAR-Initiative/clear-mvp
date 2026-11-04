@@ -350,6 +350,8 @@ interface CrisisMapProps {
    * it to their right padding so the country frames in the visible part.
    */
   countryFitInsetRight?: number;
+  /** Height (px) of a sheet overlaying the map's bottom edge (presence map on mobile). */
+  countryFitInsetBottom?: number;
   /**
    * DEV / future #277: LogIE Blockages (roads + bridges). Inline FeatureCollection
    * from `/api/dev/logie-blockages` (smoke) or clear-api ingest (prod).
@@ -765,6 +767,7 @@ export function CrisisMap({
   onPresenceHover,
   projection = "globe",
   countryFitInsetRight = 0,
+  countryFitInsetBottom = 0,
   showBlockages = false,
   blockagesGeoJson = null,
   showSeismicSignals = false,
@@ -2553,7 +2556,8 @@ export function CrisisMap({
       if (!cam) return;
       const c = cam.center as { lng: number; lat: number } | [number, number];
       const center: [number, number] = Array.isArray(c) ? c : [c.lng, c.lat];
-      const zoom = Math.max(1, cam.zoom ?? 1);
+      // No extra floor: a phone-width map needs a zoom below 1 to fit.
+      const zoom = Math.max(0, cam.zoom ?? 0);
       presenceWorldViewRef.current = { center, zoom };
       m.setMinZoom(zoom);
       if (jump) m.jumpTo({ center, zoom });
@@ -2645,6 +2649,7 @@ export function CrisisMap({
 
   // Selection: world state vs country state, camera, and office markers.
   const presencePrevSelectedRef = useRef<string | null>(null);
+  const presencePrevInsetRef = useRef("");
   useEffect(() => {
     const m = map.current;
     const mb = mbRef.current;
@@ -2672,14 +2677,18 @@ export function CrisisMap({
       controls.style.right = selected ? `${inset}px` : "0px";
     }
 
-    // Camera only on a real selection change, not on a theme rebuild.
+    // Camera only on a real selection change or a panel size change, not on
+    // a theme rebuild.
     const previous = presencePrevSelectedRef.current;
     presencePrevSelectedRef.current = selected;
-    if (selected !== previous) {
+    const insetKey = `${inset}:${countryFitInsetBottom}`;
+    const insetChanged = presencePrevInsetRef.current !== insetKey;
+    presencePrevInsetRef.current = insetKey;
+    if (selected !== previous || (country && insetChanged)) {
       if (country) {
         const [w, s, e, n] = country.bbox;
         m.fitBounds([[w, s], [e, n]], {
-          padding: { top: 70, bottom: 50, left: 50, right: inset + 50 },
+          padding: { top: 70, bottom: countryFitInsetBottom + 50, left: 50, right: inset + 50 },
           maxZoom: PRESENCE_COUNTRY_MAX_ZOOM,
           duration: PRESENCE_FLY_MS,
         });
@@ -2730,7 +2739,7 @@ export function CrisisMap({
       onPresenceHoverRef.current?.(null);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loaded, presenceVersion, selectedPresenceIso]);
+  }, [loaded, presenceVersion, selectedPresenceIso, countryFitInsetRight, countryFitInsetBottom]);
 
   // Leaving the presence map puts the zoom buttons back.
   useEffect(() => {

@@ -20,16 +20,21 @@ import type { NrcOperatingCountry } from "~/lib/data/nrc-operating-countries";
 export function WorldCountryPanel({
   country,
   onClose,
+  fullWidth = false,
 }: {
   country: NrcOperatingCountry;
   onClose: () => void;
+  /** Full width (the mobile bottom sheet) instead of the 380px side panel. */
+  fullWidth?: boolean;
 }) {
   const t = useTranslations("dashboard.worldPanel");
   return (
     <Box
       component="aside"
       aria-label={country.name}
-      className="bg-[var(--color-bg-white)] border-l border-[var(--color-border)] overflow-y-auto flex flex-col w-[380px] h-full"
+      className={`bg-[var(--color-bg-white)] border-[var(--color-border)] overflow-y-auto flex flex-col h-full ${
+        fullWidth ? "w-full border-t" : "w-[380px] border-l"
+      }`}
     >
       <Box px={24} py={20} className="border-b border-[var(--color-border)] bg-[var(--color-bg-muted)]">
         <Group justify="space-between" align="flex-start" wrap="nowrap">
@@ -47,7 +52,7 @@ export function WorldCountryPanel({
         </Group>
       </Box>
       <RiskSection iso3={country.iso3} />
-      <AnalysisSection iso2={country.iso2} />
+      <AnalysisSection country={country} />
       <FiguresSection iso3={country.iso3} />
       <SeveritySection iso3={country.iso3} />
     </Box>
@@ -142,25 +147,35 @@ function RiskSection({ iso3 }: { iso3: string }) {
 }
 
 /**
+ * Whether an API location name is this country. API names vary ("Congo
+ * (DR)", "Democratic Republic of the Congo", "Venezuela (Bolivarian
+ * Republic of)"), so match the ISO code or the name we use.
+ */
+export function isSameCountry(apiName: string, country: Pick<NrcOperatingCountry, "iso2" | "name">): boolean {
+  if (isoForCountryName(apiName)?.toUpperCase() === country.iso2) return true;
+  return apiName.trim().toLowerCase() === country.name.toLowerCase();
+}
+
+/**
  * The country's location id when the user may open its analysis: one of the
  * active team's countries, or any country for an unscoped team (global
  * monitoring), the same rule as Insights.
  */
-function useScopedCountry(iso2: string): { id: string; name: string } | null | undefined {
+function useScopedCountry(country: NrcOperatingCountry): { id: string; name: string } | null | undefined {
   const { countries: teamCountries, scopeReady } = useTeamCountry();
   const unscoped = scopeReady && teamCountries.length === 0;
   const all = api.situationAnalysis.countries.useQuery(undefined, { enabled: unscoped, staleTime: Infinity });
   if (!scopeReady || (unscoped && all.isLoading)) return undefined;
   const pool = unscoped ? (all.data ?? []) : teamCountries;
-  const match = pool.find((c) => isoForCountryName(c.name)?.toUpperCase() === iso2);
+  const match = pool.find((c) => isSameCountry(c.name, country));
   return match ? { id: match.id, name: match.name } : null;
 }
 
-function AnalysisSection({ iso2 }: { iso2: string }) {
+function AnalysisSection({ country }: { country: NrcOperatingCountry }) {
   const t = useTranslations("dashboard.worldPanel.analysis");
   const format = useFormatter();
   const { activeTeamId } = useTeam();
-  const scoped = useScopedCountry(iso2);
+  const scoped = useScopedCountry(country);
   const scopes = api.analysis.scopes.useQuery(
     { teamId: activeTeamId ?? null, countries: scoped ? [scoped] : [] },
     { enabled: !!scoped, staleTime: 60_000 },
@@ -338,6 +353,7 @@ function FiguresSection({ iso3 }: { iso3: string }) {
           <Figure
             label={t("politicalViolence")}
             source={sourceOf("politicalViolence")}
+            asOf={data.politicalViolence ? `${data.politicalViolence.month}-28` : undefined}
             value={data.politicalViolence ? format.number(data.politicalViolence.events) : "-"}
             detail={
               data.politicalViolence
