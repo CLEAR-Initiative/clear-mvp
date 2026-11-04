@@ -27,6 +27,19 @@ function iso3For(country: string): string | undefined {
   return COUNTRY_ISO3[country] ?? COUNTRY_ISO3[shortCountryName(country)];
 }
 
+/**
+ * Either a country name (resolved through COUNTRY_ISO3) or an ISO3 code.
+ * The code reaches every country JRC and ACAPS cover, not only the named ones.
+ */
+const countryInput = z
+  .object({ country: z.string().optional(), iso3: z.string().regex(/^[A-Za-z]{3}$/).optional() })
+  .refine((v) => v.country !== undefined || v.iso3 !== undefined, "country or iso3 is required");
+
+function resolveIso3(input: { country?: string; iso3?: string }): string | undefined {
+  if (input.iso3) return input.iso3.toUpperCase();
+  return input.country ? iso3For(input.country) : undefined;
+}
+
 interface AcapsRecord {
   crisis_id: string;
   crisis_name: string;
@@ -49,10 +62,12 @@ interface AcapsPage {
   results: AcapsRecord[];
 }
 
-function currentMonthSlug(): string {
+/** ACAPS monthly release slug, e.g. "Nov2026"; `monthsBack` 1 is last month. */
+function monthSlug(monthsBack = 0): string {
   const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   const now = new Date();
-  return `${months[now.getMonth()]}${now.getFullYear()}`;
+  const d = new Date(now.getFullYear(), now.getMonth() - monthsBack, 1);
+  return `${months[d.getMonth()]}${d.getFullYear()}`;
 }
 
 /* ========== JRC INFORM Risk ========== */
@@ -179,24 +194,29 @@ function resolveIndicatorName(
 
 export const informRouter = createTRPCRouter({
   getSeverity: publicProcedure
-    .input(z.object({ country: z.string() }))
+    .input(countryInput)
     .query(async ({ input }) => {
-      const iso3 = iso3For(input.country);
+      const iso3 = resolveIso3(input);
       if (!iso3) return null;
 
       const token = process.env.ACAPS_API_TOKEN;
       if (!token) throw new Error("ACAPS_API_TOKEN not configured");
 
-      const url = `https://api.acaps.org/api/v1/inform-severity-index/${currentMonthSlug()}/?iso3=${iso3}`;
-      const res = await fetch(url, {
-        headers: { Authorization: `Token ${token}` },
-        next: { revalidate: 43200 }, // 12h - data updates monthly
-      });
-
-      if (!res.ok) return null;
-
-      const data = (await res.json()) as AcapsPage;
-      const records = data.results ?? [];
+      // A month's release is not out on its first days, so fall back to the
+      // previous month rather than reporting "no crisis".
+      let records: AcapsRecord[] = [];
+      let month = monthSlug();
+      for (const monthsBack of [0, 1]) {
+        month = monthSlug(monthsBack);
+        const url = `https://api.acaps.org/api/v1/inform-severity-index/${month}/?iso3=${iso3}`;
+        const res = await fetch(url, {
+          headers: { Authorization: `Token ${token}` },
+          next: { revalidate: 43200 }, // 12h - data updates monthly
+        });
+        if (!res.ok) continue;
+        records = ((await res.json()) as AcapsPage).results ?? [];
+        if (records.length > 0) break;
+      }
 
       // Prefer aggregated country-level record; fall back to any country-level individual
       const best =
@@ -219,14 +239,14 @@ export const informRouter = createTRPCRouter({
         drivers: best.drivers,
         lastUpdated: best["Last updated"],
         iso3,
-        month: currentMonthSlug(),
+        month,
       };
     }),
 
   getRisk: publicProcedure
-    .input(z.object({ country: z.string() }))
+    .input(countryInput)
     .query(async ({ input }) => {
-      const iso3 = iso3For(input.country);
+      const iso3 = resolveIso3(input);
       if (!iso3) return null;
 
       const { id: workflowId, name: edition } = await getLatestWorkflowId();
