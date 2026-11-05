@@ -1,0 +1,54 @@
+name: Dependency submission
+
+# GitHub's dependency graph doesn't parse bun.lock, so without this Dependabot
+# alerts would only see the ranges in package.json and miss every transitive
+# package. This posts the resolved bun.lock tree as a dependency snapshot
+# (scripts/bun-lock-snapshot.mjs), which Dependabot alerts then cover the same
+# way they would a package-lock.json.
+#
+# Pushes to dev are what drive alerts. PR runs submit for the PR's head branch
+# so a broken snapshot fails here before it merges.
+
+on:
+  push:
+    branches: [dev]
+  pull_request:
+    branches: [dev]
+    paths:
+      - bun.lock
+      - package.json
+      - scripts/bun-lock-snapshot.mjs
+      - .github/workflows/dependency-submission.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write # required by POST /repos/{owner}/{repo}/dependency-graph/snapshots
+
+concurrency:
+  group: dependency-submission-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  submit:
+    name: Submit bun.lock snapshot
+    # Fork PRs get a read-only token and can't submit.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: Build snapshot
+        env:
+          SNAPSHOT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          SNAPSHOT_REF: ${{ github.event_name == 'pull_request' && format('refs/heads/{0}', github.head_ref) || github.ref }}
+        run: node scripts/bun-lock-snapshot.mjs bun.lock > "$RUNNER_TEMP/snapshot.json"
+
+      - name: Submit snapshot
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api --method POST "repos/${{ github.repository }}/dependency-graph/snapshots" \
+            --input "$RUNNER_TEMP/snapshot.json" \
+            --jq '"\(.result) snapshot \(.id) at \(.created_at)"'

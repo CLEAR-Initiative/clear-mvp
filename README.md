@@ -67,7 +67,7 @@ an installable PWA with an offline fallback page.
 
 ### Prerequisites
 
-- [Bun](https://bun.sh) v1+ (the lockfile is `bun.lockb`)
+- [Bun](https://bun.sh) v1+ (the lockfile is the text `bun.lock`; there is no `package-lock.json`)
 - A reachable **clear-api** — run it locally (`bun dev` in clear-api, default `http://localhost:4000`)
   or use a dev deployment
 - A [Mapbox](https://account.mapbox.com/) public token (free tier is fine)
