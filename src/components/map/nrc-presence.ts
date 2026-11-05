@@ -9,6 +9,7 @@
  */
 
 import { NRC_LETTER_PATHS, NRC_ORANGE } from "~/components/ui/nrc-logo-mark";
+import { SUDAN_NRC_OFFICES, type SudanNrcOffice } from "~/lib/data/sudan-nrc-offices";
 
 export const PRESENCE_SOURCE = "nrc-presence-countries";
 export const PRESENCE_POINTS = "nrc-presence-points";
@@ -106,3 +107,8 @@ export function loadNrcPinImage(): Promise<HTMLImageElement> {
   });
   return pinImage;
 }
+
+/** Sudan's offices on the presence map: current ones only, no former or planned offices. */
+export const PRESENCE_SUDAN_OFFICES: SudanNrcOffice[] = SUDAN_NRC_OFFICES.filter(
+  (o) => o.officeType !== "former_country_office" && o.officeType !== "planned_or_expansion",
+);

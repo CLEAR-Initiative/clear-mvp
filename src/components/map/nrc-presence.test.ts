@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { NRC_LETTER_PATHS } from "~/components/ui/nrc-logo-mark";
-import { nrcPinSvg, presenceFillOpacity, presenceLineOpacity } from "./nrc-presence";
+import { PRESENCE_SUDAN_OFFICES, nrcPinSvg, presenceFillOpacity, presenceLineOpacity } from "./nrc-presence";
 
 describe("presence map styling", () => {
   it("fills NRC countries at 0.42, 0.62 on hover", () => {
@@ -25,5 +25,14 @@ describe("nrcPinSvg", () => {
     expect(svg).toContain('width="80" height="104" viewBox="0 0 40 52"');
     for (const d of NRC_LETTER_PATHS) expect(svg).toContain(d);
     expect(svg).not.toContain("metadata");
+  });
+});
+
+describe("PRESENCE_SUDAN_OFFICES", () => {
+  it("leaves out former and planned offices", () => {
+    const types = new Set(PRESENCE_SUDAN_OFFICES.map((o) => o.officeType));
+    expect(types.has("former_country_office")).toBe(false);
+    expect(types.has("planned_or_expansion")).toBe(false);
+    expect(types.has("country_office")).toBe(true);
   });
 });

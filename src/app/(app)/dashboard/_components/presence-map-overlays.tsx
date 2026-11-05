@@ -6,12 +6,9 @@ import { Box, Text, UnstyledButton } from "@mantine/core";
 import { IconArrowLeft } from "@tabler/icons-react";
 import { NRC_ORANGE, NrcLogoMark } from "~/components/ui/nrc-logo-mark";
 import type { PresenceHover } from "~/components/map/crisis-map";
+import { PRESENCE_SUDAN_OFFICES } from "~/components/map/nrc-presence";
 import { nrcOperatingCountry } from "~/lib/data/nrc-operating-countries";
-import {
-  SUDAN_NRC_OFFICE_COLORS,
-  SUDAN_NRC_OFFICES,
-  type SudanNrcOfficeType,
-} from "~/lib/data/sudan-nrc-offices";
+import { SUDAN_NRC_OFFICE_COLORS, type SudanNrcOfficeType } from "~/lib/data/sudan-nrc-offices";
 
 /**
  * Overlays of the Overview presence map ("NRC presence map" design
@@ -104,7 +101,7 @@ export function PresenceTooltip({ hover }: { hover: PresenceHover }) {
     title = t("countryOfficeName", { city: country.pinCity });
     sub = `${tMap("types.country_office")} · ${country.name}`;
   } else {
-    const office = SUDAN_NRC_OFFICES.find((o) => o.id === hover.officeId);
+    const office = PRESENCE_SUDAN_OFFICES.find((o) => o.id === hover.officeId);
     if (!office) return null;
     title = office.name;
     sub = `${tMap(`types.${office.officeType}`)} · ${office.state}`;
@@ -135,14 +132,12 @@ const OFFICE_TYPE_ORDER: SudanNrcOfficeType[] = [
   "country_office",
   "area_office",
   "field_office",
-  "planned_or_expansion",
-  "former_country_office",
 ];
 
 /** Office types shown for a country: Sudan's from its office data, elsewhere the country office only. */
 export function officeTypesFor(iso2: string): SudanNrcOfficeType[] {
   if (iso2 !== "SD") return ["country_office"];
-  const present = new Set(SUDAN_NRC_OFFICES.map((o) => o.officeType));
+  const present = new Set(PRESENCE_SUDAN_OFFICES.map((o) => o.officeType));
   return OFFICE_TYPE_ORDER.filter((type) => present.has(type));
 }
 

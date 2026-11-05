@@ -29,6 +29,7 @@ import {
   PRESENCE_POINTS,
   PRESENCE_SELECTED_LINE,
   PRESENCE_SOURCE,
+  PRESENCE_SUDAN_OFFICES,
   SINGLE_WORLDVIEW,
   loadNrcPinImage,
   nrcPinDataUrl,
@@ -2716,7 +2717,7 @@ export function CrisisMap({
         markers.push(new mb.Marker({ element: el, anchor: "bottom" }).setLngLat(lngLat).addTo(m));
       };
       if (selected === "SD") {
-        for (const office of SUDAN_NRC_OFFICES) {
+        for (const office of PRESENCE_SUDAN_OFFICES) {
           const lngLat: [number, number] = [office.longitude, office.latitude];
           const payload: PresenceOfficeHover = { kind: "office", officeId: office.id };
           if (office.officeType === "country_office") {
