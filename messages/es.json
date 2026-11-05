@@ -1417,6 +1417,74 @@
         "createSignal": "No se pudo crear la señal",
         "createAlert": "No se pudo crear la alerta"
       }
+    },
+    "worldMap": {
+      "backToWorld": "Volver al mundo",
+      "presenceEyebrow": "Presencia del NRC",
+      "presenceCount": "países · haga clic en uno para ver detalles",
+      "countryTooltip": "Oficina país en {city}",
+      "countryOfficeName": "Oficina país de {city}"
+    },
+    "worldPanel": {
+      "office": "Oficina de país del NRC · {city}",
+      "close": "Volver al mundo",
+      "risk": {
+        "title": "Riesgo INFORM",
+        "source": "Fuente: JRC {edition}",
+        "sourceShort": "Fuente: JRC INFORM Risk",
+        "noData": "No hay puntuación de riesgo INFORM para este país.",
+        "unavailable": "El riesgo INFORM no está disponible en este momento.",
+        "drivers": "Factores principales",
+        "pillars": {
+          "hazard": "Amenaza y exposición",
+          "vulnerability": "Vulnerabilidad",
+          "coping": "Falta de capacidad de respuesta"
+        },
+        "class": {
+          "veryHigh": "Muy alto",
+          "high": "Alto",
+          "medium": "Medio",
+          "low": "Bajo",
+          "veryLow": "Muy bajo"
+        }
+      },
+      "analysis": {
+        "title": "Análisis del país",
+        "none": "Aún no hay análisis para este país.",
+        "updated": "Actualizado {when}",
+        "open": "Abrir análisis"
+      },
+      "figures": {
+        "title": "Situación humanitaria",
+        "sourceOf": "Fuente: {source}, a través de HDX HAPI",
+        "noData": "Sin datos de esta fuente",
+        "unavailable": "No disponible en este momento",
+        "old": "De hace más de un año",
+        "peopleInNeed": "Personas con necesidades",
+        "plan": "Plan de respuesta {year}",
+        "internallyDisplaced": "Desplazados internos",
+        "refugeesHosted": "Refugiados y otras personas que necesitan protección",
+        "foodInsecurity": "Inseguridad alimentaria (CIF 3+)",
+        "shareOfPopulation": "{share} de la población analizada · {date}",
+        "funding": "Financiación humanitaria",
+        "funded": "{pct} % financiado",
+        "appeal": "de un llamamiento de {amount}, {year}",
+        "politicalViolence": "Eventos de violencia política",
+        "fatalities": "{count, plural, one {# víctima mortal} other {# víctimas mortales}} · {month}"
+      },
+      "severity": {
+        "title": "Gravedad de la crisis",
+        "source": "Fuente: índice de gravedad INFORM de ACAPS",
+        "none": "ACAPS no sigue ninguna crisis en este país.",
+        "unavailable": "La gravedad de la crisis no está disponible en este momento.",
+        "category": {
+          "1": "Muy baja",
+          "2": "Baja",
+          "3": "Media",
+          "4": "Alta",
+          "5": "Muy alta"
+        }
+      }
     }
   },
   "detection": {

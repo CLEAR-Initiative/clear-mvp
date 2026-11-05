@@ -1417,6 +1417,74 @@
         "createSignal": "فشل إنشاء الإشارة",
         "createAlert": "فشل إنشاء التنبيه"
       }
+    },
+    "worldMap": {
+      "backToWorld": "العودة إلى خريطة العالم",
+      "presenceEyebrow": "حضور المجلس النرويجي للاجئين",
+      "presenceCount": "دولة · انقر على إحداها للاطلاع على التفاصيل",
+      "countryTooltip": "المكتب القطري في {city}",
+      "countryOfficeName": "المكتب القطري في {city}"
+    },
+    "worldPanel": {
+      "office": "المكتب القُطري للمجلس النرويجي للاجئين · {city}",
+      "close": "العودة إلى خريطة العالم",
+      "risk": {
+        "title": "مؤشر INFORM للمخاطر",
+        "source": "المصدر: JRC {edition}",
+        "sourceShort": "المصدر: JRC INFORM Risk",
+        "noData": "لا توجد درجة INFORM للمخاطر لهذا البلد.",
+        "unavailable": "مؤشر INFORM للمخاطر غير متاح حاليًا.",
+        "drivers": "أبرز العوامل",
+        "pillars": {
+          "hazard": "المخاطر والتعرض",
+          "vulnerability": "الهشاشة",
+          "coping": "نقص القدرة على التكيف"
+        },
+        "class": {
+          "veryHigh": "مرتفع جدًا",
+          "high": "مرتفع",
+          "medium": "متوسط",
+          "low": "منخفض",
+          "veryLow": "منخفض جدًا"
+        }
+      },
+      "analysis": {
+        "title": "تحليل البلد",
+        "none": "لا يوجد تحليل لهذا البلد بعد.",
+        "updated": "تم التحديث {when}",
+        "open": "فتح التحليل"
+      },
+      "figures": {
+        "title": "الوضع الإنساني",
+        "sourceOf": "المصدر: {source}، عبر HDX HAPI",
+        "noData": "لا توجد بيانات من هذا المصدر",
+        "unavailable": "غير متاح حاليًا",
+        "old": "مضى عليها أكثر من عام",
+        "peopleInNeed": "المحتاجون",
+        "plan": "خطة الاستجابة {year}",
+        "internallyDisplaced": "النازحون داخليًا",
+        "refugeesHosted": "اللاجئون وغيرهم ممن يحتاجون إلى الحماية",
+        "foodInsecurity": "انعدام الأمن الغذائي (IPC 3+)",
+        "shareOfPopulation": "{share} من السكان المشمولين بالتحليل · {date}",
+        "funding": "التمويل الإنساني",
+        "funded": "ممول بنسبة {pct}٪",
+        "appeal": "من نداء بقيمة {amount}، {year}",
+        "politicalViolence": "أحداث العنف السياسي",
+        "fatalities": "{count, plural, one {وفاة واحدة} other {# وفيات}} · {month}"
+      },
+      "severity": {
+        "title": "شدة الأزمة",
+        "source": "المصدر: مؤشر INFORM لشدة الأزمات من ACAPS",
+        "none": "لا تتابع ACAPS أي أزمة في هذا البلد.",
+        "unavailable": "شدة الأزمة غير متاحة حاليًا.",
+        "category": {
+          "1": "منخفضة جدًا",
+          "2": "منخفضة",
+          "3": "متوسطة",
+          "4": "مرتفعة",
+          "5": "مرتفعة جدًا"
+        }
+      }
     }
   },
   "detection": {

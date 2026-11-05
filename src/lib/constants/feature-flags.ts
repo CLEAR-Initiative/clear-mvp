@@ -138,6 +138,14 @@ export const FEATURE_FLAGS: FeatureFlagDefinition[] = [
     tier: 4,
     defaultEnabled: false,
   },
+  {
+    key: "overview_world_map",
+    label: "Overview world map",
+    description:
+      "Turns the Overview into a world map of the countries where NRC has a country office: a tint and an NRC logo each (at the capital, Port Sudan for Sudan), and no Detection markers, layers or team boundaries. Clicking a country zooms to it, highlights it and opens a panel with INFORM Risk, the country analysis (team scope only), HDX HAPI humanitarian figures and ACAPS crisis severity, without changing the working country. Public data only (src/lib/data/nrc-operating-countries.ts). UI-only gate.",
+    tier: 4,
+    defaultEnabled: false,
+  },
 ];
 
 export const TIER_LABELS: Record<number, string> = {
