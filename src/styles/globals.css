@@ -211,9 +211,28 @@ body[data-nav-overlay="true"][data-map-basemap] [data-map-chrome-bottom] {
 }
 
 /*
- * Map frost surface tokens: translucent backgrounds + blur so basemap reads through.
+ * Map frost surface tokens.
+ *
+ * Defaults are OPAQUE, for map chrome embedded in a card (e.g. /detection's
+ * tabs). Those routes never get `data-nav-overlay`, so before this block the
+ * tokens were undefined there and the panels rendered with no background at
+ * all — unreadable over the basemap. An embedded map is also small, so the
+ * panel covers much of it and translucency costs more than it gives.
+ *
+ * The full-bleed map route overrides these with the translucent frost below.
+ * Only map chrome references these tokens, so an opaque default cannot leak
+ * into non-map UI.
+ */
+:root {
+  --map-frost-bg: var(--color-bg-white);
+  --map-frost-bg-muted: var(--color-bg-muted);
+  --map-frost-border: var(--color-border);
+  --map-frost-blur: none;
+}
+
+/*
+ * Full-bleed map routes: translucent + blur so the basemap reads through.
  * Both themes use 42% opacity to match prod (better contrast/legibility).
- * Scoped to map routes only via data-nav-overlay.
  */
 body[data-nav-overlay="true"] {
   --map-frost-bg: color-mix(in srgb, var(--color-bg-white) 42%, transparent);
