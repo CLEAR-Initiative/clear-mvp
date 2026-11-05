@@ -25,7 +25,7 @@ import type { GqlEvent } from "~/lib/types/graphql";
 import { getDisasterPills, getDisasterL2Pills } from "~/lib/disaster-types";
 import { resolveLocationName } from "~/lib/location";
 import { getListNavigation } from "~/lib/detail-list-nav";
-import type { MapMarker } from "~/components/map/crisis-map";
+import type { BaseMapType, MapMarker } from "~/components/map/crisis-map";
 import { severityColors, severityLabels } from "~/lib/constants/severity";
 import { MapSettingsPopover, type BoundaryLevel } from "~/app/(app)/map/_components/map-settings-popover";
 import { MapPanelBar } from "~/app/(app)/map/_components/map-panel-bar";
@@ -113,6 +113,12 @@ export function EventsTab({
   const [previewEventId, setPreviewEventId] = useState<string | null>(null);
   const { hoveredMarkerId, getCardProps, onMarkerHover } = useMarkerHover(mapMarkers);
   const [showPopulation, setShowPopulation] = useState(false);
+  // Cartography controls, local to this tab. /map persists these per team
+  // (map-preferences-cookie); the detection map is a secondary surface, so it
+  // keeps its own simple state rather than plumbing activeTeamId through.
+  const [baseMapType, setBaseMapType] = useState<BaseMapType>("simple");
+  const [showRoads, setShowRoads] = useState(true);
+  const [showNrcLocations, setShowNrcLocations] = useState(false);
 
   const activeSeverities = activeSeveritiesProp ?? new Set(["critical", "high", "medium", "low"]);
   const activeSources = activeSourcesProp ?? null;
@@ -404,12 +410,21 @@ export function EventsTab({
               mapboxAdmin1Isos={mapboxAdmin1Isos}
               hoveredMarkerId={hoveredMarkerId}
               onMarkerHover={onMarkerHover}
+              baseMapType={baseMapType}
+              showRoads={showRoads}
+              showNrcLocations={showNrcLocations}
             />
             <MapPanelBar
               showPopulation={showPopulation}
               onShowPopulationChange={setShowPopulation}
               boundaryLevel={boundaryLevel}
               onBoundaryLevelChange={onBoundaryLevelChange}
+              baseMapType={baseMapType}
+              onBaseMapTypeChange={setBaseMapType}
+              showRoads={showRoads}
+              onShowRoadsChange={setShowRoads}
+              showNrcLocations={showNrcLocations}
+              onShowNrcLocationsChange={setShowNrcLocations}
             />
           </Box>
         </Card>
