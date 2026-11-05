@@ -277,12 +277,10 @@ export function LiveAlertsTab({
               onMarkerHover={onMarkerHover}
             />
             <MapPanelBar
-              dataView="alert"
-              onDataViewChange={() => {}}
               showPopulation={showPopulation}
               onShowPopulationChange={setShowPopulation}
-              boundaryLevel={boundaryLevel ?? "A1"}
-              onBoundaryLevelChange={onBoundaryLevelChange ?? (() => {})}
+              boundaryLevel={boundaryLevel}
+              onBoundaryLevelChange={onBoundaryLevelChange}
             />
           </Box>
         </Card>

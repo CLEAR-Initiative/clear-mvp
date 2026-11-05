@@ -406,12 +406,10 @@ export function EventsTab({
               onMarkerHover={onMarkerHover}
             />
             <MapPanelBar
-              dataView="event"
-              onDataViewChange={() => {}}
               showPopulation={showPopulation}
               onShowPopulationChange={setShowPopulation}
-              boundaryLevel={boundaryLevel ?? "A1"}
-              onBoundaryLevelChange={onBoundaryLevelChange ?? (() => {})}
+              boundaryLevel={boundaryLevel}
+              onBoundaryLevelChange={onBoundaryLevelChange}
             />
           </Box>
         </Card>
