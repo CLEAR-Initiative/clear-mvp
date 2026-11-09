@@ -54,10 +54,9 @@ export function AgentSection({ input }: { input: { from?: string; to?: string } 
   const utcDay = (iso: string) => format.dateTime(new Date(iso), { dateStyle: "medium", timeZone: "UTC" });
 
   let body;
-  if (query.error?.data?.code === "BAD_REQUEST") {
-    // The same range as the detection metrics: the filters already show the error.
-    body = null;
-  } else if (query.error) {
+  // The page leaves this section out while the filters show a refused range,
+  // so any error here, a refused range included, is shown here.
+  if (query.error) {
     body = (
       <Alert styles={noticeStyles("critical")} icon={<IconAlertTriangle size={16} />} title={t("error.title")}>
         {query.error.message}

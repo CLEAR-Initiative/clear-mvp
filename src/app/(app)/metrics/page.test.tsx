@@ -27,7 +27,14 @@ let agentState: {
 } = {};
 const useAgentQuery = vi.fn((..._args: unknown[]) => ({ isFetching: false, error: null, ...agentState }));
 let questionsState: { data?: AgentQuestionsResult; error?: { message: string } | null; isPending?: boolean } = {};
-const useQuestionsQuery = vi.fn((..._args: unknown[]) => ({ isPending: false, error: null, ...questionsState }));
+const refetchQuestions = vi.fn();
+const useQuestionsQuery = vi.fn((..._args: unknown[]) => ({
+  isPending: false,
+  isFetching: false,
+  error: null,
+  refetch: refetchQuestions,
+  ...questionsState,
+}));
 vi.mock("~/trpc/react", () => ({
   api: {
     useUtils: () => ({ metrics: { annotations: { invalidate: vi.fn() } } }),
@@ -85,6 +92,7 @@ afterEach(() => {
   usePrecisionQuery.mockClear();
   useAgentQuery.mockClear();
   useQuestionsQuery.mockClear();
+  refetchQuestions.mockClear();
 });
 
 function renderPage() {
@@ -342,6 +350,48 @@ describe("MetricsPage, CLEAR Agent section", () => {
     expect(useQuestionsQuery.mock.calls.at(-1)![0]).toEqual({ first: 20 });
     expect(useQuestionsQuery.mock.calls.at(-1)![1]).toMatchObject({ enabled: true });
     expect(screen.getByText("What's new in the last 24 hours?")).toBeInTheDocument();
+  });
+
+  it("asks again after a date change before reading questions for the new range", () => {
+    queryState = { data: { status: "ok", metrics: withShares(NONE_MEASURED) } };
+    agentState = { data: { status: "ok", metrics: AGENT } };
+    questionsState = {
+      data: {
+        status: "ok",
+        from: AGENT.from,
+        to: AGENT.to,
+        questions: [{ askedAt: "2026-10-06T09:00:00.000Z", question: "What's new in the last 24 hours?", page: "/dashboard" }],
+      },
+    };
+    renderPage();
+    fireEvent.click(screen.getByRole("button", { name: "Show the last 20" }));
+    expect(screen.getByText("What's new in the last 24 hours?")).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("From"), { target: { value: "2026-01-05" } });
+    expect(useQuestionsQuery.mock.calls.at(-1)![0]).toEqual({ from: "2026-01-05T00:00:00.000Z", first: 20 });
+    expect(useQuestionsQuery.mock.calls.at(-1)![1]).toMatchObject({ enabled: false });
+    expect(screen.queryByText("What's new in the last 24 hours?")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Show the last 20" })).toBeEnabled();
+  });
+
+  it("lets the admin retry a failed questions read", () => {
+    queryState = { data: { status: "ok", metrics: withShares(NONE_MEASURED) } };
+    agentState = { data: { status: "ok", metrics: AGENT } };
+    questionsState = { error: { message: "clear-api timed out" } };
+    renderPage();
+    fireEvent.click(screen.getByRole("button", { name: "Show the last 20" }));
+    expect(screen.getByText("clear-api timed out")).toBeInTheDocument();
+    const button = screen.getByRole("button", { name: "Show the last 20" });
+    expect(button).toBeEnabled();
+    fireEvent.click(button);
+    expect(refetchQuestions).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows the Agent's own range refusal when the filters are not showing one", () => {
+    queryState = { error: { message: "Network error" } };
+    agentState = { error: { message: "The range can span at most 364 days", data: { code: "BAD_REQUEST" } } };
+    renderPage();
+    expect(screen.getByRole("heading", { name: "CLEAR Agent" })).toBeInTheDocument();
+    expect(screen.getByText("The range can span at most 364 days")).toBeInTheDocument();
   });
 
   it("with no turns, says so and still explains the method", () => {

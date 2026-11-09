@@ -13,16 +13,21 @@ const FIRST = 20;
  * The newest questions asked of the Agent, behind a click. clear-api logs
  * the read as an admin read of those Conversations, so the list is never
  * fetched with the page: the admin asks for it, and the note says what that
- * means. The user is never shown; clear-api does not send it.
+ * means. The user is never shown; clear-api does not send it. The click
+ * covers one range: changing a date hides the list until the admin asks again.
  */
 export function AgentQuestions({ input }: { input: { from?: string; to?: string } }) {
   const t = useTranslations("metrics.agent.questions");
   const format = useFormatter();
-  const [shown, setShown] = useState(false);
+  const range = `${input.from ?? ""}|${input.to ?? ""}`;
+  const [shownFor, setShownFor] = useState<string | null>(null);
+  const shown = shownFor === range;
   const query = api.metrics.agentQuestions.useQuery(
     { ...input, first: FIRST },
     { enabled: shown, refetchOnWindowFocus: false, retry: false },
   );
+  // After a failed read the button asks again; otherwise it is spent for this range.
+  const ask = () => (shown ? void query.refetch() : setShownFor(range));
   const result = query.data;
 
   return (
@@ -30,7 +35,7 @@ export function AgentQuestions({ input }: { input: { from?: string; to?: string 
       title={t("title")}
       subtitle={t("subtitle")}
       action={
-        <Button size="xs" variant="default" onClick={() => setShown(true)} disabled={shown} loading={shown && query.isPending}>
+        <Button size="xs" variant="default" onClick={ask} disabled={shown && !query.error} loading={shown && query.isFetching}>
           {t("show", { n: FIRST })}
         </Button>
       }
