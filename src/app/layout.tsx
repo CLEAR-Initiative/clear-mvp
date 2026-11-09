@@ -13,6 +13,7 @@ import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages, getTranslations } from "next-intl/server";
 
 import { TRPCReactProvider } from "~/trpc/react";
+import { ChunkErrorReload } from "~/components/chunk-error-reload";
 import { clearTheme } from "~/app/config/themes";
 import { localeDirection, isLocale, defaultLocale } from "~/i18n/config";
 import { isMapPath } from "~/lib/is-map-path";
@@ -113,6 +114,7 @@ export default async function RootLayout({
         data-nav-collapsed={navCollapsed ? "true" : undefined}
         suppressHydrationWarning
       >
+        <ChunkErrorReload />
         <DirectionProvider initialDirection={dir} detectDirection={false}>
           <MantineProvider theme={clearTheme} defaultColorScheme="auto">
             <NextIntlClientProvider locale={locale} messages={messages}>
