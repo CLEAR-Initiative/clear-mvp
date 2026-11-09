@@ -3932,6 +3932,113 @@
           "definition": "clear-api defines the metric (ADR-0012) and returns counts; this page only turns them into shares."
         }
       }
+    },
+    "detection": {
+      "title": "Time to detection"
+    },
+    "agent": {
+      "title": "CLEAR Agent",
+      "scope": "All countries, over the date range above. The country filter does not apply to the Agent.",
+      "loading": "Loading Agent metrics…",
+      "error": {
+        "title": "Couldn't load the Agent metrics"
+      },
+      "unavailable": {
+        "title": "Agent metrics API not deployed yet",
+        "body": "This environment's CLEAR API doesn't serve Agent usage yet. The section fills in once it does."
+      },
+      "range": "Showing {from} to {to}",
+      "empty": {
+        "title": "No Agent turns in this range",
+        "body": "{unrecorded, plural, =0 {Nobody asked the Agent anything in this range.} one {One answer was written but its usage was never recorded; nothing else happened.} other {# answers were written but their usage was never recorded; nothing else happened.}}"
+      },
+      "budget": "Budget {limit} per user per day · {hits, plural, =0 {no user-day reached it} one {# user-day reached it} other {# user-days reached it}}.",
+      "unrecorded": "{n, plural, one {# answer has no usage record and is not counted.} other {# answers have no usage record and are not counted.}}",
+      "tiles": {
+        "spend": {
+          "label": "Spend",
+          "sub": "{perConversation} per conversation"
+        },
+        "costPerTurn": {
+          "label": "Cost per turn",
+          "sub": "p95 {p95}"
+        },
+        "latency": {
+          "label": "Median latency",
+          "sub": "p95 {p95}"
+        },
+        "turns": {
+          "label": "Turns",
+          "sub": "{conversations, plural, one {# conversation} other {# conversations}} · {users, plural, one {# user} other {# users}}"
+        }
+      },
+      "weekly": {
+        "legend": "Legend",
+        "modelChanged": "model changed",
+        "partial": "partial",
+        "costPerTurnUsd": {
+          "title": "Cost per turn by week",
+          "subtitle": "Mean cost of a turn, USD",
+          "series": "Cost per turn"
+        },
+        "latencyMedianMs": {
+          "title": "Latency by week",
+          "subtitle": "Median seconds to an answer",
+          "series": "Median latency"
+        },
+        "inputTokensPerTurn": {
+          "title": "Input tokens by week",
+          "subtitle": "Mean input tokens per turn, all steps summed",
+          "series": "Input tokens per turn"
+        },
+        "tooltip": {
+          "week": "{week} · from {start}",
+          "n": "n = {n, plural, one {# turn} other {# turns}}",
+          "models": "Models: {models}",
+          "modelChanged": "Model changed this week",
+          "partial": "Partial week: still in progress"
+        }
+      },
+      "breakdown": {
+        "title": "What the Agent is used for",
+        "subtitle": "{perTurn} tool calls per turn · {many, plural, one {# turn} other {# turns}} with more than 5 · {none, plural, one {# turn} other {# turns}} with none",
+        "tools": "Tools",
+        "pages": "Asked from",
+        "models": "Models",
+        "empty": "Nothing in this range",
+        "unknown": "unknown",
+        "other": "{n, plural, one {# other} other {# others}}",
+        "columns": {
+          "tool": "Tool",
+          "calls": "Calls",
+          "turns": "Turns",
+          "page": "Page",
+          "model": "Model",
+          "cost": "Cost"
+        }
+      },
+      "questions": {
+        "title": "Recent questions",
+        "subtitle": "What people asked, newest first, without who asked",
+        "show": "Show the last {n}",
+        "audit": "Loading the questions is an admin read of those conversations and is logged as one.",
+        "loading": "Loading…",
+        "unavailable": "This environment's CLEAR API doesn't serve the questions yet.",
+        "none": "No questions in this range.",
+        "unknownPage": "no page"
+      },
+      "method": {
+        "title": "How this is measured",
+        "intro": "The CLEAR Agent's usage, as clear-api records it per turn.",
+        "points": {
+          "turn": "A turn is one answer the Agent gave, with the model, tokens, cost and latency recorded for it.",
+          "inRange": "A turn belongs to the day and week its usage was recorded in, the same clock the daily budget uses.",
+          "tokens": "Input tokens are summed over every step of a turn's tool loop, so one turn can report far more than one request holds.",
+          "pages": "The page a question came from is the first part of the route it was asked on; ids are left out.",
+          "questions": "Question text is read only when you ask to see it, and that read is logged as an admin read of those conversations.",
+          "definition": "The full definition is clear-api's ADR-0013, \"Agent usage metrics\"."
+        }
+      }
     }
   },
   "usageAnalytics": {

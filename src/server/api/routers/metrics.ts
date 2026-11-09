@@ -24,6 +24,7 @@ import {
   type MetricSeriesResult,
   type SeriesMarker,
 } from "~/lib/metric-series";
+import type { AgentMetrics, AgentMetricsResult, AgentQuestion, AgentQuestionsResult } from "~/lib/agent-metrics";
 
 /**
  * Platform metrics for the admin /metrics page. A thin proxy over
@@ -103,6 +104,65 @@ export const DELETE_METRIC_ANNOTATION_MUTATION = `
     deleteMetricAnnotation(id: $id)
   }
 `;
+
+/** Every field but `recentQuestions`: reading question text is audited by
+ * clear-api, so it has its own query, sent only when the admin asks. */
+export const AGENT_METRICS_QUERY = `
+  query AgentMetrics($input: AgentMetricsInput) {
+    agentMetrics(input: $input) {
+      from
+      to
+      turns
+      turnsUnrecorded
+      conversations
+      newConversations
+      users
+      totalCostUsd
+      costPerTurnUsd
+      costPerTurnP95Usd
+      costPerConversationUsd
+      latencyMedianMs
+      latencyP95Ms
+      totalInputTokens
+      totalOutputTokens
+      inputTokensPerTurn
+      outputTokensPerTurn
+      toolCallsPerTurn
+      turnsWithoutTools
+      turnsWithManyToolCalls
+      budgetLimitUsd
+      budgetHits
+      byModel { model turns costUsd inputTokens outputTokens }
+      byTool { tool calls turns }
+      byPage { page turns }
+      weekly { isoWeek weekStart isPartial turns conversations users costUsd costPerTurnUsd latencyMedianMs inputTokensPerTurn toolCallsPerTurn models }
+    }
+  }
+`;
+
+export const AGENT_QUESTIONS_QUERY = `
+  query AgentQuestions($input: AgentMetricsInput, $first: Int) {
+    agentMetrics(input: $input) {
+      from
+      to
+      recentQuestions(first: $first) { askedAt question page }
+    }
+  }
+`;
+
+const rangeInput = z
+  .object({
+    from: z.string().datetime({ offset: true }).optional(),
+    to: z.string().datetime({ offset: true }).optional(),
+  })
+  .optional();
+
+function rangeVariables(input: { from?: string; to?: string } | undefined): Record<string, string> {
+  const variables: Record<string, string> = {};
+  if (input?.from) variables.from = input.from;
+  if (input?.to) variables.to = input.to;
+  return variables;
+}
 
 export const metricsRouter = createTRPCRouter({
   /** Time to detection over a range (clear-api's default: the last 12 ISO
@@ -293,4 +353,52 @@ export const metricsRouter = createTRPCRouter({
       toTrpcError(err);
     }
   }),
+
+  /** CLEAR Agent usage over a range (clear-api's default: the last 12 ISO
+   * weeks): cost, latency, turns, tool calls, and the breakdowns. Dates only;
+   * the Agent is not scoped to a country. `unavailable` while clear-api does
+   * not serve `agentMetrics` yet. */
+  agent: protectedProcedure.input(rangeInput).query(async ({ ctx, input }): Promise<AgentMetricsResult> => {
+    if (!isPlatformAdmin(ctx.user.role)) {
+      throw new TRPCError({ code: "FORBIDDEN", message: "Metrics are for platform admins" });
+    }
+    try {
+      const data = await graphqlFetch<{ agentMetrics: AgentMetrics }>(
+        AGENT_METRICS_QUERY,
+        { input: rangeVariables(input) },
+        cookieHeaders(ctx),
+      );
+      return { status: "ok", metrics: data.agentMetrics };
+    } catch (err) {
+      if (isGraphqlSchemaUnavailable(err)) return { status: "unavailable" };
+      toTrpcError(err);
+    }
+  }),
+
+  /** The newest questions asked of the Agent in range, without the user.
+   * clear-api logs the read as `conversation.admin_read`, so this is asked
+   * for only when the admin chooses to see them. */
+  agentQuestions: protectedProcedure
+    .input(
+      z.object({
+        from: z.string().datetime({ offset: true }).optional(),
+        to: z.string().datetime({ offset: true }).optional(),
+        first: z.number().int().min(1).max(50).default(20),
+      }),
+    )
+    .query(async ({ ctx, input }): Promise<AgentQuestionsResult> => {
+      if (!isPlatformAdmin(ctx.user.role)) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Metrics are for platform admins" });
+      }
+      try {
+        const data = await graphqlFetch<{
+          agentMetrics: { from: string; to: string; recentQuestions: AgentQuestion[] };
+        }>(AGENT_QUESTIONS_QUERY, { input: rangeVariables(input), first: input.first }, cookieHeaders(ctx));
+        const { from, to, recentQuestions } = data.agentMetrics;
+        return { status: "ok", from, to, questions: recentQuestions };
+      } catch (err) {
+        if (isGraphqlSchemaUnavailable(err)) return { status: "unavailable" };
+        toTrpcError(err);
+      }
+    }),
 });

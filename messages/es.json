@@ -3932,6 +3932,113 @@
           "definition": "clear-api define la métrica (ADR-0012) y devuelve recuentos; esta página solo los convierte en proporciones."
         }
       }
+    },
+    "detection": {
+      "title": "Tiempo hasta la detección"
+    },
+    "agent": {
+      "title": "Agente CLEAR",
+      "scope": "Todos los países, en el rango de fechas de arriba. El filtro de país no se aplica al Agente.",
+      "loading": "Cargando las métricas del Agente…",
+      "error": {
+        "title": "No se pudieron cargar las métricas del Agente"
+      },
+      "unavailable": {
+        "title": "La API de métricas del Agente aún no está desplegada",
+        "body": "La API de CLEAR de este entorno aún no sirve el uso del Agente. La sección se completará cuando lo haga."
+      },
+      "range": "Mostrando del {from} al {to}",
+      "empty": {
+        "title": "Sin turnos del Agente en este rango",
+        "body": "{unrecorded, plural, =0 {Nadie preguntó nada al Agente en este rango.} one {Se escribió una respuesta pero su uso nunca se registró; no ocurrió nada más.} other {Se escribieron # respuestas pero su uso nunca se registró; no ocurrió nada más.}}"
+      },
+      "budget": "Presupuesto de {limit} por usuario y día · {hits, plural, =0 {ningún usuario-día lo alcanzó} one {# usuario-día lo alcanzó} other {# usuarios-día lo alcanzaron}}.",
+      "unrecorded": "{n, plural, one {# respuesta no tiene uso registrado y no se cuenta.} other {# respuestas no tienen uso registrado y no se cuentan.}}",
+      "tiles": {
+        "spend": {
+          "label": "Gasto",
+          "sub": "{perConversation} por conversación"
+        },
+        "costPerTurn": {
+          "label": "Coste por turno",
+          "sub": "p95 {p95}"
+        },
+        "latency": {
+          "label": "Latencia mediana",
+          "sub": "p95 {p95}"
+        },
+        "turns": {
+          "label": "Turnos",
+          "sub": "{conversations, plural, one {# conversación} other {# conversaciones}} · {users, plural, one {# usuario} other {# usuarios}}"
+        }
+      },
+      "weekly": {
+        "legend": "Leyenda",
+        "modelChanged": "cambio de modelo",
+        "partial": "parcial",
+        "costPerTurnUsd": {
+          "title": "Coste por turno por semana",
+          "subtitle": "Coste medio de un turno, USD",
+          "series": "Coste por turno"
+        },
+        "latencyMedianMs": {
+          "title": "Latencia por semana",
+          "subtitle": "Segundos medianos hasta una respuesta",
+          "series": "Latencia mediana"
+        },
+        "inputTokensPerTurn": {
+          "title": "Tokens de entrada por semana",
+          "subtitle": "Tokens de entrada medios por turno, todos los pasos sumados",
+          "series": "Tokens de entrada por turno"
+        },
+        "tooltip": {
+          "week": "{week} · desde el {start}",
+          "n": "n = {n, plural, one {# turno} other {# turnos}}",
+          "models": "Modelos: {models}",
+          "modelChanged": "Cambio de modelo esta semana",
+          "partial": "Semana parcial: en curso"
+        }
+      },
+      "breakdown": {
+        "title": "Para qué se usa el Agente",
+        "subtitle": "{perTurn} llamadas a herramientas por turno · {many, plural, one {# turno} other {# turnos}} con más de 5 · {none, plural, one {# turno} other {# turnos}} sin ninguna",
+        "tools": "Herramientas",
+        "pages": "Preguntado desde",
+        "models": "Modelos",
+        "empty": "Nada en este rango",
+        "unknown": "desconocido",
+        "other": "{n, plural, one {# más} other {# más}}",
+        "columns": {
+          "tool": "Herramienta",
+          "calls": "Llamadas",
+          "turns": "Turnos",
+          "page": "Página",
+          "model": "Modelo",
+          "cost": "Coste"
+        }
+      },
+      "questions": {
+        "title": "Preguntas recientes",
+        "subtitle": "Lo que preguntó la gente, de más reciente a más antiguo, sin quién preguntó",
+        "show": "Mostrar las últimas {n}",
+        "audit": "Cargar las preguntas es una lectura de administrador de esas conversaciones y se registra como tal.",
+        "loading": "Cargando…",
+        "unavailable": "La API de CLEAR de este entorno aún no sirve las preguntas.",
+        "none": "No hay preguntas en este rango.",
+        "unknownPage": "sin página"
+      },
+      "method": {
+        "title": "Cómo se mide",
+        "intro": "El uso del Agente CLEAR, tal como clear-api lo registra en cada turno.",
+        "points": {
+          "turn": "Un turno es una respuesta que dio el Agente, con el modelo, los tokens, el coste y la latencia registrados para ella.",
+          "inRange": "Un turno pertenece al día y la semana en que se registró su uso, el mismo reloj que usa el presupuesto diario.",
+          "tokens": "Los tokens de entrada se suman en cada paso del bucle de herramientas de un turno, así que un turno puede declarar muchos más de los que cabe en una sola petición.",
+          "pages": "La página de origen de una pregunta es la primera parte de la ruta desde la que se hizo; los identificadores se omiten.",
+          "questions": "El texto de las preguntas solo se lee cuando pides verlo, y esa lectura se registra como una lectura de administrador de esas conversaciones.",
+          "definition": "La definición completa es el ADR-0013 de clear-api, «Agent usage metrics»."
+        }
+      }
     }
   },
   "usageAnalytics": {
