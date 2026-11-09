@@ -116,4 +116,10 @@ describe("analysis needs rows", () => {
       severity: "high",
     });
   });
+
+  it("keeps a sector that only the survey covers", () => {
+    const rows = analysisNeedsRows([], undefined, ["health"]);
+    expect(rows.map((row) => row.key)).toEqual(["health"]);
+    expect(rows[0]).toMatchObject({ sectorId: "health", severity: null, pin: null });
+  });
 });

@@ -53,8 +53,46 @@ interface RawContextRisk {
   contributing_sources?: Record<string, string[]>;
 }
 
+/** Knowledgebase incident hits cite as `event:<eventId>` (ADR-0006). */
+export const EVENT_CITATION_PREFIX = "event:";
+
+export function eventIdFromCitation(id: string): string | null {
+  return id.startsWith(EVENT_CITATION_PREFIX) ? id.slice(EVENT_CITATION_PREFIX.length) : null;
+}
+
 interface RawDescribed {
   description?: string;
+  source_report_ids?: string[];
+}
+
+/** A finding filed under one topic of the humanitarian taxonomy, such as "economic_fragility". */
+interface RawTopicDescribed extends RawDescribed {
+  topic?: string | null;
+  /** Where the finding applies when that is wider than the analysis area: "Sudan-wide". */
+  scope?: string | null;
+}
+
+interface RawDisplacementFinding extends RawDescribed {
+  label?: string;
+  callout?: string | null;
+  direction?: string;
+  group?: string;
+  as_of?: string | null;
+  is_new?: boolean;
+}
+
+interface RawDisplacementFlow {
+  direction?: string;
+  group?: string;
+  from_location_id?: string | null;
+  from_name?: string | null;
+  to_location_id?: string | null;
+  to_name?: string | null;
+  label?: string | null;
+  sublabel?: string | null;
+  people?: number | null;
+  finding?: number | null;
+  /** The report or CLEAR event (`event:<id>`) the movement comes from. */
   source_report_ids?: string[];
 }
 
@@ -110,10 +148,33 @@ export interface SaPayload {
   hazards_and_vulnerabilities?: {
     hazards?: RawDescribed[];
     vulnerabilities?: RawDescribed[];
+    /** One-sentence takeaways shown under the section titles. */
+    hazards_summary?: string | null;
+    vulnerabilities_summary?: string | null;
+    /** What makes the shock worse, and what reduces its impact. Older analyses have neither. */
+    aggravating_factors?: RawTopicDescribed[];
+    mitigating_factors?: RawTopicDescribed[];
+  };
+  humanitarian_access?: {
+    barriers?: RawDescribed[];
+    constraints?: RawDescribed[];
+    /** The same findings filed under the five access topics. Older analyses have only the two lists above. */
+    items?: RawTopicDescribed[];
+    summary?: string | null;
   };
   displacement?: {
     push_factors?: RawDescribed[];
     return_intention?: RawDescribed[];
+    /** One-sentence takeaway shown under the section title. */
+    summary?: string | null;
+    /** At most six edited findings. Older analyses have none and fall back to the bullets above. */
+    findings?: RawDisplacementFinding[];
+    /** Two sources that disagree about the same figure. */
+    data_check?: RawDescribed | null;
+    /** Movements for the map. `finding` is the 1-based finding the flow illustrates. */
+    flows?: RawDisplacementFlow[];
+    /** Since when the mapped movements are counted, as the source puts it: "April 2023". */
+    map_since?: string | null;
   };
   sectors?: Record<string, RawSector>;
   sources?: {
@@ -261,6 +322,72 @@ export interface SaBullet {
   refs: number[];
 }
 
+/** A finding with its taxonomy topic, and how widely it applies when wider than the area. */
+export interface SaTopicBullet extends SaBullet {
+  topic: string;
+  scope: string | null;
+}
+
+export interface SaAccess {
+  /** Filed by topic. Empty for analyses made before the topics existed. */
+  items: SaTopicBullet[];
+  barriers: SaBullet[];
+  constraints: SaBullet[];
+  summary: string | null;
+}
+
+/** Which way people move: leaving, coming back, or neither. */
+export type SaDisplacementTone = "out" | "back" | "neutral";
+
+/** Internally displaced people, refugees (crossed a border), or both. NRC's focus is IDPs. */
+export type SaDisplacementGroup = "idp" | "refugee";
+
+export interface SaDisplacementFinding {
+  /** What kind of finding: "Uneven returns". */
+  label: string;
+  /** The one thing that differs, a number or a short reason: "59% vs <1%". */
+  callout: string | null;
+  text: string;
+  refs: number[];
+  tone: SaDisplacementTone;
+  /** Null when the finding is about both groups (drivers, barriers). */
+  group: SaDisplacementGroup | null;
+  /** As written by the source: "Jul 2026", "to 31 Aug 2026". */
+  asOf: string | null;
+  isNew: boolean;
+}
+
+export interface SaDisplacementPlace {
+  id: string | null;
+  name: string | null;
+}
+
+export interface SaDisplacementFlow {
+  direction: "out" | "back" | "within";
+  group: SaDisplacementGroup;
+  from: SaDisplacementPlace;
+  to: SaDisplacementPlace;
+  label: string;
+  sublabel: string | null;
+  /** Null when the source gives no size. */
+  people: number | null;
+  /** 1-based index into the findings. */
+  finding: number | null;
+  refs: number[];
+  /** The CLEAR event the movement comes from, when it cites one. */
+  eventId: string | null;
+}
+
+export interface SaDisplacement {
+  push: SaBullet[];
+  return: SaBullet[];
+  summary: string | null;
+  findings: SaDisplacementFinding[];
+  dataCheck: SaBullet | null;
+  flows: SaDisplacementFlow[];
+  mapSince: string | null;
+}
+
 export interface SituationAnalysis {
   crisis: SaCrisis;
   summary: string | null;
@@ -277,8 +404,17 @@ export interface SituationAnalysis {
    *  where the pipeline did not resolve a value. */
   figures: Record<SaStatKey, number | null>;
   contextRisks: SaContextRisk[];
-  hazards: { hazards: SaBullet[]; vulnerabilities: SaBullet[] };
-  displacement: { push: SaBullet[]; return: SaBullet[] };
+  hazards: {
+    hazards: SaBullet[];
+    vulnerabilities: SaBullet[];
+    /** Read while the section is collapsed. Older analyses have none. */
+    hazardsSummary?: string | null;
+    vulnerabilitiesSummary?: string | null;
+    aggravating?: SaTopicBullet[];
+    mitigating?: SaTopicBullet[];
+  };
+  access?: SaAccess;
+  displacement: SaDisplacement;
   sectors: SaSector[];
   sources: SaSource[];
   /** Pipeline-generated "what changed vs the prior snapshot" notes, keyed by
@@ -349,6 +485,87 @@ function sourcedBullets(
     .filter((b) => b.text.length > 0);
 }
 
+function topicBullets(
+  items: RawTopicDescribed[] | undefined,
+  refsFrom: (ids: string[] | undefined) => number[],
+): SaTopicBullet[] {
+  return (items ?? [])
+    .map((i) => ({
+      text: i.description?.trim() ?? "",
+      refs: refsFrom(i.source_report_ids),
+      topic: i.topic?.trim() || "other",
+      scope: i.scope?.trim() || null,
+    }))
+    .filter((b) => b.text.length > 0);
+}
+
+function tone(direction: string | undefined): SaDisplacementTone {
+  return direction === "out" || direction === "back" ? direction : "neutral";
+}
+
+function group(value: string | undefined): SaDisplacementGroup | null {
+  return value === "idp" || value === "refugee" ? value : null;
+}
+
+function place(id: string | null | undefined, name: string | null | undefined): SaDisplacementPlace {
+  return { id: id?.trim() || null, name: name?.trim() || null };
+}
+
+function mapDisplacement(
+  raw: SaPayload["displacement"],
+  refsFrom: (ids: string[] | undefined) => number[],
+): SaDisplacement {
+  // The pipeline's 1-based finding number -> the number after blank findings are dropped.
+  const keptNumber = new Map<number, number>();
+  const findings = (raw?.findings ?? []).flatMap((f, i) => {
+    const finding = {
+      label: f.label?.trim() ?? "",
+      callout: f.callout?.trim() || null,
+      text: f.description?.trim() ?? "",
+      refs: refsFrom(f.source_report_ids),
+      tone: tone(f.direction),
+      group: group(f.group),
+      asOf: f.as_of?.trim() || null,
+      isNew: f.is_new === true,
+    };
+    if (!finding.label || !finding.text) return [];
+    keptNumber.set(i + 1, keptNumber.size + 1);
+    return [finding];
+  });
+  const flows = (raw?.flows ?? []).flatMap((f): SaDisplacementFlow[] => {
+    const direction = f.direction === "out" || f.direction === "back" || f.direction === "within" ? f.direction : null;
+    const label = f.label?.trim();
+    if (!direction || !label) return [];
+    const finding = Number.isInteger(f.finding) ? (keptNumber.get(f.finding as number) ?? null) : null;
+    const eventId = (f.source_report_ids ?? []).map((id) => eventIdFromCitation(id)).find(Boolean) ?? null;
+    return [
+      {
+        direction,
+        // Older answers have no group: a flow out of the country is a refugee movement.
+        group: group(f.group) ?? (direction === "out" && f.to_name && !f.to_location_id ? "refugee" : "idp"),
+        from: place(f.from_location_id, f.from_name),
+        to: place(f.to_location_id, f.to_name),
+        label,
+        sublabel: f.sublabel?.trim() || null,
+        people: typeof f.people === "number" && f.people > 0 ? f.people : null,
+        finding,
+        refs: refsFrom(f.source_report_ids),
+        eventId,
+      },
+    ];
+  });
+  const check = raw?.data_check?.description?.trim();
+  return {
+    push: sourcedBullets(raw?.push_factors, refsFrom),
+    return: sourcedBullets(raw?.return_intention, refsFrom),
+    summary: raw?.summary?.trim() || null,
+    findings,
+    dataCheck: check ? { text: check, refs: refsFrom(raw?.data_check?.source_report_ids) } : null,
+    flows,
+    mapSince: raw?.map_since?.trim() || null,
+  };
+}
+
 function cleanStrings(items: string[] | undefined): string[] {
   return (items ?? []).map((s) => s?.trim()).filter((s): s is string => Boolean(s));
 }
@@ -409,7 +626,7 @@ function invertContributingSources(
 
 /**
  * Resolve the displaced KPI. Prefer `estimated_current_displacement`
- * (`stock`, then `total`) — what current pipeline snapshots carry — and fall
+ * (`stock`, then `total`; what current pipeline snapshots carry) and fall
  * back to the legacy ADR-0007 `population_displaced` range figure.
  */
 function displacedFigure(
@@ -634,11 +851,18 @@ export function mapSituationAnalysis(
         data.hazards_and_vulnerabilities?.vulnerabilities,
         refsFrom,
       ),
+      hazardsSummary: data.hazards_and_vulnerabilities?.hazards_summary?.trim() || null,
+      vulnerabilitiesSummary: data.hazards_and_vulnerabilities?.vulnerabilities_summary?.trim() || null,
+      aggravating: topicBullets(data.hazards_and_vulnerabilities?.aggravating_factors, refsFrom),
+      mitigating: topicBullets(data.hazards_and_vulnerabilities?.mitigating_factors, refsFrom),
     },
-    displacement: {
-      push: sourcedBullets(data.displacement?.push_factors, refsFrom),
-      return: sourcedBullets(data.displacement?.return_intention, refsFrom),
+    access: {
+      items: topicBullets(data.humanitarian_access?.items, refsFrom),
+      barriers: sourcedBullets(data.humanitarian_access?.barriers, refsFrom),
+      constraints: sourcedBullets(data.humanitarian_access?.constraints, refsFrom),
+      summary: data.humanitarian_access?.summary?.trim() || null,
     },
+    displacement: mapDisplacement(data.displacement, refsFrom),
     sectors: mapSectors(data.sectors, refsFrom),
     sources,
     changes: {
@@ -656,7 +880,7 @@ export function needsYearlyFill(analysis: SituationAnalysis): boolean {
 /**
  * Per-figure fill: keep the monthly Situation Analysis (narrative, sectors,
  * sources) and borrow only unresolved Key figures from the same-year yearly
- * window. A present monthly value — including zero — is never overwritten.
+ * window. A present monthly value, including zero, is never overwritten.
  * Each borrowed tile is marked with the donor window's calendar year.
  */
 export function fillMissingKeyFigures(

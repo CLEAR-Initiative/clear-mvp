@@ -5,6 +5,7 @@ export type ChangeSection =
   | "contexts"
   | "hazards"
   | "vulnerabilities"
+  | "access"
   | "displacement"
   | "forecast";
 
@@ -13,7 +14,9 @@ export const CHANGE_ANCHOR: Record<ChangeSection, string> = {
   figures: "analysis-figures",
   contexts: "analysis-contexts",
   hazards: "analysis-hazards",
-  vulnerabilities: "analysis-vulnerabilities",
+  // Vulnerabilities live inside Shocks and hazards now.
+  vulnerabilities: "analysis-hazards",
+  access: "analysis-access",
   displacement: "analysis-displacement",
   forecast: "analysis-forecast",
 };
@@ -24,6 +27,7 @@ const ORDER: ChangeSection[] = [
   "contexts",
   "hazards",
   "vulnerabilities",
+  "access",
   "displacement",
   "forecast",
 ];
@@ -34,6 +38,7 @@ export function sectionForChangeKey(key: string): ChangeSection | null {
   if (key.startsWith("context_risks")) return "contexts";
   if (key === "hazards" || key.startsWith("hazards.")) return "hazards";
   if (key.startsWith("vulnerab")) return "vulnerabilities";
+  if (key.startsWith("humanitarian_access")) return "access";
   if (key.startsWith("displacement")) return "displacement";
   if (key.startsWith("forecast") || key.startsWith("scenarios")) return "forecast";
   if (
@@ -52,6 +57,30 @@ export function sectionForChangeKey(key: string): ChangeSection | null {
 export interface ChangeChip {
   section: ChangeSection;
   note: string;
+}
+
+const FUNDING_SHARE = /funding|funded|hrp/i;
+const PERCENT = /\d+(?:\.\d+)?\s*%/;
+
+/**
+ * Drop sentences that state a funding share. The card is the only funding
+ * figure, so a percentage that lives only in the write-up cannot disagree
+ * with "Not reported" or with the dollars on the card.
+ */
+export function withoutFundingShare(note: string): string {
+  const kept = note
+    .split(/(?<=[.!?])\s+/)
+    .filter((sentence) => !(FUNDING_SHARE.test(sentence) && PERCENT.test(sentence)));
+  return kept.join(" ").replace(/\s+/g, " ").trim();
+}
+
+export function notesWithoutFundingShares(notes: Record<string, string>): Record<string, string> {
+  const visible: Record<string, string> = {};
+  for (const [key, note] of Object.entries(notes)) {
+    const text = withoutFundingShare(note);
+    if (text) visible[key] = text;
+  }
+  return visible;
 }
 
 /** One chip per section that has a non-empty note. The first note wins. */

@@ -3,8 +3,9 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
 import { createTranslator } from "use-intl/core";
 import type { AnalysisEvent, AnalysisEvents } from "~/server/api/mappers/analysis";
+import type { SaSource } from "~/server/api/mappers/situation-analysis";
 import en from "../../../../../../messages/en.json";
-import { EventsList } from "./events-list";
+import { CitedEvents } from "./cited-events";
 
 vi.mock("next/dynamic", () => ({ default: () => () => <div data-testid="crisis-map" /> }));
 vi.mock("~/trpc/react", () => ({
@@ -35,10 +36,14 @@ function event(id: string): AnalysisEvent {
   };
 }
 
-function renderList(shown: number, total: number) {
+function source(id: string, title = id, publishedAt: string | null = null): SaSource {
+  return { id, title, url: null, publishedAt, publisher: null };
+}
+
+function renderCited(sources: SaSource[], events: AnalysisEvent[]) {
   return render(
     <NextIntlClientProvider locale="en" messages={en} timeZone="UTC">
-      <EventsList events={{ totalCount: total, items: Array.from({ length: shown }, (_, i) => event(`e${i}`)) }} />
+      <CitedEvents sources={sources} events={events} />
     </NextIntlClientProvider>,
   );
 }
@@ -52,9 +57,34 @@ describe("Analysis event count labels", () => {
     expect(t("meta.builtFrom", { reports: 40, events: 115 })).toBe("40 reports, 115 cited events");
   });
 
-  it("names the list as a sample of the events it shows against the full total", () => {
-    renderList(100, 4465);
-    expect(screen.getByTestId("analysis-events")).toHaveTextContent("Sample: 100 of 4465");
+  it("lists only the cited events, each under its citation number", () => {
+    renderCited(
+      [source("r1", "OCHA update"), source("event:e1"), source("event:e2")],
+      [{ ...event("e1"), title: "Shelling in Nyala" }, { ...event("e2"), title: "Clashes in Gereida", locationName: "Gereida" }],
+    );
+    const rows = screen.getAllByTestId("analysis-event-row");
+    expect(rows.map((r) => r.getAttribute("href"))).toEqual(["/event/e1?from=analysis", "/event/e2?from=analysis"]);
+    expect(rows[0]).toHaveTextContent("2.");
+    expect(rows[0]).toHaveTextContent("Shelling in Nyala");
+    expect(rows[1]).toHaveTextContent("3.");
+    expect(rows[1]).toHaveTextContent("Gereida");
+    expect(screen.getByTestId("analysis-events")).toHaveTextContent("2 events");
+    expect(screen.getByTestId("analysis-events")).not.toHaveTextContent("OCHA update");
+  });
+
+  it("still lists a cited event whose details did not load", () => {
+    renderCited([source("event:e9", "event:e9", "2026-09-22T00:00:00Z")], []);
+    const row = screen.getByTestId("analysis-event-row");
+    expect(row).toHaveAttribute("href", "/event/e9?from=analysis");
+    expect(row).toHaveTextContent("Untitled event");
+    expect(row).toHaveTextContent("Sep 22");
+    expect(row).not.toHaveTextContent("event:e9");
+  });
+
+  it("says the analysis cites no events", () => {
+    renderCited([source("r1", "OCHA update")], []);
+    expect(screen.getByTestId("analysis-events")).toHaveTextContent("This analysis cites no events.");
+    expect(screen.queryByTestId("analysis-event-row")).toBeNull();
   });
 
   it("keeps the map off zero and the empty copy while events are loading", () => {
@@ -65,13 +95,13 @@ describe("Analysis event count labels", () => {
     expect(map.textContent).not.toMatch(/\b0\b/);
   });
 
-  it("names the map total as events since the window", () => {
+  it("names the map total as events in this area since the window", () => {
     renderMap({
       totalCount: 4465,
       items: [{ ...event("e1"), point: [25.3, 13.6], locationName: "El Fasher", admin1: { id: "nd", name: "North Darfur" } }],
     });
     const map = screen.getByRole("region", { name: "Analysis area" });
-    expect(map).toHaveTextContent("events since Jan 1, 2026");
+    expect(map).toHaveTextContent("events in this area since Jan 1, 2026");
     expect(map.textContent?.replaceAll(",", "")).toContain("4465");
     expect(map).not.toHaveTextContent("Loading events…");
     expect(map).not.toHaveTextContent("No events recorded");

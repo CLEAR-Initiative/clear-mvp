@@ -72,6 +72,24 @@
       "onDeny": "redirect /dashboard"
     },
     {
+      "id": "nav-brief",
+      "area": "access",
+      "action": "Open /brief (hidden, admin-only Briefs; no nav entry)",
+      "route": "/brief",
+      "selectors": [],
+      "flags": [],
+      "source": "middleware.ts (/brief); routers/briefs.ts adminProcedure",
+      "expect": {
+        "admin": "allow",
+        "analyst": "hidden",
+        "member": "hidden",
+        "erm": "hidden",
+        "pending": "hidden",
+        "team_admin": "hidden"
+      },
+      "onDeny": "redirect /no-access"
+    },
+    {
       "id": "nav-ops",
       "area": "access",
       "action": "Operations/Cash nav items",
@@ -254,6 +272,26 @@
         "team_admin": "allow"
       },
       "note": "requireCaseProposalInboxAccess: admin (unscoped) + team analyst / team admin (team-scoped); ERM excluded"
+    },
+    {
+      "id": "inbox-locations",
+      "area": "inbox",
+      "action": "See Location changes tab + badge",
+      "route": "/inbox",
+      "selectors": [
+        "inbox-tab-locations"
+      ],
+      "flags": [],
+      "source": "location-challenge.ts:42",
+      "expect": {
+        "admin": "allow",
+        "analyst": "hidden",
+        "member": "hidden",
+        "erm": "hidden",
+        "pending": "hidden",
+        "team_admin": "allow"
+      },
+      "note": "decideSignalLocationChallenge: the team_admin of the team it was filed for, or a platform admin, the filer included; analysts file them"
     },
     {
       "id": "inbox-decide",

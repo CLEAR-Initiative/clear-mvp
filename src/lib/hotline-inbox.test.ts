@@ -4,6 +4,7 @@ import {
   attachmentKind,
   buildCaseGroupEntries,
   buildInboxEntries,
+  buildLocationChallengeEntries,
   combineTranslations,
   caseGroupSeenMark,
   countByFilter,
@@ -13,6 +14,7 @@ import {
   entryDescription,
   filtersFor,
   intakeRef,
+  isUnreadEntry,
   matchesFilter,
   messageFailures,
   moveSelection,
@@ -30,6 +32,7 @@ import type {
   GqlGroundInboxMessage,
   GqlGroundInboxThread,
   GqlHotlineInbox,
+  GqlLocationChallengeToDecide,
   GqlReviewCaseProposal,
 } from "./types/graphql";
 
@@ -352,7 +355,7 @@ describe("visibleEntries / countByFilter", () => {
   });
 
   it("counts per filter", () => {
-    expect(countByFilter(entries)).toEqual({ community: 3, reports: 1, unclassified: 1, chatter: 1, proposals: 0 });
+    expect(countByFilter(entries)).toEqual({ community: 3, reports: 1, unclassified: 1, chatter: 1, proposals: 0, locations: 0 });
   });
 
   it("drops an opened Review item from the filter number and keeps the queue count", () => {
@@ -362,6 +365,7 @@ describe("visibleEntries / countByFilter", () => {
       unclassified: 1,
       chatter: 1,
       proposals: 0,
+      locations: 0,
     });
     expect(countByFilter(entries).community).toBe(3);
   });
@@ -443,17 +447,20 @@ describe("translation helpers", () => {
 
 describe("tabs", () => {
   it("offers each reader the tabs of the kinds they see", () => {
-    expect(tabsFor({ hotline: true, proposals: true })).toEqual(["community", "proposals"]);
-    expect(tabsFor({ hotline: true, proposals: false })).toEqual(["community"]);
-    expect(tabsFor({ hotline: false, proposals: true })).toEqual(["proposals"]);
-    expect(tabsFor({ hotline: false, proposals: false })).toEqual([]);
+    expect(tabsFor({ hotline: true, proposals: true, locations: true })).toEqual(["community", "proposals", "locations"]);
+    expect(tabsFor({ hotline: true, proposals: false, locations: false })).toEqual(["community"]);
+    expect(tabsFor({ hotline: false, proposals: true, locations: false })).toEqual(["proposals"]);
+    expect(tabsFor({ hotline: false, proposals: false, locations: true })).toEqual(["locations"]);
+    expect(tabsFor({ hotline: false, proposals: false, locations: false })).toEqual([]);
   });
 
   it("lists the community filters under Community signals and proposals alone under its tab", () => {
     expect(filtersFor("community")).toEqual(["community", "reports", "unclassified", "chatter"]);
     expect(filtersFor("proposals")).toEqual(["proposals"]);
+    expect(filtersFor("locations")).toEqual(["locations"]);
     expect(tabOf("chatter")).toBe("community");
     expect(tabOf("proposals")).toBe("proposals");
+    expect(tabOf("locations")).toBe("locations");
   });
 
   it("keeps threads the classification filters do not cover under All", () => {
@@ -538,7 +545,7 @@ describe("web case groups (V4)", () => {
     expect(matchesFilter(entries[1]!, "reports")).toBe(false);
     expect(matchesFilter(entries[1]!, "community")).toBe(false);
     expect(matchesFilter(entries[0]!, "proposals")).toBe(false);
-    expect(countByFilter(entries)).toEqual({ community: 1, reports: 1, unclassified: 0, chatter: 0, proposals: 2 });
+    expect(countByFilter(entries)).toEqual({ community: 1, reports: 1, unclassified: 0, chatter: 0, proposals: 2, locations: 0 });
     expect(visibleEntries(entries, "proposals", "", "newest").map((e) => e.id)).toEqual(["cases:e1"]);
   });
 
@@ -571,5 +578,80 @@ describe("web case groups (V4)", () => {
     const entries = [...hotline, ...buildCaseGroupEntries([webCase("c1", "e1", "2026-09-16T10:00:00Z")])];
     expect(sortEntries(entries, "reportsFirst").map((e) => e.id)).toEqual(["report", "cases:e1", "noise"]);
     expect(sortEntries(entries, "newest").map((e) => e.id)).toEqual(["noise", "report", "cases:e1"]);
+  });
+});
+
+describe("Location challenges", () => {
+  function challenge(id: string, overrides: Partial<GqlLocationChallengeToDecide> = {}): GqlLocationChallengeToDecide {
+    return {
+      id,
+      signalId: `s-${id}`,
+      status: "consideration",
+      note: "Dataminr put this in the wrong town",
+      proposedLat: 12.0,
+      proposedLng: 24.95,
+      proposedName: "Kalma",
+      createdBy: "u-analyst",
+      createdByName: "Amira",
+      createdAt: "2026-10-28T09:00:00Z",
+      updatedAt: "2026-10-28T09:00:00Z",
+      hasProposedPoint: true,
+      teamId: "T1",
+      team: { id: "T1", name: "Sudan team", locations: [{ id: "C1" }] },
+      signal: {
+        id: `s-${id}`,
+        title: "Clashes near the market",
+        generalLocation: {
+          id: "P1",
+          name: "Clashes near the market",
+          level: 4,
+          geometry: { type: "Point", coordinates: [24.88, 12.05] },
+          pointType: null,
+          ancestors: [
+            { id: "C1", name: "Sudan", level: 0 },
+            { id: "D1", name: "Nyala", level: 2 },
+          ],
+        },
+        originLocation: null,
+        destinationLocation: null,
+      },
+      proposedPlacement: { id: "D2", name: "Bielel", level: 2, ancestors: [{ id: "C1", name: "Sudan", level: 0 }] },
+      ...overrides,
+    };
+  }
+
+  it("makes one Review item per challenge, findable by place, note and filer", () => {
+    const [entry] = buildLocationChallengeEntries([challenge("c1")]);
+    expect(entry).toMatchObject({
+      id: "location:c1",
+      kind: "location_challenge",
+      title: "Clashes near the market",
+      signalTitle: "Clashes near the market",
+      sentAt: "2026-10-28T09:00:00Z",
+    });
+    for (const query of ["nyala", "kalma", "bielel", "wrong town", "amira", "sudan team"]) {
+      expect(visibleEntries([entry!], "locations", query, "newest")).toHaveLength(1);
+    }
+  });
+
+  it("keeps an untitled Signal's row titled by the row itself", () => {
+    const [entry] = buildLocationChallengeEntries([
+      challenge("c1", { signal: { ...challenge("c1").signal, title: "  " } }),
+    ]);
+    expect(entry!.signalTitle).toBeNull();
+    expect(entry!.title).toBe("");
+  });
+
+  it("lists challenges under their own tab only, counted one each", () => {
+    const entries = [
+      ...buildInboxEntries({ sources: [], threads: [thread("t1")], messages: [message("m1", "t1")] }),
+      ...buildLocationChallengeEntries([challenge("c1"), challenge("c2")]),
+    ];
+    expect(visibleEntries(entries, "locations", "", "newest").map((e) => e.id)).toEqual(["location:c1", "location:c2"]);
+    expect(visibleEntries(entries, "community", "", "newest").map((e) => e.id)).toEqual(["t1"]);
+    expect(countByFilter(entries).locations).toBe(2);
+    expect(countUnreadByFilter(entries, new Set(["location:c1"])).locations).toBe(1);
+    expect(readMarks(entries[1]!)).toEqual(["location:c1"]);
+    expect(isUnreadEntry(entries[2]!, new Set(["location:c1"]))).toBe(true);
   });
 });

@@ -109,10 +109,11 @@ describe("resolveTeamIdForSubmit", () => {
 });
 
 describe("observe QA missing-team override", () => {
-  it("allows the flag in next dev and Vercel preview, never in production", () => {
+  it("allows the flag in next dev and the dev deploy, never in prod", () => {
     expect(isObserveQaOverrideAllowed({ nodeEnv: "development" })).toBe(true);
-    expect(isObserveQaOverrideAllowed({ nodeEnv: "production", vercelEnv: "preview" })).toBe(true);
-    expect(isObserveQaOverrideAllowed({ nodeEnv: "production", vercelEnv: "production" })).toBe(false);
+    expect(isObserveQaOverrideAllowed({ nodeEnv: "production", deployEnv: "dev" })).toBe(true);
+    expect(isObserveQaOverrideAllowed({ nodeEnv: "production", deployEnv: "prod" })).toBe(false);
+    expect(isObserveQaOverrideAllowed({ nodeEnv: "production", deployEnv: "development" })).toBe(false);
     expect(isObserveQaOverrideAllowed({ nodeEnv: "production" })).toBe(false);
   });
 

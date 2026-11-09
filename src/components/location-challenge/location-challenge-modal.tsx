@@ -1,22 +1,21 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import {
-  Modal,
-  Stack,
-  Text,
-  TextInput,
-  Textarea,
-  Button,
-  Group,
-  NumberInput,
-  Box,
-  UnstyledButton,
-} from "@mantine/core";
+import { useEffect, useRef, useState } from "react";
+import { Modal, Stack, Text, Textarea, Button, Group, Box } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import { useTranslations } from "next-intl";
-import { IconAlertTriangle, IconCircleCheck, IconMapPin, IconMapPinOff } from "@tabler/icons-react";
+import { IconAlertTriangle, IconCircleCheck, IconMapPin } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
+import { challengeErrorKey } from "~/lib/location-challenge";
+import type { GqlSignalLocationChallenge } from "~/lib/types/graphql";
+import { useLocationChallengeFiling } from "./use-location-challenge-filing";
+import { LocationChallengeMap } from "./location-challenge-map";
+import {
+  LocationPointFields,
+  fieldLabelStyles,
+  pickedAt,
+  useLocationPointPicker,
+} from "./location-point-picker";
 
 export type LocationChallengeQueuePayload = {
   signalId: string;
@@ -30,12 +29,18 @@ interface LocationChallengeModalProps {
   opened: boolean;
   onClose: () => void;
   signalId: string;
-  /** Prefill from the current source pin when proposing a nudge. */
+  /** Where the Signal is now, as readable text ("Qalat, Zabul, Afghanistan"). */
+  currentPlace?: string | null;
+  /** The Signal's pin now: shown as exact coordinates and on the map. */
   sourceLat?: number;
   sourceLng?: number;
+  /** The Signal's open change, when editing it: the form starts from it
+   *  rather than empty, so resubmitting doesn't drop its note or point. */
+  existing?: GqlSignalLocationChallenge | null;
   /**
-   * Map context: leave the modal and place a corrected pin by clicking the map.
-   * When omitted (e.g. Signal detail), only manual coordinates are offered.
+   * Map context: leave the modal and place the new pin by clicking the map
+   * behind it. When omitted (e.g. Signal detail), a small map in the modal
+   * takes the click instead.
    */
   onPlaceOnMap?: (draft: { note?: string }) => void;
   /**
@@ -46,12 +51,27 @@ interface LocationChallengeModalProps {
   onUnavailableQueue?: (payload: LocationChallengeQueuePayload) => void;
 }
 
+const sectionLabelProps = {
+  size: "xs",
+  fw: 600,
+  tt: "uppercase",
+  c: "var(--color-text-muted)",
+} as const;
+
+/**
+ * Change a Signal's location, for the active team: where it is now, and
+ * where it should be (a place search, a click on the map, or typed
+ * coordinates), with an optional note. The team's admin decides it; nothing
+ * changes on the Signal until then.
+ */
 export function LocationChallengeModal({
   opened,
   onClose,
   signalId,
+  currentPlace,
   sourceLat,
   sourceLng,
+  existing,
   onPlaceOnMap,
   onUnavailableQueue,
 }: LocationChallengeModalProps) {
@@ -59,34 +79,42 @@ export function LocationChallengeModal({
   const tActions = useTranslations("common.actions");
   const tToasts = useTranslations("common.toasts");
   const utils = api.useUtils();
+  const filing = useLocationChallengeFiling();
+  const picker = useLocationPointPicker({
+    active: opened,
+    sourceLat,
+    sourceLng,
+    teamLocations: filing.teamLocations,
+    canPlaceAnywhere: filing.canPlaceAnywhere,
+  });
+  const point = picker.point;
+  const source = sourceLat != null && sourceLng != null ? { lat: sourceLat, lng: sourceLng } : null;
 
-  const [manualEntry, setManualEntry] = useState(false);
-  const [lat, setLat] = useState<number | string>(sourceLat ?? "");
-  const [lng, setLng] = useState<number | string>(sourceLng ?? "");
-  const [name, setName] = useState("");
   const [note, setNote] = useState("");
   const [submitted, setSubmitted] = useState(false);
-  const [submittedWithCorrection, setSubmittedWithCorrection] = useState(false);
   /** True when clear-api is missing and we only queued a session-local visual. */
   const [submittedSessionOnly, setSubmittedSessionOnly] = useState(false);
 
+  // Start the form when the modal opens, not whenever the open change is
+  // refetched: filing refetches it, and resetting then would drop the
+  // success screen (or unsent edits) for the saved copy.
+  const wasOpen = useRef(false);
   useEffect(() => {
-    if (!opened) return;
-    setManualEntry(false);
-    setLat(sourceLat ?? "");
-    setLng(sourceLng ?? "");
-    setName("");
-    setNote("");
+    const justOpened = opened && !wasOpen.current;
+    wasOpen.current = opened;
+    if (!justOpened) return;
+    picker.reset(
+      existing?.proposedLat != null && existing.proposedLng != null
+        ? pickedAt(existing.proposedLat, existing.proposedLng, existing.proposedName ?? null)
+        : null,
+    );
+    setNote(existing?.note ?? "");
     setSubmitted(false);
-    setSubmittedWithCorrection(false);
     setSubmittedSessionOnly(false);
-  }, [opened, sourceLat, sourceLng]);
+  }, [opened, existing, picker]);
 
   const submit = api.locationChallenge.submit.useMutation({
-    onSuccess: async (_data, variables) => {
-      setSubmittedWithCorrection(
-        variables.proposedLat != null && variables.proposedLng != null,
-      );
+    onSuccess: async () => {
       setSubmittedSessionOnly(false);
       setSubmitted(true);
       await Promise.all([
@@ -104,31 +132,18 @@ export function LocationChallengeModal({
           proposedLat: variables.proposedLat,
           proposedLng: variables.proposedLng,
         });
-        setSubmittedWithCorrection(
-          variables.proposedLat != null && variables.proposedLng != null,
-        );
         setSubmittedSessionOnly(true);
         setSubmitted(true);
         return;
       }
       notifications.show({
         title: tToasts("error"),
-        message: backendMissing ? t("errors.backendUnavailable") : t("errors.submitFailed"),
+        message: backendMissing ? t("errors.backendUnavailable") : t(challengeErrorKey(err.data?.code)),
         color: "red",
       });
     },
   });
 
-  const latNum = typeof lat === "number" ? lat : Number(lat);
-  const lngNum = typeof lng === "number" ? lng : Number(lng);
-  const hasManualPoint =
-    manualEntry &&
-    Number.isFinite(latNum) &&
-    Number.isFinite(lngNum) &&
-    latNum >= -90 &&
-    latNum <= 90 &&
-    lngNum >= -180 &&
-    lngNum <= 180;
   function handleClose() {
     onClose();
   }
@@ -138,13 +153,18 @@ export function LocationChallengeModal({
     onClose();
   }
 
+  // A change needs where to: the Signal's new point.
+  const canSubmit = !!filing.teamId && !!point && !picker.blocked;
+
   function handleSubmit() {
+    if (!filing.teamId || !point || picker.blocked) return;
     submit.mutate({
       signalId,
+      teamId: filing.teamId,
       note: note.trim() || undefined,
-      proposedName: hasManualPoint ? name.trim() || undefined : undefined,
-      proposedLat: hasManualPoint ? latNum : undefined,
-      proposedLng: hasManualPoint ? lngNum : undefined,
+      proposedName: point.name ?? undefined,
+      proposedLat: point.lat,
+      proposedLng: point.lng,
     });
   }
 
@@ -153,7 +173,7 @@ export function LocationChallengeModal({
       opened={opened}
       onClose={handleClose}
       title={submitted ? undefined : t("modal.title")}
-      size="sm"
+      size="md"
       centered
       styles={{
         title: { fontSize: 15, fontWeight: 700, color: "var(--color-text-primary)" },
@@ -163,156 +183,80 @@ export function LocationChallengeModal({
       {submitted ? (
         <Stack align="center" gap={12} py={28}>
           {submittedSessionOnly ? (
-            <IconAlertTriangle size={52} color="#D97706" style={{ strokeWidth: 1.5 }} />
+            <IconAlertTriangle size={52} color="var(--color-warning)" style={{ strokeWidth: 1.5 }} />
           ) : (
             <IconCircleCheck size={52} color="var(--color-success)" style={{ strokeWidth: 1.5 }} />
           )}
           <Text fw={700} size="lg" c="var(--color-text-primary)">
             {submittedSessionOnly ? t("modal.sessionOnlyTitle") : t("modal.successTitle")}
           </Text>
-          <Text size="sm" c="var(--color-text-muted)" ta="center" maw={280}>
-            {submittedSessionOnly
-              ? submittedWithCorrection
-                ? t("modal.sessionOnlyCorrection")
-                : t("modal.sessionOnlyChallenge")
-              : submittedWithCorrection
-                ? t("modal.successCorrection")
-                : t("modal.successChallenge")}
+          <Text size="sm" c="var(--color-text-muted)" ta="center" maw={300}>
+            {submittedSessionOnly ? t("modal.sessionOnlyCorrection") : t("modal.successBody")}
           </Text>
           <Button variant="subtle" color="gray" size="sm" mt={4} onClick={handleClose}>
             {tActions("close")}
           </Button>
         </Stack>
       ) : (
-        <Stack gap={14}>
-          <Box
-            p={10}
-            style={{
-              background: "var(--color-bg-muted)",
-              border: "1px solid var(--color-border)",
-              borderRadius: 6,
-              display: "flex",
-              gap: 10,
-              alignItems: "flex-start",
-            }}
-          >
-            <IconMapPinOff size={18} color="var(--color-text-secondary)" style={{ flexShrink: 0, marginTop: 1 }} />
-            <Text size="xs" c="var(--color-text-secondary)" style={{ lineHeight: 1.5 }}>
-              {t("modal.intro")}
+        <Stack gap={16}>
+          <Box data-testid="location-challenge-current">
+            <Text {...sectionLabelProps} mb={4}>
+              {t("modal.current")}
+            </Text>
+            <Text size="sm" fw={600} c="var(--color-text-primary)">
+              {currentPlace ?? t("modal.noPlace")}
+            </Text>
+            <Text size="xs" c="var(--color-text-muted)">
+              {source ? `${source.lat.toFixed(5)}, ${source.lng.toFixed(5)}` : t("modal.noPin")}
             </Text>
           </Box>
+
+          <Stack gap={8}>
+            <Text {...sectionLabelProps}>{t("modal.changeTo")}</Text>
+            <LocationPointFields
+              picker={picker}
+              toggleAlign="start"
+              extra={
+                onPlaceOnMap ? (
+                  <Button
+                    size="sm"
+                    variant="light"
+                    color="gray"
+                    leftSection={<IconMapPin size={14} />}
+                    onClick={handlePlaceOnMap}
+                    style={{ fontWeight: 600, alignSelf: "flex-start" }}
+                  >
+                    {t("modal.placeOnMap")}
+                  </Button>
+                ) : (
+                  <Stack gap={6}>
+                    <Text size="xs" c="var(--color-text-muted)">
+                      {t("modal.orOnMap")}
+                    </Text>
+                    <LocationChallengeMap
+                      source={source}
+                      proposed={null}
+                      placed={point}
+                      picking
+                      onPick={picker.placeAt}
+                    />
+                  </Stack>
+                )
+              }
+            />
+          </Stack>
 
           <Textarea
             label={t("modal.noteLabel")}
             placeholder={t("modal.notePlaceholder")}
             value={note}
             onChange={(e) => setNote(e.currentTarget.value)}
-            minRows={2}
+            minRows={1}
             autosize
-            maxRows={5}
+            maxRows={4}
             maxLength={2000}
-            styles={{
-              label: {
-                fontSize: 12,
-                fontWeight: 600,
-                color: "var(--color-text-primary)",
-                marginBottom: 4,
-              },
-            }}
+            styles={fieldLabelStyles}
           />
-
-          <Stack gap={8}>
-            <Text size="xs" fw={600} c="var(--color-text-primary)">
-              {t("modal.proposeCorrection")}
-            </Text>
-            <Text size="xs" c="var(--color-text-muted)" style={{ lineHeight: 1.4, marginTop: -4 }}>
-              {onPlaceOnMap ? t("modal.placeOnMapHint") : t("modal.proposeCorrectionHint")}
-            </Text>
-
-            {onPlaceOnMap && (
-              <Button
-                size="sm"
-                variant="light"
-                color="gray"
-                leftSection={<IconMapPin size={14} />}
-                onClick={handlePlaceOnMap}
-                style={{ fontWeight: 600 }}
-              >
-                {t("modal.placeOnMap")}
-              </Button>
-            )}
-
-            <UnstyledButton
-              type="button"
-              onClick={() => setManualEntry((v) => !v)}
-              style={{
-                fontSize: 11,
-                fontWeight: 500,
-                color: "var(--color-text-muted)",
-                cursor: "pointer",
-                alignSelf: onPlaceOnMap ? "flex-start" : undefined,
-                padding: 0,
-              }}
-            >
-              {manualEntry
-                ? t("modal.hideManualCoordinates")
-                : t("modal.enterCoordinatesManually")}
-            </UnstyledButton>
-
-            {manualEntry && (
-              <Stack gap={10}>
-                <Group grow align="flex-start">
-                  <NumberInput
-                    label={t("modal.lat")}
-                    value={lat}
-                    onChange={setLat}
-                    decimalScale={6}
-                    hideControls
-                    required
-                    styles={{
-                      label: {
-                        fontSize: 12,
-                        fontWeight: 600,
-                        color: "var(--color-text-primary)",
-                        marginBottom: 4,
-                      },
-                    }}
-                  />
-                  <NumberInput
-                    label={t("modal.lng")}
-                    value={lng}
-                    onChange={setLng}
-                    decimalScale={6}
-                    hideControls
-                    required
-                    styles={{
-                      label: {
-                        fontSize: 12,
-                        fontWeight: 600,
-                        color: "var(--color-text-primary)",
-                        marginBottom: 4,
-                      },
-                    }}
-                  />
-                </Group>
-                <TextInput
-                  label={t("modal.placeName")}
-                  placeholder={t("modal.placeNamePlaceholder")}
-                  value={name}
-                  onChange={(e) => setName(e.currentTarget.value)}
-                  maxLength={500}
-                  styles={{
-                    label: {
-                      fontSize: 12,
-                      fontWeight: 600,
-                      color: "var(--color-text-primary)",
-                      marginBottom: 4,
-                    },
-                  }}
-                />
-              </Stack>
-            )}
-          </Stack>
 
           <Group justify="flex-end" mt={4}>
             <Button variant="subtle" color="gray" size="sm" onClick={handleClose}>
@@ -321,14 +265,16 @@ export function LocationChallengeModal({
             <Button
               size="sm"
               loading={submit.isPending}
+              disabled={!canSubmit}
               onClick={handleSubmit}
-              style={{
-                background: "var(--color-accent)",
-                borderColor: "var(--color-accent)",
-                fontSize: 12,
-              }}
+              data-testid="location-challenge-submit"
+              style={
+                canSubmit
+                  ? { background: "var(--color-accent)", borderColor: "var(--color-accent)", fontSize: 12 }
+                  : { fontSize: 12 }
+              }
             >
-              {hasManualPoint ? t("modal.submitCorrection") : t("modal.submitChallenge")}
+              {t("modal.submit")}
             </Button>
           </Group>
         </Stack>

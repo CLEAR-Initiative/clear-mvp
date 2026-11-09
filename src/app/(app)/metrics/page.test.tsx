@@ -14,8 +14,25 @@ let queryState: {
   isFetching?: boolean;
 } = {};
 const useQuery = vi.fn((..._args: unknown[]) => ({ isFetching: false, error: null, ...queryState }));
+// Location precision has its own query; the page tests pin the TTD states and
+// only check that the section renders (its own tests cover its states).
+let precisionState: { data?: unknown; error?: { message: string; data?: { code: string } } | null } = {};
+const usePrecisionQuery = vi.fn((..._args: unknown[]) => ({ isFetching: false, error: null, ...precisionState }));
+// "Progress over time" has its own query too; left loading here, its own tests cover its states.
+const useSeriesQuery = vi.fn((..._args: unknown[]) => ({ isFetching: false, error: null }));
 vi.mock("~/trpc/react", () => ({
-  api: { metrics: { detection: { useQuery: (...args: unknown[]) => useQuery(...args) } } },
+  api: {
+    useUtils: () => ({ metrics: { annotations: { invalidate: vi.fn() } } }),
+    metrics: {
+      detection: { useQuery: (...args: unknown[]) => useQuery(...args) },
+      locationPrecision: { useQuery: (...args: unknown[]) => usePrecisionQuery(...args) },
+      definitions: { useQuery: (...args: unknown[]) => useSeriesQuery(...args) },
+      series: { useQuery: (...args: unknown[]) => useSeriesQuery(...args) },
+      annotations: { useQuery: (...args: unknown[]) => useSeriesQuery(...args) },
+      createAnnotation: { useMutation: () => ({ mutate: vi.fn(), isPending: false, error: null }) },
+      deleteAnnotation: { useMutation: () => ({ mutate: vi.fn(), isPending: false, error: null }) },
+    },
+  },
 }));
 // The location tree as useLocations serves it; empty when locations.tree
 // failed, while `countries` falls back to names with no ids.
@@ -35,14 +52,25 @@ vi.mock("recharts", async () => {
       React.cloneElement(children, { width: 640, height: 240 }),
   };
 });
+let search = "";
+const replace = vi.fn();
+vi.mock("next/navigation", () => ({
+  usePathname: () => "/metrics",
+  useRouter: () => ({ replace }),
+  useSearchParams: () => new URLSearchParams(search),
+}));
 
 const { default: MetricsPage } = await import("./page");
 
 afterEach(() => {
   cleanup();
   queryState = {};
+  precisionState = {};
+  search = "";
+  replace.mockClear();
   tree = TREE;
   useQuery.mockClear();
+  usePrecisionQuery.mockClear();
 });
 
 function renderPage() {
@@ -95,7 +123,8 @@ describe("MetricsPage", () => {
     queryState = { data: { status: "ok", metrics: withShares(NONE_MEASURED) } };
     renderPage();
     expect(screen.getByText("No measurable events in this range")).toBeInTheDocument();
-    expect(screen.queryByText("Detected by next day")).not.toBeInTheDocument();
+    // The tiles stay away; the metric selector above also names "Detected by next day", so test a tile-only text.
+    expect(screen.queryByText("Events measured")).not.toBeInTheDocument();
     expect(screen.getByText("No ingested signal")).toBeInTheDocument();
     expect(screen.getByText("How this is measured")).toBeInTheDocument();
   });
@@ -114,7 +143,8 @@ describe("MetricsPage", () => {
       },
     };
     renderPage();
-    expect(screen.getByText("Detected by next day")).toBeInTheDocument();
+    expect(screen.getByText("Events measured")).toBeInTheDocument();
+    expect(screen.getByText("3 of 4 measured")).toBeInTheDocument();
     expect(screen.getByText("Days from onset to first signal")).toBeInTheDocument();
     expect(screen.getByText("Weekly trend")).toBeInTheDocument();
     expect(screen.getByText("Not measured")).toBeInTheDocument();
@@ -148,11 +178,35 @@ describe("MetricsPage", () => {
     expect(useQuery.mock.calls.at(-1)![0]).toEqual({ locationId: "loc-sdn" });
   });
 
+  it("renders the location precision section below time to detection, sharing the filters", () => {
+    queryState = { data: { status: "ok", metrics: withShares(NONE_MEASURED) } };
+    precisionState = { data: { status: "unavailable" } };
+    renderPage();
+    expect(screen.getByRole("heading", { name: "Location precision" })).toBeInTheDocument();
+    expect(screen.getByText("Location precision not deployed yet")).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("From"), { target: { value: "2026-01-05" } });
+    expect(usePrecisionQuery.mock.calls.at(-1)![0]).toEqual({ from: "2026-01-05T00:00:00.000Z" });
+  });
+
   it("offers no country when the location tree did not load, rather than names without ids", () => {
     tree = [];
     queryState = { data: { status: "ok", metrics: withShares(NONE_MEASURED) } };
     renderPage();
     expect(screen.getByRole("textbox", { name: "Country" })).toBeDisabled();
     expect(useQuery.mock.calls.at(-1)![0]).toEqual({});
+  });
+
+  it("restores the range and country from the URL and writes a change back to it", () => {
+    search = "from=2026-10-20&to=2026-10-27&location=loc-sdn&metric=DISTRICT_OR_FINER";
+    queryState = { data: { status: "ok", metrics: withShares(NONE_MEASURED) } };
+    renderPage();
+    expect(useQuery.mock.calls.at(-1)![0]).toEqual({
+      from: "2026-10-20T00:00:00.000Z",
+      to: "2026-10-27T23:59:59.999Z",
+      locationId: "loc-sdn",
+    });
+    expect(screen.getByLabelText("From")).toHaveValue("2026-10-20");
+    fireEvent.change(screen.getByLabelText("To"), { target: { value: "2026-10-31" } });
+    expect(replace).toHaveBeenCalledWith("/metrics?from=2026-10-20&to=2026-10-31&location=loc-sdn&metric=DISTRICT_OR_FINER", { scroll: false });
   });
 });

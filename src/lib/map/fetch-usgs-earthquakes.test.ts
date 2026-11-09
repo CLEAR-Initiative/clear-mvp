@@ -12,30 +12,38 @@ describe("getSeismicSignalsFetchUrl", () => {
   it("uses the live USGS spike in development", () => {
     vi.stubEnv("NODE_ENV", "development");
     vi.stubEnv("NEXT_PUBLIC_USGS_EARTHQUAKES_URL", "");
-    vi.stubEnv("NEXT_PUBLIC_VERCEL_ENV", "");
+    vi.stubEnv("NEXT_PUBLIC_SENTRY_ENV", "");
     expect(isUsgsSpikeAllowed()).toBe(true);
     expect(getSeismicSignalsFetchUrl()).toBe("/api/dev/usgs-earthquakes");
   });
 
-  it("uses the live USGS spike on Vercel preview (NODE_ENV is production)", () => {
+  it("uses the live USGS spike on the dev deploy (NODE_ENV is production)", () => {
     vi.stubEnv("NODE_ENV", "production");
     vi.stubEnv("NEXT_PUBLIC_USGS_EARTHQUAKES_URL", "");
-    vi.stubEnv("NEXT_PUBLIC_VERCEL_ENV", "preview");
+    vi.stubEnv("NEXT_PUBLIC_SENTRY_ENV", "dev");
     expect(isUsgsSpikeAllowed()).toBe(true);
     expect(getSeismicSignalsFetchUrl()).toBe("/api/dev/usgs-earthquakes");
   });
 
-  it("uses the BFF on Vercel production", () => {
+  it("uses the BFF on the prod deploy", () => {
     vi.stubEnv("NODE_ENV", "production");
     vi.stubEnv("NEXT_PUBLIC_USGS_EARTHQUAKES_URL", "");
-    vi.stubEnv("NEXT_PUBLIC_VERCEL_ENV", "production");
+    vi.stubEnv("NEXT_PUBLIC_SENTRY_ENV", "prod");
+    expect(isUsgsSpikeAllowed()).toBe(false);
+    expect(getSeismicSignalsFetchUrl()).toBe("/api/usgs/earthquakes");
+  });
+
+  it("uses the BFF on images built without a deploy env (Dockerfile default)", () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("NEXT_PUBLIC_USGS_EARTHQUAKES_URL", "");
+    vi.stubEnv("NEXT_PUBLIC_SENTRY_ENV", "development");
     expect(isUsgsSpikeAllowed()).toBe(false);
     expect(getSeismicSignalsFetchUrl()).toBe("/api/usgs/earthquakes");
   });
 
   it("prefers an explicit URL override", () => {
     vi.stubEnv("NODE_ENV", "production");
-    vi.stubEnv("NEXT_PUBLIC_VERCEL_ENV", "preview");
+    vi.stubEnv("NEXT_PUBLIC_SENTRY_ENV", "dev");
     vi.stubEnv("NEXT_PUBLIC_USGS_EARTHQUAKES_URL", "/api/usgs/earthquakes");
     expect(getSeismicSignalsFetchUrl()).toBe("/api/usgs/earthquakes");
   });

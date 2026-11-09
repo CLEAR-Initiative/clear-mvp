@@ -1,5 +1,6 @@
 "use client";
 
+import { eventHref } from "~/lib/analytics/event-source";
 import { useMemo } from "react";
 import Link from "next/link";
 import { useFormatter, useTranslations } from "next-intl";
@@ -76,7 +77,7 @@ export function EventsTimeline({
                   w={260}
                 >
                   <Link
-                    href={`/event/${event.id}`}
+                    href={eventHref(event.id, "analysis")}
                     aria-label={event.title ?? t("events.untitled")}
                     style={{
                       position: "absolute",
@@ -100,7 +101,7 @@ export function EventsTimeline({
                   <Box
                     key={event.id}
                     component={Link}
-                    href={`/event/${event.id}`}
+                    href={eventHref(event.id, "analysis")}
                     p={12}
                     style={{
                       border: "1px solid var(--color-border)",

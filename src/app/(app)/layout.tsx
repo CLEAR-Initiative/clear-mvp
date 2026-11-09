@@ -12,6 +12,8 @@ import { WorkingCountryProvider } from "~/providers/working-country-provider";
 import { OnboardingGuard } from "~/components/onboarding-guard";
 import { ProductTourHost } from "~/components/onboarding/product-tour-host";
 import { ConsoleBufferInit } from "~/components/console-buffer-init";
+import { UsageTracker } from "~/components/analytics/usage-tracker";
+import { UsageNoticeAfterOnboarding } from "~/components/analytics/usage-notice";
 import {
   PageTransitionProvider,
   PageTransitionVeil,
@@ -44,6 +46,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           <FeatureFlagsProvider>
           <AgentProvider>
           <ConsoleBufferInit />
+          <UsageTracker />
           <PageTransitionProvider>
             <Suspense fallback={null}>
               <OnboardingGuard>
@@ -85,6 +88,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
                 </Group>
                 <MobileBottomNav />
                 <ProductTourHost />
+                <UsageNoticeAfterOnboarding />
                 <AgentDrawer />
               </OnboardingGuard>
             </Suspense>

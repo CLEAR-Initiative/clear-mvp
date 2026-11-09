@@ -44,3 +44,32 @@ describe("middleware: /metrics", () => {
     expect(new URL(res.headers.get("location")!).pathname).toBe("/dashboard");
   });
 });
+
+describe("middleware: /brief", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("sends a non-admin to /no-access from the list and a Brief", async () => {
+    for (const path of ["/brief", "/brief/b1"]) {
+      for (const role of ["analyst", "viewer", "pending"]) {
+        sessionAs(role);
+        const res = await middleware(request(path));
+        expect(res.status).toBe(307);
+        expect(new URL(res.headers.get("location")!).pathname).toBe("/no-access");
+      }
+    }
+  });
+
+  it("lets a platform admin through", async () => {
+    sessionAs("admin");
+    for (const path of ["/brief", "/brief/b1"]) {
+      const res = await middleware(request(path));
+      expect(res.headers.get("location")).toBeNull();
+    }
+  });
+
+  it("leaves other paths that start with the same letters alone", async () => {
+    sessionAs("analyst");
+    const res = await middleware(request("/briefing"));
+    expect(res.headers.get("location")).toBeNull();
+  });
+});

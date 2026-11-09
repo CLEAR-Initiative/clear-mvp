@@ -46,16 +46,12 @@ export const createTRPCRouter = t.router;
  */
 export const publicProcedure = t.procedure;
 
-/**
- * Protected procedure — validates session against the auth backend.
- * Adds `user` and `session` to the context.
- */
-const enforceAuth = t.middleware(async ({ ctx, next }) => {
-  const cookie = ctx.headers.get("cookie") ?? "";
-  if (!cookie) {
-    throw new TRPCError({ code: "UNAUTHORIZED", message: "Not authenticated" });
-  }
+type SessionData = {
+  session?: { id: string; userId: string; expiresAt: string } | null;
+  user?: SessionUser | null;
+} | null;
 
+async function fetchSession(cookie: string): Promise<SessionData> {
   let res: Response;
   try {
     res = await fetch(`${API_URL}/api/auth/get-session`, {
@@ -72,10 +68,33 @@ const enforceAuth = t.middleware(async ({ ctx, next }) => {
     throw new TRPCError({ code: "UNAUTHORIZED", message: "Invalid session" });
   }
 
-  const data = (await res.json()) as {
-    session?: { id: string; userId: string; expiresAt: string } | null;
-    user?: SessionUser | null;
-  } | null;
+  return (await res.json()) as SessionData;
+}
+
+/**
+ * One session lookup per request, keyed by its Headers object. A batched HTTP
+ * request runs every procedure against the same context, so without this a
+ * page's first batch fired one get-session call per procedure (~10) to
+ * clear-api. Weakly held, so it never outlives the request.
+ */
+const sessionByRequest = new WeakMap<Headers, Promise<SessionData>>();
+
+/**
+ * Protected procedure — validates session against the auth backend.
+ * Adds `user` and `session` to the context.
+ */
+const enforceAuth = t.middleware(async ({ ctx, next }) => {
+  const cookie = ctx.headers.get("cookie") ?? "";
+  if (!cookie) {
+    throw new TRPCError({ code: "UNAUTHORIZED", message: "Not authenticated" });
+  }
+
+  let pending = sessionByRequest.get(ctx.headers);
+  if (!pending) {
+    pending = fetchSession(cookie);
+    sessionByRequest.set(ctx.headers, pending);
+  }
+  const data = await pending;
 
   if (!data?.session || !data?.user) {
     throw new TRPCError({ code: "UNAUTHORIZED", message: "Not authenticated" });

@@ -4,14 +4,16 @@ import type {
   GqlGroundInboxMessage,
   GqlGroundInboxThread,
   GqlHotlineInbox,
+  GqlLocationChallengeToDecide,
   GqlReviewCaseProposal,
 } from "~/lib/types/graphql";
+import { locationChain, signalLocationOf, signalPlaceLabel } from "./location-challenge";
 
 /**
  * Inbox view model (/inbox).
  *
  * Pure helpers that turn what the Inbox lists into standalone, reviewable
- * entries of two kinds (`InboxEntry.kind`), one per Inbox tab:
+ * entries of three kinds (`InboxEntry.kind`), one per Inbox tab:
  *
  *   hotline_thread — one unverified thread from the hotline staging payload
  *                    (open threads + staged messages). The hotline is free
@@ -24,6 +26,9 @@ import type {
  *                    grouped under it; each case has its own
  *                    Accept / Reject. It counts as one Review item per
  *                    undecided case, not one per group.
+ *   location_challenge — one open Location challenge on a Signal, filed by an
+ *                    analyst for a team the reader administers: accept the
+ *                    proposed point, place a different one, or decline.
  *
  * PRIVACY: hotline messages carry no sender identity. `senderRef` is a
  * per-conversation HMAC pseudonym minted by clear-api; `intakeRef` below
@@ -37,25 +42,28 @@ export interface GroundTranslationState {
   text: string | null;
 }
 
-/** The Inbox's tabs: hotline threads ("community signals") and the
- * proposed signals (web cases). The page shows only the tabs whose kind the
- * reader may see. */
-export const INBOX_TABS = ["community", "proposals"] as const;
+/** The Inbox's tabs: hotline threads ("community signals"), the proposed
+ * signals (web cases) and Location challenges. The page shows only the tabs
+ * whose kind the reader may see. */
+export const INBOX_TABS = ["community", "proposals", "locations"] as const;
 export type InboxTab = (typeof INBOX_TABS)[number];
 
 /** The filters inside the tabs: every hotline thread ("community"), the
- * three hotline classifications, and the proposed signals. */
-export const INBOX_FILTERS = ["community", "reports", "unclassified", "chatter", "proposals"] as const;
+ * three hotline classifications, the proposed signals and the Location
+ * challenges. */
+export const INBOX_FILTERS = ["community", "reports", "unclassified", "chatter", "proposals", "locations"] as const;
 export type InboxFilter = (typeof INBOX_FILTERS)[number];
 
 /** The tab a filter belongs to. */
 export function tabOf(filter: InboxFilter): InboxTab {
-  return filter === "proposals" ? "proposals" : "community";
+  return filter === "proposals" || filter === "locations" ? filter : "community";
 }
 
 /** Which tabs apply to a reader who sees these kinds. */
-export function tabsFor(access: { hotline: boolean; proposals: boolean }): InboxTab[] {
-  return INBOX_TABS.filter((tab) => (tab === "proposals" ? access.proposals : access.hotline));
+export function tabsFor(access: { hotline: boolean; proposals: boolean; locations: boolean }): InboxTab[] {
+  return INBOX_TABS.filter((tab) =>
+    tab === "proposals" ? access.proposals : tab === "locations" ? access.locations : access.hotline,
+  );
 }
 
 /** The filters within one tab, in display order. */
@@ -132,7 +140,7 @@ export interface InboxAttachment {
 }
 
 /** What an Inbox entry is about; each kind has its own row and pane. */
-export type InboxEntryKind = "hotline_thread" | "cases";
+export type InboxEntryKind = "hotline_thread" | "cases" | "location_challenge";
 
 /** What every kind of entry carries: enough to list, select, search and
  * sort it. */
@@ -195,7 +203,17 @@ export interface CaseGroupEntry extends InboxEntryBase {
   undecided: number;
 }
 
-export type InboxEntry = HotlineEntry | CaseGroupEntry;
+/** One open Location challenge on a Signal. The id is `location:<challengeId>`. */
+export interface LocationChallengeEntry extends InboxEntryBase {
+  kind: "location_challenge";
+  challenge: GqlLocationChallengeToDecide;
+  /** The Signal's title; null when it has none (the row says so). */
+  signalTitle: string | null;
+  /** When it was filed (ISO). */
+  sentAt: string;
+}
+
+export type InboxEntry = HotlineEntry | CaseGroupEntry | LocationChallengeEntry;
 
 export function isHotlineEntry(entry: InboxEntry): entry is HotlineEntry {
   return entry.kind === "hotline_thread";
@@ -203,6 +221,45 @@ export function isHotlineEntry(entry: InboxEntry): entry is HotlineEntry {
 
 export function isCaseGroupEntry(entry: InboxEntry): entry is CaseGroupEntry {
   return entry.kind === "cases";
+}
+
+export function isLocationChallengeEntry(entry: InboxEntry): entry is LocationChallengeEntry {
+  return entry.kind === "location_challenge";
+}
+
+/** The id of a Location challenge's entry. */
+export function locationChallengeEntryId(challengeId: string): string {
+  return `location:${challengeId}`;
+}
+
+/**
+ * Open Location challenges as Review items, one per challenge (clear-api
+ * lists them newest first, at most one open per Signal). `text` carries the
+ * Signal's place, the proposed place, the note and the filer, so search finds
+ * a challenge by any of them.
+ */
+export function buildLocationChallengeEntries(challenges: GqlLocationChallengeToDecide[]): LocationChallengeEntry[] {
+  return challenges.map((challenge) => {
+    const signalTitle = challenge.signal.title?.trim() || null;
+    return {
+      id: locationChallengeEntryId(challenge.id),
+      kind: "location_challenge",
+      challenge,
+      signalTitle,
+      title: signalTitle ?? "",
+      text: [
+        signalPlaceLabel(signalLocationOf(challenge.signal)),
+        challenge.proposedName,
+        locationChain(challenge.proposedPlacement),
+        challenge.note,
+        challenge.createdByName,
+        challenge.team?.name,
+      ]
+        .filter((part): part is string => !!part)
+        .join(" "),
+      sentAt: challenge.createdAt,
+    };
+  });
 }
 
 /** The id of an Event's case group. */
@@ -433,7 +490,8 @@ export function entryDescription(entry: HotlineEntry, transcriptLabel: (text: st
 }
 
 /** "community" is every hotline thread, the classification filters narrow
- * it, "proposals" is the web cases (proposed signals). "unclassified" covers
+ * it, "proposals" is the web cases (proposed signals), "locations" the
+ * Location challenges. "unclassified" covers
  * both pending and failed entries: neither has a label yet. The row pill
  * tells them apart. */
 export function matchesFilter(entry: InboxEntry, filter: InboxFilter): boolean {
@@ -448,6 +506,8 @@ export function matchesFilter(entry: InboxEntry, filter: InboxFilter): boolean {
       return isHotlineEntry(entry) && entry.classification === "chatter";
     case "proposals":
       return isCaseGroupEntry(entry);
+    case "locations":
+      return isLocationChallengeEntry(entry);
   }
 }
 
@@ -494,7 +554,7 @@ export function entryWeight(entry: InboxEntry): number {
 }
 
 export function countByFilter(entries: InboxEntry[]): Record<InboxFilter, number> {
-  const counts: Record<InboxFilter, number> = { community: 0, reports: 0, unclassified: 0, chatter: 0, proposals: 0 };
+  const counts: Record<InboxFilter, number> = { community: 0, reports: 0, unclassified: 0, chatter: 0, proposals: 0, locations: 0 };
   for (const e of entries) {
     for (const f of INBOX_FILTERS) if (matchesFilter(e, f)) counts[f] += entryWeight(e);
   }
@@ -508,7 +568,7 @@ export function countByFilter(entries: InboxEntry[]): Record<InboxFilter, number
  * `countByFilter`: work still waiting after it has been opened.
  */
 export function countUnreadByFilter(entries: InboxEntry[], readIds: ReadonlySet<string>): Record<InboxFilter, number> {
-  const counts: Record<InboxFilter, number> = { community: 0, reports: 0, unclassified: 0, chatter: 0, proposals: 0 };
+  const counts: Record<InboxFilter, number> = { community: 0, reports: 0, unclassified: 0, chatter: 0, proposals: 0, locations: 0 };
   for (const e of entries) {
     const weight = unreadWeight(e, readIds);
     for (const f of INBOX_FILTERS) if (matchesFilter(e, f)) counts[f] += weight;

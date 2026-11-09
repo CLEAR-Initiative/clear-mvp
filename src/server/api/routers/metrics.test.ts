@@ -151,3 +151,245 @@ describe("metrics router", () => {
     });
   });
 });
+
+const PRECISION = {
+  from: "2026-10-26T00:00:00.000Z",
+  to: "2026-11-08T23:59:59.999Z",
+  signalsInRange: 30,
+  bySource: [
+    { source: "sudan-war-x", total: 20, noLocation: 2, country: 4, state: 6, district: 6, point: 2 },
+    { source: "dataminr", total: 10, noLocation: 0, country: 1, state: 0, district: 0, point: 9 },
+  ],
+  weekly: [
+    { isoWeek: "2026-W44", weekStart: "2026-10-26T00:00:00.000Z", source: "sudan-war-x", total: 20, noLocation: 2, country: 4, state: 6, district: 6, point: 2, isPartial: false },
+    { isoWeek: "2026-W44", weekStart: "2026-10-26T00:00:00.000Z", source: "dataminr", total: 10, noLocation: 0, country: 1, state: 0, district: 0, point: 9, isPartial: false },
+  ],
+  corrections: { open: 2, accepted: 1, corrected: 0, declined: 1, superseded: 0 },
+};
+
+describe("metrics.locationPrecision", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+    graphqlFetch.mockReset();
+  });
+
+  it("forwards the range, location and sources as the query's input", async () => {
+    signedInAs("admin");
+    graphqlFetch.mockResolvedValueOnce({ locationPrecisionMetrics: PRECISION });
+    await caller().metrics.locationPrecision({
+      from: "2026-10-26T00:00:00.000Z",
+      to: "2026-11-08T23:59:59.999Z",
+      locationId: "loc-sdn",
+      sourceNames: ["sudan-war-x", "dataminr"],
+    });
+    const [query, vars, headers] = graphqlFetch.mock.calls[0] as [string, Record<string, unknown>, Record<string, string>];
+    expect(query).toContain("query LocationPrecisionMetrics($input: LocationPrecisionMetricsInput)");
+    expect(query).toContain("locationPrecisionMetrics(input: $input)");
+    expect(vars).toEqual({
+      input: {
+        from: "2026-10-26T00:00:00.000Z",
+        to: "2026-11-08T23:59:59.999Z",
+        locationId: "loc-sdn",
+        sourceNames: ["sudan-war-x", "dataminr"],
+      },
+    });
+    expect(headers).toEqual({ Cookie: "better-auth.session_token=x" });
+  });
+
+  it("leaves out what was not given, so clear-api applies its defaults", async () => {
+    signedInAs("admin");
+    graphqlFetch.mockResolvedValueOnce({ locationPrecisionMetrics: PRECISION });
+    await caller().metrics.locationPrecision();
+    expect(graphqlFetch.mock.calls[0]![1]).toEqual({ input: {} });
+  });
+
+  it("adds the shares and totals to clear-api's counts", async () => {
+    signedInAs("admin");
+    graphqlFetch.mockResolvedValueOnce({ locationPrecisionMetrics: PRECISION });
+    const result = await caller().metrics.locationPrecision();
+    if (result.status !== "ok") throw new Error("expected ok");
+    expect(result.metrics.totals).toMatchObject({ total: 30, fine: 17 });
+    expect(result.metrics.bySource[0]).toMatchObject({ source: "sudan-war-x", fineShare: 0.4 });
+    expect(result.metrics.corrections).toMatchObject({ decided: 2, total: 4 });
+  });
+
+  it("rejects a non-admin without calling clear-api", async () => {
+    for (const role of ["analyst", "viewer", "pending"]) {
+      signedInAs(role);
+      await expect(caller().metrics.locationPrecision()).rejects.toMatchObject({ code: "FORBIDDEN" });
+    }
+    expect(graphqlFetch).not.toHaveBeenCalled();
+  });
+
+  it("returns the unavailable state while clear-api lacks the field", async () => {
+    signedInAs("admin");
+    graphqlFetch.mockRejectedValueOnce(
+      new GraphQLRequestError('Cannot query field "locationPrecisionMetrics" on type "Query".', "GRAPHQL_VALIDATION_FAILED"),
+    );
+    await expect(caller().metrics.locationPrecision()).resolves.toEqual({ status: "unavailable" });
+  });
+});
+
+const SERIES = {
+  metric: "DISTRICT_OR_FINER",
+  granularity: "DAY",
+  from: "2026-10-26T00:00:00.000Z",
+  to: "2026-10-27T23:59:59.999Z",
+  groups: ["sudan-war-x", "dataminr"],
+  buckets: [
+    { start: "2026-10-26T00:00:00.000Z", label: "2026-10-26", isPartial: false, group: "sudan-war-x", numerator: 8, denominator: 20 },
+    { start: "2026-10-27T00:00:00.000Z", label: "2026-10-27", isPartial: false, group: "sudan-war-x", numerator: 6, denominator: 10 },
+    { start: "2026-10-26T00:00:00.000Z", label: "2026-10-26", isPartial: false, group: "dataminr", numerator: 9, denominator: 10 },
+    { start: "2026-10-27T00:00:00.000Z", label: "2026-10-27", isPartial: false, group: "dataminr", numerator: 0, denominator: 0 },
+  ],
+};
+const DEFINITIONS = [
+  { key: "DETECTED_BY_NEXT_DAY", name: "Detected by next day", dimension: "TIMELINESS", unit: "EVENTS", description: "d", timeBasis: "t", groupable: false, adr: "ADR-0011" },
+  { key: "DISTRICT_OR_FINER", name: "At district or finer", dimension: "ACCURACY", unit: "SIGNALS", description: "d", timeBasis: "t", groupable: true, adr: "ADR-0012" },
+];
+
+describe("metrics.definitions and metrics.series", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+    graphqlFetch.mockReset();
+  });
+
+  it("lists the registry for an admin, as clear-api returns it", async () => {
+    signedInAs("admin");
+    graphqlFetch.mockResolvedValueOnce({ metricDefinitions: DEFINITIONS });
+    const result = await caller().metrics.definitions();
+    const [query, vars] = graphqlFetch.mock.calls[0] as [string, Record<string, unknown>];
+    expect(query).toContain("metricDefinitions { key name dimension unit description timeBasis groupable locationScoped adr }");
+    expect(vars).toEqual({});
+    expect(result).toEqual({ status: "ok", definitions: DEFINITIONS });
+  });
+
+  it("asks metricSeries with the metric, bucket size, grouping and range, and passes the series through", async () => {
+    signedInAs("admin");
+    graphqlFetch.mockResolvedValueOnce({ metricSeries: SERIES });
+    const result = await caller().metrics.series({
+      metric: "DISTRICT_OR_FINER",
+      granularity: "DAY",
+      groupBy: "SOURCE",
+      from: "2026-10-26T00:00:00.000Z",
+      to: "2026-10-27T23:59:59.999Z",
+      locationId: "loc-sdn",
+      sourceNames: ["sudan-war-x", "dataminr"],
+    });
+    const [query, vars, headers] = graphqlFetch.mock.calls[0] as [string, Record<string, unknown>, Record<string, string>];
+    expect(query).toContain("query MetricSeries($input: MetricSeriesInput!)");
+    expect(query).toContain("buckets { start label isPartial group numerator denominator }");
+    expect(vars).toEqual({
+      input: {
+        metric: "DISTRICT_OR_FINER",
+        granularity: "DAY",
+        groupBy: "SOURCE",
+        from: "2026-10-26T00:00:00.000Z",
+        to: "2026-10-27T23:59:59.999Z",
+        locationId: "loc-sdn",
+        sourceNames: ["sudan-war-x", "dataminr"],
+      },
+    });
+    expect(headers).toEqual({ Cookie: "better-auth.session_token=x" });
+    expect(result).toEqual({ status: "ok", series: SERIES });
+  });
+
+  it("sends only the metric when nothing else was given, so clear-api applies its defaults", async () => {
+    signedInAs("admin");
+    graphqlFetch.mockResolvedValueOnce({ metricSeries: { ...SERIES, groups: [], buckets: [] } });
+    await caller().metrics.series({ metric: "DETECTED_BY_NEXT_DAY" });
+    expect(graphqlFetch.mock.calls[0]![1]).toEqual({ input: { metric: "DETECTED_BY_NEXT_DAY" } });
+  });
+
+  it("rejects a non-admin without calling clear-api", async () => {
+    signedInAs("analyst");
+    await expect(caller().metrics.definitions()).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(caller().metrics.series({ metric: "DISTRICT_OR_FINER" })).rejects.toMatchObject({ code: "FORBIDDEN" });
+    expect(graphqlFetch).not.toHaveBeenCalled();
+  });
+
+  it("returns the unavailable state while clear-api lacks the registry", async () => {
+    signedInAs("admin");
+    graphqlFetch.mockRejectedValueOnce(
+      new GraphQLRequestError('Cannot query field "metricDefinitions" on type "Query".', "GRAPHQL_VALIDATION_FAILED"),
+    );
+    await expect(caller().metrics.definitions()).resolves.toEqual({ status: "unavailable" });
+    graphqlFetch.mockRejectedValueOnce(
+      new GraphQLRequestError('Cannot query field "metricSeries" on type "Query".', "GRAPHQL_VALIDATION_FAILED"),
+    );
+    await expect(caller().metrics.series({ metric: "DETECTED_BY_NEXT_DAY" })).resolves.toEqual({ status: "unavailable" });
+  });
+
+  it("surfaces clear-api's refusal of a grouping or an unknown metric with its message", async () => {
+    signedInAs("admin");
+    graphqlFetch.mockRejectedValueOnce(new GraphQLRequestError("`DETECTED_SAME_DAY` has no groups; leave `groupBy` out.", "BAD_USER_INPUT"));
+    await expect(caller().metrics.series({ metric: "DETECTED_SAME_DAY", groupBy: "SOURCE" })).rejects.toMatchObject({
+      code: "BAD_REQUEST",
+      message: "`DETECTED_SAME_DAY` has no groups; leave `groupBy` out.",
+    });
+  });
+});
+
+const ANNOTATION = {
+  id: "ann-1",
+  at: "2026-10-29T18:33:00.000Z",
+  label: "Geocoding inside the model's area",
+  description: null,
+  link: "https://github.com/CLEAR-Initiative/clear-pipeline/pull/140",
+  metricKeys: ["DISTRICT_OR_FINER"],
+};
+
+describe("metrics.annotations, createAnnotation and deleteAnnotation", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+    graphqlFetch.mockReset();
+  });
+
+  it("lists the changes in a range for a metric, as clear-api returns them", async () => {
+    signedInAs("admin");
+    graphqlFetch.mockResolvedValueOnce({ metricAnnotations: [ANNOTATION] });
+    const result = await caller().metrics.annotations({ from: "2026-10-26T00:00:00.000Z", to: "2026-11-01T23:59:59.999Z", metric: "DISTRICT_OR_FINER" });
+    const [query, vars] = graphqlFetch.mock.calls[0] as [string, Record<string, unknown>];
+    expect(query).toContain("metricAnnotations(input: $input) { id at label description link metricKeys }");
+    expect(vars).toEqual({ input: { from: "2026-10-26T00:00:00.000Z", to: "2026-11-01T23:59:59.999Z", metric: "DISTRICT_OR_FINER" } });
+    expect(result).toEqual({ status: "ok", annotations: [ANNOTATION] });
+    graphqlFetch.mockResolvedValueOnce({ metricAnnotations: [] });
+    await caller().metrics.annotations();
+    expect(graphqlFetch.mock.calls[1]![1]).toEqual({ input: {} });
+  });
+
+  it("records and removes a change through clear-api's mutations", async () => {
+    signedInAs("admin");
+    graphqlFetch.mockResolvedValueOnce({ createMetricAnnotation: { ...ANNOTATION, id: "ann-2", label: "Prompt v3" } });
+    const created = await caller().metrics.createAnnotation({ at: "2026-10-31T13:13:00.000Z", label: "Prompt v3", metricKeys: ["DISTRICT_OR_FINER"] });
+    const [mutation, vars] = graphqlFetch.mock.calls[0] as [string, Record<string, unknown>];
+    expect(mutation).toContain("mutation CreateMetricAnnotation($input: CreateMetricAnnotationInput!)");
+    expect(vars).toEqual({ input: { at: "2026-10-31T13:13:00.000Z", label: "Prompt v3", metricKeys: ["DISTRICT_OR_FINER"] } });
+    expect(created).toMatchObject({ id: "ann-2", label: "Prompt v3" });
+    graphqlFetch.mockResolvedValueOnce({ deleteMetricAnnotation: true });
+    expect(await caller().metrics.deleteAnnotation({ id: "ann-2" })).toBe(true);
+    expect(graphqlFetch.mock.calls[1]![1]).toEqual({ id: "ann-2" });
+  });
+
+  it("refuses an incomplete change before calling clear-api, and a non-admin for everything", async () => {
+    signedInAs("admin");
+    await expect(caller().metrics.createAnnotation({ at: "2026-10-31T13:13:00.000Z", label: "  ", metricKeys: ["DISTRICT_OR_FINER"] })).rejects.toMatchObject({ code: "BAD_REQUEST" });
+    await expect(caller().metrics.createAnnotation({ at: "2026-10-31T13:13:00.000Z", label: "x", metricKeys: [] })).rejects.toMatchObject({ code: "BAD_REQUEST" });
+    await expect(caller().metrics.createAnnotation({ at: "2026-10-31T13:13:00.000Z", label: "x", link: "not a url", metricKeys: ["DISTRICT_OR_FINER"] })).rejects.toMatchObject({ code: "BAD_REQUEST" });
+    expect(graphqlFetch).not.toHaveBeenCalled();
+    signedInAs("analyst");
+    await expect(caller().metrics.annotations()).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(caller().metrics.createAnnotation({ at: "2026-10-31T13:13:00.000Z", label: "x", metricKeys: ["DISTRICT_OR_FINER"] })).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(caller().metrics.deleteAnnotation({ id: "ann-1" })).rejects.toMatchObject({ code: "FORBIDDEN" });
+    expect(graphqlFetch).not.toHaveBeenCalled();
+  });
+
+  it("returns the unavailable state while clear-api lacks annotations", async () => {
+    signedInAs("admin");
+    graphqlFetch.mockRejectedValueOnce(new GraphQLRequestError('Cannot query field "metricAnnotations" on type "Query".', "GRAPHQL_VALIDATION_FAILED"));
+    await expect(caller().metrics.annotations({ metric: "DISTRICT_OR_FINER" })).resolves.toEqual({ status: "unavailable" });
+  });
+});

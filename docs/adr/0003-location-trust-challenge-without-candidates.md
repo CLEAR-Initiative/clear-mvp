@@ -1,3 +1,7 @@
+---
+status: accepted; its queue-only boundary and optional correction are superseded by ADR-0007
+---
+
 # Location trust: challenge without forced candidates
 
 Location verification wastes analyst time when pins (especially Dataminr) are wrong and
@@ -14,6 +18,8 @@ and forcing a pick. We decided **not** to: v1 lets analysts **Location challenge
   challenges do not survive reload and are not shared across analysts.
 - **No Location admin accept/decline** in v1 and **not on the near roadmap**. Queue-only
   (`consideration`) is the durable product stance until a later decision.
+  That later decision is [ADR-0007](0007-team-admins-decide-location-challenges.md): the
+  team's admin accepts, places a different point or declines, from the Inbox.
 - Improving location precision over time (alias engine, ingest fixes, write-back of
   accepted points) is **later** — not implied by shipping the FE challenge UX.
 

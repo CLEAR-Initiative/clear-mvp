@@ -19,7 +19,11 @@ Sentry.init({
   // replaysSessionSampleRate: 0,
   // replaysOnErrorSampleRate: 0,
 
-  enabled: !!process.env.NEXT_PUBLIC_SENTRY_DSN,
+  // The public DSN is inlined at build time. A project that rejects browser
+  // envelopes answers every page load with 403. Server and edge reporting
+  // stay on SENTRY_DSN. The browser client starts only when this is "on".
+  enabled:
+    !!process.env.NEXT_PUBLIC_SENTRY_DSN && process.env.NEXT_PUBLIC_SENTRY_CLIENT === "on",
 });
 
 // Capture errors from React's error boundary chain on the client side.

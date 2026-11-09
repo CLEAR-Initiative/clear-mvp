@@ -46,6 +46,11 @@ export default getRequestConfig(async () => {
     locale,
     timeZone,
     messages,
+    // Give `format.relativeTime` a request-scoped reference time. Without it
+    // next-intl logs ENVIRONMENT_FALLBACK on every call and the server and
+    // client can hydrate different strings. Components whose lists refresh
+    // layer `useNow({ updateInterval })` on top so the labels keep ticking.
+    now: new Date(),
     formats: {
       dateTime: {
         short: { day: "numeric", month: "short", year: "numeric" },

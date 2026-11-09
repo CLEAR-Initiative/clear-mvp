@@ -1,9 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { eventHref } from "~/lib/analytics/event-source";
+import { useTrackSectionSeen } from "~/lib/analytics/use-once-per-view";
+import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useFormatter, useTranslations } from "next-intl";
+import { useFormatter, useNow, useTranslations } from "next-intl";
 import { useMediaQuery } from "@mantine/hooks";
 import {
   Box,
@@ -137,6 +139,10 @@ export function EventDetailContent({
     agentViewId ? { entity: { kind: "event", id: agentViewId, label: event?.title ?? undefined } } : null,
   );
   const isMobile = useMediaQuery("(max-width: 48em)") === true;
+  const enrichmentRef = useRef<HTMLDivElement>(null);
+  const feedbackRef = useRef<HTMLDivElement>(null);
+  useTrackSectionSeen(enrichmentRef, "enrichment", event?.id);
+  useTrackSectionSeen(feedbackRef, "feedback", event?.id);
 
   // TODO: after Prisma migration use event.title directly; remove this fallback
   // TODO: after Prisma migration use event.types (list) instead of eventType
@@ -144,6 +150,7 @@ export function EventDetailContent({
   const t = useTranslations("eventDetail");
   const tCommon = useTranslations("common");
   const format = useFormatter();
+  const now = useNow({ updateInterval: 60_000 });
   const router = useRouter();
   const isAlready = (event?.alerts?.length ?? 0) > 0;
   const [promoted, setPromoted] = useState(false);
@@ -590,7 +597,7 @@ export function EventDetailContent({
           </Group>
           <Group gap={4}>
             <IconClock size={13} color="var(--color-text-muted)" />
-            <Text size="xs" c="var(--color-text-muted)">{format.relativeTime(new Date(detectedAt))}</Text>
+            <Text size="xs" c="var(--color-text-muted)">{format.relativeTime(new Date(detectedAt), now)}</Text>
           </Group>
           <Box style={{ width: 1, height: 12, background: "var(--color-border)", alignSelf: "center" }} />
           <Group gap={4}>
@@ -768,7 +775,7 @@ export function EventDetailContent({
                                 {t("signals.sourceLink")}
                               </a>
                             )}
-                            <Text size="xs" c="var(--color-text-muted)">{format.relativeTime(new Date(sig.publishedAt))}</Text>
+                            <Text size="xs" c="var(--color-text-muted)">{format.relativeTime(new Date(sig.publishedAt), now)}</Text>
                           </Group>
                         </Group>
                         <Text fw={500} size="sm" c="var(--color-text-primary)" lineClamp={2} style={{ lineHeight: 1.4 }} mb={sigLocation ? 2 : 0}>
@@ -825,12 +832,12 @@ export function EventDetailContent({
                   : null;
                 const relDateLabel =
                   relDate && !Number.isNaN(relDate.getTime())
-                    ? format.relativeTime(relDate)
+                    ? format.relativeTime(relDate, now)
                     : "-";
                 return (
                   <Link
                     key={related.id}
-                    href={`/event/${related.id}`}
+                    href={eventHref(related.id, "related_event")}
                     style={{ textDecoration: "none", color: "inherit" }}
                   >
                     <Box
@@ -874,7 +881,11 @@ export function EventDetailContent({
 
           {/* Enrichment results - requested from the Actions card in the sidebar,
               shown here where the cited cases have room to breathe. */}
-          {!isCompact && <EnrichmentSection eventId={event.id} />}
+          {!isCompact && (
+            <div ref={enrichmentRef}>
+              <EnrichmentSection eventId={event.id} />
+            </div>
+          )}
         </Box>
 
         {/* Right sidebar - full-width under main column on phone */}
@@ -896,7 +907,9 @@ export function EventDetailContent({
 
               <SkeletonSlot pending={showPending} skeleton={<FeedbackCardSkeleton />}>
               <Card p={0} style={{ border: "1px solid var(--color-border)" }}>
-                <FeedbackSection entityId={event.id} entityType="event" />
+                <div ref={feedbackRef}>
+                  <FeedbackSection entityId={event.id} entityType="event" />
+                </div>
               </Card>
               </SkeletonSlot>
 

@@ -95,6 +95,23 @@ export function inboxBadgeCount(serverCount: number | undefined): number | null 
   return Math.max(0, measurement.unread + drift);
 }
 
+/**
+ * The nav Inbox badge's text: the proposed signals above, plus the open
+ * Location challenges the reader decides (a challenge counts until it is
+ * decided, whether opened or not). Undefined when nothing waits; "+" when a
+ * count stopped at its page cap.
+ */
+export function inboxBadgeLabel(parts: {
+  proposals?: number | null;
+  proposalsCapped?: boolean;
+  locations?: number | null;
+  locationsCapped?: boolean;
+}): string | undefined {
+  const total = (parts.proposals ?? 0) + (parts.locations ?? 0);
+  if (total <= 0) return undefined;
+  return `${total}${parts.proposalsCapped || parts.locationsCapped ? "+" : ""}`;
+}
+
 export function resetInboxUnreadForTests() {
   measurement = null;
   emit();

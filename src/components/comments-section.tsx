@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useFormatter, useTranslations } from "next-intl";
+import { useFormatter, useNow, useTranslations } from "next-intl";
 import { Box, Text, Group, Avatar, Badge, Textarea, Button, Skeleton, ActionIcon, Menu } from "@mantine/core";
 import { IconMessageCircle, IconSend, IconDots, IconTrash, IconArrowBack } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
@@ -34,6 +34,7 @@ function CommentRow({ comment, isLast, currentUserId, onReply, onDelete, isDelet
   const t = useTranslations("common.comments");
   const tActions = useTranslations("common.actions");
   const format = useFormatter();
+  const now = useNow({ updateInterval: 60_000 });
   const isOwn = currentUserId === comment.user.id;
 
   return (
@@ -73,7 +74,7 @@ function CommentRow({ comment, isLast, currentUserId, onReply, onDelete, isDelet
                 </Badge>
               )}
               <Text size="xs" c="var(--color-text-muted)">
-                {format.relativeTime(new Date(comment.createdAt))}
+                {format.relativeTime(new Date(comment.createdAt), now)}
               </Text>
             </Group>
             <Group gap={4}>

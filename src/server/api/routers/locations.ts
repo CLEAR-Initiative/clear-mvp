@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure, publicProcedure } from "~/server/api/trpc";
 import { graphqlFetch, cookieHeaders } from "~/server/api/graphql";
-import { filterLocationsByCountryScope } from "~/lib/location";
+import { adminBoundaryScope } from "~/lib/location";
 
 interface GqlLocationNode {
   id: string;
@@ -46,9 +46,12 @@ const LOCATIONS_TREE_QUERY = `
   }
 `;
 
+// `within` scopes the level in clear-api (rows that are, or sit under, one of
+// the ids). Without it a level means every row in the system, each resolving
+// its own geometry, filtered here afterwards.
 const LOCATIONS_WITH_GEOMETRY_QUERY = `
-  query LocationsWithGeometry($level: Int) {
-    locations(level: $level) {
+  query LocationsWithGeometry($level: Int, $within: [String!]) {
+    locations(level: $level, within: $within) {
       id
       name
       level
@@ -135,13 +138,10 @@ export const locationsRouter = createTRPCRouter({
     .query(async ({ ctx, input }) => {
       const data = await graphqlFetch<{ locations: GqlLocationWithGeometry[] }>(
         LOCATIONS_WITH_GEOMETRY_QUERY,
-        { level: 2 },
+        { level: 2, within: adminBoundaryScope(input) },
         cookieHeaders(ctx),
       );
-      const all = data.locations;
-      return input.countryId
-        ? all.filter((l) => l.ancestorIds.includes(input.countryId!))
-        : all;
+      return data.locations;
     }),
 
   /**
@@ -160,18 +160,9 @@ export const locationsRouter = createTRPCRouter({
     .query(async ({ ctx, input }) => {
       const data = await graphqlFetch<{ locations: GqlLocationWithGeometry[] }>(
         LOCATIONS_WITH_GEOMETRY_QUERY,
-        { level: input.level },
+        { level: input.level, within: adminBoundaryScope(input) },
         cookieHeaders(ctx),
       );
-      if (input.stateId) {
-        return data.locations.filter((l) => l.ancestorIds.includes(input.stateId!));
-      }
-      if (input.countryIds?.length) {
-        return filterLocationsByCountryScope(data.locations, input.countryIds);
-      }
-      if (input.countryId) {
-        return filterLocationsByCountryScope(data.locations, [input.countryId]);
-      }
       return data.locations;
     }),
 

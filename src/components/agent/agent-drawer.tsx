@@ -41,6 +41,7 @@ import { useAgent } from "~/components/agent/agent-provider";
 import { AgentThread } from "~/components/agent/agent-thread";
 import { isLocale, localeDirection } from "~/i18n/config";
 import { api } from "~/trpc/react";
+import { trackAgentOpened } from "./agent-analytics";
 
 // ── Width ────────────────────────────────────────────────────────────────
 
@@ -93,14 +94,23 @@ export function AgentDrawer() {
   return (
     <>
       {!onAgentPage && !open && (
-        <Affix position={{ bottom: 88, [endSide]: 24 }} zIndex={150}>
+        <Affix
+          position={{
+            bottom: "calc(88px + env(safe-area-inset-bottom, 0px))",
+            [endSide]: 24,
+          }}
+          zIndex={150}
+        >
           <Tooltip label={t("drawer.launcherTooltip")} position={rtl ? "right" : "left"}>
             <ActionIcon
               size={48}
               radius="xl"
               variant="filled"
               aria-label={t("drawer.open")}
-              onClick={() => setOpen(true)}
+              onClick={() => {
+                trackAgentOpened("drawer", pathname);
+                setOpen(true);
+              }}
             >
               <IconMessageCircle size={24} />
             </ActionIcon>

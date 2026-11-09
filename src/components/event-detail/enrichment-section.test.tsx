@@ -15,6 +15,7 @@ vi.mock("next-intl", () => ({
   useTranslations: () => (key: string, vars?: Record<string, unknown>) =>
     vars ? `${key}:${JSON.stringify(vars)}` : key,
   useFormatter: () => ({ dateTime: () => "10 Aug 2021", relativeTime: () => "2 hours ago", number: (n: number, o?: Intl.NumberFormatOptions) => n.toLocaleString("en", o) }),
+  useNow: () => new Date("2021-08-10T12:00:00Z"),
 }));
 
 /** `event_enrichment`; `flags` overrides per key (impact_prior_review). */
@@ -257,10 +258,10 @@ describe("EnrichmentSection", () => {
       computed = [COMPUTED];
       renderSection();
       expect(screen.getAllByTestId("computed-prior-event").map((a) => a.getAttribute("href"))).toEqual([
-        "/event/evt-a",
-        "/event/evt-b",
-        "/event/evt-c",
-        "/event/evt-d",
+        "/event/evt-a?from=related_event",
+        "/event/evt-b?from=related_event",
+        "/event/evt-c?from=related_event",
+        "/event/evt-d?from=related_event",
       ]);
       expect(screen.queryByTestId("computed-prior-low-confidence")).toBeNull();
       // Nothing to decide on a computed prior.

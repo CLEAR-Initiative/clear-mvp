@@ -1,7 +1,7 @@
 "use client";
 
 import { QueryClientProvider, type QueryClient } from "@tanstack/react-query";
-import { httpBatchLink, loggerLink } from "@trpc/client";
+import { httpBatchLink, httpLink, loggerLink, splitLink } from "@trpc/client";
 import { createTRPCReact } from "@trpc/react-query";
 import { type inferRouterInputs, type inferRouterOutputs } from "@trpc/server";
 import { useState } from "react";
@@ -44,14 +44,15 @@ export function TRPCReactProvider(props: { children: React.ReactNode }) {
         // resolved on the client, leaving React Query stuck in
         // isLoading forever. Switching to httpBatchLink trades the
         // streaming progressiveness for guaranteed delivery.
-        httpBatchLink({
-          transformer: SuperJSON,
-          url: getBaseUrl() + "/api/trpc",
-          headers: () => {
-            const headers = new Headers();
-            headers.set("x-trpc-source", "nextjs-react");
-            return headers;
-          },
+        //
+        // The catch is that a batch resolves only when its slowest
+        // procedure does. A query that gates first paint passes
+        // `trpc: { context: { skipBatch: true } }` to get its own
+        // request, so it isn't held behind heavy siblings.
+        splitLink({
+          condition: (op) => op.context.skipBatch === true,
+          true: httpLink(linkOptions()),
+          false: httpBatchLink(linkOptions()),
         }),
       ],
     }),
@@ -66,8 +67,17 @@ export function TRPCReactProvider(props: { children: React.ReactNode }) {
   );
 }
 
+const linkOptions = () => ({
+  transformer: SuperJSON,
+  url: getBaseUrl() + "/api/trpc",
+  headers: () => {
+    const headers = new Headers();
+    headers.set("x-trpc-source", "nextjs-react");
+    return headers;
+  },
+});
+
 function getBaseUrl() {
   if (typeof window !== "undefined") return window.location.origin;
-  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
   return `http://localhost:${process.env.PORT ?? 3000}`;
 }

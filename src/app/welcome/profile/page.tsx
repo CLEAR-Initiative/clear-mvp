@@ -34,7 +34,7 @@ export default function WelcomeProfilePage() {
   // Dial-code default follows the team the invitee was added to, rather than a
   // fixed country. Multi-country teams use the alphabetically first, which is
   // what useTeamCountry treats as primary.
-  const { countryIso: teamCountryIso } = useTeamCountry();
+  const { countryIso: teamCountryIso, scopeReady } = useTeamCountry();
 
   const [name, setName] = useState("");
   // null until either the team country resolves or a stored number is parsed,
@@ -58,11 +58,12 @@ export default function WelcomeProfilePage() {
   }, [data?.user?.name]);
 
   // Adopt the team's country once teams load, unless the user already picked
-  // one or an existing number established it.
+  // one or an existing number established it. Before scope is ready the
+  // working country can be a cookie saved for another team.
   useEffect(() => {
-    if (isoTouched || !teamCountryIso) return;
+    if (isoTouched || !scopeReady || !teamCountryIso) return;
     setSelectedIso((prev) => prev ?? teamCountryIso);
-  }, [teamCountryIso, isoTouched]);
+  }, [teamCountryIso, scopeReady, isoTouched]);
 
   // Prefill from an already-stored number. Longest dial code wins so +1268
   // is not read as +1.

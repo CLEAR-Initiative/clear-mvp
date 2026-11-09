@@ -60,6 +60,12 @@ describe("analysis report helpers", () => {
       "sitrep-bara-um-dam-haj-ahmed-and-gharb-bara-north-kordofan-sudan-2026-09-29.pdf",
     );
   });
+
+  it("takes another prefix for other documents", () => {
+    expect(reportFileName("Daily Brief, Sudan", new Date("2026-10-30T08:00:00Z"), "brief")).toBe(
+      "brief-daily-brief-sudan-2026-10-30.pdf",
+    );
+  });
 });
 
 describe("report sections", () => {
@@ -68,7 +74,7 @@ describe("report sections", () => {
     keyFindings: [{}, {}],
     contextRisks: [{ items: [1, 2] }, { items: [3] }],
     hazards: { hazards: [] },
-    displacement: { push: [1] },
+    displacement: { push: [1], findings: [] },
     sectors: [
       { severity: "critical", needs: [1], interventions: [] },
       { severity: null, needs: [1], interventions: [1] },
@@ -87,6 +93,13 @@ describe("report sections", () => {
     expect(by.outlook).toMatchObject({ included: false, available: false });
     expect(by.priorityNeeds!.count).toBe(1);
     expect(by.responseActivities!.count).toBe(1);
+    expect(by.displacement).toMatchObject({ included: true, count: 1 });
+  });
+
+  it("offers displacement when it has findings but no push list", () => {
+    const sections = defaultReportSections({ ...content, displacement: { push: [], findings: [1, 2] } }, 0);
+    const by = Object.fromEntries(sections.map((s) => [s.key, s]));
+    expect(by.displacement).toMatchObject({ included: true, available: true, count: 2 });
   });
 
   it("moves an item as a drag does, ignoring out-of-range moves", () => {

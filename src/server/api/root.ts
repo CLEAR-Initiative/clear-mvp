@@ -5,6 +5,7 @@ import { commentsRouter } from "~/server/api/routers/comments";
 import { feedbackRouter } from "~/server/api/routers/feedback";
 import { featureFlagsRouter } from "~/server/api/routers/featureFlags";
 import { authRouter } from "~/server/api/routers/auth";
+import { briefsRouter } from "~/server/api/routers/briefs";
 import { groundRouter } from "~/server/api/routers/ground";
 import { eventsRouter } from "~/server/api/routers/events";
 import { hapiRouter } from "~/server/api/routers/hapi";
@@ -17,6 +18,7 @@ import { teamsRouter } from "~/server/api/routers/teams";
 import { locationsRouter } from "~/server/api/routers/locations";
 import { locationChallengeRouter } from "~/server/api/routers/locationChallenge";
 import { metricsRouter } from "~/server/api/routers/metrics";
+import { adminActivityRouter } from "~/server/api/routers/adminActivity";
 import { invitationsRouter } from "~/server/api/routers/invitations";
 import { subscriptionsRouter } from "~/server/api/routers/subscriptions";
 import { tasksRouter } from "~/server/api/routers/tasks";
@@ -28,6 +30,7 @@ export const appRouter = createTRPCRouter({
   alerts: alertsRouter,
   analysis: analysisRouter,
   auth: authRouter,
+  briefs: briefsRouter,
   comments: commentsRouter,
   feedback: feedbackRouter,
   events: eventsRouter,
@@ -38,6 +41,7 @@ export const appRouter = createTRPCRouter({
   locations: locationsRouter,
   locationChallenge: locationChallengeRouter,
   metrics: metricsRouter,
+  adminActivity: adminActivityRouter,
   pipeline: pipelineRouter,
   signals: signalsRouter,
   situationAnalysis: situationAnalysisRouter,

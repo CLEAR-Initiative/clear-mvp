@@ -8,11 +8,13 @@ import { IconX } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
 import { useFeatureEnabled } from "~/components/feature-flags-provider";
 import { inboxAccess } from "~/lib/inbox-access";
-import { isEmergencyResponseManager, isTeamAdmin } from "~/lib/roles";
+import { isEmergencyResponseManager, isPlatformAdmin, isTeamAdmin } from "~/lib/roles";
+import type { LocationChallengeDecision } from "~/lib/location-challenge";
 import { canReviewSource } from "~/lib/ground-review";
 import {
   buildCaseGroupEntries,
   buildInboxEntries,
+  buildLocationChallengeEntries,
   countByFilter,
   countUnreadByFilter,
   filtersFor,
@@ -30,6 +32,7 @@ import {
   type InboxFilter,
   type InboxSort,
   type InboxTab,
+  type LocationChallengeEntry,
   type RejectReason,
 } from "~/lib/hotline-inbox";
 import type { GqlCaseProposal, GqlCaseProposalDecision, GqlReviewCaseProposal } from "~/lib/types/graphql";
@@ -82,7 +85,20 @@ function rememberOpened(prev: Set<string>, id: string, entries: readonly InboxEn
  * group until the Inbox is reloaded; the awaiting line is the undecided
  * cases. The small number on each tab and filter is how many of those rows
  * are still unopened, so it drops as soon as a row is opened or reviewed.
+ *
+ * Location challenges (clear-api SignalLocationChallenge): an analyst's
+ * challenge on a Signal's pin, filed for a team, for that team's admins (and
+ * platform admins), never the filer. Each is decided in its pane: accept the
+ * proposed point, place a different one, or decline. A decided challenge
+ * leaves the queue, like a reviewed hotline thread.
  */
+
+/** The toast for each way a Location challenge is decided. */
+const LOCATION_DECIDED_TOAST = {
+  ACCEPT: "location.toast.accepted",
+  CORRECT: "location.toast.corrected",
+  DECLINE: "location.toast.declined",
+} as const satisfies Record<LocationChallengeDecision, string>;
 
 const TOAST_MS = 6000;
 
@@ -144,30 +160,38 @@ export default function InboxPage() {
     enabled: access.proposals,
     staleTime: 60_000,
   });
+  // Open Location challenges the reader decides (their teams', their own included).
+  const locationsQuery = api.locationChallenge.toDecide.useQuery(undefined, {
+    enabled: access.locations,
+    staleTime: 30_000,
+    refetchInterval: 60_000,
+  });
   /** Cases decided in this session, as their decision (or, after a
    * CONFLICT, the Event's own copy) returned them: they keep their row,
    * now showing the decision, after the proposed list stops returning
    * them. */
   const [decidedCases, setDecidedCases] = useState<Record<string, GqlReviewCaseProposal>>({});
 
-  /** Hotline threads reviewed this visit. They leave the queue before the
-   * refetch returns, so the counts do not sit on the old total. */
+  /** Hotline threads reviewed and Location challenges decided this visit.
+   * They leave the queue before the refetch returns, so the counts do not sit
+   * on the old total. */
   const [dismissedIds, setDismissedIds] = useState<ReadonlySet<string>>(() => new Set());
 
   const entries = useMemo<InboxEntry[]>(() => {
     const built: InboxEntry[] = [
       ...(inboxQuery.data ? buildInboxEntries(inboxQuery.data) : []),
       ...(casesQuery.data ? buildCaseGroupEntries(casesQuery.data, decidedCases) : []),
+      ...(locationsQuery.data ? buildLocationChallengeEntries(locationsQuery.data) : []),
     ];
     return dismissedIds.size === 0 ? built : built.filter((entry) => !dismissedIds.has(entry.id));
-  }, [inboxQuery.data, casesQuery.data, decidedCases, dismissedIds]);
+  }, [inboxQuery.data, casesQuery.data, locationsQuery.data, decidedCases, dismissedIds]);
   const sourceById = useMemo(() => {
     const m = new Map<string, string[]>();
     for (const s of inboxQuery.data?.sources ?? []) m.set(s.id, s.reviewerRoles);
     return m;
   }, [inboxQuery.data]);
 
-  const tabs = useMemo(() => tabsFor(access), [access.hotline, access.proposals]); // eslint-disable-line react-hooks/exhaustive-deps
+  const tabs = useMemo(() => tabsFor(access), [access.hotline, access.proposals, access.locations]); // eslint-disable-line react-hooks/exhaustive-deps
   const [chosenTab, setTab] = useState<InboxTab>("community");
   const [chosenFilter, setFilter] = useState<InboxFilter>("reports");
   // The tab and filter in force are derived, never synced: the session and
@@ -278,7 +302,8 @@ export default function InboxPage() {
   // pay for) a thread that is already reviewed.
   const busy = review.isPending || !!selectedRetry?.pending;
 
-  const afterAction = useCallback(
+  /** The acted-on entry leaves the queue: select the next one and confirm. */
+  const dismiss = useCallback(
     (actedId: string, next: Toast) => {
       const nextId = nextSelection(visible, actedId);
       setSelectedId(nextId);
@@ -293,11 +318,37 @@ export default function InboxPage() {
         nextIds.add(actedId);
         return nextIds;
       });
+    },
+    [visible, showToast],
+  );
+
+  const afterAction = useCallback(
+    (actedId: string, next: Toast) => {
+      dismiss(actedId, next);
       void utils.ground.hotlineInbox.invalidate();
       void utils.ground.threads.invalidate();
       void utils.ground.messages.invalidate();
     },
-    [visible, showToast, utils],
+    [dismiss, utils],
+  );
+
+  /** A Location challenge was decided: it leaves the queue, the nav badge,
+   * the map's pins, the Signal's place and its location mark follow. */
+  const locationDecided = useCallback(
+    (entry: LocationChallengeEntry, decision: LocationChallengeDecision) => {
+      dismiss(entry.id, { message: t(LOCATION_DECIDED_TOAST[decision]), signalId: entry.challenge.signalId });
+      void utils.locationChallenge.toDecide.invalidate();
+      void utils.locationChallenge.toDecideCount.invalidate();
+      void utils.locationChallenge.listForMap.invalidate();
+      void utils.locationChallenge.getBySignal.invalidate({ signalId: entry.challenge.signalId });
+      void utils.locationChallenge.correctedAt.invalidate({ signalId: entry.challenge.signalId });
+      // The Signal's own place and pin change with an accepted or placed point.
+      if (decision !== "DECLINE") {
+        void utils.signals.get.invalidate({ id: entry.challenge.signalId });
+        void utils.signals.forMap.invalidate();
+      }
+    },
+    [dismiss, utils, t],
   );
 
   const errorMessage = (err: unknown) => (err instanceof Error ? err.message : t("loadError"));
@@ -519,9 +570,11 @@ export default function InboxPage() {
       <header className={styles.header}>
         <div className={styles.headerRow}>
           <span className={styles.title}>{t("title")}</span>
-          <span className={styles.awaiting}>{t("awaiting", { count: counts.community + counts.proposals })}</span>
-          {(inboxQuery.isFetching || casesQuery.isFetching) && <Loader size={12} />}
-          {(inboxQuery.error || casesQuery.error) && (
+          <span className={styles.awaiting}>
+            {t("awaiting", { count: counts.community + counts.proposals + counts.locations })}
+          </span>
+          {(inboxQuery.isFetching || casesQuery.isFetching || locationsQuery.isFetching) && <Loader size={12} />}
+          {(inboxQuery.error || casesQuery.error || locationsQuery.error) && (
             <span className={styles.actionError} data-testid="inbox-load-error">{t("loadError")}</span>
           )}
         </div>
@@ -583,7 +636,8 @@ export default function InboxPage() {
           onSelect={select}
           loading={
             (access.hotline && inboxQuery.isLoading) ||
-            (access.proposals && casesQuery.isLoading)
+            (access.proposals && casesQuery.isLoading) ||
+            (access.locations && locationsQuery.isLoading)
           }
         />
         <ReadingPane
@@ -593,6 +647,8 @@ export default function InboxPage() {
           canDecide={canDecide}
           onCaseDecided={caseDecided}
           onCaseStale={caseStale}
+          canPlaceAnywhere={isPlatformAdmin(role)}
+          onLocationDecided={locationDecided}
           busy={busy}
           error={actionError}
           rejectOpen={rejectOpen}

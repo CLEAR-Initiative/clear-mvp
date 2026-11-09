@@ -73,5 +73,8 @@ echo "── seeding the CLEAR Agent's clear-api key (e2e/support/agent-key-seed
 echo "── seeding the Sudan analysis (e2e/support/analysis-seed.ts) ──"
 "${COMPOSE[@]}" run --rm --build seed-analysis
 
+echo "── seeding pending invitations (e2e/support/invite-seed.ts) ──"
+"${COMPOSE[@]}" run --rm --build seed-invite
+
 echo "── running Playwright smoke suite ──"
 bunx playwright test "$@"

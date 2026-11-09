@@ -38,7 +38,7 @@ describe("isTeamAnalyst", () => {
 describe.each([
   ["canWriteCrisisEvents", canWriteCrisisEvents],
   ["canManageAnalyses", canManageAnalyses],
-] as const)("%s (admin or team analyst)", (_name, fn) => {
+] as const)("%s (admin, team analyst or ERM)", (_name, fn) => {
   it("admits a platform admin regardless of memberships", () => {
     expect(fn("admin")).toBe(true);
     expect(fn("admin", noAnalyst)).toBe(true);
@@ -46,6 +46,10 @@ describe.each([
 
   it("admits a team analyst", () => {
     expect(fn("member", teamAnalyst)).toBe(true);
+  });
+
+  it("admits an emergency response manager (granted the analyst's analysis powers)", () => {
+    expect(fn("member", [{ role: "emergency_response_manager" }])).toBe(true);
   });
 
   it("refuses a member with no analyst membership", () => {

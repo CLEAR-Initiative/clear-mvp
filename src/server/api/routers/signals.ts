@@ -2,7 +2,7 @@ import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { graphqlFetch, cookieHeaders } from "~/server/api/graphql";
 import type { GqlSignal, GqlSignalDetail } from "~/lib/types/graphql";
-import { sanitizeLocationGeometry } from "~/lib/geo/to-map-point";
+import { sanitizeLocationGeometry, sanitizeSignalListGeometry } from "~/lib/geo/to-map-point";
 
 const LOCATION_FIELDS = `id name level geoId ancestorIds geometry pointType parent { id name } ancestors { id name level }`;
 
@@ -274,6 +274,7 @@ export const signalsRouter = createTRPCRouter({
         { input: graphqlInput },
         cookieHeaders(ctx),
       );
+      data.signalsPage.items.forEach(sanitizeSignalListGeometry);
       return data.signalsPage;
     }),
 

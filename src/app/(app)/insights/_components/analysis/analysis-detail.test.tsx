@@ -1,6 +1,6 @@
 import React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { MantineProvider } from "@mantine/core";
 import type { Analysis } from "~/server/api/mappers/analysis";
 import type { CreatedAnalysis } from "~/server/api/mappers/analysis";
@@ -9,7 +9,7 @@ import { clearAnalysisFiles } from "~/lib/analysis-file-store";
 const replace = vi.fn();
 const params = new URLSearchParams("country=sdn");
 vi.mock("next/navigation", () => ({
-  usePathname: () => "/analysis",
+  usePathname: () => "/insights",
   useRouter: () => ({ replace }),
   useSearchParams: () => params,
 }));
@@ -38,12 +38,14 @@ vi.mock("~/components/map/minimap-card", () => ({
 const notify = vi.fn();
 vi.mock("@mantine/notifications", () => ({ notifications: { show: (o: unknown) => notify(o) } }));
 
+let threadData: { title: string | null; comments: unknown[]; documents: unknown[] } | undefined;
 let analysisResult: { data: Analysis | null | undefined; isLoading: boolean; isError: boolean };
 const currentQuery = vi.fn();
 const frameQuery = vi.fn();
 const refreshMutate = vi.fn();
 let refreshOpts: { onSuccess?: () => void; onError?: () => void } = {};
 const invalidateScopes = vi.fn();
+const recordExported = vi.fn();
 const utils = {
   locations: { getById: { fetch: async () => ({ geometry: null }) } },
   analysis: { scopes: { invalidate: invalidateScopes } },
@@ -65,6 +67,7 @@ vi.mock("~/trpc/react", () => ({
       },
       events: { useQuery: () => ({ data: { totalCount: 0, items: [] } }) },
       figures: { useQuery: () => ({ data: undefined }) },
+      needs: { useQuery: () => ({ data: undefined }) },
       refresh: {
         useMutation: (opts: typeof refreshOpts) => {
           refreshOpts = opts;
@@ -73,14 +76,15 @@ vi.mock("~/trpc/react", () => ({
       },
       thread: {
         useQuery: () => ({
-          data: undefined,
-          isSuccess: false,
+          data: threadData,
+          isSuccess: threadData !== undefined,
           isError: false,
           isLoading: false,
-          refetch: async () => ({ data: undefined }),
+          refetch: async () => ({ data: threadData }),
         }),
       },
       rename: { useMutation: () => ({ mutate: vi.fn(), isPending: false }) },
+      recordReportExported: { useMutation: () => ({ mutate: recordExported }) },
       comment: { useMutation: () => ({ mutateAsync: vi.fn(), isPending: false }) },
     },
     locations: { getById: { useQuery: () => ({ data: { geometry: null } }) } },
@@ -129,12 +133,13 @@ function analysis(overrides: Partial<Analysis["crisis"]> = {}, scope: Partial<An
     figures: { displaced: null, affected: null, inNeed: null, returnees: null, fundingRequired: null, fundingReceived: null },
     contextRisks: [],
     hazards: { hazards: [], vulnerabilities: [] },
-    displacement: { push: [], return: [] },
+    displacement: { push: [], return: [], summary: null, findings: [], dataCheck: null, flows: [], mapSince: null },
     sectors: [],
     sources: [],
     changes: { comparedTo: null, notes: {} },
     scenarios: { description: null, mostLikely: null, bestCase: null, worstCase: null, refs: [] },
     eventSourceIds: [],
+    citedEvents: [],
     keyFindings: [],
   };
 }
@@ -168,14 +173,68 @@ beforeEach(() => {
   role = "analyst";
   activeTeamId = "team-1";
   analysisResult = { data: analysis(), isLoading: false, isError: false };
+  threadData = undefined;
   refreshOpts = {};
 });
 afterEach(async () => {
   cleanup();
+  vi.unstubAllGlobals();
+  vi.stubGlobal("ResizeObserver", ResizeObserverStub);
   vi.clearAllMocks();
   sessionStorage.clear();
   localStorage.clear();
   await clearAnalysisFiles();
+});
+
+describe("AnalysisDetail usage tracking (#1214)", () => {
+  const umamiTrack = vi.fn();
+  beforeEach(() => {
+    window.umami = { track: umamiTrack, identify: vi.fn() };
+    Object.defineProperty(URL, "createObjectURL", { configurable: true, writable: true, value: () => "blob:x" });
+    Object.defineProperty(URL, "revokeObjectURL", { configurable: true, writable: true, value: () => {} });
+  });
+  afterEach(() => {
+    delete window.umami;
+  });
+  const sent = () => JSON.stringify(umamiTrack.mock.calls);
+
+  it("tracks a summary copy with no content", async () => {
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText: async () => undefined } });
+    renderDetail(COUNTRY);
+    fireEvent.click(screen.getByRole("button", { name: "analysis.layout.copySummary" }));
+    await vi.waitFor(() => expect(umamiTrack).toHaveBeenCalledWith("analysis.summary_copied", undefined));
+    expect(sent()).not.toContain("Summary.");
+  });
+
+  it("tracks an evidence preview and download with no file name", async () => {
+    renderDetail(COUNTRY);
+    fireEvent.change(screen.getByTestId("analysis-evidence-input"), {
+      target: { files: [new File(["%PDF-1.4"], "brief.pdf", { type: "application/pdf" })] },
+    });
+    fireEvent.click(await screen.findByRole("button", { name: /brief\.pdf/ }));
+    expect(umamiTrack).toHaveBeenCalledWith("analysis.evidence_previewed", undefined);
+    fireEvent.click(await screen.findByRole("link", { name: "analysis.layout.evidenceDownload" }));
+    expect(umamiTrack).toHaveBeenCalledWith("analysis.evidence_downloaded", undefined);
+    expect(sent()).not.toContain("brief");
+  });
+
+  it("records the report export with the analysis id once the PDF is built", async () => {
+    HTMLAnchorElement.prototype.click = () => {};
+    renderDetail(COUNTRY);
+    fireEvent.click(screen.getByTestId("analysis-create-report"));
+    fireEvent.click(await screen.findByTestId("report-builder-create"));
+    await vi.waitFor(() => expect(recordExported).toHaveBeenCalledWith({ analysisId: "a1" }));
+  });
+
+  it("doesn't record an export when the report fails", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    Object.defineProperty(URL, "createObjectURL", { configurable: true, writable: true, value: () => { throw new Error("no blob"); } });
+    renderDetail(COUNTRY);
+    fireEvent.click(screen.getByTestId("analysis-create-report"));
+    fireEvent.click(await screen.findByTestId("report-builder-create"));
+    await vi.waitFor(() => expect(notify).toHaveBeenCalled());
+    expect(recordExported).not.toHaveBeenCalled();
+  });
 });
 
 describe("AnalysisDetail collaboration", () => {
@@ -239,7 +298,7 @@ describe("AnalysisDetail header", () => {
   it("writes the active tab into the page URL", () => {
     renderDetail(COUNTRY);
     fireEvent.click(screen.getByRole("tab", { name: "analysis.tabs.needs" }));
-    expect(replace).toHaveBeenCalledWith("/analysis?country=sdn&tab=needs", { scroll: false });
+    expect(replace).toHaveBeenCalledWith("/insights?country=sdn&tab=needs", { scroll: false });
     expect(screen.getByTestId("analysis-needs")).toBeInTheDocument();
   });
 
@@ -392,6 +451,52 @@ describe("AnalysisDetail generating", () => {
     expect(interval()({ state: { data: undefined } })).toBe(30_000);
   });
 
+  it("stays on the generating notice when a poll fails before the first version", () => {
+    analysisResult = { data: null, isLoading: false, isError: true };
+    renderDetail(createdScope(pending("2026-09-29T11:50:00Z")));
+    expect(screen.getByTestId("analysis-generating")).toBeInTheDocument();
+    expect(screen.queryByText("analysis.error")).not.toBeInTheDocument();
+    expect(interval()({ state: { data: undefined, status: "error" } })).toBe(30_000);
+  });
+
+  it("shows the analysis when the row arrives after a failed poll", () => {
+    analysisResult = { data: null, isLoading: false, isError: true };
+    const view = renderDetail(createdScope(pending("2026-09-29T11:50:00Z")));
+    expect(screen.getByTestId("analysis-generating")).toBeInTheDocument();
+
+    analysisResult = { data: analysis(), isLoading: false, isError: false };
+    view.rerender(
+      <MantineProvider>
+        <AnalysisDetail scope={createdScope(pending("2026-09-29T11:50:00Z"))} onBack={() => {}} />
+      </MantineProvider>,
+    );
+    expect(screen.getByText("analysis.tabs.overview")).toBeInTheDocument();
+    expect(screen.queryByTestId("analysis-generating")).not.toBeInTheDocument();
+    expect(screen.queryByText("analysis.error")).not.toBeInTheDocument();
+  });
+
+  it("keeps a readable analysis on screen when a later refetch fails", () => {
+    analysisResult = { data: analysis(), isLoading: false, isError: true };
+    renderDetail(createdScope(created()));
+    expect(screen.getByText("analysis.tabs.overview")).toBeInTheDocument();
+    expect(screen.queryByText("analysis.error")).not.toBeInTheDocument();
+  });
+
+  it("shows the overdue retry when the first version never arrives, even if the last poll failed", () => {
+    analysisResult = { data: null, isLoading: false, isError: true };
+    renderDetail(createdScope(pending("2026-09-29T10:00:00Z")));
+    expect(screen.getByTestId("analysis-overdue")).toBeInTheDocument();
+    expect(screen.queryByText("analysis.error")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("analysis-generating")).not.toBeInTheDocument();
+  });
+
+  it("shows the load error when a country analysis fails and nothing is readable", () => {
+    analysisResult = { data: undefined, isLoading: false, isError: true };
+    renderDetail(COUNTRY);
+    expect(screen.getByText("analysis.error")).toBeInTheDocument();
+    expect(screen.queryByTestId("analysis-generating")).not.toBeInTheDocument();
+  });
+
   it("hides the retry from viewers", () => {
     role = "viewer";
     analysisResult.data = null;
@@ -417,6 +522,91 @@ describe("AnalysisDetail map", () => {
 });
 
 describe("Analysis detail layout", () => {
+  it("merges hazards, aggravating and mitigating factors into Shocks and hazards", () => {
+    const row = analysis();
+    row.hazards = {
+      hazards: [
+        { text: "Cholera: 114 dead since late June.", refs: [] },
+        { text: "Drone strikes: markets hit.", refs: [] },
+      ],
+      vulnerabilities: [{ text: "Water stations down: 1 of 13 working.", refs: [] }],
+      hazardsSummary: "Conflict is the main hazard.",
+      aggravating: [
+        { text: "Currency collapse: pound down 89%.", refs: [], topic: "economic_fragility", scope: null },
+        { text: "Land degradation: deserts spreading.", refs: [], topic: "environment_technology", scope: "Sudan-wide" },
+      ],
+      mitigating: [],
+    };
+    analysisResult.data = row;
+    renderDetail(COUNTRY);
+
+    const section = screen.getByTestId("analysis-section-hazards");
+    const toggle = within(section).getAllByRole("button")[0]!;
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(toggle).toHaveTextContent("analysis.findings.shocks");
+    expect(toggle).toHaveTextContent('analysis.findings.hazardsCount:{"count":2}');
+    expect(toggle).toHaveTextContent('analysis.findings.aggravatingCount:{"count":2}');
+    expect(toggle).toHaveTextContent("Conflict is the main hazard.");
+    expect(screen.queryByTestId("analysis-section-vulnerabilities")).not.toBeInTheDocument();
+
+    fireEvent.click(toggle);
+    expect(section.querySelector('[data-kind="health"]')).not.toBeNull();
+    const aggravating = screen.getByTestId("analysis-sub-aggravating");
+    expect(aggravating.querySelector('[data-topic="economic_fragility"]')).toHaveTextContent("analysis.topics.economic_fragility");
+    expect(aggravating).toHaveTextContent("Sudan-wide");
+    // The old vulnerabilities list gives way to the topic cards.
+    expect(section).not.toHaveTextContent("Water stations down");
+    // No mitigating findings: the gap is named instead of hidden.
+    expect(screen.getByTestId("analysis-sub-mitigating")).toHaveTextContent("analysis.findings.noneFound");
+  });
+
+  it("keeps the vulnerabilities list for analyses made before the split", () => {
+    const row = analysis();
+    row.hazards = {
+      hazards: [{ text: "Cholera outbreak.", refs: [] }],
+      vulnerabilities: [{ text: "Water stations down: 1 of 13 working.", refs: [] }],
+      vulnerabilitiesSummary: "Basic systems have broken down.",
+    };
+    analysisResult.data = row;
+    renderDetail(COUNTRY);
+
+    fireEvent.click(within(screen.getByTestId("analysis-section-hazards")).getAllByRole("button")[0]!);
+    const legacy = screen.getByTestId("analysis-sub-vulnerabilities");
+    expect(legacy).toHaveTextContent("Water stations down");
+    expect(legacy).toHaveTextContent("Basic systems have broken down.");
+    expect(screen.queryByTestId("analysis-sub-aggravating")).not.toBeInTheDocument();
+  });
+
+  it("shows humanitarian access as topic cards, or as two lists for older analyses", () => {
+    const row = analysis();
+    row.access = {
+      items: [
+        { text: "Airspace closed: four airports only.", refs: [], topic: "physical", scope: null },
+        { text: "Checkpoints: fees and frozen permits.", refs: [], topic: "security", scope: null },
+      ],
+      barriers: [],
+      constraints: [],
+      summary: "Fighting cuts aid off.",
+    };
+    analysisResult.data = row;
+    renderDetail(COUNTRY);
+
+    const section = screen.getByTestId("analysis-section-access");
+    const toggle = within(section).getAllByRole("button")[0]!;
+    expect(toggle).toHaveTextContent("analysis.access.title");
+    expect(toggle).toHaveTextContent("Fighting cuts aid off.");
+    fireEvent.click(toggle);
+    expect(section.querySelector('[data-topic="physical"]')).toHaveTextContent("Airspace closed");
+    expect(section.querySelector('[data-topic="security"]')).toHaveTextContent("analysis.topics.security");
+
+    cleanup();
+    row.access = { items: [], barriers: [{ text: "Blocked convoys.", refs: [] }], constraints: [], summary: null };
+    analysisResult.data = row;
+    renderDetail(COUNTRY);
+    fireEvent.click(within(screen.getByTestId("analysis-section-access")).getAllByRole("button")[0]!);
+    expect(screen.getByTestId("analysis-section-access").querySelector('[data-topic="barriers"]')).toHaveTextContent("Blocked convoys.");
+  });
+
   it("paints the redesign and dismisses change notes", () => {
     const row = analysis();
     row.changes = { comparedTo: "2026-09-01T00:00:00Z", notes: { summary: "Cholera line revised.", hazards: "Storm added." } };
@@ -434,7 +624,7 @@ describe("Analysis detail layout", () => {
     expect(screen.getByTestId("analysis-changes")).toHaveTextContent("analysis.layout.sections.hazards");
     expect(screen.getByTestId("analysis-highlights")).toBeInTheDocument();
     expect(screen.getByTestId("analysis-section-hazards")).toBeInTheDocument();
-    expect(screen.getByTestId("analysis-section-vulnerabilities")).toBeInTheDocument();
+    expect(screen.queryByTestId("analysis-section-vulnerabilities")).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "analysis.layout.dismissChanges" }));
     expect(screen.queryByTestId("analysis-changes")).not.toBeInTheDocument();
@@ -447,5 +637,141 @@ describe("Analysis detail layout", () => {
     cleanup();
     renderDetail(COUNTRY);
     expect(screen.getByTestId("analysis-changes")).toHaveTextContent("analysis.layout.sections.summary");
+  });
+
+  it("does not cite a funding share the card cannot show", () => {
+    const row = analysis();
+    row.figures = { ...row.figures, displaced: 8_600_000 };
+    row.changes = {
+      comparedTo: "2026-09-01T00:00:00Z",
+      notes: { funding_received: "People in need rose. Funding coverage moved from 41% to 31%." },
+    };
+    analysisResult.data = row;
+    renderDetail(COUNTRY);
+    expect(screen.getByText("People in need rose.")).toBeInTheDocument();
+    expect(screen.queryByText(/41%/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/31%/)).not.toBeInTheDocument();
+    expect(screen.queryByTitle(/41%/)).not.toBeInTheDocument();
+    expect(screen.getByText("analysis.kpis.funding").closest("article")).toHaveTextContent("analysis.kpis.notReported");
+  });
+});
+
+describe("AnalysisDetail evidence journey", () => {
+  const source = (id: string) => ({ id, title: id, url: null, publishedAt: null, publisher: null });
+  const doc = (createdAt: string) => ({
+    id: "doc-1",
+    fileName: "brief.pdf",
+    reportId: "manual:abc",
+    s3Key: "k",
+    createdAt,
+    url: "https://files.example/brief.pdf",
+  });
+  const journey = () => screen.getByTestId("evidence-journey");
+  const card = () => screen.getByTestId("analysis-evidence-file");
+
+  beforeEach(() => {
+    Object.defineProperty(URL, "createObjectURL", { configurable: true, writable: true, value: () => "blob:x" });
+    Object.defineProperty(URL, "revokeObjectURL", { configurable: true, writable: true, value: () => {} });
+  });
+
+  it("shows nothing for a country analysis, which keeps files on this browser", async () => {
+    renderDetail(COUNTRY);
+    fireEvent.change(screen.getByTestId("analysis-evidence-input"), {
+      target: { files: [new File(["%PDF-1.4"], "brief.pdf", { type: "application/pdf" })] },
+    });
+    await screen.findByRole("button", { name: /brief\.pdf/ });
+    expect(screen.queryByTestId("evidence-journey")).toBeNull();
+  });
+
+  it("says the upload failed, then processes the file after a retry", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(new Response("{}", { status: 400 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ reportId: "manual:abc" }), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    renderDetail(createdScope(created()));
+    fireEvent.change(screen.getByTestId("analysis-evidence-input"), {
+      target: { files: [new File(["%PDF-1.4"], "brief.pdf", { type: "application/pdf" })] },
+    });
+    await vi.waitFor(() => expect(journey()).toHaveAttribute("data-stage", "failed"));
+    expect(card()).toHaveTextContent("analysis.layout.evidenceNotUploaded");
+    expect(card()).not.toHaveTextContent("analysis.layout.evidenceNew");
+
+    fireEvent.click(screen.getByRole("button", { name: "analysis.layout.journey.retry" }));
+    await vi.waitFor(() => expect(journey()).toHaveAttribute("data-stage", "processing"));
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(card()).toHaveTextContent("analysis.layout.evidenceNew");
+  });
+
+  it("shows files waiting behind another upload as uploading, with no Retry", async () => {
+    let finishFirst: (res: Response) => void = () => {};
+    const fetchMock = vi
+      .fn()
+      .mockReturnValueOnce(new Promise<Response>((resolve) => (finishFirst = resolve)))
+      .mockResolvedValue(new Response(JSON.stringify({ reportId: "manual:b" }), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    renderDetail(createdScope(created()));
+    fireEvent.change(screen.getByTestId("analysis-evidence-input"), {
+      target: {
+        files: [
+          new File(["%PDF-1.4"], "a.pdf", { type: "application/pdf" }),
+          new File(["%PDF-1.4"], "b.pdf", { type: "application/pdf" }),
+        ],
+      },
+    });
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    const stages = () => screen.getAllByTestId("evidence-journey").map((el) => el.getAttribute("data-stage"));
+    expect(stages()).toEqual(["uploading", "uploading"]);
+    expect(screen.queryByRole("button", { name: "analysis.layout.journey.retry" })).toBeNull();
+
+    finishFirst(new Response(JSON.stringify({ reportId: "manual:a" }), { status: 200 }));
+    await vi.waitFor(() => expect(stages()).toEqual(["processing", "processing"]));
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("times a successful retry from the retry, not from the failed attempt", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    try {
+      // Added before the 06:00 update, retried after it: the update could not have used the file.
+      vi.setSystemTime(new Date("2026-09-27T05:00:00Z"));
+      const fetchMock = vi
+        .fn()
+        .mockResolvedValueOnce(new Response("{}", { status: 400 }))
+        .mockResolvedValueOnce(new Response(JSON.stringify({ reportId: "manual:abc" }), { status: 200 }));
+      vi.stubGlobal("fetch", fetchMock);
+      renderDetail(createdScope(created()));
+      fireEvent.change(screen.getByTestId("analysis-evidence-input"), {
+        target: { files: [new File(["%PDF-1.4"], "brief.pdf", { type: "application/pdf" })] },
+      });
+      await vi.waitFor(() => expect(journey()).toHaveAttribute("data-stage", "failed"));
+
+      vi.setSystemTime(new Date("2026-09-27T07:00:00Z"));
+      fireEvent.click(screen.getByRole("button", { name: "analysis.layout.journey.retry" }));
+      await vi.waitFor(() => expect(journey()).toHaveAttribute("data-stage", "processing"));
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("shows the citation number and drops NEW once the analysis cites the file", () => {
+    threadData = { title: null, comments: [], documents: [doc("2026-09-27T05:00:00Z")] };
+    analysisResult = { data: { ...analysis(), sources: [source("r1"), source("manual:abc")] }, isLoading: false, isError: false };
+    renderDetail(createdScope(created()));
+    expect(journey()).toHaveAttribute("data-stage", "cited");
+    expect(card()).not.toHaveTextContent("analysis.layout.evidenceNew");
+    fireEvent.click(screen.getByRole("button", { name: 'analysis.layout.journey.cited:{"n":2}' }));
+    expect(replace).toHaveBeenCalledWith(expect.stringContaining("tab=sources"), expect.anything());
+  });
+
+  it("says when an update after the upload left the file out", () => {
+    threadData = { title: null, comments: [], documents: [doc("2026-09-27T05:00:00Z")] };
+    renderDetail(createdScope(created()));
+    expect(journey()).toHaveAttribute("data-stage", "notInUpdate");
+  });
+
+  it("is processing while no update has run since the upload", () => {
+    threadData = { title: null, comments: [], documents: [doc("2026-09-27T07:00:00Z")] };
+    renderDetail(createdScope(created()));
+    expect(journey()).toHaveAttribute("data-stage", "processing");
   });
 });

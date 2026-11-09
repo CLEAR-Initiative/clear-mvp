@@ -1,4 +1,5 @@
 import { canDecideCaseProposals, isPlatformAdmin, isTeamAdmin } from "~/lib/roles";
+import { canDecideLocationChallenges } from "~/lib/location-challenge";
 
 /**
  * Who sees the Inbox, and which of its tabs (one rule for the page gate and
@@ -13,12 +14,18 @@ import { canDecideCaseProposals, isPlatformAdmin, isTeamAdmin } from "~/lib/role
  *                       Worker's cases (clear-api CaseProposals), decided one
  *                       by one. ERMs do NOT see or decide case proposals -
  *                       they work the community signals only.
+ *   location challenges - platform admins and team admins: analysts'
+ *                       Location challenges on Signals, filed for a team the
+ *                       reader administers (their own too), each accepted,
+ *                       corrected or declined.
  *
- * UI-only: clear-api's ground and caseProposals guards are the enforcement.
+ * UI-only: clear-api's ground, caseProposals and Location challenge guards
+ * are the enforcement.
  */
 export interface InboxAccess {
   hotline: boolean;
   proposals: boolean;
+  locations: boolean;
   /** Any tab at all: the page and the nav entry show. */
   any: boolean;
 }
@@ -54,5 +61,6 @@ export function inboxAccess(input: {
     input.hotlineInbox &&
     (isPlatformAdmin(input.role) || !!input.isErm || isTeamAdmin(input.teamMemberships));
   const proposals = canReviewCaseProposals(input);
-  return { hotline, proposals, any: hotline || proposals };
+  const locations = canDecideLocationChallenges(input.role, input.teamMemberships);
+  return { hotline, proposals, locations, any: hotline || proposals || locations };
 }

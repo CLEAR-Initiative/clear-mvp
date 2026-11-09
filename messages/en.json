@@ -19,46 +19,6 @@
       "firstEvent": "First event: {date}",
       "lastUpdate": "Last update: {date}"
     },
-    "executiveSummary": {
-      "priorityAnalysis": "Priority Analysis",
-      "criticalBadge": "{count} Critical",
-      "activeBadge": "{count} Active",
-      "situationReport": "Situation Report - {country}",
-      "defaultReportTitle": "Armed Conflict Displacement Crisis - {country}",
-      "activeAlerts": "Active Alerts",
-      "totalAlerts": "Total Alerts",
-      "trend": "Trend",
-      "needs": {
-        "shelter": {
-          "label": "Shelter",
-          "description": "Housing & displacement"
-        },
-        "wash": {
-          "label": "WASH",
-          "description": "Water & sanitation"
-        },
-        "protection": {
-          "label": "Protection",
-          "description": "Rights & safety"
-        },
-        "health": {
-          "label": "Health",
-          "description": "Medical response"
-        },
-        "foodSecurity": {
-          "label": "Food Security",
-          "description": "Nutrition access"
-        }
-      },
-      "viewFullReport": "View Full Report",
-      "downloadPdf": "Download PDF",
-      "updatedAt": "Updated {time}",
-      "updatedFallback": "Updated 2 hours ago",
-      "confidence": "Confidence: {pct}%",
-      "aiGeneratedAnalysis": "AI-Generated Analysis",
-      "generating": "Generating comprehensive analysis from {count} active alerts...",
-      "generateFailed": "Failed to generate analysis. Please try again."
-    },
     "insights": {
       "title": "AI-Generated Insights",
       "subtitle": "Pattern detection and recommendations",
@@ -359,7 +319,8 @@
   "admin": {
     "header": {
       "title": "Admin",
-      "subtitle": "Platform configuration, user and organisation management"
+      "subtitle": "Platform configuration, user and organisation management",
+      "activityLink": "Usage activity"
     },
     "tabs": {
       "users": "Users",
@@ -1456,6 +1417,74 @@
         "createSignal": "Failed to create signal",
         "createAlert": "Failed to create alert"
       }
+    },
+    "worldMap": {
+      "backToWorld": "Back to world",
+      "presenceEyebrow": "NRC presence",
+      "presenceCount": "countries · click one for details",
+      "countryTooltip": "Country office in {city}",
+      "countryOfficeName": "{city} country office"
+    },
+    "worldPanel": {
+      "office": "NRC country office · {city}",
+      "close": "Back to world",
+      "risk": {
+        "title": "INFORM Risk",
+        "source": "Source: JRC {edition}",
+        "sourceShort": "Source: JRC INFORM Risk",
+        "noData": "No INFORM Risk score for this country.",
+        "unavailable": "INFORM Risk is unavailable right now.",
+        "drivers": "Top drivers",
+        "pillars": {
+          "hazard": "Hazard & exposure",
+          "vulnerability": "Vulnerability",
+          "coping": "Lack of coping capacity"
+        },
+        "class": {
+          "veryHigh": "Very high",
+          "high": "High",
+          "medium": "Medium",
+          "low": "Low",
+          "veryLow": "Very low"
+        }
+      },
+      "analysis": {
+        "title": "Country analysis",
+        "none": "No analysis for this country yet.",
+        "updated": "Updated {when}",
+        "open": "Open analysis"
+      },
+      "figures": {
+        "title": "Humanitarian situation",
+        "sourceOf": "Source: {source}, via HDX HAPI",
+        "noData": "No data from this source",
+        "unavailable": "Unavailable right now",
+        "old": "Over a year old",
+        "peopleInNeed": "People in need",
+        "plan": "{year} response plan",
+        "internallyDisplaced": "Internally displaced",
+        "refugeesHosted": "Refugees and others needing protection",
+        "foodInsecurity": "Food insecurity (IPC 3+)",
+        "shareOfPopulation": "{share} of analysed population · {date}",
+        "funding": "Humanitarian funding",
+        "funded": "{pct}% funded",
+        "appeal": "of {amount} appeal, {year}",
+        "politicalViolence": "Political violence events",
+        "fatalities": "{count, plural, one {# fatality} other {# fatalities}} · {month}"
+      },
+      "severity": {
+        "title": "Crisis severity",
+        "source": "Source: ACAPS INFORM Severity Index",
+        "none": "No crisis tracked by ACAPS for this country.",
+        "unavailable": "Crisis severity is unavailable right now.",
+        "category": {
+          "1": "Very low",
+          "2": "Low",
+          "3": "Medium",
+          "4": "High",
+          "5": "Very high"
+        }
+      }
     }
   },
   "detection": {
@@ -1522,21 +1551,24 @@
         "empty": "No active alerts at this time.",
         "noMatch": "No alerts match your filters.",
         "untitled": "Untitled alert",
-        "allLoaded": "All {count, plural, one {# alert} other {# alerts}} loaded"
+        "allLoaded": "All {count, plural, one {# alert} other {# alerts}} loaded",
+        "scanning": "Searching older alerts, {loaded} of {total} checked"
       },
       "events": {
         "title": "Events",
         "empty": "No events found.",
         "noMatch": "No events match your filters.",
         "untitled": "Untitled event",
-        "allLoaded": "All {count, plural, one {# event} other {# events}} loaded"
+        "allLoaded": "All {count, plural, one {# event} other {# events}} loaded",
+        "scanning": "Searching older events, {loaded} of {total} checked"
       },
       "signals": {
         "title": "Signals",
         "empty": "No signals found.",
         "noMatch": "No signals match your filters.",
         "untitled": "Untitled signal",
-        "allLoaded": "All {count, plural, one {# signal} other {# signals}} loaded"
+        "allLoaded": "All {count, plural, one {# signal} other {# signals}} loaded",
+        "scanning": "Searching older signals, {loaded} of {total} checked"
       }
     },
     "history": {
@@ -1547,6 +1579,7 @@
       "loadMore": "Load more",
       "sortByTime": "Sort by time",
       "untitled": "Untitled",
+      "selectRow": "Select {title}",
       "columns": {
         "title": "Title",
         "class": "Class",
@@ -2719,7 +2752,8 @@
     "actions": {
       "title": "Actions",
       "addToCrisis": "Add to Crisis",
-      "comingSoon": "coming soon"
+      "comingSoon": "coming soon",
+      "menu": "Signal actions"
     },
     "details": {
       "title": "Details",
@@ -2732,8 +2766,8 @@
   },
   "locationChallenge": {
     "actions": {
-      "challengeLocation": "Challenge location",
-      "updateChallenge": "Update location challenge",
+      "changeLocation": "Change location",
+      "editChange": "Edit location change",
       "challengeOnMap": "Challenge location",
       "updateOnMap": "Move corrected pin",
       "showSignalsLayer": "Show Signals layer"
@@ -2746,36 +2780,58 @@
       "signalLayerHint": "To challenge a pin, open Layers and switch Data to Signals, then open a Signal pin."
     },
     "status": {
-      "challenged": "Location challenged",
-      "correctionQueued": "Correction queued"
+      "challenged": "Location change requested",
+      "correctionQueued": "Location change proposed"
+    },
+    "indicator": {
+      "requested": "Location change requested: waiting for an admin to decide",
+      "requestedTo": "Change to {place} requested: waiting for an admin to decide",
+      "changed": "Location changed by an admin on {date}"
     },
     "modal": {
-      "title": "Challenge location",
-      "intro": "Mark this Signal pin as untrusted. You can optionally propose a corrected point for consideration — the source pin is not overwritten.",
-      "noteLabel": "Why does this look wrong? (optional)",
+      "title": "Change location",
+      "current": "Current location",
+      "noPlace": "No place name",
+      "noPin": "Placed on an area, with no exact point.",
+      "changeTo": "Change to",
+      "orOnMap": "Or click the map where it should be.",
+      "placeOnMap": "Pick it on the map",
+      "noteLabel": "Why? (optional)",
       "notePlaceholder": "e.g. Dataminr placed this in the wrong town…",
-      "proposeCorrection": "Propose a corrected point (optional)",
-      "proposeCorrectionHint": "Optional. Enter latitude and longitude if you know them. Queued for consideration only.",
-      "placeOnMap": "Place corrected pin on map",
-      "placeOnMapHint": "Return to the map and click where the pin should be. You can still enter coordinates manually below.",
       "enterCoordinatesManually": "Enter coordinates manually",
       "hideManualCoordinates": "Hide coordinate fields",
       "lat": "Latitude",
       "lng": "Longitude",
       "placeName": "Place name (optional)",
       "placeNamePlaceholder": "Local spelling or landmark",
-      "submitChallenge": "Submit challenge",
-      "submitCorrection": "Submit challenge + correction",
-      "successTitle": "Queued for consideration",
-      "successChallenge": "This Signal location is marked challenged. No second pin until a correction point is proposed.",
-      "successCorrection": "Source and proposed pins will both show on the map while the correction is queued.",
+      "submit": "Propose change",
+      "successTitle": "Change proposed",
+      "successBody": "Both pins show on the map until your team's admin decides.",
       "sessionOnlyTitle": "Shown this session only",
-      "sessionOnlyChallenge": "Map shows this pin as challenged for now. It is not saved yet — clear-api persistence is still pending.",
-      "sessionOnlyCorrection": "Source and proposed pins show on the map for this session. Saving for consideration needs clear-api support (still pending)."
+      "sessionOnlyCorrection": "Source and proposed pins show on the map for this session. Saving for consideration needs clear-api support (still pending).",
+      "searchLabel": "Search for the place",
+      "searchPlaceholder": "Village, town or landmark",
+      "noResults": "No places found. Try another spelling.",
+      "placing": "Finding where this is in CLEAR…",
+      "landsIn": "In CLEAR: {chain}",
+      "outsideCoverage": "This place is outside the areas CLEAR covers.",
+      "outsideTeamArea": "This place is outside your team's area. A platform admin can place the Signal there.",
+      "changePick": "Choose another place"
+    },
+    "map": {
+      "pins": {
+        "source": "Current",
+        "proposed": "Proposed",
+        "placed": "Your point"
+      },
+      "unavailable": "The map could not load. You can still search for the place or enter its coordinates."
     },
     "errors": {
-      "submitFailed": "Could not submit the location challenge. Try again.",
-      "backendUnavailable": "Location challenge is not available yet — clear-api support is still pending."
+      "submitFailed": "Could not propose the location change. Try again.",
+      "forbidden": "Your team can't correct this Signal there: the Signal or the place is outside your team's area.",
+      "outsideCoverage": "That place is outside the areas CLEAR covers.",
+      "conflict": "Someone proposed a location change for this Signal at the same moment. Try again.",
+      "backendUnavailable": "Location changes are not available yet: clear-api support is still pending."
     }
   },
   "verifyEmail": {
@@ -2798,14 +2854,16 @@
     "awaiting": "{count, plural, one {# awaiting review} other {# awaiting review}}",
     "tabs": {
       "community": "Community signals",
-      "proposals": "Proposed signals"
+      "proposals": "Proposed signals",
+      "locations": "Location changes"
     },
     "filters": {
       "community": "All",
       "reports": "Field reports",
       "unclassified": "Unclassified",
       "chatter": "Chatter",
-      "proposals": "Proposed signals"
+      "proposals": "Proposed signals",
+      "locations": "Location changes"
     },
     "search": "Search text, intake refs",
     "sort": {
@@ -2929,12 +2987,53 @@
       "partial": "Queued again: {done} of {total} messages. {error}"
     },
     "kinds": {
-      "cases": "Proposed signals"
+      "cases": "Proposed signals",
+      "location": "Location"
     },
     "event": {
       "untitled": "Untitled event",
       "open": "Open the event",
       "proposedAt": "Proposed {date}"
+    },
+    "location": {
+      "untitled": "Untitled signal",
+      "preview": {
+        "proposed": "Proposed: {place}",
+        "bare": "Pin marked as wrong, no point proposed"
+      },
+      "filedBy": "Filed by {name} · {date}",
+      "filed": "Filed {date}",
+      "openSignal": "Open the signal",
+      "now": "Current location",
+      "noPlace": "This Signal has no location",
+      "noPin": "Placed on an area, so it has no pin on the map.",
+      "proposed": "Proposed location",
+      "noProposal": "No point proposed: the analyst says the pin is wrong, not where it should be.",
+      "landsIn": "In CLEAR: {chain}",
+      "outsideCoverage": "Outside the areas CLEAR covers",
+      "note": "Analyst's note",
+      "team": "Team",
+      "placeTitle": "Place the point",
+      "placeHint": "Click the map where the Signal should be, or search for the place. You can also enter its coordinates.",
+      "actions": {
+        "accept": "Accept proposed point",
+        "placeOther": "Place a different point",
+        "place": "Place a point",
+        "decline": "Decline",
+        "save": "Save this point",
+        "cancel": "Cancel"
+      },
+      "toast": {
+        "accepted": "Location corrected to the proposed point",
+        "corrected": "Location corrected to your point",
+        "declined": "Change declined. The pin stays where it is."
+      },
+      "errors": {
+        "forbidden": "You can't correct this Signal there: the Signal or the place is outside the team's area.",
+        "outsideCoverage": "That place is outside the areas CLEAR covers.",
+        "conflict": "This change was already decided, or replaced by a newer one.",
+        "failed": "Could not save the decision. Try again."
+      }
     },
     "cases": {
       "preview": "{count, plural, =0 {All proposed signals decided} one {# proposed signal to review} other {# proposed signals to review}} · {hazard}"
@@ -3006,7 +3105,7 @@
     "map": {
       "title": "Analysis area",
       "events": "{count, plural, one {# event} other {# events}} since {date}",
-      "eventsSince": "{count, plural, one {event} other {events}} since {date}",
+      "eventsSince": "{count, plural, one {event in this area} other {events in this area}} since {date}",
       "areas": "Where events happened",
       "areaEvents": "{count, plural, one {# event} other {# events}}",
       "noEvents": "No events recorded in this area since {date}.",
@@ -3037,8 +3136,26 @@
       "push": "What is forcing people out",
       "return": "Return intentions",
       "count": "{count, plural, one {# finding} other {# findings}}",
+      "hazardsCount": "{count, plural, one {# hazard} other {# hazards}}",
       "showAll": "Show all {count}",
+      "showAllHazards": "Show all {count} hazards",
       "showLess": "Show less",
+      "displacementMetaMap": "{count, plural, one {# finding} other {# findings}} · movement map",
+      "dataCheck": "Data check",
+      "movementTitle": "Where people moved",
+      "movementSince": "Since {since}",
+      "movementAria": "Map of displacement flows out of, into, and within {scope}",
+      "movementInside": "displaced inside",
+      "movementLegendOut": "People leaving · thicker = more people",
+      "movementLegendBack": "Returns",
+      "movementLegendUnknown": "Size unknown",
+      "movementLegendBadge": "Matches finding",
+      "groupsLabel": "Show movements of",
+      "groupIdp": "Internally displaced",
+      "groupRefugee": "Refugees",
+      "groupsEmpty": "No findings for the selected groups.",
+      "movementLegendEvent": "Caused by an event",
+      "movementLegendPoint": "Displaced by an event, sized by people",
       "forecast": "Forecast",
       "forecastTag": "Projections, not observed",
       "forecastNote": "What sources expect next. Kept apart from the facts above.",
@@ -3046,24 +3163,60 @@
       "bestCase": "Best case",
       "worstCase": "Worst case",
       "hazardsTitle": "Hazards & Vulnerabilities",
-      "hazardsMeta": "{hazards, plural, one {# hazard} other {# hazards}} · {vulnerabilities, plural, one {# vulnerability} other {# vulnerabilities}}"
+      "hazardsMeta": "{hazards, plural, one {# hazard} other {# hazards}} · {vulnerabilities, plural, one {# vulnerability} other {# vulnerabilities}}",
+      "shocks": "Shocks and hazards",
+      "hazardsHint": "Current shocks and threats ahead",
+      "aggravating": "Aggravating factors",
+      "aggravatingHint": "What makes the shock worse",
+      "mitigating": "Mitigating factors",
+      "mitigatingHint": "What reduces its impact",
+      "aggravatingCount": "{count, plural, one {# aggravating factor} other {# aggravating factors}}",
+      "mitigatingCount": "{count, plural, one {# mitigating factor} other {# mitigating factors}}",
+      "noneFound": "Nothing found in the sources for this area."
+    },
+    "access": {
+      "title": "Humanitarian access",
+      "meta": "{topics, plural, one {# topic} other {# topics}} · {count, plural, one {# finding} other {# findings}}"
+    },
+    "topics": {
+      "economic_fragility": "Economic fragility",
+      "environment_technology": "Environment and technology stressors",
+      "governance_policy": "Governance and policy weaknesses",
+      "social_inequality": "Social inequality",
+      "resource_shortfalls": "Response resource shortfalls",
+      "coordination_failures": "Coordination failures",
+      "preparedness": "Emergency preparedness",
+      "risk_reduction": "Risk reduction",
+      "recovery_support": "Recovery support",
+      "protective_infrastructure": "Protective infrastructure",
+      "public_warning": "Public warning",
+      "response_surge": "Response surge",
+      "people_facing_gaps": "People facing access gaps",
+      "physical": "Physical constraints",
+      "security": "Security constraints",
+      "relief_to_population": "Aid reaching people",
+      "population_to_relief": "People reaching aid",
+      "barriers": "Barriers",
+      "constraints": "Constraints",
+      "other": "Other"
     },
     "needs": {
       "severityIntro": "Each sector is graded by the analysis from the sector reporting it cites.",
       "severityNull": "Not assessed: too little evidence to grade.",
       "inferred": "Graded from reporting outside this sector. Treat as indicative.",
       "notAssessed": "Not assessed",
+      "reportingGrade": "From reporting: {grade}",
       "noFigure": "No people-in-need figure"
     },
     "events": {
-      "title": "Events in this area",
-      "empty": "No events recorded in this area in this period.",
+      "title": "Events cited",
+      "empty": "This analysis cites no events.",
       "untitled": "Untitled event",
       "severity": "Severity {value}",
-      "count": "Sample: {shown} of {total}"
+      "count": "{count, plural, one {# event} other {# events}}"
     },
     "sources": {
-      "title": "Sources cited"
+      "title": "Reports cited"
     },
     "contexts": {
       "title": "Context risks",
@@ -3243,6 +3396,25 @@
       "evidenceSitrepNote": "Older than 30 days: kept on file, not used in figures or summary",
       "evidenceUploadedKind": "Uploaded just now",
       "evidenceUploadedNote": "On file. Not read into this page yet.",
+      "evidenceNotUploaded": "Not uploaded. It is only in this browser.",
+      "evidenceAddedAt": "Added {time}",
+      "evidenceUploadedAt": "Uploaded {time}",
+      "journey": {
+        "uploading": "Uploading",
+        "uploaded": "Uploaded",
+        "failed": "Upload failed",
+        "failedDetail": "The server did not take the file. It is only in this browser.",
+        "retry": "Retry",
+        "processing": "Processing",
+        "processingDetail": "Reading text, places and dates. The next update of this analysis can use it.",
+        "processed": "Processed",
+        "analysis": "Analysis",
+        "cited": "Cited as {n}",
+        "citedStep": "Cited in this analysis",
+        "citedDetail": "Source {n}",
+        "notInUpdate": "Not in the latest update",
+        "notInUpdateDetail": "This analysis updated after the upload without citing the file."
+      },
       "discussionTitle": "Discussion",
       "discussionComments": "{count, plural, one {# comment} other {# comments}}",
       "discussionEmpty": "No comments yet. Start the discussion.",
@@ -3275,6 +3447,7 @@
         "contexts": "Context risks",
         "hazards": "Hazards",
         "vulnerabilities": "Vulnerabilities",
+        "access": "Humanitarian access",
         "displacement": "Displacement",
         "forecast": "Forecast"
       }
@@ -3551,6 +3724,470 @@
       "country": "Country",
       "allCountries": "All countries",
       "hint": "Days are UTC. Leave the dates empty for the last 12 weeks."
+    },
+    "progress": {
+      "title": "Progress over time",
+      "subtitle": "One metric at a time, by day, week or month. A hollow point is a bucket the range only partly covers; the tooltip shows n.",
+      "metric": {
+        "label": "Metric"
+      },
+      "dimensions": {
+        "TIMELINESS": "Timeliness",
+        "ACCURACY": "Accuracy",
+        "COVERAGE": "Coverage",
+        "RELIABILITY": "Reliability",
+        "USEFULNESS": "Usefulness"
+      },
+      "metrics": {
+        "DETECTED_BY_NEXT_DAY": "Detected by next day",
+        "DETECTED_SAME_DAY": "Detected same day",
+        "ALERTED_BY_NEXT_DAY": "Alerted by next day",
+        "ALERTED_SAME_DAY": "Alerted same day",
+        "DISTRICT_OR_FINER": "At district or finer",
+        "SIGNALS_GROUPED": "Signals grouped",
+        "EVENTS_WITH_ONE_SIGNAL": "Events with one signal",
+        "ACLED_EVENTS_ALERTED": "ACLED events alerted nearby",
+        "SOURCES_ON_SCHEDULE": "Sources on schedule",
+        "EVENTS_ESCALATED": "Events escalated"
+      },
+      "granularity": {
+        "label": "Buckets",
+        "DAY": "Day",
+        "WEEK": "Week",
+        "MONTH": "Month"
+      },
+      "bucketsOf": {
+        "DAY": "Days",
+        "WEEK": "ISO weeks",
+        "MONTH": "Months"
+      },
+      "card": {
+        "subtitle": "{buckets} from {from} to {to}"
+      },
+      "perSource": "Lines per source",
+      "allSources": "All sources",
+      "legend": "Legend",
+      "partial": "partial",
+      "deployMarker": "deploy",
+      "showTable": "Table view",
+      "hideTable": "Hide table",
+      "columns": {
+        "bucket": "Bucket"
+      },
+      "markers": {
+        "several": "{n, plural, one {# change} other {# changes}}"
+      },
+      "tooltip": {
+        "week": "{week} · from {start}",
+        "partial": "Partial bucket: the range covers only part of it",
+        "changes": "Changes in this bucket"
+      },
+      "units": {
+        "EVENTS": "n = {n, plural, one {# measured event} other {# measured events}}",
+        "SIGNALS": "n = {n, plural, one {# signal} other {# signals}}",
+        "SOURCE_DAYS": "n = {n, plural, one {# source-day} other {# source-days}}",
+        "ACLED_EVENTS": "n = {n, plural, one {# ACLED event} other {# ACLED events}}",
+        "DEFAULT": "n = {n, number}"
+      },
+      "chip": {
+        "title": "Since {marker} ({date}):",
+        "body": "{group} {before} in the 7 days before, {after} since (n = {nBefore, number} and {nAfter, number})"
+      },
+      "loading": "Loading the series…",
+      "error": {
+        "title": "Couldn't load the series"
+      },
+      "unavailable": {
+        "title": "Metric registry not deployed yet",
+        "body": "This environment's CLEAR API doesn't serve the metric registry and its series yet (clear-api ADR-0014 and ADR-0015). The cards below still work."
+      },
+      "empty": {
+        "title": "Nothing to plot in this range",
+        "body": "No measured events or located signals fall in this range for this metric."
+      },
+      "definition": {
+        "timeBasis": "Time basis: {timeBasis} · {adr}"
+      },
+      "annotations": {
+        "title": "Changes in range",
+        "add": "Add a change",
+        "when": "When (UTC)",
+        "label": "Label",
+        "link": "Link (optional)",
+        "metrics": "Metrics",
+        "save": "Save",
+        "cancel": "Cancel",
+        "remove": "Remove",
+        "removeNamed": "Remove {label}",
+        "empty": "No change recorded in this range yet.",
+        "unavailable": "This environment's CLEAR API doesn't serve metric annotations yet (clear-api ADR-0016).",
+        "columns": {
+          "when": "When",
+          "label": "Change",
+          "metrics": "Metrics"
+        },
+        "error": "Couldn't load the changes: {message}",
+        "loading": "Loading changes…"
+      },
+      "overview": {
+        "title": "At a glance",
+        "subtitle": "Each metric over the last 12 weeks, by week, under the country filter. Pick one to see it below.",
+        "current": "{week}",
+        "currentPartial": "{week}, so far",
+        "noData": "No data in the last 12 weeks",
+        "loading": "Loading…",
+        "error": "Couldn't load",
+        "unavailable": "Not served by this API",
+        "select": "Show {metric}",
+        "everyCountry": "every country"
+      },
+      "copyLink": "Copy link",
+      "copied": "Link copied",
+      "everyCountry": "Reads every country: the country filter does not apply to this metric."
+    },
+    "precision": {
+      "title": "Location precision",
+      "subtitle": "How finely the pipeline placed the signals it located. Grouping keys on district, so a signal at district or finer can join an event; one left at state or country level always becomes its own event.",
+      "loading": "Loading location precision…",
+      "range": "Showing {from} to {to}",
+      "error": {
+        "title": "Couldn't load location precision"
+      },
+      "unavailable": {
+        "title": "Location precision not deployed yet",
+        "body": "This environment's CLEAR API doesn't serve location precision yet. The section fills in once it does."
+      },
+      "empty": {
+        "title": "No signals located in this range",
+        "body": "Nothing was ingested and located in this range for the selected sources."
+      },
+      "sources": {
+        "label": "Sources",
+        "placeholder": "All sources"
+      },
+      "tiles": {
+        "fine": {
+          "label": "At district or finer"
+        },
+        "emphasis": {
+          "label": "{source} at district or finer"
+        },
+        "noLocation": {
+          "label": "No location"
+        },
+        "corrections": {
+          "label": "Location challenges",
+          "sub": "{open, number} open · {decided, number} decided"
+        },
+        "ofSignals": "{n, number} of {total, number} signals",
+        "none": "none in range"
+      },
+      "levels": {
+        "noLocation": "No location",
+        "country": "Country",
+        "state": "State",
+        "district": "District",
+        "point": "Point"
+      },
+      "bySource": {
+        "title": "Where each source lands",
+        "subtitle": "Signals located in range, by the level of their location, coarse to fine",
+        "legend": "Legend",
+        "tooltip": "{count, number} · {share}",
+        "n": "n = {n, plural, one {# signal} other {# signals}}",
+        "showTable": "Table view",
+        "hideTable": "Hide table",
+        "columns": {
+          "source": "Source",
+          "signals": "Signals",
+          "fine": "District or finer"
+        }
+      },
+      "weekly": {
+        "title": "Weekly trend",
+        "subtitle": "Share of each ISO week's located signals at district or finer, per source",
+        "legend": "Legend",
+        "partial": "partial",
+        "deployMarker": "deploy",
+        "showTable": "Table view",
+        "hideTable": "Hide table",
+        "columns": {
+          "week": "Week"
+        },
+        "tooltip": {
+          "week": "{week} · from {start}",
+          "n": "{n, plural, one {# signal} other {# signals}}",
+          "partial": "Partial week: still in progress"
+        },
+        "severalChanges": "{n, plural, one {# change} other {# changes}}"
+      },
+      "method": {
+        "title": "How location precision is measured",
+        "intro": "Location precision is how finely the pipeline placed the signals it located, read from the location stored on each signal.",
+        "points": {
+          "counted": "A signal counts when a pipeline ingested it (not submitted or filed by hand) and it is neither retracted nor dummy. Each counts once, under the level of its location: none, country, state, district, or a point inside a district.",
+          "level": "The location is the signal's general location, or for a displacement signal its origin. District or finer means district plus point, which is what grouping can use.",
+          "week": "A signal belongs to the ISO week it was located in (processed, else collected), so a pipeline deploy shows up in the week it happened. A re-processed signal moves to the week it was re-located in.",
+          "correctness": "This measures how fine a location is, not whether it is right. Location challenges filed in the range are shown as a proxy until an analyst-checked sample exists.",
+          "definition": "clear-api defines the metric (ADR-0012) and returns counts; this page only turns them into shares."
+        }
+      }
+    }
+  },
+  "usageAnalytics": {
+    "profile": {
+      "title": "Usage analytics",
+      "toggleLabel": "Help improve CLEAR with usage analytics",
+      "toggleDescription": "Records which pages and features you use. Turn off to stop it completely on this browser.",
+      "adminNote": "Global admins are never tracked.",
+      "noticeLink": "How usage analytics works",
+      "backToProfile": "Back to Profile"
+    },
+    "notice": {
+      "title": "Usage analytics in CLEAR",
+      "intro": "CLEAR records how the app is used so the team can see what helps field teams and what gets in the way.",
+      "whatTitle": "What we collect",
+      "whatPages": "Which pages you open, keeping only the page address (search text and other query details are removed).",
+      "whatActions": "A fixed list of actions, such as opening an Event or finishing the tour.",
+      "whatIdentity": "Your user ID, role, organisation, team and language.",
+      "whatNot": "Never your name, email, search text, Agent prompts, titles or anything you type.",
+      "whyTitle": "Why",
+      "why": "To learn which features are used, where people get stuck, and what to improve next.",
+      "whoTitle": "Who sees it",
+      "who": "Only the CLEAR product team, in a self-hosted tool on CLEAR's own servers. It is not shared with third parties or used for advertising.",
+      "retentionTitle": "How long we keep it",
+      "retention": "13 months, then it is deleted.",
+      "optOutTitle": "Turning it off",
+      "optOut": "You can turn usage analytics off at any time in your Profile. When it is off, the tracker is not loaded at all.",
+      "manageInProfile": "Manage in Profile",
+      "gotIt": "Got it"
+    }
+  },
+  "adminActivity": {
+    "page": {
+      "title": "Usage activity",
+      "breadcrumb": "Activity",
+      "breadcrumbAdmin": "Admin"
+    },
+    "window": {
+      "label": "Time window",
+      "days": "Last {days} days"
+    },
+    "error": {
+      "title": "Could not load activity"
+    },
+    "unavailable": {
+      "title": "Activity not available yet",
+      "body": "The CLEAR API does not serve activity statistics yet. Try again after the next API release."
+    },
+    "loading": "Loading activity",
+    "actions": {
+      "title": "Actions",
+      "action": "Action",
+      "count": "Count",
+      "total": "Total",
+      "empty": "No actions recorded in this window."
+    },
+    "agent": {
+      "title": "Agent usage",
+      "turns": "Turns",
+      "distinctUsers": "Distinct users",
+      "answers": "Answers",
+      "cost": "Cost (USD)",
+      "tokens": "Tokens",
+      "tokensSplit": "{input} in / {output} out",
+      "byRoute": "By route",
+      "route": "Route",
+      "empty": "No agent usage in this window."
+    },
+    "export": {
+      "title": "NRC aggregate export",
+      "note": "Monthly totals for the last 12 months by organisation, team and role. Groups of fewer than 5 people and platform admins are excluded.",
+      "button": "Download NRC export (CSV)"
+    }
+  },
+  "brief": {
+    "page": {
+      "title": "Briefs",
+      "breadcrumb": "Briefs"
+    },
+    "composer": {
+      "window": "Covers {start} → {end}",
+      "notFound": "This Brief doesn't exist or was deleted.",
+      "loadError": "Couldn't load this Brief.",
+      "back": "All Briefs",
+      "titleLabel": "Brief title",
+      "titleRequired": "The title can't be empty; the last one is kept.",
+      "refresh": "Refresh to now",
+      "refreshError": "Couldn't refresh the window: {message}",
+      "markdownHint": "**bold**, *italic*, - bullets, [link](https://…)",
+      "preview": "Preview",
+      "empty": "—",
+      "saveError": "Couldn't save: {message}",
+      "unsaved": "An edit couldn't be saved, so nothing went out. Check the Brief and try again.",
+      "leaveConfirm": "Your last edit to this Brief hasn't saved yet. Leave anyway?"
+    },
+    "groups": {
+      "alert": "Alerts",
+      "event": "Events",
+      "signal": "Signals"
+    },
+    "items": {
+      "emptyGroup": "Nothing picked yet.",
+      "addError": "Couldn't add the item: {message}",
+      "removeError": "Couldn't remove the item: {message}",
+      "earlier": "from {date}",
+      "noneSent": "None.",
+      "drag": "Drag to reorder {title}",
+      "remove": "Remove from the Brief",
+      "removeLabel": "Remove {title} from the Brief",
+      "notePlaceholder": "Add a note (optional)",
+      "noteLabel": "Note on {title}",
+      "noteError": "Couldn't save the note: {message}",
+      "reorderError": "Couldn't reorder: {message}"
+    },
+    "send": {
+      "test": "Send test to me",
+      "testToAddress": "Send test",
+      "testSent": "Test sent to your email address.",
+      "testSentTo": "Test sent to {email}.",
+      "testRefused": "The email provider refused the test.",
+      "testError": "Couldn't send the test: {message}",
+      "testRecipient": {
+        "open": "Test email address",
+        "label": "Send tests to",
+        "placeholder": "you@example.org",
+        "hint": "Saved in this browser only. Leave blank to send to your own address.",
+        "invalid": "Enter a valid email address.",
+        "save": "Save",
+        "reset": "Use my address",
+        "tooltip": "Sends to {email}",
+        "notStored": "This browser didn't let us save the address. It applies until you leave the page."
+      },
+      "open": "Send…",
+      "title": "Send Brief",
+      "list": "Recipient list",
+      "listPlaceholder": "Choose a list",
+      "listOption": "{name} ({count, plural, one {# recipient} other {# recipients}})",
+      "noLists": "No list with recipients yet.",
+      "manageLists": "Manage Recipient lists",
+      "cancel": "Cancel",
+      "next": "Next",
+      "back": "Back",
+      "confirm": "Send to {list} ({count, plural, one {# recipient} other {# recipients}})?",
+      "freezes": "Sending freezes the Brief: it can't be edited afterwards.",
+      "send": "Send",
+      "error": "Couldn't send: {message}",
+      "result": "Sent to {sent}, failed {failed}.",
+      "partial": "Failed emails are not retried.",
+      "done": "Done",
+      "unknownList": "a deleted list",
+      "sentNotice": "Sent {date} to {list}: {sent} sent, {failed} failed.",
+      "frozen": "A sent Brief is frozen: its items keep what they showed when it was sent."
+    },
+    "list": {
+      "new": "New Brief",
+      "empty": "No Briefs yet. Start one with New Brief.",
+      "loadError": "Couldn't load the Briefs.",
+      "delete": "Delete draft",
+      "deleteConfirm": "Delete the draft “{title}”? This can't be undone.",
+      "deleteError": "Couldn't delete the draft: {message}",
+      "columns": {
+        "title": "Brief",
+        "area": "Area",
+        "window": "Window",
+        "status": "Status",
+        "sentAt": "Sent"
+      },
+      "loadMore": "Load more"
+    },
+    "cadence": {
+      "daily": "Daily",
+      "weekly": "Weekly",
+      "monthly": "Monthly"
+    },
+    "status": {
+      "draft": "Draft",
+      "sent": "Sent"
+    },
+    "new": {
+      "title": {
+        "daily": "New Daily Brief",
+        "weekly": "New Weekly Brief",
+        "monthly": "New Monthly Brief"
+      },
+      "window": {
+        "daily": "Covers the last 24 hours, ending now.",
+        "weekly": "Covers the last 7 days, ending now.",
+        "monthly": "Covers the last 30 days, ending now."
+      },
+      "country": "Country",
+      "countryPlaceholder": "Pick a country",
+      "region": "State or district (optional)",
+      "cancel": "Cancel",
+      "submit": "Start Brief",
+      "error": "Couldn't start the Brief: {message}"
+    },
+    "sections": {
+      "summary": "Summary",
+      "counts": "Counts",
+      "items": "Picked items",
+      "closingNotes": "Closing notes"
+    },
+    "save": {
+      "saving": "Saving…",
+      "saved": "Saved",
+      "error": "Not saved"
+    },
+    "counts": {
+      "none": "None in this window.",
+      "byType": "Types",
+      "bySource": "Sources",
+      "more": "+{count} more"
+    },
+    "picker": {
+      "dateBrief": "Brief window",
+      "date24h": "Last 24 hours",
+      "date7d": "Last 7 days",
+      "date30d": "Last 30 days",
+      "dateCustom": "Custom range",
+      "from": "From",
+      "to": "To"
+    },
+    "lists": {
+      "open": "Recipient lists",
+      "title": "Recipient lists",
+      "intro": "Named sets of email addresses a Brief can be sent to. Addresses don't need a CLEAR account; every email carries an unsubscribe link.",
+      "newName": "New list name",
+      "create": "Create",
+      "loading": "Loading lists…",
+      "loadError": "Couldn't load the lists.",
+      "empty": "No lists yet.",
+      "recipients": "{count, plural, one {# recipient} other {# recipients}}",
+      "unsubscribed": "Unsubscribed",
+      "remove": "Remove address",
+      "removeLabel": "Remove {email}",
+      "removeError": "Couldn't remove the address: {message}",
+      "addEmail": "name@example.org",
+      "addEmailLabel": "Add an address to {list}",
+      "add": "Add"
+    },
+    "pdf": {
+      "button": "Download PDF",
+      "eyebrow": "{cadence} Brief",
+      "org": "Norwegian Refugee Council · CLEAR",
+      "classification": "Internal use and private sharing only",
+      "footer": "CLEAR · {title}",
+      "generated": "PDF created {date} in CLEAR ({status}).",
+      "page": "Page {n} of {total}",
+      "error": "The PDF could not be created. Please try again.",
+      "unsupportedLocale": "PDFs can't be created in Arabic yet. Switch the language to English, French or Spanish to create one."
+    },
+    "copy": {
+      "button": "Copy",
+      "done": "Copied",
+      "plainOnly": "This browser copied plain text only.",
+      "error": "Couldn't copy the Brief."
     }
   }
 }

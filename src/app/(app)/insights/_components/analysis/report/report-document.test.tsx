@@ -23,7 +23,7 @@ const data = {
   figures: { displaced: 414252, affected: null, inNeed: 200000, returnees: null, fundingRequired: 4.2e9, fundingReceived: 1.1e9 },
   contextRisks: [{ key: "security", label: "Security", items: ["SAF and RSF clashes around al-Mazroub, 17 to 19 Sep.", "Drone strike on Mazrub on 25 Sep."], refs: [2], lineRefs: {} }],
   hazards: { hazards: [{ text: "Cholera: 45 cases in Bara.", refs: [1] }], vulnerabilities: [] },
-  displacement: { push: [{ text: "Attacks on civilians in Um Dibban.", refs: [2] }], return: [] },
+  displacement: { push: [{ text: "Attacks on civilians in Um Dibban.", refs: [2] }], return: [], summary: null, findings: [], dataCheck: null, flows: [], mapSince: null },
   sectors: [
     { id: "health", code: "HE", name: "Health", severity: "critical", impact: [], humanitarian: [], atRisk: [], needs: ["Cholera treatment capacity", "Measles vaccination"], interventions: ["WHO supplied cholera kits to Bara hospital."], coverage: [], refs: [1], lineRefs: {}, reportCount: 2, evidenceScope: "sector" },
     { id: "wash", code: "WA", name: "WASH", severity: "high", impact: [], humanitarian: [], atRisk: [], needs: ["Safe water in El Fāshir camps"], interventions: [], coverage: [], refs: [], lineRefs: {}, reportCount: 1, evidenceScope: "sector" },
@@ -102,7 +102,7 @@ describe("ReportDocument", () => {
         lineRefs: {},
       })),
       hazards: { hazards: lines(8, "Hazard").map((text) => ({ text, refs: [1] })), vulnerabilities: [] },
-      displacement: { push: lines(8, "Displacement").map((text) => ({ text, refs: [2] })), return: [] },
+      displacement: { push: lines(8, "Displacement").map((text) => ({ text, refs: [2] })), return: [], summary: null, findings: [], dataCheck: null, flows: [], mapSince: null },
       sectors: Array.from({ length: 8 }, (_, i) => sector(i)),
       sources: Array.from({ length: 40 }, (_, i) => ({
         id: `r${i}`,

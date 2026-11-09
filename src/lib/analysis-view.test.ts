@@ -54,13 +54,14 @@ function analysisDisplaced(displaced: number | null): Analysis {
     figures: { displaced, affected: null, inNeed: null, returnees: null, fundingRequired: null, fundingReceived: null },
     contextRisks: [],
     hazards: { hazards: [], vulnerabilities: [] },
-    displacement: { push: [], return: [] },
+    displacement: { push: [], return: [], summary: null, findings: [], dataCheck: null, flows: [], mapSince: null },
     sectors: [],
     sources: [],
     changes: { comparedTo: null, notes: {} },
     scenarios: null,
     keyFindings: [],
     eventSourceIds: [],
+    citedEvents: [],
   };
 }
 

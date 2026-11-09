@@ -9,6 +9,7 @@
  */
 
 import {
+  eventIdFromCitation,
   mapSituationAnalysis,
   type SaBullet,
   type SaPayload,
@@ -18,11 +19,7 @@ import { toMapPointGeometry } from "~/lib/geo/to-map-point";
 import { scopeLabel, type LabelLocation } from "~/lib/analysis-view";
 
 /** Knowledgebase incident hits cite as `event:<eventId>` (ADR-0006). */
-export const EVENT_CITATION_PREFIX = "event:";
-
-export function eventIdFromCitation(id: string): string | null {
-  return id.startsWith(EVENT_CITATION_PREFIX) ? id.slice(EVENT_CITATION_PREFIX.length) : null;
-}
+export { EVENT_CITATION_PREFIX, eventIdFromCitation } from "~/server/api/mappers/situation-analysis";
 
 interface RawScenarios {
   description?: string | null;
@@ -79,6 +76,9 @@ export interface Analysis extends SituationAnalysis {
   keyFindings: SaBullet[];
   /** Source ids (as in `sources[].id`) that are events, not reports. */
   eventSourceIds: string[];
+  /** The cited events' details, for the Sources tab. An event whose lookup
+   * failed is missing here; its `sources` entry still lists it. */
+  citedEvents: AnalysisEvent[];
 }
 
 function clean(s: string | null | undefined): string | null {
@@ -135,6 +135,7 @@ export function mapAnalysis(row: AnalysisRow, scopeName: string): Analysis {
       .map((f) => ({ text: clean(f.description) ?? "", refs: refsFrom(f.source_report_ids) }))
       .filter((f) => f.text),
     eventSourceIds: base.sources.map((s) => s.id).filter((id) => eventIdFromCitation(id) !== null),
+    citedEvents: [],
   };
 }
 
@@ -205,7 +206,11 @@ export function mapFigures(data: Record<string, unknown> | null | undefined): An
     refugees: toFigure(d.refugees),
     returneeStock: toFigure(d.returnee_stock),
     overallPin: toFigure(d.overall_pin),
-    pinBySector: PIN_SECTORS.map((sector) => ({ sector, figure: toFigure(d[`pin_${sector}`]) }))
+    pinBySector: PIN_SECTORS.map((sector) => {
+      // The stock is usually `pin_food_security`. Some payloads still use `pin_food`.
+      const raw = d[`pin_${sector}`] ?? (sector === "food_security" ? d.pin_food : undefined);
+      return { sector, figure: toFigure(raw) };
+    })
       .filter((r): r is { sector: PinSector; figure: AnalysisFigure } => r.figure !== null)
       .sort((a, b) => b.figure.value - a.figure.value),
   };

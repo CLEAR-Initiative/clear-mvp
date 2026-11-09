@@ -14,14 +14,13 @@
 | clear-mvp UI (Signal detail + map Marker detail) | **Done** — challenge modal, map place-pin, dual-pin / challenged affordance |
 | clear-mvp tRPC (`locationChallenge.*`) | **Done** — calls GraphQL below; degrades when schema missing |
 | clear-api persist + GraphQL | **Done** — `signalLocationChallenges` + `submitSignalLocationChallenge` |
-| Location admin accept / decline | **Not built and not near-roadmap** — v1 is queue-only forever until a later product decision |
+| Deciding a challenge | **Done** (superseding the queue-only v1, [ADR-0007](adr/0007-team-admins-decide-location-challenges.md)): the team's admin accepts, places a different point or declines in the Inbox (`decideSignalLocationChallenge`, `signalLocationChallengesToDecide`) |
 
 ### Explicit non-goals (near term)
 
-- **No admin / review UI** to confirm or decline a Location challenge or correction.
-  Status stays `consideration`. There is **no** near-roadmap ticket to ship Location
-  admin accept/reject with this wedge.
-- **No write-back** of the proposed point onto Signal (or Event) source geometry.
+- The v1 non-goals "no admin / review UI" and "no write-back" are superseded by
+  [ADR-0007](adr/0007-team-admins-decide-location-challenges.md): the team's admin decides
+  in the Inbox, and an accepted or placed point is written onto the Signal (never the Event).
 - **No Event / Alert pin challenges** — target entity is **Signal** only.
 - Improving precision over time (alias engine, gazetteer, Dataminr ingest fix) is
   **out of band** — persistence of the queue is the API prerequisite; learning from
@@ -42,7 +41,7 @@ the product cannot remember challenges across sessions or share them across anal
 | Correction | Optional; **point (lat/lng) required** if submitted; name/note optional |
 | FE correction UX | Place-on-map primary; manual coordinates secondary |
 | Schema shape | **One table** for v1 (`signal_location_challenges`) with optional proposed point fields |
-| Review | Queue only (`status = consideration`); **Location admin not near-roadmap** |
+| Review | v1: queue only (`status = consideration`). Now the team's admin decides in the Inbox ([ADR-0007](adr/0007-team-admins-decide-location-challenges.md)) |
 | Entry points (FE) | Signal detail + Signal marker detail panel |
 | Not this wedge | Forced top‑3 candidates, Feedback “Wrong area”, overwrite of source geometry, admin accept/reject |
 

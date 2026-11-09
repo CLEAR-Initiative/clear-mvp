@@ -35,6 +35,22 @@ export function isTeamAnalyst(
 }
 
 /**
+ * Whether the user holds the ANALYSIS permission set on any team — a team
+ * `analyst`, OR an `emergency_response_manager` (granted the analyst's analysis
+ * powers on top of its own; clear-api's `TEAM_ANALYST_ROLES`). Use this for
+ * analysis chrome: managing analyses, raising/promoting alerts, add-to-crisis.
+ * NOT for case-proposal deciding, which stays `analyst`/`team_admin` only —
+ * an ERM is deliberately excluded there (see `canDecideCaseProposals`). The
+ * server is the real, location-scoped gate; this only decides which chrome to
+ * show.
+ */
+export function hasAnalysisPowers(
+  teamMemberships: { role: string }[] | null | undefined,
+): boolean {
+  return isTeamAnalyst(teamMemberships) || isEmergencyResponseManager(teamMemberships);
+}
+
+/**
  * Client twin of clear-api `addEventToCrisis` / `createAlert`
  * `requireRole(["admin", "analyst"])`. Use this for Add-to-crisis and
  * Raise-alert chrome — NOT `isPlatformAdmin`, which is admin-only and
@@ -52,7 +68,7 @@ export function canWriteCrisisEvents(
   role: string | null | undefined,
   teamMemberships?: { role: string }[] | null,
 ): boolean {
-  return isPlatformAdmin(role) || isTeamAnalyst(teamMemberships);
+  return isPlatformAdmin(role) || hasAnalysisPowers(teamMemberships);
 }
 
 /**
@@ -65,7 +81,7 @@ export function canManageAnalyses(
   role: string | null | undefined,
   teamMemberships?: { role: string }[] | null,
 ): boolean {
-  return isPlatformAdmin(role) || isTeamAnalyst(teamMemberships);
+  return isPlatformAdmin(role) || hasAnalysisPowers(teamMemberships);
 }
 
 /**
