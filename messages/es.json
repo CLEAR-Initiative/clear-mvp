@@ -4189,5 +4189,14 @@
       "plainOnly": "Este navegador solo copió texto sin formato.",
       "error": "No se pudo copiar el Brief."
     }
+  },
+  "errorBoundary": {
+    "title": "Algo salió mal",
+    "message": "Esta página encontró un error. Recargar suele solucionarlo. Si sigue ocurriendo, avisa al equipo de CLEAR.",
+    "updatedTitle": "CLEAR se ha actualizado",
+    "updatedMessage": "Se publicó una nueva versión mientras esta página estaba abierta. Recarga para continuar.",
+    "reload": "Recargar página",
+    "tryAgain": "Reintentar",
+    "reference": "Referencia: {digest}"
   }
 }

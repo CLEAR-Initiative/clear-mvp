@@ -4189,5 +4189,14 @@
       "plainOnly": "Ce navigateur n'a copié que du texte brut.",
       "error": "Impossible de copier le Brief."
     }
+  },
+  "errorBoundary": {
+    "title": "Une erreur est survenue",
+    "message": "Cette page a rencontré une erreur. Un rechargement suffit généralement. Si le problème persiste, prévenez l'équipe CLEAR.",
+    "updatedTitle": "CLEAR a été mis à jour",
+    "updatedMessage": "Une nouvelle version a été publiée pendant que cette page était ouverte. Rechargez pour continuer.",
+    "reload": "Recharger la page",
+    "tryAgain": "Réessayer",
+    "reference": "Référence : {digest}"
   }
 }

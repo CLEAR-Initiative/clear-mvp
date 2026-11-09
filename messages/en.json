@@ -4189,5 +4189,14 @@
       "plainOnly": "This browser copied plain text only.",
       "error": "Couldn't copy the Brief."
     }
+  },
+  "errorBoundary": {
+    "title": "Something went wrong",
+    "message": "This page hit an error. Reloading usually fixes it. If it keeps happening, tell the CLEAR team.",
+    "updatedTitle": "CLEAR has been updated",
+    "updatedMessage": "A new version was released while this page was open. Reload to continue.",
+    "reload": "Reload page",
+    "tryAgain": "Try again",
+    "reference": "Reference: {digest}"
   }
 }
