@@ -13,7 +13,7 @@ const LOCK = `{
     },
   },
   "packages": {
-    "a": ["a@1.0.0", "", { "dependencies": { "b": "^1.0.0", "c": "^2.0.0" }, "optionalDependencies": { "@s/e": "^1.0.0" }, "peerDependencies": { "p": "*" }, "optionalPeers": ["p"] }, "sha512-a"],
+    "a": ["a@1.0.0", "", { "dependencies": { "b": "^1.0.0", "c": "^2.0.0" }, "optionalDependencies": { "@s/e": "^1.0.0" }, "peerDependencies": { "d": "*", "p": "*" }, "optionalPeers": ["d", "p"] }, "sha512-a"],
     "app": ["app@root:", {}],
     "b": ["b@1.0.0", "", {}, "sha512-b1"],
     "c": ["c@1.0.0", "", {}, "sha512-c1"],
@@ -36,10 +36,13 @@ describe("bun-lock-snapshot", () => {
       "pkg:npm/b@1.0.0",
       "pkg:npm/c@2.0.0",
       "pkg:npm/%40s/e@1.0.0",
+      "pkg:npm/d@1.0.0",
     ]);
     expect(resolved["pkg:npm/%40s/e@1.0.0"].dependencies).toEqual(["pkg:npm/b@2.0.0"]);
   });
 
+  // a's optional peer d is installed (as a dev root): it is linked above,
+  // but stays development because optional peers don't propagate runtime.
   it("marks direct dependencies and scopes by reachability from runtime roots", () => {
     const summary = Object.fromEntries(
       Object.values(resolved).map((p) => [p.package_url, `${p.relationship}/${p.scope}`]),

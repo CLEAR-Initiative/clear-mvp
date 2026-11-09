@@ -64,6 +64,15 @@ function installedDeps(meta = {}) {
 }
 
 /**
+ * Names a package links to in the snapshot: everything it installs, plus
+ * optional peers. Optional peers resolve only when something else installed
+ * them, and they don't make their target runtime (better-auth lists vitest).
+ */
+function linkedDeps(meta = {}) {
+  return [...installedDeps(meta), ...(meta.optionalPeers ?? [])];
+}
+
+/**
  * Resolves dependency `dep` as seen from lockfile key `fromKey`, the way bun
  * nests them: the closest "<ancestor path>/<dep>" entry wins, then the
  * hoisted "<dep>".
@@ -127,7 +136,7 @@ export function resolveDependencies(lock) {
     if (directKeys.has(key)) entry.relationship = "direct";
     if (scope === "runtime") entry.scope = "runtime";
 
-    for (const dep of installedDeps(meta)) {
+    for (const dep of linkedDeps(meta)) {
       const childKey = resolveKey(packages, key, dep);
       if (!childKey) continue;
       const child = splitSpec(packages[childKey][0]);
