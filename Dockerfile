@@ -14,7 +14,7 @@ WORKDIR /app
 # libc6-compat is required by some native bindings (sharp, swc) on Alpine.
 RUN apk add --no-cache libc6-compat
 
-COPY package.json bun.lockb ./
+COPY package.json bun.lock ./
 RUN bun install --frozen-lockfile
 
 # ─── Stage 2: build ─────────────────────────────────────────────────────────
