@@ -22,6 +22,7 @@ import type { GqlSignalLocationChallenge } from "~/lib/types/graphql";
 import { api } from "~/trpc/react";
 import styles from "./map-marker-detail.module.css";
 import type { PointAltitudeResult } from "~/lib/map/point-altitude";
+import { BidiTitle } from "~/components/ui/bidi-title";
 
 /** In-panel Location correction place-on-map flow (Signal pins only). */
 export type LocationCorrectionUi = {
@@ -538,7 +539,7 @@ export function MapMarkerDetail({
             className="border-b border-[var(--color-border)]"
           >
             <Text fw={600} size="sm" lineClamp={2} style={{ flex: 1 }}>
-              {marker.title}
+              <BidiTitle>{marker.title}</BidiTitle>
             </Text>
             <CloseButton size="sm" onClick={onClose} data-no-drag />
           </Group>
@@ -566,7 +567,7 @@ export function MapMarkerDetail({
             className="border-b border-[var(--color-border)]"
           >
             <Text fw={600} size="sm" lineClamp={2} style={{ flex: 1 }}>
-              {marker.title}
+              <BidiTitle>{marker.title}</BidiTitle>
             </Text>
             <CloseButton size="sm" onClick={onClose} data-no-drag />
           </Group>

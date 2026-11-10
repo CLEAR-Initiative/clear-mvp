@@ -29,6 +29,7 @@ import {
   resolveInclusionChipVisual,
   toggleInclusionFilter,
 } from "~/lib/history-filter-chips";
+import { BidiTitle } from "~/components/ui/bidi-title";
 
 const SUMMARY_CHIP_STYLE = {
   background: "var(--color-accent-light)",
@@ -559,7 +560,7 @@ export function HistoryTab({ alerts, events, signals, loading, hasMore, isFetchi
             const disasterPills = getDisasterPills(types);
             const titleText = (
               <Text fw={600} lineClamp={2} style={{ fontSize: 13, color: "var(--color-text-primary)", lineHeight: 1.4 }}>
-                {title}
+                <BidiTitle>{title}</BidiTitle>
               </Text>
             );
 
