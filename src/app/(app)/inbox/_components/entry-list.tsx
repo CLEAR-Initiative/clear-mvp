@@ -33,6 +33,9 @@ interface EntryListProps {
    * rather than "Nothing left in this view", which would claim an empty
    * queue that may not be. */
   loading?: boolean;
+  /** Entries of this view that clear-api holds and the list does not: the
+   * footer says so instead of "all loaded". */
+  notLoaded?: number;
 }
 
 function HotlineRow({ entry }: { entry: HotlineEntry }) {
@@ -157,6 +160,7 @@ export function EntryList({
   onSortToggle,
   onSelect,
   loading = false,
+  notLoaded = 0,
 }: EntryListProps) {
   const t = useTranslations("inbox");
   const tStates = useTranslations("common.states");
@@ -211,7 +215,13 @@ export function EntryList({
           );
         })}
         <div className={styles.listFooter} data-testid="inbox-list-footer" data-loading={loading}>
-          {loading ? tStates("loading") : entries.length > 0 ? t("list.allLoaded", { count: entries.length }) : t("list.empty")}
+          {loading
+            ? tStates("loading")
+            : notLoaded > 0
+              ? t("list.cut", { count: entries.length, more: notLoaded })
+              : entries.length > 0
+                ? t("list.allLoaded", { count: entries.length })
+                : t("list.empty")}
         </div>
       </div>
     </section>

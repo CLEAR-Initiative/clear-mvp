@@ -2875,6 +2875,7 @@
     },
     "list": {
       "allLoaded": "Les {count} entrées de cette vue sont chargées",
+      "cut": "{count} chargés. {more, plural, one {# autre n’est pas affiché} other {# autres ne sont pas affichés}} : traitez-en quelques-uns, puis rechargez.",
       "empty": "Plus rien dans cette vue",
       "priorEntries": "{count, plural, one {# entrée précédente} other {# entrées précédentes}}"
     },

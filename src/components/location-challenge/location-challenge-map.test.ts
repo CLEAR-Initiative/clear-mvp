@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { challengeMapPins, outlinePoints, pinBounds } from "./location-challenge-map";
+import { challengeMapPins, outlinePoints, pinBounds, shouldRefit } from "./location-challenge-map";
 
 describe("challengeMapPins", () => {
   it("draws the Signal's pin first, then the proposed point and the decider's", () => {
@@ -34,6 +34,16 @@ describe("suggestions and outlines", () => {
     expect(points).toHaveLength(7);
     expect(pinBounds(points)).toEqual([[29, 10], [33, 14]]);
     expect(outlinePoints([{ type: "Polygon", coordinates: null }])).toEqual([]);
+  });
+});
+
+describe("shouldRefit", () => {
+  it("frames pins that load late, until the reader takes the map or places a point", () => {
+    const at = { lat: 1, lng: 2 };
+    expect(shouldRefit({ interacted: false, picking: false, placed: null })).toBe(true);
+    expect(shouldRefit({ interacted: true, picking: false, placed: null })).toBe(false);
+    expect(shouldRefit({ interacted: false, picking: true, placed: null })).toBe(false);
+    expect(shouldRefit({ interacted: false, picking: false, placed: at })).toBe(false);
   });
 });
 

@@ -72,8 +72,10 @@ const locationsQuery = vi.fn((_input: unknown, opts: { enabled: boolean }) => ({
 }));
 /** Open unresolved place names the reader may resolve. */
 let placesData: GqlUnresolvedPlaceName[] = [];
+/** Rows clear-api holds beyond the ones the router read. */
+let placesNotLoaded = 0;
 const placesQuery = vi.fn((_input: unknown, opts: { enabled: boolean }) => ({
-  data: opts.enabled ? { items: placesData, totalCount: placesData.length } : undefined,
+  data: opts.enabled ? { items: placesData, totalCount: placesData.length + placesNotLoaded } : undefined,
   isFetching: false,
   isLoading: false,
   error: null,
@@ -332,6 +334,7 @@ function placeName(id: string, signalCount: number): GqlUnresolvedPlaceName {
 
 beforeEach(() => {
   placesData = [];
+  placesNotLoaded = 0;
   flagEnabled = true;
   flags = {};
   role = "admin";
@@ -581,6 +584,19 @@ describe("InboxPage places", () => {
     expect(rows[1]).toHaveTextContent("Name pn-2");
     expect(screen.getByText('awaiting:{"count":2}')).toBeInTheDocument();
     expect(screen.getByTestId("inbox-pane")).toHaveAttribute("data-kind", "place_name");
+  });
+
+  it("says so when the queue is longer than the list, instead of claiming it is all loaded", () => {
+    role = "admin";
+    flagEnabled = false;
+    placesData = [placeName("pn-1", 7)];
+    placesNotLoaded = 3000;
+    renderPage();
+    fireEvent.click(screen.getByTestId("inbox-tab-places"));
+    expect(screen.getByTestId("inbox-list-footer")).toHaveTextContent('list.cut:{"count":1,"more":3000}');
+    // Only on the Places tab: the other tabs' lists are whole.
+    fireEvent.click(screen.getByTestId("inbox-tab-locations"));
+    expect(screen.getByTestId("inbox-list-footer")).not.toHaveTextContent("list.cut");
   });
 
   it("takes a resolved name out of the queue, says how many signals moved, and refreshes the badge", () => {

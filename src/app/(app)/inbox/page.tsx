@@ -673,6 +673,12 @@ export default function InboxPage() {
             (access.locations && locationsQuery.isLoading) ||
             (access.places && placesQuery.isLoading)
           }
+          // Places beyond the read limit: the list must not claim to be whole.
+          notLoaded={
+            tab === "places" && placesQuery.data
+              ? Math.max(0, placesQuery.data.totalCount - placesQuery.data.items.length)
+              : 0
+          }
         />
         <ReadingPane
           entry={selected}

@@ -14,12 +14,15 @@ import { PLACE_NAME_RESOLUTION_KINDS } from "~/lib/place-names";
  */
 
 /** clear-api's page maximum for the queue. */
-const QUEUE_MAX = 200;
+const QUEUE_PAGE_MAX = 200;
+/** Pages read at most: 2000 names. Beyond that the list says it is cut. */
+const QUEUE_PAGE_READS_MAX = 10;
 
 const QUEUE_QUERY = `
-  query UnresolvedPlaceNames($first: Int) {
-    unresolvedPlaceNames(status: OPEN, first: $first) {
+  query UnresolvedPlaceNames($first: Int, $offset: Int) {
+    unresolvedPlaceNames(status: OPEN, first: $first, offset: $offset) {
       totalCount
+      hasMore
       items {
         id
         nameNorm
@@ -107,13 +110,32 @@ const resolutionInput = z
   });
 
 export const placeNamesRouter = createTRPCRouter({
-  /** Open rows the reader may resolve, the ones most Signals name first. */
+  /** Open rows the reader may resolve, the ones most Signals name first.
+   * Every page is read (clear-api gives 200 a page), so search and the list
+   * reach a name below the first page. `totalCount` is clear-api's count:
+   * larger than `items` only past the read limit, and the Inbox then says
+   * the list is cut. */
   queue: protectedProcedure.query(async ({ ctx }): Promise<{ items: GqlUnresolvedPlaceName[]; totalCount: number }> => {
     try {
-      const data = await graphqlFetch<{
-        unresolvedPlaceNames: { items: GqlUnresolvedPlaceName[]; totalCount: number };
-      }>(QUEUE_QUERY, { first: QUEUE_MAX }, cookieHeaders(ctx));
-      return { items: data.unresolvedPlaceNames?.items ?? [], totalCount: data.unresolvedPlaceNames?.totalCount ?? 0 };
+      const items: GqlUnresolvedPlaceName[] = [];
+      // A row recorded mid-read shifts the pages, so one can come back twice.
+      const seen = new Set<string>();
+      let totalCount = 0;
+      for (let read = 0; read < QUEUE_PAGE_READS_MAX; read++) {
+        const data = await graphqlFetch<{
+          unresolvedPlaceNames: { items: GqlUnresolvedPlaceName[]; totalCount: number; hasMore: boolean };
+        }>(QUEUE_QUERY, { first: QUEUE_PAGE_MAX, offset: read * QUEUE_PAGE_MAX }, cookieHeaders(ctx));
+        const page = data.unresolvedPlaceNames;
+        totalCount = page?.totalCount ?? 0;
+        for (const row of page?.items ?? []) {
+          if (!seen.has(row.id)) {
+            seen.add(row.id);
+            items.push(row);
+          }
+        }
+        if (!page?.hasMore || (page.items ?? []).length === 0) break;
+      }
+      return { items, totalCount: Math.max(totalCount, items.length) };
     } catch (err) {
       if (isGraphqlSchemaUnavailable(err)) return { items: [], totalCount: 0 };
       toTrpcError(err);

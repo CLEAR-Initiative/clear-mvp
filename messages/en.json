@@ -2875,6 +2875,7 @@
     },
     "list": {
       "allLoaded": "All {count} entries in this view loaded",
+      "cut": "{count} loaded. {more, plural, one {# more is} other {# more are}} not shown: resolve some, then reload.",
       "empty": "Nothing left in this view",
       "priorEntries": "{count, plural, one {# prior entry} other {# prior entries}}"
     },

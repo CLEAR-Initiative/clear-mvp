@@ -49,6 +49,12 @@ export function outlinePoints(outlines: readonly MapOutline[]): LatLng[] {
   return points;
 }
 
+/** Whether pins that arrive after the first frame may move the view: not
+ *  once the reader has moved the map, is placing a point, or has placed one. */
+export function shouldRefit(state: { interacted: boolean; picking: boolean; placed: LatLng | null }): boolean {
+  return !state.interacted && !state.picking && !state.placed;
+}
+
 const OUTLINE_SOURCE = "challenge-outline";
 const OUTLINE_FILL = "challenge-outline-fill";
 const OUTLINE_LINE = "challenge-outline-line";
@@ -101,6 +107,9 @@ export function LocationChallengeMap({
   const glRef = useRef<MapboxGL>(null);
   const markersRef = useRef<MapboxGL[]>([]);
   const framedRef = useRef(false);
+  /** The reader moved or zoomed the map, or is placing a point: the view is
+   *  theirs, and pins that load later no longer move it. */
+  const interactedRef = useRef(false);
   const styleRef = useRef(isDark);
   const [ready, setReady] = useState(false);
   const [failed, setFailed] = useState(!MAPBOX_TOKEN);
@@ -136,6 +145,12 @@ export function LocationChallengeMap({
         map.on("click", (e: { lngLat: LatLng }) => {
           if (pickRef.current.picking) pickRef.current.onPick({ lat: e.lngLat.lat, lng: e.lngLat.lng });
         });
+        // Only the reader's own gestures carry an originalEvent; fitBounds does not.
+        const taken = (e: { originalEvent?: unknown }) => {
+          if (e.originalEvent) interactedRef.current = true;
+        };
+        map.on("dragstart", taken);
+        map.on("zoomstart", taken);
         map.on("load", () => {
           if (!cancelled) setReady(true);
         });
@@ -176,10 +191,16 @@ export function LocationChallengeMap({
     });
     if (!framedRef.current) {
       framedRef.current = true;
-      const bounds = pinBounds(pins);
+      const bounds = pinBounds([...outlinePoints(areas), ...pins]);
       if (bounds) map.fitBounds(bounds, { padding: 48, maxZoom: 11, duration: 0 });
     } else if (placed && !map.getBounds().contains([placed.lng, placed.lat])) {
       map.easeTo({ center: [placed.lng, placed.lat] });
+    } else if (shouldRefit({ interacted: interactedRef.current, picking, placed })) {
+      // Suggestions that load after the first frame (a query) would otherwise
+      // sit off-screen: frame them with the outlines, until the reader takes
+      // the map.
+      const bounds = pinBounds([...outlinePoints(areas), ...pins]);
+      if (bounds) map.fitBounds(bounds, { padding: 48, maxZoom: 11, duration: 0 });
     }
     // pinsKey stands for the pins.
     // eslint-disable-next-line react-hooks/exhaustive-deps

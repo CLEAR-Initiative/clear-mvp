@@ -2875,6 +2875,7 @@
     },
     "list": {
       "allLoaded": "Las {count} entradas de esta vista están cargadas",
+      "cut": "{count} cargados. {more, plural, one {# más no se muestra} other {# más no se muestran}}: resuelva algunos y vuelva a cargar.",
       "empty": "No queda nada en esta vista",
       "priorEntries": "{count, plural, one {# entrada previa} other {# entradas previas}}"
     },
