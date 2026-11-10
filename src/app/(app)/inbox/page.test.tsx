@@ -86,6 +86,11 @@ const resolvePlaceMutate = vi.fn(
     opts.onSuccess?.({ id: "pn-1", status: "RESOLVED", signalsMoved: 3 }),
 );
 vi.mock("~/lib/analytics/track", () => ({ track: vi.fn() }));
+vi.mock("./_components/aliases-view", () => ({
+  AliasesView: (props: { canPlaceAnywhere: boolean }) => (
+    <div data-testid="aliases-view" data-anywhere={props.canPlaceAnywhere} />
+  ),
+}));
 /** A decision succeeds unless a test makes it fail. */
 const decideLocationMutate = vi.fn((_input: unknown, opts?: { onSuccess?: () => void }) => opts?.onSuccess?.());
 const locationInvalidate = {
@@ -584,6 +589,41 @@ describe("InboxPage places", () => {
     expect(rows[1]).toHaveTextContent("Name pn-2");
     expect(screen.getByText('awaiting:{"count":2}')).toBeInTheDocument();
     expect(screen.getByTestId("inbox-pane")).toHaveAttribute("data-kind", "place_name");
+  });
+
+  it("switches the Places tab between its queue and the alias list", () => {
+    role = "admin";
+    flagEnabled = false;
+    placesData = [placeName("pn-1", 7)];
+    renderPage();
+    // The switch belongs to the Places tab only.
+    expect(screen.queryByTestId("inbox-places-view")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("inbox-tab-places"));
+    expect(screen.getByTestId("inbox-places-view-queue")).toHaveAttribute("aria-pressed", "true");
+    expect(screen.queryByTestId("aliases-view")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId("inbox-places-view-aliases"));
+    expect(screen.getByTestId("aliases-view")).toHaveAttribute("data-anywhere", "true");
+    expect(screen.getByRole("tabpanel")).toContainElement(screen.getByTestId("aliases-view"));
+    // The queue stays mounted under it, hidden, and comes back as it was.
+    expect(screen.getByTestId("inbox-list")).not.toBeVisible();
+    fireEvent.click(screen.getByTestId("inbox-places-view-queue"));
+    expect(screen.queryByTestId("aliases-view")).not.toBeInTheDocument();
+    expect(screen.getByTestId("inbox-list")).toBeVisible();
+
+    // Leaving the tab leaves the alias list too.
+    fireEvent.click(screen.getByTestId("inbox-places-view-aliases"));
+    fireEvent.click(screen.getByTestId("inbox-tab-locations"));
+    expect(screen.queryByTestId("aliases-view")).not.toBeInTheDocument();
+  });
+
+  it("a team admin gets the alias list without the platform admin's reach", () => {
+    role = "team_admin";
+    flagEnabled = false;
+    renderPage();
+    fireEvent.click(screen.getByTestId("inbox-tab-places"));
+    fireEvent.click(screen.getByTestId("inbox-places-view-aliases"));
+    expect(screen.getByTestId("aliases-view")).toHaveAttribute("data-anywhere", "false");
   });
 
   it("says so when the queue is longer than the list, instead of claiming it is all loaded", () => {

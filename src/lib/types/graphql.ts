@@ -166,6 +166,35 @@ export interface GqlUnresolvedPlaceName {
   signals: GqlUnresolvedPlaceNameSignal[];
 }
 
+/** A spelling that CLEAR maps to one of its own locations (clear-api
+ *  `PlaceAlias`, ADR-0019). */
+export interface GqlPlaceAlias {
+  id: string;
+  nameNorm: string;
+  /** The spelling to show. */
+  nameDisplay: string;
+  countryCode: string;
+  /** Null: the alias applies in the whole country. */
+  scopeLocationId: string | null;
+  scopeLocation: { id: string; name: string } | null;
+  locationId: string;
+  location: { id: string; name: string; level: number; ancestors: { id: string; name: string; level: number }[] } | null;
+  source: "REVIEW" | "SEED" | "MANUAL";
+  createdByName: string | null;
+  createdAt: string;
+  note: string | null;
+  /** Whether the reader may change or delete it. */
+  canEdit: boolean;
+}
+
+/** A country an alias can belong to, with the states it can be scoped to. */
+export interface PlaceAliasCountry {
+  countryCode: string;
+  name: string;
+  countryLocationId: string | null;
+  states: { id: string; name: string }[];
+}
+
 /** A place a queued name can mean (clear-api `placeNameSuggestions`). */
 export interface GqlPlaceNameSuggestion {
   kind: "GEONAMES" | "LOCATION";

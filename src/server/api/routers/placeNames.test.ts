@@ -157,3 +157,81 @@ describe("placeNames.resolve", () => {
     }
   });
 });
+
+describe("placeNames aliases", () => {
+  const item = { id: "a1", nameDisplay: "Um Dabakir", canEdit: true };
+
+  it("lists a page and hands on clear-api's cursor while there is more", async () => {
+    graphqlFetch.mockResolvedValueOnce({ placeAliases: { items: [item], totalCount: 120, hasMore: true, endCursor: "a1" } });
+    expect(await caller().placeNames.aliases({ search: " kadugli ", source: "MANUAL" })).toEqual({
+      items: [item],
+      totalCount: 120,
+      nextCursor: "a1",
+    });
+    expect(graphqlFetch.mock.calls[0]![1]).toEqual({ search: "kadugli", source: "MANUAL", first: 50, after: undefined });
+
+    graphqlFetch.mockResolvedValueOnce({ placeAliases: { items: [item], totalCount: 120, hasMore: false, endCursor: null } });
+    expect((await caller().placeNames.aliases({ cursor: "a1" })).nextCursor).toBeNull();
+    expect(graphqlFetch.mock.calls[1]![1]).toMatchObject({ after: "a1" });
+  });
+
+  it("reads as empty against a clear-api without the alias list", async () => {
+    graphqlFetch.mockRejectedValue(new Error('Cannot query field "placeAliases" on type "Query".'));
+    expect(await caller().placeNames.aliases()).toEqual({ items: [], totalCount: 0, nextCursor: null });
+    expect(await caller().placeNames.aliasScopes()).toEqual([]);
+  });
+
+  it("builds the countries and states for the form", async () => {
+    graphqlFetch.mockResolvedValueOnce({
+      pipelineCountries: [{ name: "Sudan", pcode: "SD" }],
+      countries: [{ id: "C1", name: "Sudan", pCode: null }],
+      states: [{ id: "S1", name: "South Kordofan", parent: { id: "C1" } }],
+    });
+    expect(await caller().placeNames.aliasScopes()).toEqual([
+      { countryCode: "SD", name: "Sudan", countryLocationId: "C1", states: [{ id: "S1", name: "South Kordofan" }] },
+    ]);
+  });
+
+  it("creates an alias with one target, and refuses none or two", async () => {
+    graphqlFetch.mockResolvedValue({ createPlaceAlias: item });
+    const api = caller().placeNames;
+    const base = { name: " Um Dabakir ", countryCode: "SD", scopeLocationId: "S1" };
+    expect(await api.createAlias({ ...base, nameAr: " ", locationId: "D1", note: " " })).toEqual(item);
+    expect(graphqlFetch.mock.calls[0]![1]).toEqual({
+      input: { name: "Um Dabakir", nameAr: undefined, countryCode: "SD", scopeLocationId: "S1", locationId: "D1", note: undefined, point: undefined },
+    });
+    await api.createAlias({ ...base, scopeLocationId: null, point: { lat: 11, lng: 29, name: "Um Dabakir" } });
+    expect((graphqlFetch.mock.calls[1]![1] as { input: unknown }).input).toMatchObject({
+      scopeLocationId: null,
+      point: { lat: 11, lng: 29, name: "Um Dabakir" },
+    });
+    graphqlFetch.mockClear();
+    await expect(api.createAlias(base)).rejects.toMatchObject({ code: "BAD_REQUEST" });
+    await expect(api.createAlias({ ...base, locationId: "D1", point: { lat: 1, lng: 1 } })).rejects.toMatchObject({ code: "BAD_REQUEST" });
+    expect(graphqlFetch).not.toHaveBeenCalled();
+  });
+
+  it("sends only the fields the reader changed; a null scope means the whole country", async () => {
+    graphqlFetch.mockResolvedValue({ updatePlaceAlias: item });
+    const api = caller().placeNames;
+    await api.updateAlias({ id: "a1", change: { note: " Checked " } });
+    expect(graphqlFetch.mock.calls[0]![1]).toEqual({ id: "a1", input: { note: "Checked" } });
+    await api.updateAlias({ id: "a1", change: { scopeLocationId: null } });
+    expect(graphqlFetch.mock.calls[1]![1]).toEqual({ id: "a1", input: { scopeLocationId: null } });
+    await api.updateAlias({ id: "a1", change: { locationId: "D2", note: "" } });
+    expect(graphqlFetch.mock.calls[2]![1]).toEqual({ id: "a1", input: { locationId: "D2", note: null } });
+    graphqlFetch.mockClear();
+    await expect(api.updateAlias({ id: "a1", change: {} })).rejects.toMatchObject({ code: "BAD_REQUEST" });
+    await expect(
+      api.updateAlias({ id: "a1", change: { locationId: "D1", point: { lat: 1, lng: 1 } } }),
+    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
+    expect(graphqlFetch).not.toHaveBeenCalled();
+  });
+
+  it("deletes an alias, and passes a refusal on with its code", async () => {
+    graphqlFetch.mockResolvedValueOnce({ deletePlaceAlias: true });
+    expect(await caller().placeNames.deleteAlias({ id: "a1" })).toEqual({ deleted: true });
+    graphqlFetch.mockRejectedValueOnce(new GraphQLRequestError("refused", "FORBIDDEN"));
+    await expect(caller().placeNames.deleteAlias({ id: "a1" })).rejects.toMatchObject({ code: "FORBIDDEN" });
+  });
+});

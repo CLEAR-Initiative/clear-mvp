@@ -1,4 +1,9 @@
-import type { GqlPlaceNameSuggestion, GqlUnresolvedPlaceName } from "~/lib/types/graphql";
+import type {
+  GqlPlaceAlias,
+  GqlPlaceNameSuggestion,
+  GqlUnresolvedPlaceName,
+  PlaceAliasCountry,
+} from "~/lib/types/graphql";
 
 /**
  * Unresolved place names in the Inbox (clear-api ADR-0019): a place name, as
@@ -75,4 +80,82 @@ export function signalExcerpt(signal: { title: string | null; description: strin
   const text = (signal?.description?.trim() || signal?.title?.trim() || "").replace(/\s+/g, " ");
   if (!text) return null;
   return text.length > max ? `${text.slice(0, max - 1).trimEnd()}…` : text;
+}
+
+/* ─── The alias list ─── */
+
+/** Where an alias came from (clear-api `PlaceAliasSource`). */
+export const PLACE_ALIAS_SOURCES = ["REVIEW", "SEED", "MANUAL"] as const;
+export type PlaceAliasSource = (typeof PLACE_ALIAS_SOURCES)[number];
+
+/** A country's name without its long official form: "Venezuela (Bolivarian
+ *  Republic of)" and "the Sudan" match "Venezuela" and "Sudan". */
+function countryKey(name: string): string {
+  return name
+    .replace(/\([^)]*\)/g, "")
+    .trim()
+    .toLowerCase()
+    .replace(/^the\s+/, "");
+}
+
+/**
+ * The countries an alias can belong to, each with its states, from clear-api's
+ * pipeline countries (which carry the ISO-2 code an alias needs) and its
+ * level-0 and level-1 locations. A country location is matched by its P-Code,
+ * else by name: a P-Code is missing on many installs. A country with no
+ * matching location still lists, with no states: a country-wide alias needs
+ * only the code.
+ */
+export function aliasCountries(data: {
+  pipelineCountries: { name: string; pcode: string }[];
+  countries: { id: string; name: string; pCode: string | null }[];
+  states: { id: string; name: string; parent: { id: string } | null }[];
+}): PlaceAliasCountry[] {
+  return (data.pipelineCountries ?? []).map((country) => {
+    const code = country.pcode.toUpperCase();
+    const location =
+      (data.countries ?? []).find((l) => l.pCode?.toUpperCase() === code) ??
+      (data.countries ?? []).find((l) => countryKey(l.name) === countryKey(country.name)) ??
+      null;
+    const states = location
+      ? (data.states ?? [])
+          .filter((s) => s.parent?.id === location.id)
+          .map((s) => ({ id: s.id, name: s.name }))
+          .sort((a, b) => a.name.localeCompare(b.name))
+      : [];
+    return { countryCode: code, name: country.name, countryLocationId: location?.id ?? null, states };
+  });
+}
+
+/** An alias's target as a path, finest first: "Um Dabakir, Kadugli, South
+ *  Kordofan". The country is left out: the list shows one country's aliases
+ *  side by side with their scope. */
+export function aliasTargetPath(alias: Pick<GqlPlaceAlias, "location">): string | null {
+  const location = alias.location;
+  if (!location) return null;
+  const above = [...location.ancestors].filter((a) => a.level > 0).sort((a, b) => b.level - a.level);
+  return [location.name, ...above.map((a) => a.name)].join(", ");
+}
+
+export type AliasErrorKey =
+  | "aliases.errors.forbidden"
+  | "aliases.errors.badInput"
+  | "aliases.errors.conflict"
+  | "aliases.errors.gone"
+  | "aliases.errors.failed";
+
+/** The `inbox` message for a refused alias write, by the tRPC code. */
+export function aliasErrorKey(code: string | null | undefined): AliasErrorKey {
+  switch (code) {
+    case "FORBIDDEN":
+      return "aliases.errors.forbidden";
+    case "BAD_REQUEST":
+      return "aliases.errors.badInput";
+    case "CONFLICT":
+      return "aliases.errors.conflict";
+    case "NOT_FOUND":
+      return "aliases.errors.gone";
+    default:
+      return "aliases.errors.failed";
+  }
 }

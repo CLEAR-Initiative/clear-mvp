@@ -3086,6 +3086,79 @@
         "failed": "Impossible d’enregistrer la réponse. Réessayez."
       }
     },
+    "placesView": {
+      "queue": "File",
+      "aliases": "Alias",
+      "label": "Vue des lieux"
+    },
+    "aliases": {
+      "search": "Rechercher une orthographe ou un lieu",
+      "sourceAll": "Toutes les sources",
+      "count": "{count, plural, one {# alias} other {# alias}}",
+      "add": "Ajouter un alias",
+      "edit": "Modifier",
+      "delete": "Supprimer",
+      "cancel": "Annuler",
+      "loadError": "Impossible de charger les alias. Réessayez.",
+      "empty": "Aucun alias pour l’instant. Résolvez un nom de lieu dans la file, ou ajoutez-en un ici.",
+      "noMatch": "Aucun alias ne correspond.",
+      "loadMore": "Charger plus ({shown} sur {total})",
+      "targetGone": "Le lieu n’existe plus",
+      "wholeCountry": "Tout le pays ({country})",
+      "noAuthor": "CLEAR",
+      "columns": {
+        "spelling": "Orthographe",
+        "target": "Désigne",
+        "scope": "S’applique dans",
+        "source": "Source",
+        "author": "Ajouté par",
+        "added": "Ajouté le",
+        "actions": "Actions"
+      },
+      "sources": {
+        "REVIEW": "Revue",
+        "SEED": "Liste initiale",
+        "MANUAL": "Ajouté à la main"
+      },
+      "levels": {
+        "landmark": "Repère",
+        "district": "District",
+        "area": "Zone"
+      },
+      "deleteTitle": "Supprimer cet alias ?",
+      "deleteBody": "CLEAR ne placera plus <b>{name}</b> avec cet alias. Le nom de lieu retourne dans la file.",
+      "deleteKeeps": "Les signaux déjà déplacés par cet alias restent où ils sont.",
+      "deleteYes": "Supprimer l’alias",
+      "form": {
+        "addTitle": "Ajouter un alias de lieu",
+        "editTitle": "Modifier un alias de lieu",
+        "spelling": "Orthographe",
+        "spellingHelp": "Le nom tel que les publications l’écrivent, en caractères latins.",
+        "spellingFixed": "L’orthographe ne peut pas changer. Pour la changer, supprimez cet alias et ajoutez-en un autre.",
+        "arabic": "Orthographe arabe (facultatif)",
+        "arabicHelp": "Elle reçoit son propre alias vers le même lieu.",
+        "country": "Pays",
+        "scope": "S’applique dans",
+        "scopeHelp": "L’alias sert seulement aux publications placées dans cet État.",
+        "wholeCountry": "Tout le pays ({country})",
+        "target": "Où est-ce ?",
+        "keep": "Garder : {place}",
+        "pick": "Un lieu connu de CLEAR ou de GeoNames",
+        "point": "Un point sur la carte",
+        "suggestionsNeed": "Saisissez l’orthographe et choisissez où elle s’applique pour voir des lieux.",
+        "outsideScope": "à {km} km en dehors",
+        "note": "Note (facultatif)",
+        "saveNew": "Ajouter l’alias",
+        "saveChange": "Enregistrer"
+      },
+      "errors": {
+        "forbidden": "Vous ne pouvez pas modifier cet alias, ni le placer ici : il est en dehors de la zone de votre équipe. Un administrateur de la plateforme le peut.",
+        "badInput": "Ce lieu ou ce périmètre n’est pas valide pour cet alias.",
+        "conflict": "Cette orthographe a déjà un alias dans ce périmètre.",
+        "gone": "Cet alias n’existe plus. Rechargez la liste.",
+        "failed": "Enregistrement impossible. Réessayez."
+      }
+    },
     "cases": {
       "preview": "{count, plural, =0 {Tous les signaux proposés décidés} one {# signal proposé à examiner} other {# signaux proposés à examiner}} · {hazard}"
     }

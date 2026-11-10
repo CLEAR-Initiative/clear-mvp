@@ -3086,6 +3086,79 @@
         "failed": "Could not save the answer. Try again."
       }
     },
+    "placesView": {
+      "queue": "Queue",
+      "aliases": "Aliases",
+      "label": "Places view"
+    },
+    "aliases": {
+      "search": "Search a spelling or a place",
+      "sourceAll": "All sources",
+      "count": "{count, plural, one {# alias} other {# aliases}}",
+      "add": "Add alias",
+      "edit": "Edit",
+      "delete": "Delete",
+      "cancel": "Cancel",
+      "loadError": "Could not load the aliases. Try again.",
+      "empty": "No aliases yet. Resolve a place name in the queue, or add one here.",
+      "noMatch": "No alias matches.",
+      "loadMore": "Load more ({shown} of {total})",
+      "targetGone": "The place no longer exists",
+      "wholeCountry": "Whole country ({country})",
+      "noAuthor": "CLEAR",
+      "columns": {
+        "spelling": "Spelling",
+        "target": "Points to",
+        "scope": "Applies in",
+        "source": "Source",
+        "author": "Added by",
+        "added": "Added",
+        "actions": "Actions"
+      },
+      "sources": {
+        "REVIEW": "Review",
+        "SEED": "Seed list",
+        "MANUAL": "Added by hand"
+      },
+      "levels": {
+        "landmark": "Landmark",
+        "district": "District",
+        "area": "Area"
+      },
+      "deleteTitle": "Delete this alias?",
+      "deleteBody": "CLEAR will stop placing <b>{name}</b> with this alias. The place name goes back to the queue.",
+      "deleteKeeps": "Signals that this alias already moved stay where they are.",
+      "deleteYes": "Delete alias",
+      "form": {
+        "addTitle": "Add a place alias",
+        "editTitle": "Change a place alias",
+        "spelling": "Spelling",
+        "spellingHelp": "The name as posts write it, in Latin script.",
+        "spellingFixed": "The spelling cannot change. To change it, delete this alias and add another.",
+        "arabic": "Arabic spelling (optional)",
+        "arabicHelp": "It gets its own alias to the same place.",
+        "country": "Country",
+        "scope": "Applies in",
+        "scopeHelp": "The alias is used only for posts placed in this state.",
+        "wholeCountry": "Whole country ({country})",
+        "target": "Where is it?",
+        "keep": "Keep: {place}",
+        "pick": "A place CLEAR or GeoNames knows",
+        "point": "A point on the map",
+        "suggestionsNeed": "Enter the spelling and choose where it applies to see places.",
+        "outsideScope": "{km} km outside",
+        "note": "Note (optional)",
+        "saveNew": "Add alias",
+        "saveChange": "Save changes"
+      },
+      "errors": {
+        "forbidden": "You can't change this alias, or put it there: it is outside your team's area. A platform admin can.",
+        "badInput": "That place or scope is not valid for this alias.",
+        "conflict": "This spelling already has an alias in this scope.",
+        "gone": "This alias no longer exists. Reload the list.",
+        "failed": "Could not save. Try again."
+      }
+    },
     "cases": {
       "preview": "{count, plural, =0 {All proposed signals decided} one {# proposed signal to review} other {# proposed signals to review}} · {hazard}"
     }

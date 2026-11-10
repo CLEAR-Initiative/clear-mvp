@@ -42,6 +42,7 @@ import type { GqlCaseProposal, GqlCaseProposalDecision, GqlReviewCaseProposal } 
 import { proposalQueueMatchesServer, publishInboxUnread } from "~/lib/inbox-badge";
 import { EntryList } from "./_components/entry-list";
 import { ReadingPane } from "./_components/reading-pane";
+import { AliasesView } from "./_components/aliases-view";
 import { AddToClearModal, type SignalDraft } from "./_components/add-to-clear-modal";
 import styles from "./inbox.module.css";
 
@@ -220,6 +221,9 @@ export default function InboxPage() {
   const tab: InboxTab = tabs.includes(chosenTab) ? chosenTab : (tabs[0] ?? "community");
   const filters = useMemo(() => filtersFor(tab), [tab]);
   const filter: InboxFilter = filters.includes(chosenFilter) ? chosenFilter : filters[0]!;
+  /** The Places tab shows its queue, or the alias list the queue builds up. */
+  const [placesView, setPlacesView] = useState<"queue" | "aliases">("queue");
+  const showAliases = tab === "places" && placesView === "aliases";
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState<InboxSort>("reportsFirst");
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -649,14 +653,41 @@ export default function InboxPage() {
             ))}
           </div>
         )}
+        {tab === "places" && (
+          <div className={styles.filters} role="group" aria-label={t("placesView.label")} data-testid="inbox-places-view">
+            {(["queue", "aliases"] as const).map((view) => (
+              <button
+                type="button"
+                key={view}
+                className={styles.filterPill}
+                data-active={placesView === view}
+                aria-pressed={placesView === view}
+                data-testid={`inbox-places-view-${view}`}
+                onClick={() => setPlacesView(view)}
+              >
+                {t(`placesView.${view}`)}
+                {view === "queue" && <span className={styles.filterCount}>{counts.places}</span>}
+              </button>
+            ))}
+          </div>
+        )}
       </header>
+
+      {showAliases && (
+        <div id="inbox-tabpanel" role="tabpanel" aria-labelledby="inbox-tab-places" style={{ overflow: "auto", flex: 1 }}>
+          <AliasesView canPlaceAnywhere={isPlatformAdmin(role)} />
+        </div>
+      )}
 
       <div
         className={styles.row}
-        id="inbox-tabpanel"
-        role="tabpanel"
-        aria-labelledby={`inbox-tab-${tab}`}
+        id={showAliases ? undefined : "inbox-tabpanel"}
+        role={showAliases ? undefined : "tabpanel"}
+        aria-labelledby={showAliases ? undefined : `inbox-tab-${tab}`}
         data-mobile-pane={mobilePane && selected !== null}
+        // The queue stays mounted under the alias list, so its selection and
+        // scroll are there when the reader comes back.
+        style={showAliases ? { display: "none" } : undefined}
       >
         <EntryList
           entries={visible}
