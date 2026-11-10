@@ -3969,7 +3969,16 @@
       },
       "copyLink": "Copiar enlace",
       "copied": "Enlace copiado",
-      "everyCountry": "Lee todos los países: el filtro de país no se aplica a esta métrica."
+      "everyCountry": "Lee todos los países: el filtro de país no se aplica a esta métrica.",
+      "replay": {
+        "label": "Ejecución de repetición",
+        "placeholder": "Ninguna",
+        "noVersion": "versión desconocida",
+        "option": "{version} · {date} · {n, plural, one {# señal} other {# señales}}",
+        "legend": "Repetición ({version})",
+        "coverage": "Ejecución de repetición {version}, iniciada el {date}: reprocesó {replayed} de {total} señales del periodo ({group}). La línea de repetición muestra lo que esa versión del pipeline hace con esas señales, en el intervalo en que cada una se localizó por primera vez. Las demás líneas muestran lo que el pipeline entregó en su momento.",
+        "error": "No se pudo cargar la línea de repetición: {message}"
+      }
     },
     "precision": {
       "title": "Precisión de ubicación",

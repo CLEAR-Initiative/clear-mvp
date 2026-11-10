@@ -3969,7 +3969,16 @@
       },
       "copyLink": "Copier le lien",
       "copied": "Lien copié",
-      "everyCountry": "Lit tous les pays : le filtre par pays ne s'applique pas à cette métrique."
+      "everyCountry": "Lit tous les pays : le filtre par pays ne s'applique pas à cette métrique.",
+      "replay": {
+        "label": "Exécution de rejeu",
+        "placeholder": "Aucune",
+        "noVersion": "version inconnue",
+        "option": "{version} · {date} · {n, plural, one {# signal} other {# signaux}}",
+        "legend": "Rejeu ({version})",
+        "coverage": "Exécution de rejeu {version}, lancée le {date} : elle a retraité {replayed} des {total} signaux de la période ({group}). La ligne de rejeu montre ce que cette version du pipeline fait de ces signaux, dans l'intervalle où chacun a été localisé pour la première fois. Les autres lignes montrent ce que le pipeline a livré à l'époque.",
+        "error": "Impossible de charger la ligne de rejeu : {message}"
+      }
     },
     "precision": {
       "title": "Précision de localisation",
