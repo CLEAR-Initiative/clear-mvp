@@ -2822,6 +2822,7 @@
       "pins": {
         "source": "Actuel",
         "proposed": "Proposé",
+        "suggestion": "Suggéré",
         "placed": "Votre point"
       },
       "unavailable": "La carte n’a pas pu se charger. Vous pouvez quand même rechercher le lieu ou saisir ses coordonnées."
@@ -2855,7 +2856,8 @@
     "tabs": {
       "community": "Signaux communautaires",
       "proposals": "Signaux proposés",
-      "locations": "Changements d’emplacement"
+      "locations": "Changements d’emplacement",
+      "places": "Lieux"
     },
     "filters": {
       "community": "Tous",
@@ -2863,7 +2865,8 @@
       "unclassified": "Non classés",
       "chatter": "Bavardage",
       "proposals": "Signaux proposés",
-      "locations": "Changements d’emplacement"
+      "locations": "Changements d’emplacement",
+      "places": "Lieux"
     },
     "search": "Rechercher texte, réf. d'admission",
     "sort": {
@@ -2872,6 +2875,7 @@
     },
     "list": {
       "allLoaded": "Les {count} entrées de cette vue sont chargées",
+      "cut": "{count} chargés. {more, plural, one {# autre n’est pas affiché} other {# autres ne sont pas affichés}} : traitez-en quelques-uns, puis rechargez.",
       "empty": "Plus rien dans cette vue",
       "priorEntries": "{count, plural, one {# entrée précédente} other {# entrées précédentes}}"
     },
@@ -2988,7 +2992,8 @@
     },
     "kinds": {
       "cases": "Signaux proposés",
-      "location": "Emplacement"
+      "location": "Emplacement",
+      "place": "Nom de lieu"
     },
     "event": {
       "untitled": "Événement sans titre",
@@ -3033,6 +3038,52 @@
         "outsideCoverage": "Ce lieu est hors des zones couvertes par CLEAR.",
         "conflict": "Ce changement a déjà été tranché, ou remplacé par un plus récent.",
         "failed": "Impossible d’enregistrer la décision. Réessayez."
+      }
+    },
+    "place": {
+      "preview": "{count, plural, one {# signal} other {# signaux}} · {area}",
+      "seen": "{count, plural, one {# signal} other {# signaux}} dans {area} · vu pour la dernière fois le {date}",
+      "posts": "{count, plural, one {La publication qui le cite} other {Publications qui le citent}}",
+      "noPosts": "Aucune publication à afficher.",
+      "postHidden": "Vous ne pouvez pas lire ce signal.",
+      "openSignal": "Ouvrir le signal",
+      "reasons": {
+        "NO_MATCH": "Aucune correspondance dans {area}",
+        "OUTSIDE_AREA": "Un lieu de ce nom existe en dehors de {area}"
+      },
+      "suggestions": "Lieux possibles",
+      "suggestionsLoading": "Recherche de lieux…",
+      "noSuggestions": "Aucun lieu au nom proche. Placez un point sur la carte.",
+      "kinds": {
+        "geonames": "Lieu GeoNames",
+        "district": "District dans CLEAR",
+        "landmark": "Repère dans CLEAR"
+      },
+      "where": {
+        "inside": "Dans {area}",
+        "outside": "À {km} km de {area}",
+        "unknown": "Distance inconnue"
+      },
+      "placeTitle": "Placer le point",
+      "placeHint": "Cliquez sur la carte à l’endroit où se trouve {name}, ou recherchez le lieu. Vous pouvez aussi saisir ses coordonnées.",
+      "actions": {
+        "use": "Utiliser ce lieu",
+        "place": "Placer sur la carte",
+        "save": "Enregistrer ce point",
+        "cancel": "Annuler",
+        "notAPlace": "Pas un lieu",
+        "ambiguous": "Ambigu"
+      },
+      "toast": {
+        "resolved": "Lieu enregistré. {count, plural, =0 {Aucun signal déplacé.} one {# signal déplacé.} other {# signaux déplacés.}}",
+        "notAPlace": "Marqué comme n’étant pas un lieu. Il ne reviendra pas.",
+        "ambiguous": "Marqué comme ambigu. Il reste hors de la file jusqu’à sa résolution."
+      },
+      "errors": {
+        "forbidden": "Vous ne pouvez pas placer ce lieu ici : il est en dehors de l’État de ce nom de lieu.",
+        "badPlace": "Ce lieu est en dehors du pays, ou en dehors des zones couvertes par CLEAR.",
+        "conflict": "Ce nom de lieu a déjà été résolu, ou son orthographe a déjà un alias.",
+        "failed": "Impossible d’enregistrer la réponse. Réessayez."
       }
     },
     "cases": {

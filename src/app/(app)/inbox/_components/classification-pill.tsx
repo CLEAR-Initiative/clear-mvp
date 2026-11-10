@@ -2,13 +2,14 @@
 
 import type { CSSProperties } from "react";
 import { useTranslations } from "next-intl";
-import { IconAlertTriangle, IconMapPin, IconWorld } from "@tabler/icons-react";
+import { IconAlertTriangle, IconMapPin, IconMapPinQuestion, IconWorld } from "@tabler/icons-react";
 import type {
   CaseGroupEntry,
   HotlineEntry,
   InboxClassification,
   InboxFailure,
   LocationChallengeEntry,
+  PlaceNameEntry,
 } from "~/lib/hotline-inbox";
 
 const STYLES: Record<InboxClassification, { bg: string; color: string }> = {
@@ -129,10 +130,34 @@ export function InboxLocationPill() {
   );
 }
 
+/** The Review-item kind pill for an unresolved place name. */
+export function InboxPlacePill() {
+  const t = useTranslations("inbox");
+  return (
+    <span
+      data-testid="inbox-kind-pill"
+      data-kind="place_name"
+      style={{
+        ...PILL,
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 4,
+        padding: "1px 7px",
+        background: "var(--color-info-light)",
+        color: "var(--color-info)",
+      }}
+    >
+      <IconMapPinQuestion size={11} aria-hidden />
+      {t("kinds.place")}
+    </span>
+  );
+}
+
 type PillEntry =
   | Pick<HotlineEntry, "kind" | "classification" | "processing" | "failures">
   | Pick<CaseGroupEntry, "kind">
-  | Pick<LocationChallengeEntry, "kind">;
+  | Pick<LocationChallengeEntry, "kind">
+  | Pick<PlaceNameEntry, "kind">;
 
 /** An entry's pills, per kind. A hotline thread: its classification, plus
  * the failed pill when the pipeline gave up on a message ("Unclassified"
@@ -141,6 +166,7 @@ type PillEntry =
 export function InboxEntryPills({ entry }: { entry: PillEntry }) {
   if (entry.kind === "cases") return <InboxCasesPill />;
   if (entry.kind === "location_challenge") return <InboxLocationPill />;
+  if (entry.kind === "place_name") return <InboxPlacePill />;
   const failed = entry.processing === "failed";
   return (
     <>

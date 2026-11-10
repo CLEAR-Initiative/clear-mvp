@@ -5,6 +5,7 @@ import {
   buildCaseGroupEntries,
   buildInboxEntries,
   buildLocationChallengeEntries,
+  buildPlaceNameEntries,
   combineTranslations,
   caseGroupSeenMark,
   countByFilter,
@@ -14,8 +15,10 @@ import {
   entryDescription,
   filtersFor,
   intakeRef,
+  isPlaceNameEntry,
   isUnreadEntry,
   matchesFilter,
+  matchesSearch,
   messageFailures,
   moveSelection,
   needsTranslation,
@@ -34,6 +37,7 @@ import type {
   GqlHotlineInbox,
   GqlLocationChallengeToDecide,
   GqlReviewCaseProposal,
+  GqlUnresolvedPlaceName,
 } from "./types/graphql";
 
 function thread(id: string, title: string | null = null): GqlGroundInboxThread {
@@ -355,7 +359,7 @@ describe("visibleEntries / countByFilter", () => {
   });
 
   it("counts per filter", () => {
-    expect(countByFilter(entries)).toEqual({ community: 3, reports: 1, unclassified: 1, chatter: 1, proposals: 0, locations: 0 });
+    expect(countByFilter(entries)).toEqual({ community: 3, reports: 1, unclassified: 1, chatter: 1, proposals: 0, locations: 0, places: 0 });
   });
 
   it("drops an opened Review item from the filter number and keeps the queue count", () => {
@@ -366,6 +370,7 @@ describe("visibleEntries / countByFilter", () => {
       chatter: 1,
       proposals: 0,
       locations: 0,
+      places: 0,
     });
     expect(countByFilter(entries).community).toBe(3);
   });
@@ -452,6 +457,18 @@ describe("tabs", () => {
     expect(tabsFor({ hotline: false, proposals: true, locations: false })).toEqual(["proposals"]);
     expect(tabsFor({ hotline: false, proposals: false, locations: true })).toEqual(["locations"]);
     expect(tabsFor({ hotline: false, proposals: false, locations: false })).toEqual([]);
+    expect(tabsFor({ hotline: true, proposals: true, locations: true, places: true })).toEqual([
+      "community",
+      "proposals",
+      "locations",
+      "places",
+    ]);
+    expect(tabsFor({ hotline: false, proposals: false, locations: false, places: true })).toEqual(["places"]);
+  });
+
+  it("gives the Places tab its own single filter", () => {
+    expect(filtersFor("places")).toEqual(["places"]);
+    expect(tabOf("places")).toBe("places");
   });
 
   it("lists the community filters under Community signals and proposals alone under its tab", () => {
@@ -545,7 +562,7 @@ describe("web case groups (V4)", () => {
     expect(matchesFilter(entries[1]!, "reports")).toBe(false);
     expect(matchesFilter(entries[1]!, "community")).toBe(false);
     expect(matchesFilter(entries[0]!, "proposals")).toBe(false);
-    expect(countByFilter(entries)).toEqual({ community: 1, reports: 1, unclassified: 0, chatter: 0, proposals: 2, locations: 0 });
+    expect(countByFilter(entries)).toEqual({ community: 1, reports: 1, unclassified: 0, chatter: 0, proposals: 2, locations: 0, places: 0 });
     expect(visibleEntries(entries, "proposals", "", "newest").map((e) => e.id)).toEqual(["cases:e1"]);
   });
 
@@ -653,5 +670,59 @@ describe("Location challenges", () => {
     expect(countUnreadByFilter(entries, new Set(["location:c1"])).locations).toBe(1);
     expect(readMarks(entries[1]!)).toEqual(["location:c1"]);
     expect(isUnreadEntry(entries[2]!, new Set(["location:c1"]))).toBe(true);
+  });
+});
+
+describe("unresolved place names", () => {
+  const row = (id: string, signalCount: number, lastSeenAt: string): GqlUnresolvedPlaceName => ({
+    id,
+    nameNorm: `name ${id}`,
+    nameAsWritten: `Name ${id}`,
+    nameAr: "أم دباكر",
+    countryCode: "SD",
+    stateLocationId: "S1",
+    countryLocationId: "C1",
+    stateLocation: { id: "S1", name: "South Kordofan", level: 1 },
+    status: "OPEN",
+    signalCount,
+    firstSeenAt: "2026-10-20T09:00:00Z",
+    lastSeenAt,
+    signals: [
+      {
+        signalId: `sig-${id}`,
+        nameAsWritten: "Umm Dabaker",
+        reason: "NO_MATCH",
+        seenAt: lastSeenAt,
+        relocatedAt: null,
+        areaLocation: null,
+        signal: null,
+      },
+    ],
+  });
+  const entries = buildPlaceNameEntries([
+    row("a", 2, "2026-11-03T09:00:00Z"),
+    row("b", 9, "2026-11-01T09:00:00Z"),
+    row("c", 2, "2026-11-04T09:00:00Z"),
+  ]);
+
+  it("builds one Review item per row, searchable by Arabic spelling, state and each post's spelling", () => {
+    expect(entries[0]).toMatchObject({ id: "place:a", kind: "place_name", title: "Name a", sentAt: "2026-11-03T09:00:00Z" });
+    expect(isPlaceNameEntry(entries[0]!)).toBe(true);
+    for (const query of ["دباكر", "south kordofan", "umm dabaker", "name a"]) {
+      expect(matchesSearch(entries[0]!, query)).toBe(true);
+    }
+    expect(matchesSearch(entries[0]!, "khartoum")).toBe(false);
+  });
+
+  it("sits under Places only, one count each", () => {
+    expect(entries.every((e) => matchesFilter(e, "places"))).toBe(true);
+    expect(entries.some((e) => matchesFilter(e, "locations") || matchesFilter(e, "community"))).toBe(false);
+    expect(countByFilter(entries).places).toBe(3);
+    expect(countUnreadByFilter(entries, new Set(["place:a"])).places).toBe(2);
+  });
+
+  it("lists the names most signals use first, then the newest; Newest sorts by time alone", () => {
+    expect(visibleEntries(entries, "places", "", "reportsFirst").map((e) => e.id)).toEqual(["place:b", "place:c", "place:a"]);
+    expect(visibleEntries(entries, "places", "", "newest").map((e) => e.id)).toEqual(["place:c", "place:a", "place:b"]);
   });
 });

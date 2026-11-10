@@ -17,6 +17,7 @@ import { crisesRouter } from "~/server/api/routers/crises";
 import { teamsRouter } from "~/server/api/routers/teams";
 import { locationsRouter } from "~/server/api/routers/locations";
 import { locationChallengeRouter } from "~/server/api/routers/locationChallenge";
+import { placeNamesRouter } from "~/server/api/routers/placeNames";
 import { metricsRouter } from "~/server/api/routers/metrics";
 import { adminActivityRouter } from "~/server/api/routers/adminActivity";
 import { invitationsRouter } from "~/server/api/routers/invitations";
@@ -40,6 +41,7 @@ export const appRouter = createTRPCRouter({
   invitations: invitationsRouter,
   locations: locationsRouter,
   locationChallenge: locationChallengeRouter,
+  placeNames: placeNamesRouter,
   metrics: metricsRouter,
   adminActivity: adminActivityRouter,
   pipeline: pipelineRouter,

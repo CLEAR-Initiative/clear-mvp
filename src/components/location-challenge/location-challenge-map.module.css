@@ -75,6 +75,11 @@
   background: var(--color-accent);
 }
 
+.dot[data-kind="suggestion"],
+.pin[data-kind="suggestion"] {
+  background: var(--color-warning);
+}
+
 .dot[data-kind="placed"],
 .pin[data-kind="placed"] {
   background: var(--color-info);

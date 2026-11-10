@@ -47,6 +47,9 @@ export const ANALYTICS_EVENTS = {
   /** Back undid an Agent navigation. */
   "agent.navigation_back": {},
 
+  /** An unresolved place name was resolved in the Inbox. The kind only: never the name. */
+  "place_name.resolved": { kind: ["LOCATION", "GEONAMES", "POINT", "NOT_A_PLACE", "AMBIGUOUS"] },
+
   /** The analysis summary was copied to the clipboard. */
   "analysis.summary_copied": {},
   /** An evidence document was opened in the preview. */

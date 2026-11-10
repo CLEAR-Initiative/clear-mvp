@@ -4,6 +4,7 @@ import { useFormatter, useNow, useTranslations } from "next-intl";
 import { IconPaperclip, IconSearch } from "@tabler/icons-react";
 import {
   isCaseGroupEntry,
+  isLocationChallengeEntry,
   isHotlineEntry,
   isUnreadEntry,
   type CaseGroupEntry,
@@ -11,6 +12,7 @@ import {
   type InboxEntry,
   type InboxSort,
   type LocationChallengeEntry,
+  type PlaceNameEntry,
 } from "~/lib/hotline-inbox";
 import { locationChain } from "~/lib/location-challenge";
 import { WEB_SEARCH_KIND } from "~/lib/impact-prior-source";
@@ -31,6 +33,9 @@ interface EntryListProps {
    * rather than "Nothing left in this view", which would claim an empty
    * queue that may not be. */
   loading?: boolean;
+  /** Entries of this view that clear-api holds and the list does not: the
+   * footer says so instead of "all loaded". */
+  notLoaded?: number;
 }
 
 function HotlineRow({ entry }: { entry: HotlineEntry }) {
@@ -114,6 +119,37 @@ function LocationChallengeRow({ entry }: { entry: LocationChallengeEntry }) {
   );
 }
 
+/** An unresolved place name: the name as written, its Arabic spelling, the
+ * state, how many Signals name it and when one last did. */
+function PlaceNameRow({ entry }: { entry: PlaceNameEntry }) {
+  const t = useTranslations("inbox");
+  const format = useFormatter();
+  const now = useNow({ updateInterval: 60_000 });
+  const row = entry.row;
+  return (
+    <span className={styles.entryBody}>
+      <span className={styles.entryLine1}>
+        <span className={styles.entryTitle}>
+          <bdi>{row.nameAsWritten}</bdi>
+          {row.nameAr && (
+            <>
+              {" "}
+              <bdi lang="ar" data-testid="inbox-place-arabic">{row.nameAr}</bdi>
+            </>
+          )}
+        </span>
+        <span className={styles.entryTime}>{format.relativeTime(new Date(entry.sentAt), now)}</span>
+      </span>
+      <span className={styles.entryPreview} data-testid="inbox-place-preview">
+        {t("place.preview", { count: row.signalCount, area: row.stateLocation?.name ?? row.countryCode })}
+      </span>
+      <span className={styles.entryMeta}>
+        <InboxEntryPills entry={entry} />
+      </span>
+    </span>
+  );
+}
+
 export function EntryList({
   entries,
   selectedId,
@@ -124,6 +160,7 @@ export function EntryList({
   onSortToggle,
   onSelect,
   loading = false,
+  notLoaded = 0,
 }: EntryListProps) {
   const t = useTranslations("inbox");
   const tStates = useTranslations("common.states");
@@ -169,14 +206,22 @@ export function EntryList({
                 <HotlineRow entry={entry} />
               ) : isCaseGroupEntry(entry) ? (
                 <CaseGroupRow entry={entry} />
-              ) : (
+              ) : isLocationChallengeEntry(entry) ? (
                 <LocationChallengeRow entry={entry} />
+              ) : (
+                <PlaceNameRow entry={entry} />
               )}
             </button>
           );
         })}
         <div className={styles.listFooter} data-testid="inbox-list-footer" data-loading={loading}>
-          {loading ? tStates("loading") : entries.length > 0 ? t("list.allLoaded", { count: entries.length }) : t("list.empty")}
+          {loading
+            ? tStates("loading")
+            : notLoaded > 0
+              ? t("list.cut", { count: entries.length, more: notLoaded })
+              : entries.length > 0
+                ? t("list.allLoaded", { count: entries.length })
+                : t("list.empty")}
         </div>
       </div>
     </section>

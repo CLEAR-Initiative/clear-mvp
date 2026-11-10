@@ -28,6 +28,13 @@ describe("analytics event allowlist", () => {
     expect(isAllowedEvent("privacy_notice.viewed", { from: "somewhere-else" })).toBe(false);
   });
 
+  it("takes a place-name resolution by its kind only, never the name", () => {
+    expect(isAllowedEvent("place_name.resolved", { kind: "NOT_A_PLACE" })).toBe(true);
+    expect(isAllowedEvent("place_name.resolved", { kind: "GEONAMES" })).toBe(true);
+    expect(isAllowedEvent("place_name.resolved", { kind: "DELETED" })).toBe(false);
+    expect(isAllowedEvent("place_name.resolved", { kind: "POINT", name: "Um Dabakir" })).toBe(false);
+  });
+
   it("rejects missing, extra and non-string properties", () => {
     expect(isAllowedEvent("privacy_notice.viewed", {})).toBe(false);
     expect(isAllowedEvent("privacy_notice.viewed", { from: "profile", email: "a@b.c" })).toBe(false);

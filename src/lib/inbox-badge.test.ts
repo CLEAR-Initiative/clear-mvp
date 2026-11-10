@@ -71,6 +71,9 @@ describe("inboxBadgeLabel", () => {
     expect(inboxBadgeLabel({ proposals: 3, locations: 2 })).toBe("5");
     expect(inboxBadgeLabel({ locations: 1 })).toBe("1");
     expect(inboxBadgeLabel({ proposals: 4 })).toBe("4");
+    // Open unresolved place names add to it.
+    expect(inboxBadgeLabel({ proposals: 3, locations: 2, places: 4 })).toBe("9");
+    expect(inboxBadgeLabel({ places: 1 })).toBe("1");
   });
 
   it("shows nothing when nothing waits", () => {
