@@ -388,6 +388,16 @@ export default function InboxPage() {
     [dismiss, utils, t],
   );
 
+  /** An alias changed. A deleted alias opens its place name again, so a row
+   * resolved earlier in this visit must not stay dismissed: the queue as
+   * clear-api returns it is the truth for place names from here on. */
+  const aliasesChanged = useCallback(() => {
+    setDismissedIds((prev) => {
+      const kept = [...prev].filter((id) => !id.startsWith("place:"));
+      return kept.length === prev.size ? prev : new Set(kept);
+    });
+  }, []);
+
   const errorMessage = (err: unknown) => (err instanceof Error ? err.message : t("loadError"));
 
   const retryMessage = api.ground.retryMessage.useMutation();
@@ -562,7 +572,9 @@ export default function InboxPage() {
       }
       const target = e.target as HTMLElement | null;
       const typing = target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable);
-      if (typing || addOpen || e.metaKey || e.ctrlKey || e.altKey) return;
+      // The alias list has its own controls: the queue under it is hidden,
+      // and a shortcut must not move its selection or mark its rows read.
+      if (typing || addOpen || showAliases || e.metaKey || e.ctrlKey || e.altKey) return;
       switch (e.key.toLowerCase()) {
         case "j":
           select(moveSelection(visible, selectedId, 1));
@@ -583,7 +595,7 @@ export default function InboxPage() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [addOpen, rejectOpen, visible, selectedId, selectedThread, canReviewSelected, select, archive]);
+  }, [addOpen, rejectOpen, showAliases, visible, selectedId, selectedThread, canReviewSelected, select, archive]);
 
   if (authLoading) {
     return (
@@ -675,7 +687,7 @@ export default function InboxPage() {
 
       {showAliases && (
         <div id="inbox-tabpanel" role="tabpanel" aria-labelledby="inbox-tab-places" style={{ overflow: "auto", flex: 1 }}>
-          <AliasesView canPlaceAnywhere={isPlatformAdmin(role)} />
+          <AliasesView canPlaceAnywhere={isPlatformAdmin(role)} onChanged={aliasesChanged} />
         </div>
       )}
 

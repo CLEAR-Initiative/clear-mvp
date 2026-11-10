@@ -20,7 +20,15 @@ import { AliasFormModal } from "./alias-form-modal";
  * change (`canEdit`: a team admin's own state, a platform admin's all), and
  * clear-api enforces the same rule.
  */
-export function AliasesView({ canPlaceAnywhere }: { canPlaceAnywhere: boolean }) {
+export function AliasesView({
+  canPlaceAnywhere,
+  onChanged,
+}: {
+  canPlaceAnywhere: boolean;
+  /** An alias was added, changed or deleted: the queue's rows may have
+   *  closed or opened again. */
+  onChanged?: () => void;
+}) {
   const t = useTranslations("inbox");
   const format = useFormatter();
   const utils = api.useUtils();
@@ -50,6 +58,7 @@ export function AliasesView({ canPlaceAnywhere }: { canPlaceAnywhere: boolean })
     void utils.placeNames.aliases.invalidate();
     void utils.placeNames.queue.invalidate();
     void utils.placeNames.queueCount.invalidate();
+    onChanged?.();
   };
 
   function confirmDelete() {

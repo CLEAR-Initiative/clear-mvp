@@ -61,14 +61,21 @@ export function AliasFormModal({
   const [chosen, setChosen] = useState<string | null>(null);
 
   const spelling = name.trim();
+  // The place is searched by the spelling until the reader types another
+  // name: an alias often points at a place CLEAR knows under a different
+  // name ("Um Dabakir" at "Kosti thermal plant"). The search never changes
+  // the alias's own spelling.
+  const [targetSearch, setTargetSearch] = useState<string | null>(null);
+  const searchName = (targetSearch ?? spelling).trim();
   const suggestionsQuery = api.placeNames.suggestions.useQuery(
     {
-      name: spelling,
-      nameAr: nameAr.trim() || undefined,
+      name: searchName,
+      // The Arabic spelling belongs to the alias, not to another name searched for.
+      nameAr: targetSearch === null ? nameAr.trim() || undefined : undefined,
       countryCode: countryCode ?? "",
       withinLocationId: scopeLocationId ?? country?.countryLocationId ?? undefined,
     },
-    { enabled: mode === "suggestion" && spelling.length >= 2 && !!countryCode && scope !== null, staleTime: 60_000 },
+    { enabled: mode === "suggestion" && searchName.length >= 2 && !!countryCode && scope !== null, staleTime: 60_000 },
   );
   const suggestions: GqlPlaceNameSuggestion[] = suggestionsQuery.data ?? [];
   const chosenSuggestion = suggestions.find((s) => suggestionKey(s) === chosen) ?? null;
@@ -255,7 +262,21 @@ export function AliasFormModal({
 
         {mode === "suggestion" && (
           <Box data-testid="inbox-alias-form-suggestions">
-            {spelling.length < 2 || !countryCode || scope === null ? (
+            <TextInput
+              size="xs"
+              mb={8}
+              label={t("aliases.form.targetSearch")}
+              description={t("aliases.form.targetSearchHelp")}
+              value={targetSearch ?? name}
+              onChange={(e) => {
+                setTargetSearch(e.currentTarget.value);
+                setChosen(null);
+              }}
+              maxLength={500}
+              dir="auto"
+              data-testid="inbox-alias-form-target-search"
+            />
+            {searchName.length < 2 || !countryCode || scope === null ? (
               <Text size="xs" c="var(--color-text-muted)">{t("aliases.form.suggestionsNeed")}</Text>
             ) : suggestionsQuery.isLoading ? (
               <Text size="xs" c="var(--color-text-muted)">{t("place.suggestionsLoading")}</Text>

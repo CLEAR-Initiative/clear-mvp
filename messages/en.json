@@ -3145,6 +3145,8 @@
         "keep": "Keep: {place}",
         "pick": "A place CLEAR or GeoNames knows",
         "point": "A point on the map",
+        "targetSearch": "Search for the place",
+        "targetSearchHelp": "Search by another name when the place is known under one. This does not change the spelling of the alias.",
         "suggestionsNeed": "Enter the spelling and choose where it applies to see places.",
         "outsideScope": "{km} km outside",
         "note": "Note (optional)",

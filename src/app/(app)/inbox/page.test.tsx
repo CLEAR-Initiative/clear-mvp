@@ -87,8 +87,13 @@ const resolvePlaceMutate = vi.fn(
 );
 vi.mock("~/lib/analytics/track", () => ({ track: vi.fn() }));
 vi.mock("./_components/aliases-view", () => ({
-  AliasesView: (props: { canPlaceAnywhere: boolean }) => (
-    <div data-testid="aliases-view" data-anywhere={props.canPlaceAnywhere} />
+  AliasesView: (props: { canPlaceAnywhere: boolean; onChanged?: () => void }) => (
+    <button
+      type="button"
+      data-testid="aliases-view"
+      data-anywhere={props.canPlaceAnywhere}
+      onClick={() => props.onChanged?.()}
+    />
   ),
 }));
 /** A decision succeeds unless a test makes it fail. */
@@ -615,6 +620,43 @@ describe("InboxPage places", () => {
     fireEvent.click(screen.getByTestId("inbox-places-view-aliases"));
     fireEvent.click(screen.getByTestId("inbox-tab-locations"));
     expect(screen.queryByTestId("aliases-view")).not.toBeInTheDocument();
+  });
+
+  it("shows a place name again when its alias is deleted in the same visit", () => {
+    role = "admin";
+    flagEnabled = false;
+    placesData = [placeName("pn-1", 7), placeName("pn-2", 2)];
+    renderPage();
+    fireEvent.click(screen.getByTestId("inbox-tab-places"));
+    fireEvent.click(screen.getByTestId("inbox-place-ambiguous"));
+    expect(screen.getAllByTestId("inbox-entry")).toHaveLength(1);
+    // The alias list reports a change (a deleted alias reopens its row; the
+    // refetched queue still holds pn-1 here).
+    fireEvent.click(screen.getByTestId("inbox-places-view-aliases"));
+    fireEvent.click(screen.getByTestId("aliases-view"));
+    fireEvent.click(screen.getByTestId("inbox-places-view-queue"));
+    expect(screen.getAllByTestId("inbox-entry")).toHaveLength(2);
+  });
+
+  it("keeps the queue's shortcuts off while the alias list is shown", () => {
+    role = "admin";
+    flagEnabled = false;
+    placesData = [placeName("pn-1", 7), placeName("pn-2", 2)];
+    renderPage();
+    fireEvent.click(screen.getByTestId("inbox-tab-places"));
+    const rows = () => screen.getAllByTestId("inbox-entry");
+    expect(rows()[0]).toHaveAttribute("data-selected", "true");
+    expect(rows()[1]).toHaveAttribute("data-unread", "true");
+
+    fireEvent.click(screen.getByTestId("inbox-places-view-aliases"));
+    fireEvent.keyDown(window, { key: "j" });
+    // The hidden queue did not move, and its second row is still unread.
+    expect(rows()[0]).toHaveAttribute("data-selected", "true");
+    expect(rows()[1]).toHaveAttribute("data-unread", "true");
+
+    fireEvent.click(screen.getByTestId("inbox-places-view-queue"));
+    fireEvent.keyDown(window, { key: "j" });
+    expect(rows()[1]).toHaveAttribute("data-selected", "true");
   });
 
   it("a team admin gets the alias list without the platform admin's reach", () => {

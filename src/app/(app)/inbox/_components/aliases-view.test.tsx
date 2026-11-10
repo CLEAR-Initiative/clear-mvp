@@ -139,10 +139,12 @@ Element.prototype.scrollIntoView = () => undefined;
 
 const { AliasesView } = await import("./aliases-view");
 
+const onChanged = vi.fn();
+
 function renderView(canPlaceAnywhere = false) {
   render(
     <MantineProvider>
-      <AliasesView canPlaceAnywhere={canPlaceAnywhere} />
+      <AliasesView canPlaceAnywhere={canPlaceAnywhere} onChanged={onChanged} />
     </MantineProvider>,
   );
 }
@@ -263,7 +265,26 @@ describe("AliasesView add", () => {
     expect(invalidate.aliases).toHaveBeenCalled();
     expect(invalidate.queue).toHaveBeenCalled();
     expect(invalidate.queueCount).toHaveBeenCalled();
+    expect(onChanged).toHaveBeenCalledTimes(1);
     expect(screen.queryByTestId("inbox-alias-form")).not.toBeInTheDocument();
+  });
+
+  it("searches for the place by another name, without changing the spelling", () => {
+    openAdd();
+    choose("inbox-alias-form-scope", "South Kordofan");
+    // The search starts as the spelling.
+    expect(screen.getByTestId("inbox-alias-form-target-search")).toHaveValue("Um Dabakir");
+    fireEvent.change(screen.getByTestId("inbox-alias-form-target-search"), { target: { value: "Kosti thermal plant" } });
+    // Another name is searched for alone: the Arabic spelling belongs to the alias.
+    expect(suggestionsInput).toHaveBeenLastCalledWith(
+      { name: "Kosti thermal plant", nameAr: undefined, countryCode: "SD", withinLocationId: "S1" },
+      true,
+    );
+    fireEvent.click(within(screen.getByTestId("inbox-alias-form-suggestions")).getAllByRole("radio")[0]!);
+    fireEvent.click(screen.getByTestId("inbox-alias-form-save"));
+    expect(createMutate).toHaveBeenCalledWith(
+      expect.objectContaining({ name: "Um Dabakir", nameAr: "أم دباكر", locationId: "D1" }),
+    );
   });
 
   it("sends a GeoNames place as a named point, so clear-api makes the landmark", () => {
@@ -361,6 +382,18 @@ describe("AliasesView edit", () => {
     expect(invalidate.aliases).toHaveBeenCalled();
   });
 
+  it("finds a new target by a name other than the alias's spelling", () => {
+    openEdit();
+    fireEvent.click(screen.getByTestId("inbox-alias-form-pick"));
+    fireEvent.change(screen.getByTestId("inbox-alias-form-target-search"), { target: { value: "Kadugli" } });
+    expect(suggestionsInput).toHaveBeenLastCalledWith(expect.objectContaining({ name: "Kadugli" }), true);
+    fireEvent.click(within(screen.getByTestId("inbox-alias-form-suggestions")).getAllByRole("radio")[0]!);
+    fireEvent.click(screen.getByTestId("inbox-alias-form-save"));
+    expect(updateMutate).toHaveBeenCalledWith({ id: "a1", change: { locationId: "D1" } });
+    // The spelling stays the alias's key.
+    expect(screen.queryByTestId("inbox-alias-form-name")).not.toBeInTheDocument();
+  });
+
   it("changes the target to another place", () => {
     openEdit();
     fireEvent.click(screen.getByTestId("inbox-alias-form-pick"));
@@ -398,6 +431,7 @@ describe("AliasesView delete", () => {
     // The queue row the alias came from opens again.
     expect(invalidate.queue).toHaveBeenCalled();
     expect(invalidate.queueCount).toHaveBeenCalled();
+    expect(onChanged).toHaveBeenCalledTimes(1);
   });
 
   it("shows why clear-api refused, and keeps the alias", () => {

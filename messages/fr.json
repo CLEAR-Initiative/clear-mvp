@@ -3145,6 +3145,8 @@
         "keep": "Garder : {place}",
         "pick": "Un lieu connu de CLEAR ou de GeoNames",
         "point": "Un point sur la carte",
+        "targetSearch": "Rechercher le lieu",
+        "targetSearchHelp": "Recherchez sous un autre nom si le lieu est connu autrement. Cela ne change pas l’orthographe de l’alias.",
         "suggestionsNeed": "Saisissez l’orthographe et choisissez où elle s’applique pour voir des lieux.",
         "outsideScope": "à {km} km en dehors",
         "note": "Note (facultatif)",
