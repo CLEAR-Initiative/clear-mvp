@@ -4,6 +4,7 @@ import { useFormatter, useNow, useTranslations } from "next-intl";
 import { IconPaperclip, IconSearch } from "@tabler/icons-react";
 import {
   isCaseGroupEntry,
+  isLocationChallengeEntry,
   isHotlineEntry,
   isUnreadEntry,
   type CaseGroupEntry,
@@ -11,6 +12,7 @@ import {
   type InboxEntry,
   type InboxSort,
   type LocationChallengeEntry,
+  type PlaceNameEntry,
 } from "~/lib/hotline-inbox";
 import { locationChain } from "~/lib/location-challenge";
 import { WEB_SEARCH_KIND } from "~/lib/impact-prior-source";
@@ -114,6 +116,37 @@ function LocationChallengeRow({ entry }: { entry: LocationChallengeEntry }) {
   );
 }
 
+/** An unresolved place name: the name as written, its Arabic spelling, the
+ * state, how many Signals name it and when one last did. */
+function PlaceNameRow({ entry }: { entry: PlaceNameEntry }) {
+  const t = useTranslations("inbox");
+  const format = useFormatter();
+  const now = useNow({ updateInterval: 60_000 });
+  const row = entry.row;
+  return (
+    <span className={styles.entryBody}>
+      <span className={styles.entryLine1}>
+        <span className={styles.entryTitle}>
+          <bdi>{row.nameAsWritten}</bdi>
+          {row.nameAr && (
+            <>
+              {" "}
+              <bdi lang="ar" data-testid="inbox-place-arabic">{row.nameAr}</bdi>
+            </>
+          )}
+        </span>
+        <span className={styles.entryTime}>{format.relativeTime(new Date(entry.sentAt), now)}</span>
+      </span>
+      <span className={styles.entryPreview} data-testid="inbox-place-preview">
+        {t("place.preview", { count: row.signalCount, area: row.stateLocation?.name ?? row.countryCode })}
+      </span>
+      <span className={styles.entryMeta}>
+        <InboxEntryPills entry={entry} />
+      </span>
+    </span>
+  );
+}
+
 export function EntryList({
   entries,
   selectedId,
@@ -169,8 +202,10 @@ export function EntryList({
                 <HotlineRow entry={entry} />
               ) : isCaseGroupEntry(entry) ? (
                 <CaseGroupRow entry={entry} />
-              ) : (
+              ) : isLocationChallengeEntry(entry) ? (
                 <LocationChallengeRow entry={entry} />
+              ) : (
+                <PlaceNameRow entry={entry} />
               )}
             </button>
           );

@@ -18,6 +18,11 @@ import { canDecideLocationChallenges } from "~/lib/location-challenge";
  *                       Location challenges on Signals, filed for a team the
  *                       reader administers (their own too), each accepted,
  *                       corrected or declined.
+ *   places            - the same people as Location challenges (ADR-0007):
+ *                       platform admins and team admins. Place names that
+ *                       geocoding could not place, resolved once each
+ *                       (clear-api ADR-0019). clear-api lists a team admin
+ *                       only the rows inside their team's area.
  *
  * UI-only: clear-api's ground, caseProposals and Location challenge guards
  * are the enforcement.
@@ -26,6 +31,7 @@ export interface InboxAccess {
   hotline: boolean;
   proposals: boolean;
   locations: boolean;
+  places: boolean;
   /** Any tab at all: the page and the nav entry show. */
   any: boolean;
 }
@@ -62,5 +68,8 @@ export function inboxAccess(input: {
     (isPlatformAdmin(input.role) || !!input.isErm || isTeamAdmin(input.teamMemberships));
   const proposals = canReviewCaseProposals(input);
   const locations = canDecideLocationChallenges(input.role, input.teamMemberships);
-  return { hotline, proposals, locations, any: hotline || proposals || locations };
+  // One rule with Location challenges: the people who decide a Signal's
+  // place also decide what a place name means.
+  const places = locations;
+  return { hotline, proposals, locations, places, any: hotline || proposals || locations || places };
 }

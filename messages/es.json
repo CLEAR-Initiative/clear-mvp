@@ -2822,6 +2822,7 @@
       "pins": {
         "source": "Actual",
         "proposed": "Propuesta",
+        "suggestion": "Sugerido",
         "placed": "Su punto"
       },
       "unavailable": "No se pudo cargar el mapa. Aun así puede buscar el lugar o introducir sus coordenadas."
@@ -2855,7 +2856,8 @@
     "tabs": {
       "community": "Señales comunitarias",
       "proposals": "Señales propuestas",
-      "locations": "Cambios de ubicación"
+      "locations": "Cambios de ubicación",
+      "places": "Lugares"
     },
     "filters": {
       "community": "Todas",
@@ -2863,7 +2865,8 @@
       "unclassified": "Sin clasificar",
       "chatter": "Charla",
       "proposals": "Señales propuestas",
-      "locations": "Cambios de ubicación"
+      "locations": "Cambios de ubicación",
+      "places": "Lugares"
     },
     "search": "Buscar texto, ref. de ingreso",
     "sort": {
@@ -2988,7 +2991,8 @@
     },
     "kinds": {
       "cases": "Señales propuestas",
-      "location": "Ubicación"
+      "location": "Ubicación",
+      "place": "Nombre de lugar"
     },
     "event": {
       "untitled": "Evento sin título",
@@ -3033,6 +3037,52 @@
         "outsideCoverage": "Ese lugar está fuera de las zonas que cubre CLEAR.",
         "conflict": "Este cambio ya se decidió o se sustituyó por uno más reciente.",
         "failed": "No se pudo guardar la decisión. Inténtelo de nuevo."
+      }
+    },
+    "place": {
+      "preview": "{count, plural, one {# señal} other {# señales}} · {area}",
+      "seen": "{count, plural, one {# señal} other {# señales}} en {area} · visto por última vez el {date}",
+      "posts": "{count, plural, one {La publicación que lo nombra} other {Publicaciones que lo nombran}}",
+      "noPosts": "No hay publicaciones que mostrar.",
+      "postHidden": "No puede leer esta señal.",
+      "openSignal": "Abrir la señal",
+      "reasons": {
+        "NO_MATCH": "Sin coincidencias en {area}",
+        "OUTSIDE_AREA": "Existe un lugar con este nombre fuera de {area}"
+      },
+      "suggestions": "Lugares posibles",
+      "suggestionsLoading": "Buscando lugares…",
+      "noSuggestions": "Ningún lugar con un nombre parecido. Coloque un punto en el mapa.",
+      "kinds": {
+        "geonames": "Lugar de GeoNames",
+        "district": "Distrito en CLEAR",
+        "landmark": "Punto de referencia en CLEAR"
+      },
+      "where": {
+        "inside": "En {area}",
+        "outside": "A {km} km de {area}",
+        "unknown": "Distancia desconocida"
+      },
+      "placeTitle": "Colocar el punto",
+      "placeHint": "Haga clic en el mapa donde está {name}, o busque el lugar. También puede introducir sus coordenadas.",
+      "actions": {
+        "use": "Usar este lugar",
+        "place": "Colocar en el mapa",
+        "save": "Guardar este punto",
+        "cancel": "Cancelar",
+        "notAPlace": "No es un lugar",
+        "ambiguous": "Ambiguo"
+      },
+      "toast": {
+        "resolved": "Lugar guardado. {count, plural, =0 {Ninguna señal movida.} one {# señal movida.} other {# señales movidas.}}",
+        "notAPlace": "Marcado como no es un lugar. No volverá a aparecer.",
+        "ambiguous": "Marcado como ambiguo. Queda fuera de la cola hasta que alguien lo resuelva."
+      },
+      "errors": {
+        "forbidden": "No puede colocar este lugar ahí: está fuera del estado de este nombre de lugar.",
+        "badPlace": "Ese lugar está fuera del país, o fuera de las áreas que cubre CLEAR.",
+        "conflict": "Este nombre de lugar ya se resolvió, o su grafía ya tiene un alias.",
+        "failed": "No se pudo guardar la respuesta. Inténtelo de nuevo."
       }
     },
     "cases": {

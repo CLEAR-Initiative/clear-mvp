@@ -294,6 +294,26 @@
       "note": "decideSignalLocationChallenge: the team_admin of the team it was filed for, or a platform admin, the filer included; analysts file them"
     },
     {
+      "id": "inbox-places",
+      "area": "inbox",
+      "action": "See Places tab + badge",
+      "route": "/inbox",
+      "selectors": [
+        "inbox-tab-places"
+      ],
+      "flags": [],
+      "source": "inbox-access.ts:73",
+      "expect": {
+        "admin": "allow",
+        "analyst": "hidden",
+        "member": "hidden",
+        "erm": "hidden",
+        "pending": "hidden",
+        "team_admin": "allow"
+      },
+      "note": "resolveUnresolvedPlaceName: a platform admin, or a team admin when the row's state is inside their team's area (clear-api ADR-0019); the same people as Location changes"
+    },
+    {
       "id": "inbox-decide",
       "area": "inbox",
       "action": "Decide proposal Accept/Reject",

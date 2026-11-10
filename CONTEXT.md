@@ -100,8 +100,9 @@ _Avoid_: using Alert for any raw Signal; "notification" (product push/tagging is
 **Inbox**:
 The one queue of **Review items** a reader may act on (`/inbox`): hotline threads for
 platform admins (`hotline_inbox`), **Proposed signals** for deciders, that is admins and
-analysts (`impact_prior_review`, a flag key kept from before the rename), and **Location
-challenges** for platform admins and the admins of the team each was filed for. One
+analysts (`impact_prior_review`, a flag key kept from before the rename), **Location
+challenges** for platform admins and the admins of the team each was filed for, and
+**Unresolved place names** (the Places tab) for the same people. One
 access rule (`src/lib/inbox-access.ts`) gates the page and its nav entry; clear-api's
 guards are the enforcement.
 _Avoid_: "hotline inbox" for the whole page — that is one kind of Review item.
@@ -109,13 +110,27 @@ _Avoid_: "hotline inbox" for the whole page — that is one kind of Review item.
 **Review item**:
 One thing in the **Inbox** waiting for a person's decision: a hotline thread (Add to
 CLEAR / Archive / Reject), a **Proposed signal** (accept, or reject with a rationale) or a
-**Location challenge** (accept the proposed point, place a different one, or decline). A
+**Location challenge** (accept the proposed point, place a different one, or decline) or an
+**Unresolved place name** (use a suggested place, place a point, not a place, or ambiguous). A
 Proposed signal is also decidable from its **Event** page: two doors, one decision. The
 Inbox groups an Event's Proposed signals into one entry and counts decisions waiting: one
-per thread, undecided Proposed signal or open Location challenge. In product copy the filter and an Event's group
+per thread, undecided Proposed signal, open Location challenge or open Unresolved place name. In product copy the filter and an Event's group
 read "Proposed signals"; a web request reads "Web search".
 _Avoid_: a whole ImpactPrior as a Review item — nothing proposes one any more (the
 **ImpactPrior** is computed).
+
+**Unresolved place name** (clear-api `UnresolvedPlaceName`, clear-api ADR-0019):
+A place name, as written in **Signals**, that geocoding could not place inside the Signal's
+area. One Review item per name, country and state, under the Inbox's **Places** tab, listed
+with the names most Signals use first. The decider resolves it once: **Use this place** (a
+suggested GeoNames place, or a district or landmark CLEAR already has), **Place on map**,
+**Not a place** or **Ambiguous**. A location answer becomes a **place alias** in clear-api, so
+the next Signal with that spelling is placed without review, and the Signals that wait on the
+name move at once. Who decides is the rule of ADR-0007: platform admins, and team admins for
+names in their team's area. The suggestions are optional help; nothing forces a decider to
+pick a gazetteer name (ADR-0003 is about challenges, and stays as it is).
+_Avoid_: "failed geocode" (the Signal still has a location: its state or country); "synonym"
+for a place alias in code.
 
 **Proposed signal** (clear-api `CaseProposal`; "Web case" in older notes):
 One historical case the web Worker found while enriching an **Event**: when and where, the

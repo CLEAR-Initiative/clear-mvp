@@ -2822,6 +2822,7 @@
       "pins": {
         "source": "Current",
         "proposed": "Proposed",
+        "suggestion": "Suggested",
         "placed": "Your point"
       },
       "unavailable": "The map could not load. You can still search for the place or enter its coordinates."
@@ -2855,7 +2856,8 @@
     "tabs": {
       "community": "Community signals",
       "proposals": "Proposed signals",
-      "locations": "Location changes"
+      "locations": "Location changes",
+      "places": "Places"
     },
     "filters": {
       "community": "All",
@@ -2863,7 +2865,8 @@
       "unclassified": "Unclassified",
       "chatter": "Chatter",
       "proposals": "Proposed signals",
-      "locations": "Location changes"
+      "locations": "Location changes",
+      "places": "Places"
     },
     "search": "Search text, intake refs",
     "sort": {
@@ -2988,7 +2991,8 @@
     },
     "kinds": {
       "cases": "Proposed signals",
-      "location": "Location"
+      "location": "Location",
+      "place": "Place name"
     },
     "event": {
       "untitled": "Untitled event",
@@ -3033,6 +3037,52 @@
         "outsideCoverage": "That place is outside the areas CLEAR covers.",
         "conflict": "This change was already decided, or replaced by a newer one.",
         "failed": "Could not save the decision. Try again."
+      }
+    },
+    "place": {
+      "preview": "{count, plural, one {# signal} other {# signals}} · {area}",
+      "seen": "{count, plural, one {# signal} other {# signals}} in {area} · last seen {date}",
+      "posts": "{count, plural, one {The post that names it} other {Posts that name it}}",
+      "noPosts": "No post to show.",
+      "postHidden": "You cannot read this signal.",
+      "openSignal": "Open the signal",
+      "reasons": {
+        "NO_MATCH": "No match in {area}",
+        "OUTSIDE_AREA": "A place with this name exists outside {area}"
+      },
+      "suggestions": "Places it could be",
+      "suggestionsLoading": "Looking for places…",
+      "noSuggestions": "No place with a similar name. Place a point on the map.",
+      "kinds": {
+        "geonames": "GeoNames place",
+        "district": "District in CLEAR",
+        "landmark": "Landmark in CLEAR"
+      },
+      "where": {
+        "inside": "In {area}",
+        "outside": "{km} km outside {area}",
+        "unknown": "Distance not known"
+      },
+      "placeTitle": "Place the point",
+      "placeHint": "Click the map where {name} is, or search for the place. You can also enter its coordinates.",
+      "actions": {
+        "use": "Use this place",
+        "place": "Place on map",
+        "save": "Save this point",
+        "cancel": "Cancel",
+        "notAPlace": "Not a place",
+        "ambiguous": "Ambiguous"
+      },
+      "toast": {
+        "resolved": "Place saved. {count, plural, =0 {No signal moved.} one {# signal moved.} other {# signals moved.}}",
+        "notAPlace": "Marked as not a place. It will not come back.",
+        "ambiguous": "Marked as ambiguous. It stays out of the queue until someone resolves it."
+      },
+      "errors": {
+        "forbidden": "You can't put this place there: it is outside the state of this place name.",
+        "badPlace": "That place is outside the country, or outside the areas CLEAR covers.",
+        "conflict": "This place name was already resolved, or its spelling already has an alias.",
+        "failed": "Could not save the answer. Try again."
       }
     },
     "cases": {

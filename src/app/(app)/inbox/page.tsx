@@ -10,11 +10,13 @@ import { useFeatureEnabled } from "~/components/feature-flags-provider";
 import { inboxAccess } from "~/lib/inbox-access";
 import { isEmergencyResponseManager, isPlatformAdmin, isTeamAdmin } from "~/lib/roles";
 import type { LocationChallengeDecision } from "~/lib/location-challenge";
+import { placeResolvedToastKey, type PlaceNameResolutionKind } from "~/lib/place-names";
 import { canReviewSource } from "~/lib/ground-review";
 import {
   buildCaseGroupEntries,
   buildInboxEntries,
   buildLocationChallengeEntries,
+  buildPlaceNameEntries,
   countByFilter,
   countUnreadByFilter,
   filtersFor,
@@ -33,6 +35,7 @@ import {
   type InboxSort,
   type InboxTab,
   type LocationChallengeEntry,
+  type PlaceNameEntry,
   type RejectReason,
 } from "~/lib/hotline-inbox";
 import type { GqlCaseProposal, GqlCaseProposalDecision, GqlReviewCaseProposal } from "~/lib/types/graphql";
@@ -91,6 +94,13 @@ function rememberOpened(prev: Set<string>, id: string, entries: readonly InboxEn
  * platform admins), never the filer. Each is decided in its pane: accept the
  * proposed point, place a different one, or decline. A decided challenge
  * leaves the queue, like a reviewed hotline thread.
+ *
+ * Places (clear-api UnresolvedPlaceName, ADR-0019): a place name, as written
+ * in Signals, that geocoding could not place, for the same deciders as
+ * Location challenges. Each is resolved once in its pane: use a suggested
+ * place, place a point, or mark it not a place or ambiguous. A location
+ * answer becomes a place alias and moves the Signals that wait on the name.
+ * A resolved row leaves the queue.
  */
 
 /** The toast for each way a Location challenge is decided. */
@@ -166,6 +176,12 @@ export default function InboxPage() {
     staleTime: 30_000,
     refetchInterval: 60_000,
   });
+  // Open unresolved place names the reader may resolve, most Signals first.
+  const placesQuery = api.placeNames.queue.useQuery(undefined, {
+    enabled: access.places,
+    staleTime: 30_000,
+    refetchInterval: 60_000,
+  });
   /** Cases decided in this session, as their decision (or, after a
    * CONFLICT, the Event's own copy) returned them: they keep their row,
    * now showing the decision, after the proposed list stops returning
@@ -182,16 +198,17 @@ export default function InboxPage() {
       ...(inboxQuery.data ? buildInboxEntries(inboxQuery.data) : []),
       ...(casesQuery.data ? buildCaseGroupEntries(casesQuery.data, decidedCases) : []),
       ...(locationsQuery.data ? buildLocationChallengeEntries(locationsQuery.data) : []),
+      ...(placesQuery.data ? buildPlaceNameEntries(placesQuery.data.items) : []),
     ];
     return dismissedIds.size === 0 ? built : built.filter((entry) => !dismissedIds.has(entry.id));
-  }, [inboxQuery.data, casesQuery.data, locationsQuery.data, decidedCases, dismissedIds]);
+  }, [inboxQuery.data, casesQuery.data, locationsQuery.data, placesQuery.data, decidedCases, dismissedIds]);
   const sourceById = useMemo(() => {
     const m = new Map<string, string[]>();
     for (const s of inboxQuery.data?.sources ?? []) m.set(s.id, s.reviewerRoles);
     return m;
   }, [inboxQuery.data]);
 
-  const tabs = useMemo(() => tabsFor(access), [access.hotline, access.proposals, access.locations]); // eslint-disable-line react-hooks/exhaustive-deps
+  const tabs = useMemo(() => tabsFor(access), [access.hotline, access.proposals, access.locations, access.places]); // eslint-disable-line react-hooks/exhaustive-deps
   const [chosenTab, setTab] = useState<InboxTab>("community");
   const [chosenFilter, setFilter] = useState<InboxFilter>("reports");
   // The tab and filter in force are derived, never synced: the session and
@@ -345,6 +362,22 @@ export default function InboxPage() {
       // The Signal's own place and pin change with an accepted or placed point.
       if (decision !== "DECLINE") {
         void utils.signals.get.invalidate({ id: entry.challenge.signalId });
+        void utils.signals.forMap.invalidate();
+      }
+    },
+    [dismiss, utils, t],
+  );
+
+  /** A place name was resolved: it leaves the queue and the nav badge
+   * follows. A location answer moved Signals, so their places and the map's
+   * pins follow too. */
+  const placeResolved = useCallback(
+    (entry: PlaceNameEntry, kind: PlaceNameResolutionKind, signalsMoved: number) => {
+      dismiss(entry.id, { message: t(placeResolvedToastKey(kind), { count: signalsMoved }) });
+      void utils.placeNames.queue.invalidate();
+      void utils.placeNames.queueCount.invalidate();
+      if (signalsMoved > 0) {
+        void utils.signals.get.invalidate();
         void utils.signals.forMap.invalidate();
       }
     },
@@ -571,10 +604,10 @@ export default function InboxPage() {
         <div className={styles.headerRow}>
           <span className={styles.title}>{t("title")}</span>
           <span className={styles.awaiting}>
-            {t("awaiting", { count: counts.community + counts.proposals + counts.locations })}
+            {t("awaiting", { count: counts.community + counts.proposals + counts.locations + counts.places })}
           </span>
-          {(inboxQuery.isFetching || casesQuery.isFetching || locationsQuery.isFetching) && <Loader size={12} />}
-          {(inboxQuery.error || casesQuery.error || locationsQuery.error) && (
+          {(inboxQuery.isFetching || casesQuery.isFetching || locationsQuery.isFetching || placesQuery.isFetching) && <Loader size={12} />}
+          {(inboxQuery.error || casesQuery.error || locationsQuery.error || placesQuery.error) && (
             <span className={styles.actionError} data-testid="inbox-load-error">{t("loadError")}</span>
           )}
         </div>
@@ -637,7 +670,8 @@ export default function InboxPage() {
           loading={
             (access.hotline && inboxQuery.isLoading) ||
             (access.proposals && casesQuery.isLoading) ||
-            (access.locations && locationsQuery.isLoading)
+            (access.locations && locationsQuery.isLoading) ||
+            (access.places && placesQuery.isLoading)
           }
         />
         <ReadingPane
@@ -649,6 +683,7 @@ export default function InboxPage() {
           onCaseStale={caseStale}
           canPlaceAnywhere={isPlatformAdmin(role)}
           onLocationDecided={locationDecided}
+          onPlaceResolved={placeResolved}
           busy={busy}
           error={actionError}
           rejectOpen={rejectOpen}
