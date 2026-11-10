@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
+  aliasCountries,
+  aliasErrorKey,
+  aliasTargetPath,
   placeErrorKey,
   placeNameHomeArea,
   placeResolvedToastKey,
@@ -72,5 +75,69 @@ describe("signalExcerpt", () => {
     const cut = signalExcerpt({ title: null, description: "x".repeat(400) }, 50)!;
     expect(cut).toHaveLength(50);
     expect(cut.endsWith("…")).toBe(true);
+  });
+});
+
+describe("aliasCountries", () => {
+  const data = {
+    pipelineCountries: [
+      { name: "Sudan", pcode: "SD" },
+      { name: "Venezuela", pcode: "VE" },
+      { name: "Afghanistan", pcode: "AF" },
+    ],
+    countries: [
+      { id: "C-SD", name: "Sudan", pCode: "sd" },
+      // No P-Code, and the long official name: matched by name.
+      { id: "C-VE", name: "Venezuela (Bolivarian Republic of)", pCode: null },
+    ],
+    states: [
+      { id: "S2", name: "White Nile", parent: { id: "C-SD" } },
+      { id: "S1", name: "South Kordofan", parent: { id: "C-SD" } },
+      { id: "S3", name: "Zulia", parent: { id: "C-VE" } },
+      { id: "S4", name: "Orphan", parent: null },
+    ],
+  };
+
+  it("matches each pipeline country to its location by P-Code, else by name, and lists its states by name", () => {
+    expect(aliasCountries(data)).toEqual([
+      {
+        countryCode: "SD",
+        name: "Sudan",
+        countryLocationId: "C-SD",
+        states: [{ id: "S1", name: "South Kordofan" }, { id: "S2", name: "White Nile" }],
+      },
+      { countryCode: "VE", name: "Venezuela", countryLocationId: "C-VE", states: [{ id: "S3", name: "Zulia" }] },
+      // No location: still listed, for a country-wide alias, with no states.
+      { countryCode: "AF", name: "Afghanistan", countryLocationId: null, states: [] },
+    ]);
+  });
+});
+
+describe("aliasTargetPath and aliasErrorKey", () => {
+  it("reads a target finest first, without the country", () => {
+    expect(
+      aliasTargetPath({
+        location: {
+          id: "L4",
+          name: "Um Dabakir",
+          level: 4,
+          ancestors: [
+            { id: "C1", name: "Sudan", level: 0 },
+            { id: "S1", name: "South Kordofan", level: 1 },
+            { id: "D1", name: "Kadugli", level: 2 },
+          ],
+        },
+      }),
+    ).toBe("Um Dabakir, Kadugli, South Kordofan");
+    expect(aliasTargetPath({ location: { id: "D1", name: "Kadugli", level: 2, ancestors: [] } })).toBe("Kadugli");
+    expect(aliasTargetPath({ location: null })).toBeNull();
+  });
+
+  it("maps clear-api's refusal of an alias write to a message", () => {
+    expect(aliasErrorKey("FORBIDDEN")).toBe("aliases.errors.forbidden");
+    expect(aliasErrorKey("BAD_REQUEST")).toBe("aliases.errors.badInput");
+    expect(aliasErrorKey("CONFLICT")).toBe("aliases.errors.conflict");
+    expect(aliasErrorKey("NOT_FOUND")).toBe("aliases.errors.gone");
+    expect(aliasErrorKey(null)).toBe("aliases.errors.failed");
   });
 });

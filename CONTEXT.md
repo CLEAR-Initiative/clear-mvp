@@ -132,6 +132,18 @@ pick a gazetteer name (ADR-0003 is about challenges, and stays as it is).
 _Avoid_: "failed geocode" (the Signal still has a location: its state or country); "synonym"
 for a place alias in code.
 
+**Place alias** (clear-api `PlaceAlias`, clear-api ADR-0019):
+A spelling that CLEAR maps to one of its own locations, used before GeoNames when a Signal
+is placed. The Places tab's **Aliases** view is the list of them: spelling, the place it
+points to, where it applies (one state, or the whole country), its source (**Review**: a
+decider resolved an Unresolved place name; **Seed list**; **Added by hand**) and who added it.
+A decider adds a spelling before any post uses it, changes an alias's target, scope or note,
+or deletes it. A resolution writes two aliases, one for the Latin spelling and one for the
+Arabic one; they are separate rows. Deleting an alias sends its place name back to the queue
+and does not move Signals back. Everyone who decides reads the whole list; a team admin
+changes the aliases of their team's states, a platform admin all of them and the country-wide
+ones. The spelling is the alias's key, so it does not change: delete and add.
+
 **Proposed signal** (clear-api `CaseProposal`; "Web case" in older notes):
 One historical case the web Worker found while enriching an **Event**: when and where, the
 source's words and link, the figures it gives (on the ontology's seven metric types), and

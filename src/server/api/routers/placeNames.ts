@@ -3,8 +3,13 @@ import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { graphqlFetch, cookieHeaders } from "~/server/api/graphql";
 import { isGraphqlSchemaUnavailable } from "~/server/api/graphql-schema-unavailable";
 import { toTrpcError } from "~/server/api/routers/tasks";
-import type { GqlPlaceNameSuggestion, GqlUnresolvedPlaceName } from "~/lib/types/graphql";
-import { PLACE_NAME_RESOLUTION_KINDS } from "~/lib/place-names";
+import type {
+  GqlPlaceAlias,
+  GqlPlaceNameSuggestion,
+  GqlUnresolvedPlaceName,
+  PlaceAliasCountry,
+} from "~/lib/types/graphql";
+import { PLACE_ALIAS_SOURCES, PLACE_NAME_RESOLUTION_KINDS, aliasCountries } from "~/lib/place-names";
 
 /**
  * The unresolved place-name queue (clear-api ADR-0019): place names that
@@ -84,6 +89,74 @@ const RESOLVE_MUTATION = `
     }
   }
 `;
+
+const ALIAS_FIELDS = `
+  id
+  nameNorm
+  nameDisplay
+  countryCode
+  scopeLocationId
+  scopeLocation { id name }
+  locationId
+  location { id name level ancestors { id name level } }
+  source
+  createdByName
+  createdAt
+  note
+  canEdit
+`;
+
+/** Aliases per "Load more" page. */
+export const ALIAS_PAGE_SIZE = 50;
+
+const ALIASES_QUERY = `
+  query PlaceAliases($search: String, $source: PlaceAliasSource, $first: Int, $after: String) {
+    placeAliases(search: $search, source: $source, first: $first, after: $after) {
+      totalCount
+      hasMore
+      endCursor
+      items { ${ALIAS_FIELDS} }
+    }
+  }
+`;
+
+// The countries the pipeline covers (with their ISO-2 code), and the level-0
+// and level-1 locations to match them to: an alias needs a country code, and
+// a country location does not always carry one.
+const ALIAS_SCOPES_QUERY = `
+  query PlaceAliasScopes {
+    pipelineCountries { name pcode }
+    countries: locations(level: 0) { id name pCode }
+    states: locations(level: 1) { id name parent { id } }
+  }
+`;
+
+const CREATE_ALIAS_MUTATION = `
+  mutation CreatePlaceAlias($input: CreatePlaceAliasInput!) {
+    createPlaceAlias(input: $input) { ${ALIAS_FIELDS} }
+  }
+`;
+
+const UPDATE_ALIAS_MUTATION = `
+  mutation UpdatePlaceAlias($id: String!, $input: UpdatePlaceAliasInput!) {
+    updatePlaceAlias(id: $id, input: $input) { ${ALIAS_FIELDS} }
+  }
+`;
+
+const DELETE_ALIAS_MUTATION = `
+  mutation DeletePlaceAlias($id: String!) {
+    deletePlaceAlias(id: $id)
+  }
+`;
+
+const pointInput = z.object({
+  lat: z.number().min(-90).max(90),
+  lng: z.number().min(-180).max(180),
+  name: z.string().trim().max(500).optional(),
+});
+
+/** A target is an existing location or a point, never both. */
+const oneTarget = (val: { locationId?: string; point?: unknown }) => !(val.locationId != null && val.point != null);
 
 const resolutionInput = z
   .object({
@@ -214,6 +287,153 @@ export const placeNamesRouter = createTRPCRouter({
           cookieHeaders(ctx),
         );
         return data.resolveUnresolvedPlaceName;
+      } catch (err) {
+        toTrpcError(err);
+      }
+    }),
+
+  /** The alias list, newest first, a page at a time. `cursor` is clear-api's
+   * `endCursor`, for infinite queries. Every decider reads every alias;
+   * `canEdit` says which ones the reader may change. */
+  aliases: protectedProcedure
+    .input(
+      z
+        .object({
+          search: z.string().trim().max(500).optional(),
+          source: z.enum(PLACE_ALIAS_SOURCES).optional(),
+          cursor: z.string().min(1).nullish(),
+        })
+        .optional(),
+    )
+    .query(async ({ ctx, input }): Promise<{ items: GqlPlaceAlias[]; totalCount: number; nextCursor: string | null }> => {
+      try {
+        const data = await graphqlFetch<{
+          placeAliases: { items: GqlPlaceAlias[]; totalCount: number; hasMore: boolean; endCursor: string | null };
+        }>(
+          ALIASES_QUERY,
+          {
+            search: input?.search || undefined,
+            source: input?.source,
+            first: ALIAS_PAGE_SIZE,
+            after: input?.cursor ?? undefined,
+          },
+          cookieHeaders(ctx),
+        );
+        const page = data.placeAliases;
+        return {
+          items: page?.items ?? [],
+          totalCount: page?.totalCount ?? 0,
+          nextCursor: page?.hasMore ? (page.endCursor ?? null) : null,
+        };
+      } catch (err) {
+        if (isGraphqlSchemaUnavailable(err)) return { items: [], totalCount: 0, nextCursor: null };
+        toTrpcError(err);
+      }
+    }),
+
+  /** The countries an alias can belong to and the states it can be scoped
+   * to, for the Add alias form. */
+  aliasScopes: protectedProcedure.query(async ({ ctx }): Promise<PlaceAliasCountry[]> => {
+    try {
+      const data = await graphqlFetch<Parameters<typeof aliasCountries>[0]>(ALIAS_SCOPES_QUERY, {}, cookieHeaders(ctx));
+      return aliasCountries(data);
+    } catch (err) {
+      if (isGraphqlSchemaUnavailable(err)) return [];
+      toTrpcError(err);
+    }
+  }),
+
+  /** Add an alias by hand. clear-api checks the decider, the scope and the
+   * target, and closes the open queue rows the alias answers. Its error
+   * comes back with its code (FORBIDDEN, BAD_REQUEST, CONFLICT). */
+  createAlias: protectedProcedure
+    .input(
+      z
+        .object({
+          name: z.string().trim().min(1).max(500),
+          nameAr: z.string().trim().max(500).optional(),
+          countryCode: z.string().trim().length(2),
+          /** Null: the whole country. */
+          scopeLocationId: z.string().min(1).nullable(),
+          locationId: z.string().min(1).optional(),
+          point: pointInput.optional(),
+          note: z.string().trim().max(2000).optional(),
+        })
+        .refine((val) => (val.locationId != null) !== (val.point != null), {
+          message: "Give the target as locationId or as point, not both",
+          path: ["locationId"],
+        }),
+    )
+    .mutation(async ({ ctx, input }): Promise<GqlPlaceAlias> => {
+      try {
+        const data = await graphqlFetch<{ createPlaceAlias: GqlPlaceAlias }>(
+          CREATE_ALIAS_MUTATION,
+          {
+            input: {
+              ...input,
+              nameAr: input.nameAr || undefined,
+              note: input.note || undefined,
+              point: input.point ? { ...input.point, name: input.point.name || undefined } : undefined,
+            },
+          },
+          cookieHeaders(ctx),
+        );
+        return data.createPlaceAlias;
+      } catch (err) {
+        toTrpcError(err);
+      }
+    }),
+
+  /** Change an alias's target, scope or note. A field left out stays as it
+   * is; `scopeLocationId: null` means the whole country. */
+  updateAlias: protectedProcedure
+    .input(
+      z.object({
+        id: z.string().min(1),
+        change: z
+          .object({
+            scopeLocationId: z.string().min(1).nullable().optional(),
+            locationId: z.string().min(1).optional(),
+            point: pointInput.optional(),
+            note: z.string().trim().max(2000).nullable().optional(),
+          })
+          .refine(oneTarget, { message: "Give the target as locationId or as point, not both", path: ["locationId"] })
+          .refine((val) => Object.values(val).some((v) => v !== undefined), { message: "Nothing to change" }),
+      }),
+    )
+    .mutation(async ({ ctx, input }): Promise<GqlPlaceAlias> => {
+      const { scopeLocationId, locationId, point, note } = input.change;
+      // Only the fields the reader changed are sent: clear-api reads a field
+      // that is present, even as null, as a change.
+      const change: Record<string, unknown> = {};
+      if (scopeLocationId !== undefined) change.scopeLocationId = scopeLocationId;
+      if (locationId !== undefined) change.locationId = locationId;
+      if (point !== undefined) change.point = { ...point, name: point.name || undefined };
+      if (note !== undefined) change.note = note || null;
+      try {
+        const data = await graphqlFetch<{ updatePlaceAlias: GqlPlaceAlias }>(
+          UPDATE_ALIAS_MUTATION,
+          { id: input.id, input: change },
+          cookieHeaders(ctx),
+        );
+        return data.updatePlaceAlias;
+      } catch (err) {
+        toTrpcError(err);
+      }
+    }),
+
+  /** Delete an alias. Signals it moved stay where they are; the queue row
+   * it came from opens again. */
+  deleteAlias: protectedProcedure
+    .input(z.object({ id: z.string().min(1) }))
+    .mutation(async ({ ctx, input }): Promise<{ deleted: boolean }> => {
+      try {
+        const data = await graphqlFetch<{ deletePlaceAlias: boolean }>(
+          DELETE_ALIAS_MUTATION,
+          { id: input.id },
+          cookieHeaders(ctx),
+        );
+        return { deleted: !!data.deletePlaceAlias };
       } catch (err) {
         toTrpcError(err);
       }
