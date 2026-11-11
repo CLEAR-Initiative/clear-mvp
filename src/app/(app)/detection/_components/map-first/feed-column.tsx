@@ -89,7 +89,8 @@ export const FeedColumn = forwardRef<FeedColumnHandle, FeedColumnProps>(function
     );
     observer.observe(sentinel);
     return () => observer.disconnect();
-  }, [hasMore, isFetchingMore, onLoadMore]);
+    // The feed remounts when `refreshKey` changes; watch its new sentinel.
+  }, [hasMore, isFetchingMore, onLoadMore, refreshKey]);
 
   const nounLabel = t(`noun.${noun}`, { count: narrowed ? totalCount : items.length });
   const countText = narrowed
