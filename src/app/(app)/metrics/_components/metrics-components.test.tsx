@@ -175,6 +175,26 @@ describe("WeeklyTrend", () => {
     expect(screen.getByText(/Coverage is the share of events in range/)).toBeInTheDocument();
   });
 
+  it("keeps the chart, with coverage at 0%, when nothing in the trend could be measured", () => {
+    const unmeasured = withShares({
+      ...RAW,
+      weekly: RAW.weekly.map((w) => ({ ...w, counted: 0, sameDay: 0, byNextDay: 0, eventsInRange: 6 })),
+    });
+    const { container } = wrap(<WeeklyTrend metrics={unmeasured} showFrom={SHOW_ALL} defaultMode="weekly" />);
+    expect(screen.queryByText("No measured events in the trend's weeks yet.")).not.toBeInTheDocument();
+    expect(screen.getByText("Measured coverage")).toBeInTheDocument();
+    const coverage = [...container.querySelectorAll("path.recharts-line-curve")].filter(
+      (c) => c.getAttribute("stroke-dasharray") === "2 3",
+    );
+    expect(coverage).toHaveLength(1);
+  });
+
+  it("says nothing was measured when it can draw neither shares nor coverage", () => {
+    const empty = withShares({ ...RAW, weekly: RAW.weekly.map((w) => ({ ...w, counted: 0, sameDay: 0, byNextDay: 0 })) });
+    wrap(<WeeklyTrend metrics={empty} showFrom={SHOW_ALL} />);
+    expect(screen.getByText("No measured events in the trend's weeks yet.")).toBeInTheDocument();
+  });
+
   it("says coverage needs a newer API when the weeks lack it", () => {
     wrap(<WeeklyTrend metrics={withShares(RAW)} showFrom={SHOW_ALL} />);
     expect(screen.queryByText("Measured coverage")).not.toBeInTheDocument();

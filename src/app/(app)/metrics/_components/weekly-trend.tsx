@@ -111,7 +111,8 @@ export function WeeklyTrend({
         <SkeletonBone height={260} />
       </Box>
     );
-  } else if (!anyMeasured) {
+  } else if (!anyMeasured && !hasCoverage) {
+    // Coverage at 0% is still worth drawing: it is the week nothing could be measured.
     body = (
       <Text size="sm" c="var(--color-text-secondary)">
         {t("empty")}
