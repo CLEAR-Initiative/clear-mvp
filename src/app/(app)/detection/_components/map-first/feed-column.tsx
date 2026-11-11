@@ -281,6 +281,9 @@ function FeedRow({
     <div
       ref={registerRef}
       role="button"
+      // Named by its title: from its content the name would start with the
+      // select button's label ("Select event").
+      aria-label={item.title}
       tabIndex={0}
       data-testid={`feed-row-${item.id}`}
       className={`${css.row} ${selected ? css.rowSelected : ""} ${fresh ? css.rowFresh : ""}`}
