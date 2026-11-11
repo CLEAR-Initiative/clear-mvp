@@ -415,7 +415,10 @@ export function ProgressOverTime({ filters }: { filters: MetricsFilterValues }) 
             </Tabs.Tab>
           ))}
         </Tabs.List>
-      </Tabs>
+        {/* One panel for the tab that is open: the content is the same component with another view, and
+            the panel ties it to its tab for a screen reader. */}
+        <Tabs.Panel value={view} pt={16}>
+          <Stack gap={16}>
       <Text size="sm" c="var(--color-text-secondary)" maw={720} data-testid="view-description">
         {t(`view.${view}.description`)}
       </Text>
@@ -761,6 +764,9 @@ export function ProgressOverTime({ filters }: { filters: MetricsFilterValues }) 
           <MetricsBodySkeleton />
         </Box>
       )}
+          </Stack>
+        </Tabs.Panel>
+      </Tabs>
     </Stack>
   );
 }

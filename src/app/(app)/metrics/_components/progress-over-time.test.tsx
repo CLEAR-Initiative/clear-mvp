@@ -372,8 +372,14 @@ describe("ProgressOverTime, the two views", () => {
     // The tiles and the selector offer the delay metrics only.
     expect(screen.getByRole("button", { name: "Show Detected same day" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Show At district or finer" })).not.toBeInTheDocument();
+    // jsdom has no scrollIntoView, and the open dropdown calls it.
+    Element.prototype.scrollIntoView = vi.fn();
     fireEvent.click(screen.getByRole("textbox", { name: "Metric" }));
+    expect(screen.getByRole("option", { name: "Detected same day" })).toBeInTheDocument();
     expect(screen.queryByRole("option", { name: "At district or finer" })).not.toBeInTheDocument();
+    // The open tab's panel holds the content and names its tab.
+    expect(screen.getByRole("tabpanel")).toHaveAccessibleName("Same ruler");
+    expect(within(screen.getByRole("tabpanel")).getByTestId("view-description")).toBeInTheDocument();
     // Every read on this tab asks for the onset known today.
     expect(seriesCalls().length).toBeGreaterThan(0);
     expect(seriesCalls().every((input) => input.onsetBasis === "CURRENT")).toBe(true);
