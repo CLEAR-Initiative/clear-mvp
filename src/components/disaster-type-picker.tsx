@@ -9,7 +9,12 @@ import { IconChevronRight, IconChevronDown, IconSelector } from "@tabler/icons-r
 
 export interface HierarchyLevel1 {
   name: string;
-  groups: Array<{ name: string; codes: string[] }>;
+  groups: Array<{
+    name: string;
+    codes: string[];
+    /** Level-3 types under the group, one code each (when loaded). */
+    subTypes?: Array<{ name: string; code: string }>;
+  }>;
 }
 
 interface DisasterTypePickerProps {
@@ -20,17 +25,25 @@ interface DisasterTypePickerProps {
   size?: "xs" | "sm";
 }
 
-/** Expand selected "<l1>::<l2>" keys to their underlying glide codes */
+/**
+ * Expand selected keys to their underlying glide codes: a level-2 group
+ * ("<l1>::<l2>") to all its codes, a level-3 type ("<l1>::<l2>::<l3>") to its own.
+ */
 export function expandSelectionsToCodes(
-  selections: string[],
-  hierarchy: HierarchyLevel1[],
+  selections: readonly string[],
+  hierarchy: readonly HierarchyLevel1[],
 ): string[] {
   const codes = new Set<string>();
   for (const value of selections) {
-    const [l1Name, l2Name] = value.split("::");
+    const [l1Name, l2Name, l3Name] = value.split("::");
     const l1 = hierarchy.find((h) => h.name === l1Name);
     const l2 = l1?.groups.find((g) => g.name === l2Name);
-    l2?.codes.forEach((c) => codes.add(c));
+    if (l3Name != null) {
+      const sub = l2?.subTypes?.find((s) => s.name === l3Name);
+      if (sub) codes.add(sub.code);
+    } else {
+      l2?.codes.forEach((c) => codes.add(c));
+    }
   }
   return [...codes];
 }

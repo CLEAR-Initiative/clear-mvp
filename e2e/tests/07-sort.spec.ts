@@ -2,42 +2,52 @@ import { test, expect } from "../support/test";
 import { gotoDetectionEvents, eventRows } from "../support/helpers";
 
 /**
- * Case 7 — sort the Detection Events list and assert the order changes. The sort
- * trigger is an icon-only button, so it carries a data-testid (feed-sort-trigger).
- * Labels are detection.sort in messages/en.json.
+ * Case 7 - sort the Detection Events list and assert the order changes. The
+ * sort button (data-testid feed-sort-trigger) on the count row opens a menu
+ * grouped by Last activity, Severity and Published; labels are
+ * detection.mapFirst.sort in messages/en.json.
  *
- * Severity: seeded events have distinct severities, so High to Low and Low to High
- * put different events first. Age: event-types-seed stamps a distinct
- * lastSignalCreatedAt on each of those four, so Newest first and Oldest first
- * do the same. Region and type filters are not this case.
+ * Severity: seeded events have distinct severities, so the Severity sort must
+ * list them most severe first. Age: event-types-seed stamps a distinct
+ * lastSignalCreatedAt on each of those four, so Newest and Oldest put
+ * different events first. Region and type filters are not this case.
  */
+const RANK: Record<string, number> = { critical: 4, high: 3, medium: 2, low: 1, unknown: 0 };
+
+async function severities(page: import("@playwright/test").Page) {
+  return eventRows(page)
+    .locator("[data-severity]")
+    .evaluateAll((els) => els.map((el) => el.getAttribute("data-severity") ?? "unknown"));
+}
+
 test.describe("Sort events (case 7)", () => {
-  test("changing the severity sort reorders the event list", async ({ page }) => {
+  test("the Severity sort lists the most severe events first", async ({ page }) => {
     await gotoDetectionEvents(page);
+    const sort = page.getByTestId("feed-sort-trigger");
+    await expect(sort).toHaveText(/Activity/);
 
-    await page.getByTestId("feed-sort-trigger").click();
-    await page.getByRole("menuitem", { name: "Severity: High to Low" }).click();
-    await expect(eventRows(page).first()).toBeVisible();
-    const topHighToLow = (await eventRows(page).first().innerText()).trim();
-
-    await page.getByTestId("feed-sort-trigger").click();
-    await page.getByRole("menuitem", { name: "Severity: Low to High" }).click();
-
+    await sort.click();
+    await page.getByRole("menuitemradio", { name: "Highest first" }).click();
+    await expect(sort).toHaveText(/Severity/);
     await expect
-      .poll(async () => (await eventRows(page).first().innerText()).trim())
-      .not.toBe(topHighToLow);
+      .poll(async () => {
+        const ranks = (await severities(page)).map((s) => RANK[s] ?? 0);
+        return ranks.length > 1 && ranks.every((r, i) => i === 0 || r <= ranks[i - 1]!);
+      })
+      .toBe(true);
   });
 
-  test("Newest first and Oldest first put different events first", async ({ page }) => {
+  test("Newest and Oldest put different events first", async ({ page }) => {
     await gotoDetectionEvents(page);
-
-    await page.getByTestId("feed-sort-trigger").click();
-    await page.getByRole("menuitem", { name: "Newest first" }).click();
+    const sort = page.getByTestId("feed-sort-trigger");
+    await expect(sort).toHaveText(/Activity/);
     await expect(eventRows(page).first()).toBeVisible();
     const topNewest = (await eventRows(page).first().innerText()).trim();
 
-    await page.getByTestId("feed-sort-trigger").click();
-    await page.getByRole("menuitem", { name: "Oldest first" }).click();
+    // Last activity, oldest first: the first "Oldest first" in the menu.
+    await sort.click();
+    await page.getByRole("menuitemradio", { name: "Oldest first" }).first().click();
+    await expect(sort).toHaveAttribute("title", /Last activity · Oldest first/);
 
     await expect
       .poll(async () => (await eventRows(page).first().innerText()).trim())

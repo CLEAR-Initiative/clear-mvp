@@ -271,6 +271,8 @@ const dateLike = z.union([z.date(), z.string()]).optional();
 const commonFilter = {
   teamId: z.string().nullish(),
   locationId: z.string().nullish(),
+  /** Several places at once (each with its descendants); see clear-api's EventsPageInput. */
+  locationIds: z.array(z.string()).optional(),
   eventTypes: z.array(z.string()).optional(),
   severityMin: z.number().int().min(1).max(5).optional(),
   severityMax: z.number().int().min(1).max(5).optional(),
@@ -509,14 +511,22 @@ export const alertsRouter = createTRPCRouter({
     const data = await graphqlFetch<{
       disasterTypeHierarchy: Array<{
         name: string;
-        groups: Array<{ name: string; codes: string[] }>;
+        groups: Array<{ name: string; codes: string[]; subTypes: Array<{ disasterType: string; glideNumber: string }> }>;
       }>;
     }>(
-      `query { disasterTypeHierarchy { name groups { name codes } } }`,
+      `query { disasterTypeHierarchy { name groups { name codes subTypes { disasterType glideNumber } } } }`,
       undefined,
       cookieHeaders(ctx),
     );
-    return data.disasterTypeHierarchy;
+    // Level 3 (one code each) goes along for filters that offer it.
+    return data.disasterTypeHierarchy.map((l1) => ({
+      name: l1.name,
+      groups: l1.groups.map((g) => ({
+        name: g.name,
+        codes: g.codes,
+        subTypes: g.subTypes.map((s) => ({ name: s.disasterType, code: s.glideNumber })),
+      })),
+    }));
   }),
 
   createAlert: protectedProcedure

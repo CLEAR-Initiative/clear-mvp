@@ -2,6 +2,7 @@ import { z } from "zod";
 import { createTRPCRouter, protectedProcedure, publicProcedure } from "~/server/api/trpc";
 import { graphqlFetch, cookieHeaders } from "~/server/api/graphql";
 import { adminBoundaryScope } from "~/lib/location";
+import { labelPoint } from "~/lib/geo/label-point";
 
 interface GqlLocationNode {
   id: string;
@@ -60,6 +61,17 @@ const LOCATIONS_WITH_GEOMETRY_QUERY = `
       pCode
       geometry
       population
+    }
+  }
+`;
+
+// Names and shapes only: `parent` would resolve one row per location.
+const LABEL_POINTS_QUERY = `
+  query LocationLabelPoints($level: Int, $within: [String!]) {
+    locations(level: $level, within: $within) {
+      id
+      name
+      geometry
     }
   }
 `;
@@ -148,6 +160,25 @@ export const locationsRouter = createTRPCRouter({
    * Fetch admin boundary polygons for a given hierarchy level (1 = states, 2 = districts).
    * Optionally scoped to a country by its location ID.
    */
+  /**
+   * A country's states (level 1) or districts (level 2) as map label points:
+   * a name and one point inside each place, without the polygons. Afghanistan's
+   * districts are about 11 MB of GeoJSON; their label points are a few KB.
+   */
+  labelPoints: protectedProcedure
+    .input(z.object({ countryId: z.string(), level: z.union([z.literal(1), z.literal(2)]) }))
+    .query(async ({ ctx, input }) => {
+      const data = await graphqlFetch<{ locations: { id: string; name: string; geometry: unknown }[] }>(
+        LABEL_POINTS_QUERY,
+        { level: input.level, within: [input.countryId] },
+        cookieHeaders(ctx),
+      );
+      return data.locations.flatMap((l) => {
+        const point = labelPoint(l.geometry);
+        return point ? [{ id: l.id, name: l.name, lng: point[0], lat: point[1] }] : [];
+      });
+    }),
+
   getAdminBoundaries: protectedProcedure
     .input(
       z.object({

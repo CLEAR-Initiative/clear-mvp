@@ -388,6 +388,8 @@ interface CrisisMapProps {
   appearance?: "default" | "analysis";
   /** Mapbox +/- control. The analysis map draws its own stack. Default true. */
   showNavigation?: boolean;
+  /** Hide the basemap's state/province names (Detection draws clickable ones). */
+  hideStateLabels?: boolean;
   /**
    * Mutable ref filled with project helpers while the map is mounted.
    * Cleared on unmount. Used by `/map` spaghetti connectors.
@@ -776,6 +778,7 @@ export function CrisisMap({
   baseMapType = "simple",
   appearance = "default",
   showNavigation = true,
+  hideStateLabels = false,
   mapApiRef,
   onMapMove,
   locationPickActive = false,
@@ -1530,7 +1533,7 @@ export function CrisisMap({
       // State/province labels - show for focus country only at all zoom levels.
       if (layer.type === "symbol" && id === "state-label") {
         try {
-          if (analysisLook) {
+          if (analysisLook || hideStateLabels) {
             m.setLayoutProperty(layer.id, "visibility", "none");
           } else {
           m.setLayerZoomRange(layer.id, 0, 24);
@@ -1612,7 +1615,7 @@ export function CrisisMap({
     }
 
     return cleanup;
-  }, [focusIso, paintableFocusGeometry, loaded, paintableAdminBoundaries, adminBoundaryLevel, isDark, showBoundaries, baseMapType, scopeCountryIsos, mapboxAdmin1Isos, appearance]);
+  }, [focusIso, paintableFocusGeometry, loaded, paintableAdminBoundaries, adminBoundaryLevel, isDark, showBoundaries, baseMapType, scopeCountryIsos, mapboxAdmin1Isos, appearance, hideStateLabels]);
 
   // Frame the focus country instantly from static countryConfig.
   // L0 GeoJSON (focusCountryFitBounds) is for highlight paint only — waiting

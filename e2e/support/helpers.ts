@@ -2,8 +2,8 @@ import { expect, type Page, type PlaywrightWorkerArgs } from "@playwright/test";
 import { ADMIN, BASE_URL } from "./data";
 
 /**
- * Open the Detection page and make sure the Events tab is active. Filters and
- * the event list live in the shared page header / Events tab.
+ * Open the Detection page and make sure the Events tab is active. On desktop
+ * the page is the map-first layout: a feed column of row cards beside the map.
  */
 export async function gotoDetectionEvents(page: Page) {
   await page.goto("/detection", { waitUntil: "domcontentloaded" });
@@ -11,34 +11,35 @@ export async function gotoDetectionEvents(page: Page) {
   if (await eventsTab.isVisible().catch(() => false)) {
     await eventsTab.click();
   }
-  // Event rows are anchors to /event/<id>. Waiting for one also proves the
-  // page has hydrated and the feed query succeeded (not pending-role empty).
-  await expect(page.locator('a[href^="/event/"]').first()).toBeVisible();
+  // Waiting for a row also proves the page has hydrated and the feed query
+  // succeeded (not pending-role empty).
+  await expect(eventRows(page).first()).toBeVisible();
 }
 
-/** Locator for the event-list rows (anchors) on the Detection Events tab. */
+/** Locator for the feed rows (cards) on the Detection Events tab. */
 export function eventRows(page: Page) {
-  return page.locator('a[href^="/event/"]');
+  return page.locator('[data-testid^="feed-row-"]');
 }
 
 /**
  * Navigate from the Detection Events list to a specific event's detail page by
  * its (seeded) title.
  *
- * A plain row click now opens the preview drawer and replaceStates /event/:id
- * without mounting page-mode chrome (Add to Crisis, Alert). Follow the href
- * so those actions stay reachable. "Back to Events" is page-only — the drawer
- * never renders it — so it is the signal we actually left the overlay.
+ * A plain row click opens the preview drawer without mounting page-mode
+ * chrome (Add to Crisis, Alert), so go to the row's full event page so those
+ * actions stay reachable. "Back to Events" is page-only: the drawer never
+ * renders it, so it is the signal we actually left the overlay.
  */
 export async function gotoEventByTitle(page: Page, title: string) {
   await gotoDetectionEvents(page);
   const row = eventRows(page).filter({ hasText: title }).first();
   await expect(row).toBeVisible();
-  const href = await row.getAttribute("href");
-  if (!href) {
-    throw new Error(`event row "${title}" should link to /event/:id`);
+  // An event row's test id carries the event's id.
+  const id = (await row.getAttribute("data-testid"))?.replace(/^feed-row-/, "");
+  if (!id) {
+    throw new Error(`event row "${title}" should carry its event id`);
   }
-  await page.goto(href);
+  await page.goto(`/event/${id}?from=detection`);
   await expect(page.getByRole("link", { name: /Back to Events/i })).toBeVisible();
   await expect(page.getByText(title).first()).toBeVisible();
 }

@@ -1767,6 +1767,106 @@
         "frequency": "Frequency",
         "variables": "Variables"
       }
+    },
+    "mapFirst": {
+      "live": "Live · updated {relative}",
+      "noun": {
+        "events": "{count, plural, one {event} other {events}}",
+        "alerts": "{count, plural, one {alert} other {alerts}}",
+        "signals": "{count, plural, one {signal} other {signals}}"
+      },
+      "count": "<b>{total}</b> {noun} · {scope} · {date}",
+      "countNarrowed": "<b>{shown}</b> of {total} {noun} · {scope} · {date}",
+      "newCount": "{count} new",
+      "empty": {
+        "events": "No events match",
+        "alerts": "No alerts match",
+        "signals": "No signals match",
+        "remove": "Remove <b>{what}</b> · shows {count}",
+        "longer": "Try a longer date range.",
+        "search": "search “{query}”"
+      },
+      "allCountries": "All countries",
+      "levels": "{count} levels",
+      "typesCount": "{count} types",
+      "sourcesCount": "{count} sources",
+      "last24h": "Last 24 hours",
+      "lastDays": "Last {count} days",
+      "showTimeline": "Show timeline (T)",
+      "hideTimeline": "Hide timeline (T)",
+      "totalNoun": "{total} {noun}",
+      "presets": {
+        "24h": "24h",
+        "7d": "7d",
+        "30d": "30d",
+        "90d": "90d"
+      },
+      "timelineSummary": "{range} · <b>{total}</b> {noun}",
+      "today": "Today",
+      "hideList": "Hide list",
+      "showList": "Show list",
+      "places": "{count, plural, one {# place} other {# places}}",
+      "qb": {
+        "label": "Search and filter",
+        "placeholder": "Search or filter…",
+        "placeholderMore": "Add filter or search…",
+        "clear": "Clear search and filters",
+        "removeToken": "Remove the {key}: filter",
+        "tokenTitle": "{token} · click to edit",
+        "filterBy": "Filter by",
+        "filters": "Filters",
+        "pickOne": "Pick one",
+        "pickMany": "Pick one or more",
+        "search": "Search “<b>{query}</b>”",
+        "noMatches": "No matches for “{query}”.",
+        "state": "State",
+        "showDistricts": "Show districts (→)",
+        "hideDistricts": "Hide districts (←)",
+        "expand": "Show subtypes (→)",
+        "collapse": "Hide subtypes (←)",
+        "keys": {
+          "in": "Location",
+          "type": "Event type",
+          "severity": "Severity",
+          "source": "Source",
+          "since": "Time range",
+          "sort": "Sort order"
+        },
+        "hint": {
+          "navigate": "navigate",
+          "select": "select",
+          "toggle": "toggle",
+          "complete": "complete",
+          "districts": "districts",
+          "remove": "remove filter",
+          "close": "close"
+        }
+      },
+      "sort": {
+        "title": "Sort: {group} · {option}",
+        "menu": "Sort order",
+        "group": {
+          "activity": "Last activity",
+          "severity": "Severity",
+          "published": "Published"
+        },
+        "option": {
+          "newest": "Newest first",
+          "oldest": "Oldest first",
+          "highest": "Highest first"
+        },
+        "short": {
+          "activity": "Activity",
+          "severity": "Severity",
+          "published": "Published"
+        }
+      },
+      "time": {
+        "pub": "Pub.",
+        "published": "Published",
+        "activity": "Last activity"
+      },
+      "mapLabel": "{name} · click to filter, shift-click to add"
     }
   },
   "eventDetail": {

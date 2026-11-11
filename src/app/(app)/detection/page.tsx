@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Box, Tabs, Button, Group } from "@mantine/core";
 import { DetectionTabContentSkeleton } from "~/components/ui/detection-page-skeleton";
-import { useDisclosure } from "@mantine/hooks";
+import { useDisclosure, useMediaQuery } from "@mantine/hooks";
 import { IconPlus } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
 import { ALL_COUNTRIES } from "~/hooks/use-team-country";
@@ -29,14 +29,18 @@ import {
 import { LiveAlertsTab, type AlertSortOrder } from "./_components/live-alerts-tab";
 import { HistoryTab } from "./_components/history-tab";
 import { DetectionFilterPopover } from "./_components/detection-filter-popover";
-import { EventsTab, type EventSortOrder } from "./_components/events-tab";
+import { EventsTab } from "./_components/events-tab";
 import { SignalsTab, type SignalSortOrder } from "./_components/signals-tab";
 import { CreateSignalModal } from "~/components/create-signal-modal";
 import { useHistoryFeed } from "./_hooks/use-history-feed";
 import { useDetectionFilters } from "./_hooks/use-detection-filters";
-import { ALERT_ORDER_MAP, DETECTION_PAGE_SIZE, EVENT_ORDER_MAP, SIGNAL_ORDER_MAP } from "./_lib/feed-order";
+import { useDetectionUrlSync } from "./_hooks/use-detection-url-sync";
+import { ALERT_ORDER_MAP, DETECTION_PAGE_SIZE, EVENT_ORDER_MAP, SIGNAL_ORDER_MAP, type EventFeedSort } from "./_lib/feed-order";
+import { combineGeometries } from "~/lib/analysis-view";
 import detectionTabsStyles from "./detection-tabs.module.css";
 import { detectionFiltersForAgent, useAgentCurrentView } from "~/lib/agent-current-view";
+import { MapFirstView } from "./_components/map-first/map-first-view";
+import { DEFAULT_DATE } from "./_lib/detection-model";
 
 const PAGE_SIZE = DETECTION_PAGE_SIZE;
 
@@ -166,7 +170,10 @@ function DetectionPageContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const filters = useDetectionFilters({ agentDeepLinkPath: "/detection" });
+  // Desktop is the map-first layout; below `sm` the page keeps its stacked layout.
+  const isMobile = useMediaQuery("(max-width: 48em)") === true;
+  const filters = useDetectionFilters({ agentDeepLinkPath: "/detection", defaultDate: DEFAULT_DATE });
+  useDetectionUrlSync(filters);
   const {
     country: selectedCountry,
     regionId: selectedRegionId,
@@ -188,6 +195,9 @@ function DetectionPageContent() {
     getZoom,
     teamId: activeTeamId,
     selectedLocationId,
+    multiLocIds,
+    countryLocationId,
+    locIds,
     locationsReady,
     fromIso,
     effectiveTo,
@@ -245,12 +255,13 @@ function DetectionPageContent() {
     { enabled: boundaryLevel === "A2" && boundariesReady, staleTime: 1000 * 60 * 60, refetchOnWindowFocus: false },
   );
   const adminBoundaries = useMemo(() => {
-    if (selectedRegionId !== null) return [];
+    // Picked places are outlined by fitBoundsGeometry instead.
+    if (locIds.length > 0) return [];
     if (boundaryLevel === "A0" && isGlobalBrowse) return a0BoundaryQuery.data ?? [];
     if (boundaryLevel === "A1") return a1BoundaryQuery.data ?? [];
     if (boundaryLevel === "A2") return a2BoundaryQuery.data ?? [];
     return [];
-  }, [selectedRegionId, boundaryLevel, isGlobalBrowse, a0BoundaryQuery.data, a1BoundaryQuery.data, a2BoundaryQuery.data]);
+  }, [locIds.length, boundaryLevel, isGlobalBrowse, a0BoundaryQuery.data, a1BoundaryQuery.data, a2BoundaryQuery.data]);
   const adminBoundaryLevel =
     boundaryLevel === "A0" ? 0 : boundaryLevel === "A1" ? 1 : boundaryLevel === "A2" ? 2 : undefined;
   const mapboxAdmin1Isos = useMemo(
@@ -264,28 +275,36 @@ function DetectionPageContent() {
     [boundaryLevel, isGlobalBrowse, teamCountries, a1BoundaryQuery.isSuccess, a1BoundaryQuery.data],
   );
 
-  const regionQuery = api.locations.getById.useQuery(
-    { id: selectedRegionId! },
-    { enabled: !!selectedRegionId, staleTime: 1000 * 60 * 60, refetchOnWindowFocus: false },
+  // The map frames (and outlines) the picked states and districts together.
+  const placeQueries = api.useQueries((q) =>
+    locIds.map((id) => q.locations.getById({ id }, { staleTime: 1000 * 60 * 60, refetchOnWindowFocus: false })),
   );
-  const fitBoundsGeometry = useMemo(
-    () => (selectedRegionId ? (regionQuery.data?.geometry ?? null) : null),
-    [selectedRegionId, regionQuery.data],
-  );
+  const placeGeometryKey = placeQueries.map((r) => r.dataUpdatedAt).join(",");
+  const fitBoundsGeometry = useMemo(() => {
+    if (locIds.length === 0) return null;
+    const geometries = placeQueries.map((r) => r.data?.geometry ?? null);
+    if (geometries.some((g) => g == null)) return null;
+    return locIds.length === 1 ? geometries[0] : combineGeometries(geometries);
+    // `placeGeometryKey` changes whenever one of the geometries arrives.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [locIds, placeGeometryKey]);
 
   // ── Per-feed sort state ────────────────────────────────────────────────────
-  const [eventsSort, setEventsSort] = useState<EventSortOrder>("newest");
+  const [eventsSort, setEventsSort] = useState<EventFeedSort>("newest");
   const [alertsSort, setAlertsSort] = useState<AlertSortOrder>("newest");
   const [signalsSort, setSignalsSort] = useState<SignalSortOrder>("newest");
 
   // Write detection nav context for event/signal page prev/next navigation.
   // Wait until locationId is resolved - writing null would make detail arrow
   // nav query an unfiltered (all-countries) list.
+  // Several picked places travel as the country here; the exact feed order is
+  // saved separately below, so detail navigation still follows the list.
+  const contextLocationId = selectedLocationId ?? countryLocationId;
   useEffect(() => {
-    if (!selectedLocationId) return;
+    if (!contextLocationId) return;
     writeDetectionNavContext({
       teamId: activeTeamId,
-      locationId: selectedLocationId,
+      locationId: contextLocationId,
       country: selectedCountry,
       from: fromIso,
       to: effectiveTo,
@@ -296,15 +315,15 @@ function DetectionPageContent() {
       signalOrderBy: SIGNAL_ORDER_MAP[signalsSort],
       sourceNames: activeSources ? [...activeSources] : undefined,
     });
-  }, [activeTeamId, selectedLocationId, selectedCountry, fromIso, effectiveTo, severityMin, severityMax, expandedTypeCodes?.join(","), eventsSort, signalsSort, activeSources]);
+  }, [activeTeamId, contextLocationId, selectedCountry, fromIso, effectiveTo, severityMin, severityMax, expandedTypeCodes?.join(","), eventsSort, signalsSort, activeSources]);
 
   // The same scope, as the CLEAR Agent's Current view (identifiers only).
   useAgentCurrentView(
-    selectedLocationId
+    contextLocationId
       ? {
           filters: detectionFiltersForAgent({
             teamId: activeTeamId,
-            locationId: selectedLocationId,
+            locationId: contextLocationId,
             country: selectedCountry,
             from: fromIso,
             to: effectiveTo,
@@ -381,6 +400,7 @@ function DetectionPageContent() {
     {
       teamId: activeTeamId,
       locationId: selectedLocationId ?? undefined,
+      locationIds: multiLocIds,
       from: fromIso,
       to: effectiveTo,
       severityMin,
@@ -558,6 +578,7 @@ function DetectionPageContent() {
     {
       teamId: activeTeamId,
       locationId: selectedLocationId ?? undefined,
+      locationIds: multiLocIds,
       severityMin,
       severityMax,
       sourceNames: activeSources ? [...activeSources] : undefined,
@@ -602,24 +623,25 @@ function DetectionPageContent() {
 
   const clipToRegion = useCallback((markers: CrisisMarker[]): CrisisMarker[] => {
     const countryBbox =
-      !selectedRegionId && selectedCountry !== ALL_COUNTRIES
+      locIds.length === 0 && selectedCountry !== ALL_COUNTRIES
         ? staticCountryBounds(selectedCountry)
         : null;
-    if (!selectedLocationId && !countryBbox) return markers;
-    return markers.filter((mk) =>
+    const scopeIds = multiLocIds ?? (selectedLocationId ? [selectedLocationId] : []);
+    if (scopeIds.length === 0 && !countryBbox) return markers;
+    const matches = (mk: CrisisMarker, id: string | null) =>
       markerMatchesLocationScope({
         locationId: mk.locationId,
         ancestorIds: mk.ancestorIds,
         region: mk.region,
         lng: mk.lng,
         lat: mk.lat,
-        selectedLocationId,
+        selectedLocationId: id,
         selectedLocationName:
           selectedCountry !== ALL_COUNTRIES ? selectedCountry : null,
         countryBbox,
-      }),
-    );
-  }, [selectedLocationId, selectedRegionId, selectedCountry]);
+      });
+    return markers.filter((mk) => (scopeIds.length > 0 ? scopeIds.some((id) => matches(mk, id)) : matches(mk, null)));
+  }, [selectedLocationId, multiLocIds, locIds.length, selectedCountry]);
 
   const mapMarkers: MapMarker[] = useMemo(() => clipToRegion(alertsToMarkers(alertsItems)), [alertsItems, clipToRegion]);
   const eventMapMarkers: MapMarker[] = useMemo(() => clipToRegion(eventsToMarkers(eventsItems)), [eventsItems, clipToRegion]);
@@ -690,6 +712,74 @@ function DetectionPageContent() {
       if (tabHandoffTimer.current) clearTimeout(tabHandoffTimer.current);
     };
   }, [pendingTab, activeTab, pendingTabLoading, locationsReady]);
+
+  if (!isMobile) {
+    const activeNew = activeTab === "alerts" ? alertsNewQuery : activeTab === "signals" ? signalsNewQuery : eventsNewQuery;
+    return (
+      <>
+        <MapFirstView
+          filters={filters}
+          title={t("header.title")}
+          tab={indicatorTab}
+          onTabChange={handleTabChange}
+          alerts={{
+            items: alertsItems,
+            loading: alertsInitialLoading,
+            isFetchingMore: alertsQuery.isFetching && alertsAppending.current,
+            hasMore: alertsHasMore,
+            total: alertsTotalCount,
+            newCount: alertsNewCount,
+            onLoadMore: loadMoreAlerts,
+            onRefresh: refreshAlerts,
+            sort: alertsSort,
+            onSortChange: setAlertsSort,
+          }}
+          events={{
+            items: eventsItems,
+            loading: eventsInitialLoading,
+            isFetchingMore: eventsQuery.isFetching && eventsAppending.current,
+            hasMore: eventsHasMore,
+            total: eventsTotalCount,
+            newCount: eventsNewCount,
+            onLoadMore: loadMoreEvents,
+            onRefresh: refreshEvents,
+            sort: eventsSort,
+            onSortChange: setEventsSort,
+          }}
+          signals={{
+            items: signalsItems,
+            loading: signalsInitialLoading,
+            isFetchingMore: signalsQuery.isFetching && signalsAppending.current,
+            hasMore: signalsHasMore,
+            total: signalsTotalCount,
+            newCount: signalsNewCount,
+            onLoadMore: loadMoreSignals,
+            onRefresh: refreshSignals,
+            sort: signalsSort,
+            onSortChange: setSignalsSort,
+          }}
+          history={pendingTab === "history" ? <DetectionTabContentSkeleton tab="history" /> : <HistoryTab {...historyFeed} />}
+          updatedAt={activeNew.dataUpdatedAt || null}
+          onCreateSignal={openCreateModal}
+          focusCountryPCode={focusCountryPCode}
+          focusCountryName={focusCountryName}
+          focusCountryGeometry={focusCountryGeometry}
+          center={mapCenter}
+          zoom={mapZoom}
+          markers={{ alerts: mapMarkers, events: eventMapMarkers, signals: signalMapMarkers }}
+          fitBoundsGeometry={fitBoundsGeometry}
+          adminBoundaries={adminBoundaries}
+          adminBoundaryLevel={adminBoundaryLevel}
+          scopeCountryIsos={scopeCountryIsos}
+          mapboxAdmin1Isos={mapboxAdmin1Isos}
+          boundaryLevel={boundaryLevel}
+          onBoundaryLevelChange={setBoundaryLevel}
+          countryLocationId={selectedCountryId}
+        />
+        <CreateSignalModal opened={createModalOpened} onClose={closeCreateModal} />
+      </>
+    );
+  }
 
   return (
     <Box>
@@ -810,7 +900,7 @@ function DetectionPageContent() {
                 hasMore={eventsHasMore}
                 totalCount={eventsTotalCount}
                 newCount={eventsNewCount}
-                sortOrder={eventsSort}
+                sortOrder={eventsSort === "pub-desc" || eventsSort === "pub-asc" ? "newest" : eventsSort}
                 onSortChange={setEventsSort}
                 onLoadMore={loadMoreEvents}
                 onRefresh={refreshEvents}
