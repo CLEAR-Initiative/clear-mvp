@@ -104,16 +104,17 @@ export function viewFromParams(params: URLSearchParams): LinkedView | null {
 /**
  * Keep /detection's filters in the URL so a view can be shared: read once on
  * mount (after the saved filters, so a link wins), then write on change. A
- * link sets the whole view, country included: the country holds for the
- * visit without changing the working country, like a starting area. An Agent
- * deep link (countryId and friends) owns the visit and is left alone. Call
- * right after `useDetectionFilters` so its restore runs first.
+ * link sets the whole view, country included: its country (or All Countries)
+ * holds for the visit, where the team's scope allows it, without changing
+ * the working country. An Agent deep link (countryId and friends) owns the
+ * visit and is left alone. Call right after `useDetectionFilters` so its
+ * restore runs first.
  */
 export function useDetectionUrlSync(filters: DetectionFilters) {
   const applied = useRef(false);
-  // "All Countries" from a link waits until the team's scope says it may be picked.
-  const pendingAll = useRef(false);
-  const { setLocIds, onDateChange, setCustomRange, setSeverities, setTypeFilters, setSources, setStartingArea, onCountryChange } = filters;
+  const {
+    setLocIds, onDateChange, setCustomRange, setSeverities, setTypeFilters, setSources, setStartingArea, showAllCountriesForVisit,
+  } = filters;
 
   useEffect(() => {
     if (applied.current) return;
@@ -122,7 +123,7 @@ export function useDetectionUrlSync(filters: DetectionFilters) {
     if (DETECTION_DEEP_LINK_PARAMS.some((k) => params.has(k))) return;
     const view = viewFromParams(params);
     if (!view) return;
-    if (view.country === ALL_COUNTRIES_PARAM) pendingAll.current = true;
+    if (view.country === ALL_COUNTRIES_PARAM) showAllCountriesForVisit();
     else if (view.country) setStartingArea(view.country);
     setLocIds(view.locIds);
     if (view.customRange) setCustomRange(view.customRange);
@@ -130,14 +131,7 @@ export function useDetectionUrlSync(filters: DetectionFilters) {
     setSeverities(view.severities);
     setTypeFilters(view.typeFilters);
     setSources(view.sources);
-  }, [setLocIds, onDateChange, setCustomRange, setSeverities, setTypeFilters, setSources, setStartingArea]);
-
-  const { scopeReady, countryOptions } = filters;
-  useEffect(() => {
-    if (!pendingAll.current || !scopeReady) return;
-    pendingAll.current = false;
-    if (countryOptions.includes(ALL_COUNTRIES)) onCountryChange(ALL_COUNTRIES);
-  }, [scopeReady, countryOptions, onCountryChange]);
+  }, [setLocIds, onDateChange, setCustomRange, setSeverities, setTypeFilters, setSources, setStartingArea, showAllCountriesForVisit]);
 
   const next = filtersToParams({
     country: filters.country === ALL_COUNTRIES ? ALL_COUNTRIES_PARAM : (filters.countryLocationId ?? null),

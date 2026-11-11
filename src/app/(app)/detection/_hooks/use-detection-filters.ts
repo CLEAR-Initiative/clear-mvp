@@ -132,6 +132,8 @@ export function useDetectionFilters({
   );
   // The starting area, until the user picks a country.
   const [areaOverride, setAreaOverride] = useState<string | null>(() => initial?.locationId ?? null);
+  // All Countries for this visit only (a shared link's), until the user picks a country.
+  const [allCountriesVisit, setAllCountriesVisit] = useState(false);
   const localizedDateOptions = useMemo(() => {
     const now = new Date();
     const englishMonths = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
@@ -197,10 +199,15 @@ export function useDetectionFilters({
     () => (areaOverride ? locateArea(tree, areaOverride) : null),
     [areaOverride, tree],
   );
-  const countryCandidate = linkCountry ?? overrideArea?.country ?? workingCountryName ?? pickedCountry;
+  const countryCandidate =
+    linkCountry ?? (allCountriesVisit ? ALL_COUNTRIES : undefined) ?? overrideArea?.country ?? workingCountryName ?? pickedCountry;
   const selectedCountry = resolveSelectedCountry(teamCountryNames, countryCandidate, scopeReady);
+  // The starting area holds only inside the country the page shows: one from
+  // outside the team's scope (a shared link's, say) is ignored, so the feed
+  // and the map never disagree about the country.
+  const overrideHolds = overrideArea != null && overrideArea.country === selectedCountry;
   // While the starting area holds, the region shown is the area's own.
-  const overrideRegion = areaOverride ? (overrideArea?.regionId ?? null) : null;
+  const overrideRegion = overrideHolds && overrideArea ? overrideArea.regionId : null;
   const locIds = useMemo(() => (overrideRegion ? [overrideRegion] : selectedLocIds), [overrideRegion, selectedLocIds]);
   // One place reads as the old single region (FilterBar, /brief); several read as none.
   const regionId = locIds.length === 1 ? locIds[0]! : null;
@@ -212,8 +219,9 @@ export function useDetectionFilters({
         const rest = withoutDeepLink(new URLSearchParams(searchParams.toString()), DETECTION_DEEP_LINK_PARAMS);
         router.replace(`${agentDeepLinkPath}${rest}`, { scroll: false });
       }
-      // ...and the starting area's.
+      // ...and the starting area's, and a visit's All Countries.
       setAreaOverride(null);
+      setAllCountriesVisit(false);
       if (value === ALL_COUNTRIES) {
         setPickedCountry(ALL_COUNTRIES);
         setWorkingCountry("", ALL_COUNTRIES);
@@ -244,6 +252,16 @@ export function useDetectionFilters({
   const handleDateChange = useCallback((value: string) => {
     setCustomRange(null);
     setSelectedDate(value);
+  }, []);
+
+  // A shared link's country, for its visit only: neither touches the working country.
+  const setStartingArea = useCallback((id: string) => {
+    setAllCountriesVisit(false);
+    setAreaOverride(id);
+  }, []);
+  const showAllCountriesForVisit = useCallback(() => {
+    setAreaOverride(null);
+    setAllCountriesVisit(true);
   }, []);
 
   const countryOptions = useMemo(() => {
@@ -355,8 +373,8 @@ export function useDetectionFilters({
 
   // The country (or the starting area's country) the page is scoped to.
   const countryLocationId = useMemo(
-    () => (areaOverride && !overrideRegion ? areaOverride : getLocationId(selectedCountry)),
-    [areaOverride, overrideRegion, selectedCountry, getLocationId],
+    () => (overrideHolds && !overrideRegion ? areaOverride : getLocationId(selectedCountry)),
+    [overrideHolds, areaOverride, overrideRegion, selectedCountry, getLocationId],
   );
   // The one location the feeds query: the starting area, the one picked place
   // or the country. Null when several places are picked: they go as locationIds.
@@ -451,10 +469,12 @@ export function useDetectionFilters({
     setCustomRange,
     /**
      * Scope this visit to an area (a shared link's country) the way
-     * `initial.locationId` does: it holds until a country is picked and
-     * leaves the working country alone.
+     * `initial.locationId` does: it holds until a country is picked, only
+     * inside the team's scope, and leaves the working country alone.
      */
-    setStartingArea: setAreaOverride,
+    setStartingArea,
+    /** Show All Countries for this visit only, where the team may (a shared link's). */
+    showAllCountriesForVisit,
     // Filter popover
     severities: activeSeverities,
     setSeverities: setActiveSeverities,
