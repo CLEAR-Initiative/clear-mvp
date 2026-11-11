@@ -366,6 +366,12 @@ describe("ProgressOverTime and a Replay run", () => {
     expect(screen.queryByTestId("replay-coverage")).not.toBeInTheDocument();
     cleanup();
 
+    // A failed read is said, not shown as "no runs".
+    replayRunsState = { error: { message: "clear-api timed out" } };
+    wrap(<ProgressOverTime filters={filters("2026-10-25", "2026-10-30")} />);
+    expect(screen.getByTestId("replay-runs-error")).toHaveTextContent("Could not load the Replay runs: clear-api timed out");
+    cleanup();
+
     replayRunsState = { data: { status: "ok", runs: [RUN] } };
     search = "metric=DETECTED_BY_NEXT_DAY";
     wrap(<ProgressOverTime filters={filters("2026-10-25", "2026-10-30")} />);
@@ -382,7 +388,7 @@ describe("ProgressOverTime and a Replay run", () => {
     expect(container.querySelectorAll(".recharts-line")).toHaveLength(2);
 
     fireEvent.click(screen.getByRole("textbox", { name: "Replay run" }));
-    fireEvent.click(screen.getByRole("option", { name: "def4567 · Nov 9, 2026 · 150 Signals", hidden: true }));
+    fireEvent.click(screen.getByRole("option", { name: /^def4567 · Nov 9, 2026, 10:00.*· 150 Signals$/, hidden: true }));
 
     // The replay series is asked for the same range, bucket size and grouping, with the run.
     const asked = useSeries.mock.calls.map(([input]) => input as Record<string, unknown>).filter((input) => input.replayRunId === RUN.runId);

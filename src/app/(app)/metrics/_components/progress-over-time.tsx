@@ -427,7 +427,8 @@ export function ProgressOverTime({ filters }: { filters: MetricsFilterValues }) 
             placeholder={t("replay.placeholder")}
             data={replayRuns.map((run) => ({
               value: run.runId,
-              label: t("replay.option", { version: versionOf(run), date: utcDay(run.startedAt), n: run.signals }),
+              // The start instant, to the minute, tells two runs of one version on one day apart.
+              label: t("replay.option", { version: versionOf(run), date: utcInstant(run.startedAt), n: run.signals }),
             }))}
             value={replayRun?.runId ?? null}
             onChange={setReplayChoice}
@@ -437,6 +438,11 @@ export function ProgressOverTime({ filters }: { filters: MetricsFilterValues }) 
           />
         )}
       </Group>
+      {replayable && replayList.error && (
+        <Text size="xs" c="var(--color-critical)" role="alert" data-testid="replay-runs-error">
+          {t("replay.listError", { message: replayList.error.message })}
+        </Text>
+      )}
       {definitions && definitions.length > 0 && (
         <MetricTiles definitions={definitions} selected={metric} onSelect={pickMetric} locationId={input.locationId} nameOf={nameOf} />
       )}
