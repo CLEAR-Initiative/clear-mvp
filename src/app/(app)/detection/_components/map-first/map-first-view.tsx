@@ -605,6 +605,7 @@ export function MapFirstView(props: MapFirstViewProps) {
       counts={tabCounts}
       updatedAt={updatedAt}
       onCreateSignal={onCreateSignal}
+      country={{ value: filters.country, options: filters.countryOptions, onChange: filters.onCountryChange }}
     />
   );
 
