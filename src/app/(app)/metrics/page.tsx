@@ -79,20 +79,27 @@ function MetricsPageBody() {
   // message; show it by the dates rather than as a page error.
   const rangeError = query.error?.data?.code === "BAD_REQUEST" ? query.error.message : null;
   const result = query.data;
-  const current = result?.status === "ok" ? result.metrics : undefined;
+  // The picked range's own figures: not the last range's, which
+  // `keepPreviousData` shows while a new country or range loads.
+  const current = result?.status === "ok" && !query.isPlaceholderData ? result.metrics : undefined;
 
   const trend = trendRange(input, now);
   const trendQuery = api.metrics.detection.useQuery(trend.input, { ...QUERY_OPTIONS, enabled: !rangeError });
   const trendMetrics = trendQuery.data?.status === "ok" ? trendQuery.data.metrics : undefined;
 
   // The previous period follows the range clear-api resolved, so it works
-  // for its default range too.
+  // for its default range too. It waits for `current`, so it never pairs one
+  // country's figures with another's. While it waits its input is `{}`, which
+  // is also the main query's default key, so its data is only read once
+  // `current` is there and the data is its own (not a placeholder).
   const previousInput = current
     ? { ...previousRange(current), ...(input.locationId ? { locationId: input.locationId } : {}) }
     : {};
   const previousQuery = api.metrics.detection.useQuery(previousInput, { ...QUERY_OPTIONS, enabled: !!current });
   const previous =
-    previousQuery.data?.status === "ok" && !previousQuery.isPlaceholderData ? previousQuery.data.metrics : undefined;
+    current && previousQuery.data?.status === "ok" && !previousQuery.isPlaceholderData
+      ? previousQuery.data.metrics
+      : undefined;
 
   return (
     <Box>

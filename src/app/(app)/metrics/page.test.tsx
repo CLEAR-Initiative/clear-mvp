@@ -16,6 +16,7 @@ type QueryState = {
   error?: { message: string; data?: { code: string } } | null;
   isFetching?: boolean;
   isLoading?: boolean;
+  isPlaceholderData?: boolean;
 };
 const KINDS = ["main", "trend", "previous"] as const;
 type Kind = (typeof KINDS)[number];
@@ -292,6 +293,21 @@ describe("MetricsPage", () => {
     // Same day 50%, was 25%.
     expect(screen.getByText("+25 pts")).toBeInTheDocument();
     expect(screen.getByText(/compared with Apr 24, 2026 to Jul 19, 2026/)).toBeInTheDocument();
+  });
+
+  it("compares nothing while the tiles still show the last country's figures", () => {
+    const before = withShares({ ...NONE_MEASURED, counted: 4, sameDay: 1, byNextDay: 3 });
+    // keepPreviousData: the main query shows the old country's figures.
+    queryState = {
+      data: { status: "ok", metrics: withShares({ ...NONE_MEASURED, counted: 4, sameDay: 2, byNextDay: 3 }) },
+      isPlaceholderData: true,
+    };
+    // The previous-period query holds data of its own (another key's).
+    previousState = { data: { status: "ok", metrics: before } };
+    renderPage();
+    expect(lastOptions("previous").enabled).toBe(false);
+    expect(screen.queryByText(/pts/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/compared with/)).not.toBeInTheDocument();
   });
 
   it("waits for the picked range before asking for the previous period", () => {
