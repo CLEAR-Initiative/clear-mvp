@@ -477,7 +477,10 @@ export function ProgressOverTime({ filters }: { filters: MetricsFilterValues }) 
             onChange={setReplayChoice}
             clearable
             size="xs"
-            w={{ base: "100%", xs: 300 }}
+            // Wide enough for "version · date, time · n Signals" beside the
+            // clear button in every locale; the title shows it in full if not.
+            title={replayRun ? t("replay.option", { version: versionOf(replayRun), date: utcInstant(replayRun.startedAt), n: replayRun.signals }) : undefined}
+            w={{ base: "100%", xs: 400 }}
           />
         )}
       </Group>
