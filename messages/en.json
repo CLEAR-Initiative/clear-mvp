@@ -3876,6 +3876,18 @@
     "progress": {
       "title": "Progress over time",
       "subtitle": "One metric at a time, by day, week or month. A hollow point is a bucket the range only partly covers; the tooltip shows n.",
+      "view": {
+        "label": "View",
+        "cardTitle": "{metric} · {view}",
+        "as-delivered": {
+          "name": "As delivered",
+          "description": "Every value as the pipeline gave it at the time. Use it to see if a deploy made CLEAR better: past weeks do not move."
+        },
+        "same-ruler": {
+          "name": "Same ruler",
+          "description": "The same detections and alerts, measured against the start date CLEAR knows today, so every week has one ruler. Use it to judge how timely CLEAR is: past weeks move when CLEAR learns a better start date."
+        }
+      },
       "metric": {
         "label": "Metric"
       },

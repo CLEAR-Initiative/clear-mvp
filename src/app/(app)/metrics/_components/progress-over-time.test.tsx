@@ -322,8 +322,94 @@ describe("ProgressOverTime, overview tiles and URL state", () => {
     seriesStates["*"] = { data: { status: "ok", series: daily(27, 31) } };
     wrap(<ProgressOverTime filters={filters("2026-10-27", "2026-10-31")} />);
     fireEvent.click(screen.getByText("Copy link"));
-    expect(writeText).toHaveBeenCalledWith(window.location.href);
+    // The link names the view, also when the page's own URL does not.
+    expect(writeText).toHaveBeenCalledWith(`${window.location.href}?view=as-delivered`);
     expect(await screen.findByText("Link copied")).toBeInTheDocument();
+  });
+});
+
+describe("ProgressOverTime, the two views", () => {
+  /** An ungrouped delay series over the same days as `daily`. */
+  const delay = (metric: string): MetricSeries => ({
+    ...daily(25, 30),
+    metric,
+    groups: [],
+    buckets: daily(25, 30).buckets.filter((b) => b.group === "sudan-war-x").map((b) => ({ ...b, group: null })),
+  });
+  const delayMarkers: SeriesMarker[] = [{ ...MARKERS[0]!, metricKeys: ["DETECTED_BY_NEXT_DAY", "DISTRICT_OR_FINER"] }];
+
+  it("opens on As delivered, says what it is on the page, and sends no onset basis", () => {
+    seriesStates["*"] = { data: { status: "ok", series: daily(25, 30) } };
+    wrap(<ProgressOverTime filters={filters("2026-10-25", "2026-10-30")} />);
+    expect(screen.getByRole("tab", { name: "As delivered" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("tab", { name: "Same ruler" })).toHaveAttribute("aria-selected", "false");
+    expect(screen.getByTestId("view-description")).toHaveTextContent("Every value as the pipeline gave it at the time.");
+    expect(screen.getByTestId("view-description")).toHaveTextContent("past weeks do not move");
+    // Every read of this tab, the chart's and the tiles', is the default view.
+    expect(seriesCalls().length).toBeGreaterThan(0);
+    expect(seriesCalls().every((input) => input.onsetBasis === undefined)).toBe(true);
+    // The card and the legend name the view.
+    expect(screen.getByText("At district or finer · As delivered")).toBeInTheDocument();
+    expect(screen.getByTestId("legend-view")).toHaveTextContent("As delivered");
+    expect(screen.getByTestId("before-after")).toBeInTheDocument();
+  });
+
+  it("switches to Same ruler: the delay metrics only, onsetBasis CURRENT, the markers and no before-and-after", async () => {
+    seriesStates["*"] = { data: { status: "ok", series: delay("DETECTED_BY_NEXT_DAY") } };
+    annotationsState = { data: { status: "ok", annotations: delayMarkers } };
+    const writeText = vi.fn(async () => undefined);
+    Object.assign(navigator, { clipboard: { writeText } });
+    wrap(<ProgressOverTime filters={filters("2026-10-25", "2026-10-30")} />);
+    useSeries.mockClear();
+    fireEvent.click(screen.getByRole("tab", { name: "Same ruler" }));
+
+    expect(screen.getByRole("tab", { name: "Same ruler" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByTestId("view-description")).toHaveTextContent("measured against the start date CLEAR knows today");
+    expect(screen.getByTestId("view-description")).toHaveTextContent("past weeks move when CLEAR learns a better start date");
+    // District precision has one view, so the tab opens on a delay metric and writes both to the URL.
+    expect(replace).toHaveBeenLastCalledWith("/metrics?metric=DETECTED_BY_NEXT_DAY&view=same-ruler", { scroll: false });
+    expect(screen.getByRole("textbox", { name: "Metric" })).toHaveValue("Detected by next day");
+    // The tiles and the selector offer the delay metrics only.
+    expect(screen.getByRole("button", { name: "Show Detected same day" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Show At district or finer" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("textbox", { name: "Metric" }));
+    expect(screen.queryByRole("option", { name: "At district or finer" })).not.toBeInTheDocument();
+    // Every read on this tab asks for the onset known today.
+    expect(seriesCalls().length).toBeGreaterThan(0);
+    expect(seriesCalls().every((input) => input.onsetBasis === "CURRENT")).toBe(true);
+    expect(seriesCalls().every((input) => ["DETECTED_BY_NEXT_DAY", "DETECTED_SAME_DAY"].includes(input.metric as string))).toBe(true);
+    // The card and the legend name the view; the deploy marker stays; the before-and-after does not.
+    expect(screen.getByText("Detected by next day · Same ruler")).toBeInTheDocument();
+    expect(screen.getByTestId("legend-view")).toHaveTextContent("Same ruler");
+    expect(screen.getAllByText("Geocoding inside the model's area").length).toBeGreaterThan(0);
+    expect(screen.queryByTestId("before-after")).not.toBeInTheDocument();
+    // The copied link names the view.
+    fireEvent.click(screen.getByText("Copy link"));
+    expect(writeText).toHaveBeenCalledWith(expect.stringContaining("view=same-ruler"));
+    expect(await screen.findByText("Link copied")).toBeInTheDocument();
+
+    // Back on As delivered, every metric is offered again and the reads carry no onset basis.
+    useSeries.mockClear();
+    fireEvent.click(screen.getByRole("tab", { name: "As delivered" }));
+    expect(screen.getByRole("button", { name: "Show At district or finer" })).toBeInTheDocument();
+    expect(seriesCalls().every((input) => input.onsetBasis === undefined)).toBe(true);
+    expect(screen.getByText("Detected by next day · As delivered")).toBeInTheDocument();
+    expect(screen.getByTestId("before-after")).toBeInTheDocument();
+  });
+
+  it("opens the tab a link names, and a delay metric when the link asks Same ruler for another metric", () => {
+    search = "view=same-ruler&metric=DETECTED_SAME_DAY";
+    seriesStates["*"] = { data: { status: "ok", series: delay("DETECTED_SAME_DAY") } };
+    wrap(<ProgressOverTime filters={filters("2026-10-25", "2026-10-30")} />);
+    expect(screen.getByRole("tab", { name: "Same ruler" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("textbox", { name: "Metric" })).toHaveValue("Detected same day");
+    expect(seriesCalls().every((input) => input.onsetBasis === "CURRENT")).toBe(true);
+    cleanup();
+
+    search = "view=same-ruler&metric=DISTRICT_OR_FINER";
+    wrap(<ProgressOverTime filters={filters("2026-10-25", "2026-10-30")} />);
+    expect(screen.getByRole("textbox", { name: "Metric" })).toHaveValue("Detected by next day");
+    expect(screen.getByText("Detected by next day · Same ruler")).toBeInTheDocument();
   });
 });
 

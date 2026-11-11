@@ -113,6 +113,28 @@ export interface ReplayRun {
 /** `metrics.replayRuns`'s result: the runs, or clear-api not serving them yet. */
 export type ReplayRunsResult = { status: "ok"; runs: ReplayRun[] } | { status: "unavailable" };
 
+/**
+ * The two views of the delay metrics (clear-api ADR-0021, decision 4), as
+ * the URL names them. `as-delivered`: every value as the pipeline gave it at
+ * the time; the default, and past buckets do not move. `same-ruler`: the
+ * same instants against the onset known today (`onsetBasis: CURRENT`).
+ */
+export const METRIC_VIEWS = ["as-delivered", "same-ruler"] as const;
+export type MetricView = (typeof METRIC_VIEWS)[number];
+export const DEFAULT_VIEW: MetricView = "as-delivered";
+
+/** The metrics that measure a delay from an onset: the only ones with a Same ruler view. */
+export const SAME_RULER_METRICS: readonly string[] = ["DETECTED_BY_NEXT_DAY", "DETECTED_SAME_DAY", "ALERTED_BY_NEXT_DAY", "ALERTED_SAME_DAY"];
+/** The metric the Same ruler tab opens on when the chosen one has no such view. */
+export const DEFAULT_SAME_RULER_METRIC: MetricKey = "DETECTED_BY_NEXT_DAY";
+
+/** What `metrics.series` sends clear-api for a view: `CURRENT` for Same ruler, nothing for As delivered. */
+export const onsetBasisOf = (view: MetricView): "CURRENT" | undefined => (view === "same-ruler" ? "CURRENT" : undefined);
+
+/** The metric a view shows when `chosen` is asked for: Same ruler has the delay metrics only. */
+export const metricForView = (view: MetricView, chosen: MetricKey): MetricKey =>
+  view === "same-ruler" && !SAME_RULER_METRICS.includes(chosen) ? DEFAULT_SAME_RULER_METRIC : chosen;
+
 /** The metrics that have a replay series (clear-api ADR-0020). */
 export const REPLAY_METRICS: readonly string[] = ["DISTRICT_OR_FINER"];
 

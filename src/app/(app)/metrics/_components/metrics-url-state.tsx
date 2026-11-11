@@ -2,13 +2,13 @@
 
 import { createContext, useCallback, useContext, useMemo, useRef, type ReactNode } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { GRANULARITIES, type Granularity, type MetricKey } from "~/lib/metric-series";
+import { GRANULARITIES, METRIC_VIEWS, type Granularity, type MetricKey, type MetricView } from "~/lib/metric-series";
 import type { MetricsFilterValues } from "./metrics-filters";
 
 /**
  * The /metrics page's state as its URL carries it (Exponential #1279), so a
  * view can be shared, reloaded, or linked from a Notion metric row:
- * `?from=2026-10-25&to=2026-10-31&location=<id>&metric=DISTRICT_OR_FINER&granularity=day&lines=source&sources=sudan-war-x,dataminr`.
+ * `?from=2026-10-25&to=2026-10-31&location=<id>&metric=DISTRICT_OR_FINER&granularity=day&lines=source&sources=sudan-war-x,dataminr&view=as-delivered`.
  * Components keep their own state, read it from the URL once on mount and
  * write every change back through {@link MetricsUrlProvider}; the URL is
  * never re-read while the page lives.
@@ -25,9 +25,11 @@ export interface MetricsUrlState {
   lines: "source" | "all" | null;
   /** The location-precision section's source picker. */
   sources: string[];
+  /** The explorer's tab (`view=`): As delivered or Same ruler; null for the default, As delivered. */
+  view: MetricView | null;
 }
 
-export const EMPTY_URL_STATE: MetricsUrlState = { from: "", to: "", locationId: null, metric: null, granularity: null, lines: null, sources: [] };
+export const EMPTY_URL_STATE: MetricsUrlState = { from: "", to: "", locationId: null, metric: null, granularity: null, lines: null, sources: [], view: null };
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const KEY = /^[A-Z][A-Z0-9_]{0,63}$/;
@@ -45,6 +47,7 @@ export function parseMetricsUrl(params: URLSearchParams): MetricsUrlState {
   const granularity = params.get("granularity")?.trim().toUpperCase() ?? "";
   const lines = params.get("lines")?.trim().toLowerCase() ?? "";
   const sources = [...new Set((params.get("sources") ?? "").split(",").map((s) => s.trim()).filter(Boolean))].slice(0, 50);
+  const view = params.get("view")?.trim().toLowerCase() ?? "";
   return {
     from: date("from"),
     to: date("to"),
@@ -53,6 +56,7 @@ export function parseMetricsUrl(params: URLSearchParams): MetricsUrlState {
     granularity: (GRANULARITIES as readonly string[]).includes(granularity) ? (granularity as Granularity) : null,
     lines: lines === "source" || lines === "all" ? lines : null,
     sources,
+    view: (METRIC_VIEWS as readonly string[]).includes(view) ? (view as MetricView) : null,
   };
 }
 
@@ -70,6 +74,7 @@ export function metricsUrlSearch(patch: Partial<MetricsUrlState>, current: URLSe
   if ("granularity" in patch) put("granularity", patch.granularity?.toLowerCase());
   if ("lines" in patch) put("lines", patch.lines);
   if ("sources" in patch) put("sources", patch.sources && patch.sources.length > 0 ? patch.sources.join(",") : null);
+  if ("view" in patch) put("view", patch.view);
   return next.toString();
 }
 

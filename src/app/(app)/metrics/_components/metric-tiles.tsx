@@ -30,12 +30,15 @@ export function MetricTiles({
   onSelect,
   locationId,
   nameOf,
+  onsetBasis,
 }: {
   definitions: MetricDefinition[];
   selected: MetricKey;
   onSelect: (key: MetricKey) => void;
   locationId?: string;
   nameOf: (definition: MetricDefinition) => string;
+  /** `CURRENT` on the Same ruler tab, so a tile reads the view its chart reads. */
+  onsetBasis?: "CURRENT";
 }) {
   const t = useTranslations("metrics.progress.overview");
   return (
@@ -55,6 +58,7 @@ export function MetricTiles({
             selected={definition.key === selected}
             onSelect={() => onSelect(definition.key)}
             locationId={locationId}
+            onsetBasis={onsetBasis}
           />
         ))}
       </SimpleGrid>
@@ -68,17 +72,19 @@ function MetricTile({
   selected,
   onSelect,
   locationId,
+  onsetBasis,
 }: {
   definition: MetricDefinition;
   name: string;
   selected: boolean;
   onSelect: () => void;
   locationId?: string;
+  onsetBasis?: "CURRENT";
 }) {
   const t = useTranslations("metrics.progress.overview");
   const pct = useShareFormat();
   const query = api.metrics.series.useQuery(
-    { metric: definition.key, granularity: "WEEK", ...(locationId && definition.locationScoped !== false ? { locationId } : {}) },
+    { metric: definition.key, granularity: "WEEK", ...(locationId && definition.locationScoped !== false ? { locationId } : {}), ...(onsetBasis ? { onsetBasis } : {}) },
     {
       refetchOnWindowFocus: false,
       retry: (count, err) => !NO_RETRY.has(err.data?.code ?? "") && count < 2,

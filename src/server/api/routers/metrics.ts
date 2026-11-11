@@ -291,6 +291,8 @@ export const metricsRouter = createTRPCRouter({
         sourceNames: z.array(z.string().min(1)).max(50).optional(),
         /** Read the replay series of this Replay run (clear-api ADR-0020). */
         replayRunId: z.string().min(1).max(200).optional(),
+        /** The Same ruler view of a delay metric (clear-api ADR-0021): the onset known today. Left out, clear-api reads As delivered. */
+        onsetBasis: z.enum(["CURRENT"]).optional(),
       }),
     )
     .query(async ({ ctx, input }): Promise<MetricSeriesResult> => {
@@ -305,6 +307,7 @@ export const metricsRouter = createTRPCRouter({
       if (input.locationId) variables.locationId = input.locationId;
       if (input.sourceNames?.length) variables.sourceNames = input.sourceNames;
       if (input.replayRunId) variables.replayRunId = input.replayRunId;
+      if (input.onsetBasis) variables.onsetBasis = input.onsetBasis;
       try {
         const data = await graphqlFetch<{ metricSeries: MetricSeries }>(METRIC_SERIES_QUERY, { input: variables }, cookieHeaders(ctx));
         return { status: "ok", series: data.metricSeries };

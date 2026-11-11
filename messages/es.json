@@ -3876,6 +3876,18 @@
     "progress": {
       "title": "Evolución en el tiempo",
       "subtitle": "Una métrica a la vez, por día, semana o mes. Un punto hueco es un intervalo que el periodo solo cubre en parte; la información emergente muestra n.",
+      "view": {
+        "label": "Vista",
+        "cardTitle": "{metric} · {view}",
+        "as-delivered": {
+          "name": "Tal como se entregó",
+          "description": "Cada valor tal como el pipeline lo dio en su momento. Úsela para ver si un despliegue mejoró CLEAR: las semanas pasadas no cambian."
+        },
+        "same-ruler": {
+          "name": "Misma regla",
+          "description": "Las mismas detecciones y alertas, medidas con la fecha de inicio que CLEAR conoce hoy, de modo que todas las semanas tienen una sola regla. Úsela para juzgar la puntualidad de CLEAR: las semanas pasadas cambian cuando CLEAR conoce una fecha de inicio mejor."
+        }
+      },
       "metric": {
         "label": "Métrica"
       },
