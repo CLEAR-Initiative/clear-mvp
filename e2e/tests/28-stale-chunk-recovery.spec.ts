@@ -59,11 +59,19 @@ test.describe("Stale chunk after a deploy (case 28)", () => {
 
     await page.goto("/detection", { waitUntil: "domcontentloaded" });
 
-    // The boundary reloaded the page, which recorded the reload time.
+    // The boundary reloaded the page, which recorded the reload time. A read
+    // that lands while the page reloads throws ("Execution context was
+    // destroyed"), and `expect.poll` does not retry a callback that throws.
+    // Such a read counts as "not yet": the key is in sessionStorage, so the
+    // next read after the reload finds it.
     await expect
-      .poll(() => page.evaluate((k) => sessionStorage.getItem(k), RELOAD_KEY), {
-        timeout: 30_000,
-      })
+      .poll(
+        () =>
+          page
+            .evaluate((k) => sessionStorage.getItem(k), RELOAD_KEY)
+            .catch(() => null),
+        { timeout: 30_000 },
+      )
       .not.toBeNull();
     expect(failed.count).toBeGreaterThan(0);
 
