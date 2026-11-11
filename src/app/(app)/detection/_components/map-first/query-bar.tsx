@@ -202,7 +202,9 @@ export const QueryBar = forwardRef<QueryBarHandle, QueryBarProps>(function Query
     : parsed.value
       ? { kind: "text", q: parsed.value }
       : { kind: "root" };
-  const keys = QUALIFIER_KEYS.filter((k) => k !== "type" || tab !== "signals");
+  // History keeps its own source filter, sort and search; the bar there holds the shared filters.
+  const history = tab === "history";
+  const keys = QUALIFIER_KEYS.filter((k) => (k !== "type" || tab !== "signals") && !(history && (k === "source" || k === "sort")));
 
   // ── Value lists ───────────────────────────────────────────────────────────
   const locRows = (q: string, prefixed = false): ValueRow[] => {
@@ -378,11 +380,11 @@ export const QueryBar = forwardRef<QueryBarHandle, QueryBarProps>(function Query
       const lower = mode.q.toLowerCase();
       const textRow: Row = { t: "text", label: mode.q };
       draft = [
-        textRow,
+        ...(history ? [] : [textRow]),
         ...keys.filter((key) => qualifierAliases(key, locale).some((a) => a.startsWith(lower))).map((key): Row => ({ t: "key", key })),
         ...locRows(mode.q, true).slice(0, 4),
         ...(tab !== "signals" ? typeRows(mode.q, true).slice(0, 3) : []),
-        ...sourceRows(mode.q, true).slice(0, 2),
+        ...(history ? [] : sourceRows(mode.q, true).slice(0, 2)),
         ...sevRows(mode.q, true).slice(0, 2),
       ].slice(0, 11);
     }

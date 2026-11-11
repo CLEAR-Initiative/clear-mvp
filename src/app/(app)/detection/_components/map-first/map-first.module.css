@@ -750,6 +750,20 @@
   max-height: min(460px, calc(100% - 120px));
 }
 
+/* History has no feed column: the bar sits above the table, as wide as the
+   column would be, and its list drops over the table. */
+.historyBar {
+  position: relative;
+  z-index: 5;
+  width: clamp(360px, 32%, 480px);
+  margin-bottom: 16px;
+}
+
+.historyBar .dd {
+  inset-inline: 0;
+  max-height: 460px;
+}
+
 .sortMenu {
   inset-inline-end: 12px;
   width: 232px;

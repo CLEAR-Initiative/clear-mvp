@@ -577,7 +577,8 @@ export function MapFirstView(props: MapFirstViewProps) {
   const tokens: QueryToken[] = [];
   if (active.region && placesLabel) tokens.push({ dim: "region", key: "in", value: placesLabel });
   if (active.types) tokens.push({ dim: "types", key: "type", value: typesLabel });
-  if (active.sources) tokens.push({ dim: "sources", key: "source", value: sourcesLabel });
+  // History filters sources itself, so the shared source filter has no token there.
+  if (active.sources && feedTab !== "history") tokens.push({ dim: "sources", key: "source", value: sourcesLabel });
   if (active.sev) tokens.push({ dim: "sev", key: "severity", value: sevLabel.map((l) => l.toLowerCase()).join(", ") });
   if (!dateIsDefault) {
     const k = dateKeyOf(filters.date);
@@ -607,11 +608,53 @@ export function MapFirstView(props: MapFirstViewProps) {
     />
   );
 
+  const queryBar = (
+    <QueryBar
+      ref={queryRef}
+      value={query}
+      onValueChange={setQuery}
+      tab={feedTab}
+      tokens={tokens}
+      current={current}
+      states={states}
+      hierarchy={hierarchy}
+      locIds={filters.locIds}
+      typeFilters={typeKeys}
+      severities={filters.severities}
+      sources={filters.sources}
+      sourceFacet={sourceFacet}
+      dateKey={filters.customRange ? null : dateKeyOf(filters.date)}
+      sortChoices={sortChoices}
+      sortKey={feed.sort}
+      searchCount={items.length}
+      countBase={base}
+      nowIso={filters.snapshotTime}
+      onToggleLocation={onToggleLocation}
+      onToggleType={(key) => filters.setTypeFilters(toggleTypeKey(filters.typeFilters, hierarchy, key))}
+      onPickSeverity={(sev) => filters.setSeverities(pickSeverity(filters.severities, sev))}
+      onToggleSource={(name) => {
+        // From "all", picking one source isolates it; picking every one is "all" again.
+        filters.setSources(toggleInSet(filters.sources, name, allSourceNames.current));
+      }}
+      onDate={(key) => {
+        const d = dateOfKey(key);
+        if (d) filters.onDateChange(d);
+      }}
+      onSort={onSort}
+      onClearDim={clearDim}
+      onClearAll={clearAll}
+    />
+  );
+
   if (feedTab === "history") {
     return (
       <div className={css.shell}>
         {header}
-        <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: 24 }}>{history}</div>
+        <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: 24 }}>
+          {/* History has no feed column: the shared place, type, severity and date filters sit above its table. */}
+          <div className={css.historyBar}>{queryBar}</div>
+          {history}
+        </div>
       </div>
     );
   }
@@ -629,43 +672,7 @@ export function MapFirstView(props: MapFirstViewProps) {
           noun={nounKey}
           scopeLabel={scopeLabel}
           dateLabel={dateLabel}
-          queryBar={
-            <QueryBar
-              ref={queryRef}
-              value={query}
-              onValueChange={setQuery}
-              tab={feedTab}
-              tokens={tokens}
-              current={current}
-              states={states}
-              hierarchy={hierarchy}
-              locIds={filters.locIds}
-              typeFilters={typeKeys}
-              severities={filters.severities}
-              sources={filters.sources}
-              sourceFacet={sourceFacet}
-              dateKey={filters.customRange ? null : dateKeyOf(filters.date)}
-              sortChoices={sortChoices}
-              sortKey={feed.sort}
-              searchCount={items.length}
-              countBase={base}
-              nowIso={filters.snapshotTime}
-              onToggleLocation={onToggleLocation}
-              onToggleType={(key) => filters.setTypeFilters(toggleTypeKey(filters.typeFilters, hierarchy, key))}
-              onPickSeverity={(sev) => filters.setSeverities(pickSeverity(filters.severities, sev))}
-              onToggleSource={(name) => {
-                // From "all", picking one source isolates it; picking every one is "all" again.
-                filters.setSources(toggleInSet(filters.sources, name, allSourceNames.current));
-              }}
-              onDate={(key) => {
-                const d = dateOfKey(key);
-                if (d) filters.onDateChange(d);
-              }}
-              onSort={onSort}
-              onClearDim={clearDim}
-              onClearAll={clearAll}
-            />
-          }
+          queryBar={queryBar}
           sortChoices={sortChoices}
           sortKey={feed.sort}
           onSortChange={onSort}
