@@ -375,7 +375,8 @@ export const QueryBar = forwardRef<QueryBarHandle, QueryBarProps>(function Query
   let draft: Row[] = [];
   if (open) {
     if (mode.kind === "root") draft = keys.map((key) => ({ t: "key", key }));
-    else if (mode.kind === "val") draft = valueRows(mode.key, mode.q);
+    // A typed qualifier this tab doesn't offer (source: on History) lists nothing to pick.
+    else if (mode.kind === "val") draft = keys.includes(mode.key) ? valueRows(mode.key, mode.q) : [];
     else {
       const lower = mode.q.toLowerCase();
       const textRow: Row = { t: "text", label: mode.q };
