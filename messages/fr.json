@@ -1767,6 +1767,107 @@
         "frequency": "Fréquence",
         "variables": "Variables"
       }
+    },
+    "mapFirst": {
+      "live": "En direct · mis à jour {relative}",
+      "noun": {
+        "events": "{count, plural, one {événement} other {événements}}",
+        "alerts": "{count, plural, one {alerte} other {alertes}}",
+        "signals": "{count, plural, one {signal} other {signaux}}"
+      },
+      "count": "<b>{total}</b> {noun} · {scope} · {date}",
+      "countNarrowed": "<b>{shown}</b> sur {total} {noun} · {scope} · {date}",
+      "newCount": "{count} nouveaux",
+      "empty": {
+        "events": "Aucun événement ne correspond",
+        "alerts": "Aucune alerte ne correspond",
+        "signals": "Aucun signal ne correspond",
+        "remove": "Retirer <b>{what}</b> · affiche {count}",
+        "longer": "Essayez une période plus longue.",
+        "search": "la recherche « {query} »"
+      },
+      "open": "Ouvrir",
+      "allCountries": "Tous les pays",
+      "levels": "{count} niveaux",
+      "typesCount": "{count} types",
+      "sourcesCount": "{count} sources",
+      "last24h": "Dernières 24 heures",
+      "lastDays": "{count} derniers jours",
+      "showTimeline": "Afficher la frise (T)",
+      "hideTimeline": "Masquer la frise (T)",
+      "totalNoun": "{total} {noun}",
+      "presets": {
+        "24h": "24 h",
+        "7d": "7 j",
+        "30d": "30 j",
+        "90d": "90 j"
+      },
+      "timelineSummary": "{range} · <b>{total}</b> {noun}",
+      "today": "Aujourd'hui",
+      "hideList": "Masquer la liste",
+      "showList": "Afficher la liste",
+      "places": "{count, plural, one {# lieu} other {# lieux}}",
+      "qb": {
+        "label": "Rechercher et filtrer",
+        "placeholder": "Rechercher ou filtrer…",
+        "placeholderMore": "Ajouter un filtre ou rechercher…",
+        "clear": "Effacer la recherche et les filtres",
+        "removeToken": "Retirer le filtre {key}:",
+        "tokenTitle": "{token} · cliquer pour modifier",
+        "filterBy": "Filtrer par",
+        "filters": "Filtres",
+        "pickOne": "Un seul choix",
+        "pickMany": "Un ou plusieurs choix",
+        "search": "Rechercher « <b>{query}</b> »",
+        "noMatches": "Aucun résultat pour « {query} ».",
+        "state": "État",
+        "showDistricts": "Afficher les districts (→)",
+        "hideDistricts": "Masquer les districts (←)",
+        "expand": "Afficher les sous-types (→)",
+        "collapse": "Masquer les sous-types (←)",
+        "keys": {
+          "in": "Lieu",
+          "type": "Type d'événement",
+          "severity": "Gravité",
+          "source": "Source",
+          "since": "Période",
+          "sort": "Ordre de tri"
+        },
+        "hint": {
+          "navigate": "naviguer",
+          "select": "choisir",
+          "toggle": "cocher",
+          "complete": "compléter",
+          "districts": "districts",
+          "remove": "retirer le filtre",
+          "close": "fermer"
+        }
+      },
+      "sort": {
+        "title": "Tri : {group} · {option}",
+        "menu": "Ordre de tri",
+        "group": {
+          "activity": "Dernière activité",
+          "severity": "Gravité",
+          "published": "Publication"
+        },
+        "option": {
+          "newest": "Plus récents d'abord",
+          "oldest": "Plus anciens d'abord",
+          "highest": "Plus graves d'abord"
+        },
+        "short": {
+          "activity": "Activité",
+          "severity": "Gravité",
+          "published": "Publication"
+        }
+      },
+      "time": {
+        "pub": "Publ.",
+        "published": "Publication",
+        "activity": "Dernière activité"
+      },
+      "mapLabel": "{name} · cliquer pour filtrer, Maj+clic pour ajouter"
     }
   },
   "eventDetail": {

@@ -11,11 +11,16 @@ type EventOrderBy = "LAST_SIGNAL_DESC" | "LAST_SIGNAL_ASC" | "CREATED_DESC" | "C
 type AlertOrderBy = "CREATED_DESC" | "CREATED_ASC" | "SEVERITY_DESC" | "SEVERITY_ASC";
 type SignalOrderBy = "PUBLISHED_DESC" | "PUBLISHED_ASC" | "SEVERITY_DESC" | "SEVERITY_ASC";
 
-export const EVENT_ORDER_MAP: Record<EventSortOrder, EventOrderBy> = {
+/** The events feed's sort: the events tab's four, plus published (first signal) time. */
+export type EventFeedSort = EventSortOrder | "pub-desc" | "pub-asc";
+
+export const EVENT_ORDER_MAP: Record<EventFeedSort, EventOrderBy> = {
   "sev-desc": "SEVERITY_DESC",
   "sev-asc":  "SEVERITY_ASC",
   "newest":   "LAST_SIGNAL_DESC",
   "oldest":   "LAST_SIGNAL_ASC",
+  "pub-desc": "CREATED_DESC",
+  "pub-asc":  "CREATED_ASC",
 };
 export const ALERT_ORDER_MAP: Record<AlertSortOrder, AlertOrderBy> = {
   "sev-desc": "SEVERITY_DESC",

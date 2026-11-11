@@ -33,21 +33,24 @@ test("Map: a deep link wins over a remembered focus and keeps its country", asyn
 test("Detection: deep-linked filters apply for that visit only", async ({ page }) => {
   await page.goto("/detection", { waitUntil: "domcontentloaded" });
   const sudan = await countryIdByName(page, "Sudan");
-  await page.goto(`/detection?countryId=${sudan}&date=Last%207%20days&severities=critical,high`, {
+  // Last 7 days is the page's default, so link a different window.
+  await page.goto(`/detection?countryId=${sudan}&date=Last%2030%20days&severities=critical,high`, {
     waitUntil: "domcontentloaded",
   });
   await expect(page).not.toHaveURL(/date=|severities=/, { timeout: 20_000 });
   expect(new URL(page.url()).searchParams.get("countryId")).toBe(sudan);
-  await expect(page.locator('input[value="Last 7 days"]:visible').first()).toBeVisible();
+  // The date shows on the timeline pill at the bottom of the map.
+  const timeline = page.getByTitle("Show timeline (T)");
+  await expect(timeline).toContainText("Last 30 days");
 
   // Kept under the link, not stored as the page's defaults.
   await expect
     .poll(() => page.evaluate(() => sessionStorage.getItem("detection-link-filters") ?? ""))
-    .toContain("Last 7 days");
+    .toContain("Last 30 days");
   const stored = await page.evaluate(() => sessionStorage.getItem("detection-filters"));
-  expect(stored ?? "").not.toContain("Last 7 days");
+  expect(stored ?? "").not.toContain("Last 30 days");
 
   // A revisit of the same link brings the visit's filters back.
   await page.reload({ waitUntil: "domcontentloaded" });
-  await expect(page.locator('input[value="Last 7 days"]:visible').first()).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByTitle("Show timeline (T)")).toContainText("Last 30 days", { timeout: 20_000 });
 });

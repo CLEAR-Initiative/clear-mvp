@@ -40,12 +40,21 @@ export type BoundaryLevel = "none" | "A0" | "A1" | "A2";
 // signal/event detail page (which unmounts the page).
 interface StoredFilters {
   country?: string;
+  /** Before multi-select: one state or district. Still read from older sessions. */
   regionId?: string | null;
+  /** The selected states and districts. */
+  locIds?: string[];
   date?: string;
   severities?: string[];
   typeFilters?: string[];
   sources?: string[] | null;
   boundaryLevel?: BoundaryLevel;
+}
+
+/** Saved places, from `locIds` or an older session's single `regionId`. */
+function storedLocIds(stored: StoredFilters): string[] {
+  if (Array.isArray(stored.locIds)) return stored.locIds.filter((id): id is string => typeof id === "string");
+  return stored.regionId ? [stored.regionId] : [];
 }
 
 function readStoredFilters(key: string): StoredFilters & { countryId?: string } {
@@ -91,6 +100,8 @@ export interface DetectionFiltersOptions {
    * `severities`) and rewrite them on this path. Only /detection does.
    */
   agentDeepLinkPath?: string;
+  /** Date filter before anything is saved or picked. Defaults to "Last 30 days". */
+  defaultDate?: string;
 }
 
 /**
@@ -103,6 +114,7 @@ export function useDetectionFilters({
   initial,
   persistKey = DETECTION_FILTERS_STORAGE_KEY,
   agentDeepLinkPath,
+  defaultDate = "Last 30 days",
 }: DetectionFiltersOptions = {}) {
   const t = useTranslations("detection");
   const locale = useLocale();
@@ -110,8 +122,9 @@ export function useDetectionFilters({
   const searchParams = useSearchParams();
   const [storageReady, setStorageReady] = useState(false);
 
-  const [selectedRegionId, setSelectedRegionId] = useState<string | null>(null);
-  const [selectedDate, setSelectedDate] = useState("Last 30 days");
+  // Selected states and districts, in the order picked. Empty = the whole country.
+  const [selectedLocIds, setSelectedLocIds] = useState<string[]>([]);
+  const [selectedDate, setSelectedDate] = useState(defaultDate);
   const [customRange, setCustomRange] = useState<{ from: string; to: string } | null>(() =>
     initial?.from && initial.to ? { from: initial.from, to: initial.to } : null,
   );
@@ -185,7 +198,10 @@ export function useDetectionFilters({
   const countryCandidate = linkCountry ?? overrideArea?.country ?? workingCountryName ?? pickedCountry;
   const selectedCountry = resolveSelectedCountry(teamCountryNames, countryCandidate, scopeReady);
   // While the starting area holds, the region shown is the area's own.
-  const regionId = areaOverride ? (overrideArea?.regionId ?? null) : selectedRegionId;
+  const overrideRegion = areaOverride ? (overrideArea?.regionId ?? null) : null;
+  const locIds = useMemo(() => (overrideRegion ? [overrideRegion] : selectedLocIds), [overrideRegion, selectedLocIds]);
+  // One place reads as the old single region (FilterBar, /brief); several read as none.
+  const regionId = locIds.length === 1 ? locIds[0]! : null;
 
   const handleCountryChange = useCallback(
     (value: string) => {
@@ -207,19 +223,21 @@ export function useDetectionFilters({
         setWorkingCountry(getLocationId(value) ?? value, value);
       }
       // Reset region when country changes
-      setSelectedRegionId(null);
+      setSelectedLocIds([]);
     },
     [teamCountries, setWorkingCountry, getLocationId, agentDeepLinkPath, detectionDeepLink.countryId, searchParams, router],
   );
 
-  const handleRegionChange = useCallback(
-    (id: string | null) => {
-      // Within the starting area's country, a region pick moves the area.
-      if (areaOverride) setAreaOverride(id ?? getLocationId(selectedCountry) ?? areaOverride);
-      else setSelectedRegionId(id);
+  const setLocIds = useCallback(
+    (ids: string[]) => {
+      // Within the starting area's country, a pick replaces the area's own region.
+      if (areaOverride) setAreaOverride(getLocationId(selectedCountry) ?? areaOverride);
+      setSelectedLocIds(ids);
     },
     [areaOverride, getLocationId, selectedCountry],
   );
+
+  const handleRegionChange = useCallback((id: string | null) => setLocIds(id ? [id] : []), [setLocIds]);
 
   const handleDateChange = useCallback((value: string) => {
     setCustomRange(null);
@@ -244,7 +262,7 @@ export function useDetectionFilters({
     // session here: on the first mount `teamCountries` is still empty, so a
     // leftover "Venezuela" would look like an unscoped pick and pin Detection
     // after Map already switched to All Countries.
-    if (storedFilters.regionId !== undefined && !initial?.locationId) setSelectedRegionId(storedFilters.regionId ?? null);
+    if (!initial?.locationId) setSelectedLocIds(storedLocIds(storedFilters));
     if (storedFilters.date && !(initial?.from && initial.to)) setSelectedDate(storedFilters.date);
     if (storedFilters.severities) setActiveSeverities(new Set(storedFilters.severities));
     if (storedFilters.typeFilters) setSelectedTypeFilters(storedFilters.typeFilters);
@@ -274,8 +292,9 @@ export function useDetectionFilters({
       if (!fresh) {
         const visit = readStoredFilters(LINK_FILTERS_STORAGE_KEY);
         if (visit.countryId !== detectionDeepLink.countryId) return;
-        setSelectedRegionId(visit.regionId ?? null);
-        linkedRegionRef.current = !!visit.regionId;
+        const visitLocIds = storedLocIds(visit);
+        setSelectedLocIds(visitLocIds);
+        linkedRegionRef.current = visitLocIds.length > 0;
         if (visit.date) setSelectedDate(visit.date);
         if (visit.severities) setActiveSeverities(new Set(visit.severities));
         if (visit.typeFilters) setSelectedTypeFilters(visit.typeFilters);
@@ -283,13 +302,13 @@ export function useDetectionFilters({
         if (visit.boundaryLevel) setBoundaryLevel(visit.boundaryLevel);
         return;
       }
-      setSelectedRegionId(linkScope.region?.id ?? null);
+      setSelectedLocIds(linkScope.region ? [linkScope.region.id] : []);
       linkedRegionRef.current = !!linkScope.region;
       if (detectionDeepLink.date) setSelectedDate(detectionDeepLink.date);
       if (detectionDeepLink.severities) setActiveSeverities(new Set(detectionDeepLink.severities));
     },
     onGone: () => {
-      if (linkedRegionRef.current) setSelectedRegionId(null);
+      if (linkedRegionRef.current) setSelectedLocIds([]);
       linkedRegionRef.current = false;
     },
   });
@@ -304,7 +323,7 @@ export function useDetectionFilters({
     try {
       const toStore: StoredFilters = {
         country: selectedCountry,
-        regionId: selectedRegionId,
+        locIds: selectedLocIds,
         date: selectedDate,
         severities: Array.from(activeSeverities),
         typeFilters: selectedTypeFilters,
@@ -322,17 +341,26 @@ export function useDetectionFilters({
     } catch {
       /* sessionStorage unavailable (SSR or private mode) */
     }
-  }, [storageReady, linkScope.status, detectionDeepLink.countryId, persistKey, selectedCountry, selectedRegionId, selectedDate, activeSeverities, selectedTypeFilters, activeSources, boundaryLevel]);
+  }, [storageReady, linkScope.status, detectionDeepLink.countryId, persistKey, selectedCountry, selectedLocIds, selectedDate, activeSeverities, selectedTypeFilters, activeSources, boundaryLevel]);
 
-  const selectedLocationId = useMemo(
-    () => areaOverride ?? selectedRegionId ?? getLocationId(selectedCountry),
-    [areaOverride, selectedCountry, selectedRegionId, getLocationId],
+  // The country (or the starting area's country) the page is scoped to.
+  const countryLocationId = useMemo(
+    () => (areaOverride && !overrideRegion ? areaOverride : getLocationId(selectedCountry)),
+    [areaOverride, overrideRegion, selectedCountry, getLocationId],
   );
+  // The one location the feeds query: the starting area, the one picked place
+  // or the country. Null when several places are picked: they go as locationIds.
+  const selectedLocationId = useMemo(() => {
+    if (overrideRegion) return areaOverride;
+    if (locIds.length > 1) return null;
+    return locIds[0] ?? countryLocationId;
+  }, [overrideRegion, areaOverride, locIds, countryLocationId]);
+  const multiLocIds = locIds.length > 1 ? locIds : undefined;
 
   // Don't fire feed queries until the location tree has loaded. Without this
   // guard, the queries fire with locationId=undefined (no filter) during the
   // brief window before the tree resolves, returning results from all countries.
-  const locationsReady = !isLocationsLoading || !!selectedLocationId;
+  const locationsReady = !isLocationsLoading || !!selectedLocationId || !!multiLocIds;
 
   const currentCountryStates = useMemo(
     () => tree.find((c) => c.name === selectedCountry)?.states ?? [],
@@ -367,7 +395,7 @@ export function useDetectionFilters({
 
   // Changes when the scope the feeds query changes: resets their paging.
   // Sources are left out: only the signal feeds filter on them.
-  const filterKey = JSON.stringify([selectedLocationId, fromIso, toIso, activeTeamId, severityMin, severityMax, expandedTypeCodes?.join(",")]);
+  const filterKey = JSON.stringify([selectedLocationId, multiLocIds?.join(","), fromIso, toIso, activeTeamId, severityMin, severityMax, expandedTypeCodes?.join(",")]);
 
   // A new scope means a new frozen window, so the user sees results from the
   // correct time range.
@@ -378,6 +406,7 @@ export function useDetectionFilters({
   const filter: DetectionFeedFilter = {
     teamId: activeTeamId,
     locationId: selectedLocationId ?? undefined,
+    locationIds: multiLocIds,
     from: fromIso,
     to: effectiveTo,
     severityMin,
@@ -393,6 +422,9 @@ export function useDetectionFilters({
     regionStates: currentCountryStates,
     regionId,
     onRegionChange: handleRegionChange,
+    /** Selected states and districts; empty = the whole country. */
+    locIds,
+    setLocIds,
     date: selectedDate,
     onDateChange: handleDateChange,
     dateOptions: localizedDateOptions,
@@ -418,6 +450,9 @@ export function useDetectionFilters({
     // Scope
     teamId: activeTeamId,
     selectedLocationId,
+    /** Several picked places, sent as locationIds; undefined for zero or one. */
+    multiLocIds,
+    countryLocationId,
     locationsReady,
     fromIso,
     effectiveTo,

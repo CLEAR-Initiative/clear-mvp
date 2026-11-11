@@ -19,6 +19,8 @@ const HISTORY_PAGE_SIZE = DETECTION_PAGE_SIZE;
 export interface DetectionFeedFilter {
   teamId?: string | null;
   locationId?: string;
+  /** Several places (states or districts); set instead of `locationId`. */
+  locationIds?: string[];
   from: string;
   to: string;
   severityMin?: number;
@@ -66,8 +68,8 @@ export function useHistoryFeed(filter: DetectionFeedFilter, { enabled, resetKey 
   // guaranteeing the accumulation effects fire even when offset stays 0.
   const [version, setVersion] = useState(0);
 
-  const { teamId, locationId, from, to, severityMin, severityMax, eventTypes } = filter;
-  const sharedFilter = { teamId, locationId, from, to, severityMin, severityMax, eventTypes };
+  const { teamId, locationId, locationIds, from, to, severityMin, severityMax, eventTypes } = filter;
+  const sharedFilter = { teamId, locationId, locationIds, from, to, severityMin, severityMax, eventTypes };
 
   // ── Paginated per source, all three sources accumulated ────────────────────
   const alertsQuery = api.alerts.alertsPage.useQuery(
@@ -79,7 +81,7 @@ export function useHistoryFeed(filter: DetectionFeedFilter, { enabled, resetKey 
     { enabled, staleTime: Infinity },
   );
   const signalsQuery = api.signals.signalsPage.useQuery(
-    { teamId, locationId, from, to, severityMin, severityMax, sourceNames: sources ? [...sources] : undefined, orderBy: SIGNAL_ORDER_MAP[sortOrder], limit: HISTORY_PAGE_SIZE, offset, _v: version },
+    { teamId, locationId, locationIds, from, to, severityMin, severityMax, sourceNames: sources ? [...sources] : undefined, orderBy: SIGNAL_ORDER_MAP[sortOrder], limit: HISTORY_PAGE_SIZE, offset, _v: version },
     { enabled, staleTime: Infinity },
   );
   const sourceNamesQuery = api.signals.pushFeedSourceNames.useQuery(undefined, {

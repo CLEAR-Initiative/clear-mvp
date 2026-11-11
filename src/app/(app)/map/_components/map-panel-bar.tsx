@@ -181,6 +181,12 @@ interface MapPanelBarProps {
    * When provided, a Filters icon appears below Legend on small screens.
    */
   filters?: ReactNode;
+  /**
+   * Which edge of the map the icon column sits on. Default "left". On
+   * "right" (/detection's rail) the panels open towards the map, to the left
+   * of the icons. Content is the same either way.
+   */
+  placement?: "left" | "right";
 }
 
 function IconBtn({
@@ -347,6 +353,7 @@ export function MapPanelBar({
   baseMapType, onBaseMapTypeChange,
   keepPanelsOpen, onKeepPanelsOpenChange,
   filters,
+  placement = "left",
 }: MapPanelBarProps) {
   // Unlike the controls above, an unwired blockages/seismic toggle falls back to
   // a Coming-soon stub rather than vanishing — the feature is announced, not
@@ -371,10 +378,20 @@ export function MapPanelBar({
   return (
     // Mobile: clear the status/safe area + floating burger. Desktop: below the filter bar.
     <Box
-      data-map-chrome-left
-      className="absolute z-20 top-14 left-4 sm:top-20 bottom-4 pointer-events-none"
+      data-map-chrome-left={placement === "left" ? true : undefined}
+      className={
+        placement === "right"
+          ? "absolute z-20 top-4 right-4 bottom-4 pointer-events-none"
+          : "absolute z-20 top-14 left-4 sm:top-20 bottom-4 pointer-events-none"
+      }
     >
-      <Group gap={4} align="flex-start" wrap="nowrap" h="100%">
+      <Group
+        gap={4}
+        align="flex-start"
+        wrap="nowrap"
+        h="100%"
+        style={placement === "right" ? { flexDirection: "row-reverse" } : undefined}
+      >
 
         {/* Icon column — Filters is mobile-only (third button under Legend) */}
         <Stack gap={4} className="pointer-events-auto">

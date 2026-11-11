@@ -1767,6 +1767,107 @@
         "frequency": "الدورية",
         "variables": "المتغيرات"
       }
+    },
+    "mapFirst": {
+      "live": "مباشر · آخر تحديث {relative}",
+      "noun": {
+        "events": "{count, plural, one {حدث} other {أحداث}}",
+        "alerts": "{count, plural, one {تنبيه} other {تنبيهات}}",
+        "signals": "{count, plural, one {إشارة} other {إشارات}}"
+      },
+      "count": "<b>{total}</b> {noun} · {scope} · {date}",
+      "countNarrowed": "<b>{shown}</b> من {total} {noun} · {scope} · {date}",
+      "newCount": "{count} جديد",
+      "empty": {
+        "events": "لا توجد أحداث مطابقة",
+        "alerts": "لا توجد تنبيهات مطابقة",
+        "signals": "لا توجد إشارات مطابقة",
+        "remove": "إزالة <b>{what}</b> · يعرض {count}",
+        "longer": "جرّب نطاقًا زمنيًا أطول.",
+        "search": "البحث «{query}»"
+      },
+      "open": "فتح",
+      "allCountries": "كل البلدان",
+      "levels": "{count} مستويات",
+      "typesCount": "{count} أنواع",
+      "sourcesCount": "{count} مصادر",
+      "last24h": "آخر 24 ساعة",
+      "lastDays": "آخر {count} يومًا",
+      "showTimeline": "إظهار الخط الزمني (T)",
+      "hideTimeline": "إخفاء الخط الزمني (T)",
+      "totalNoun": "{total} {noun}",
+      "presets": {
+        "24h": "24 س",
+        "7d": "7 أيام",
+        "30d": "30 يومًا",
+        "90d": "90 يومًا"
+      },
+      "timelineSummary": "{range} · <b>{total}</b> {noun}",
+      "today": "اليوم",
+      "hideList": "إخفاء القائمة",
+      "showList": "إظهار القائمة",
+      "places": "{count} أماكن",
+      "qb": {
+        "label": "البحث والتصفية",
+        "placeholder": "ابحث أو صفِّ…",
+        "placeholderMore": "أضف عامل تصفية أو ابحث…",
+        "clear": "مسح البحث وعوامل التصفية",
+        "removeToken": "إزالة عامل التصفية {key}:",
+        "tokenTitle": "{token} · انقر للتعديل",
+        "filterBy": "تصفية حسب",
+        "filters": "عوامل التصفية",
+        "pickOne": "اختر واحدًا",
+        "pickMany": "اختر واحدًا أو أكثر",
+        "search": "البحث عن «<b>{query}</b>»",
+        "noMatches": "لا توجد نتائج لـ «{query}».",
+        "state": "ولاية",
+        "showDistricts": "إظهار المناطق (→)",
+        "hideDistricts": "إخفاء المناطق (←)",
+        "expand": "إظهار الأنواع الفرعية (→)",
+        "collapse": "إخفاء الأنواع الفرعية (←)",
+        "keys": {
+          "in": "الموقع",
+          "type": "نوع الحدث",
+          "severity": "الخطورة",
+          "source": "المصدر",
+          "since": "الفترة الزمنية",
+          "sort": "ترتيب الفرز"
+        },
+        "hint": {
+          "navigate": "للتنقل",
+          "select": "للاختيار",
+          "toggle": "للتحديد",
+          "complete": "للإكمال",
+          "districts": "المناطق",
+          "remove": "لإزالة عامل التصفية",
+          "close": "للإغلاق"
+        }
+      },
+      "sort": {
+        "title": "الفرز: {group} · {option}",
+        "menu": "ترتيب الفرز",
+        "group": {
+          "activity": "آخر نشاط",
+          "severity": "الخطورة",
+          "published": "النشر"
+        },
+        "option": {
+          "newest": "الأحدث أولاً",
+          "oldest": "الأقدم أولاً",
+          "highest": "الأعلى خطورة أولاً"
+        },
+        "short": {
+          "activity": "النشاط",
+          "severity": "الخطورة",
+          "published": "النشر"
+        }
+      },
+      "time": {
+        "pub": "نُشر",
+        "published": "تاريخ النشر",
+        "activity": "آخر نشاط"
+      },
+      "mapLabel": "{name} · انقر للتصفية، وShift+نقر للإضافة"
     }
   },
   "eventDetail": {
