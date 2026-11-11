@@ -14,7 +14,7 @@ const { EMPTY_URL_STATE, MetricsUrlProvider, filtersFromUrl, metricsUrlSearch, p
 describe("parseMetricsUrl", () => {
   it("reads every key, normalising the bucket size and splitting the sources", () => {
     const state = parseMetricsUrl(
-      new URLSearchParams("from=2026-10-25&to=2026-10-31&location=loc-sdn&metric=DISTRICT_OR_FINER&granularity=Day&lines=all&sources=sudan-war-x,%20dataminr,sudan-war-x"),
+      new URLSearchParams("from=2026-10-25&to=2026-10-31&location=loc-sdn&metric=DISTRICT_OR_FINER&granularity=Day&lines=all&sources=sudan-war-x,%20dataminr,sudan-war-x&view=Same-Ruler"),
     );
     expect(state).toEqual({
       from: "2026-10-25",
@@ -24,6 +24,7 @@ describe("parseMetricsUrl", () => {
       granularity: "DAY",
       lines: "all",
       sources: ["sudan-war-x", "dataminr"],
+      view: "same-ruler",
     });
   });
 
@@ -34,6 +35,9 @@ describe("parseMetricsUrl", () => {
     ).toEqual(EMPTY_URL_STATE);
     expect(parseMetricsUrl(new URLSearchParams("metric=detected_same_day")).metric).toBeNull();
     expect(parseMetricsUrl(new URLSearchParams("sources=,,")).sources).toEqual([]);
+    // An unknown view reads as unset, which is As delivered.
+    expect(parseMetricsUrl(new URLSearchParams("view=current")).view).toBeNull();
+    expect(parseMetricsUrl(new URLSearchParams("view=as-delivered")).view).toBe("as-delivered");
   });
 });
 
@@ -48,7 +52,7 @@ describe("metricsUrlSearch", () => {
   });
 
   it("round-trips through parseMetricsUrl", () => {
-    const state = { from: "2026-10-25", to: "2026-10-31", locationId: "loc-sdn", metric: "DETECTED_SAME_DAY", granularity: "MONTH" as const, lines: "source" as const, sources: ["sudan-war-x"] };
+    const state = { from: "2026-10-25", to: "2026-10-31", locationId: "loc-sdn", metric: "DETECTED_SAME_DAY", granularity: "MONTH" as const, lines: "source" as const, sources: ["sudan-war-x"], view: "same-ruler" as const };
     expect(parseMetricsUrl(new URLSearchParams(metricsUrlSearch(state)))).toEqual(state);
   });
 });

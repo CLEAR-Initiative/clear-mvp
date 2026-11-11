@@ -189,3 +189,19 @@ describe("known metric keys and units", () => {
     for (const unit of METRIC_UNITS) expect(messages.units[unit], unit).toBeTruthy();
   });
 });
+
+describe("the two views of the delay metrics", () => {
+  it("sends CURRENT for Same ruler and nothing for As delivered", async () => {
+    const { onsetBasisOf } = await import("./metric-series");
+    expect(onsetBasisOf("same-ruler")).toBe("CURRENT");
+    expect(onsetBasisOf("as-delivered")).toBeUndefined();
+  });
+
+  it("keeps the chosen metric, except on Same ruler for a metric with one view", async () => {
+    const { metricForView, SAME_RULER_METRICS } = await import("./metric-series");
+    expect(SAME_RULER_METRICS).toEqual(["DETECTED_BY_NEXT_DAY", "DETECTED_SAME_DAY", "ALERTED_BY_NEXT_DAY", "ALERTED_SAME_DAY"]);
+    expect(metricForView("as-delivered", "SIGNALS_GROUPED")).toBe("SIGNALS_GROUPED");
+    expect(metricForView("same-ruler", "ALERTED_SAME_DAY")).toBe("ALERTED_SAME_DAY");
+    expect(metricForView("same-ruler", "SIGNALS_GROUPED")).toBe("DETECTED_BY_NEXT_DAY");
+  });
+});

@@ -362,6 +362,26 @@ describe("metrics.definitions and metrics.series", () => {
     expect(graphqlFetch).not.toHaveBeenCalled();
   });
 
+  it("sends onsetBasis CURRENT for the Same ruler view and nothing for As delivered", async () => {
+    signedInAs("admin");
+    graphqlFetch.mockResolvedValue({ metricSeries: { ...SERIES, groups: [], buckets: [] } });
+    await caller().metrics.series({ metric: "ALERTED_BY_NEXT_DAY", onsetBasis: "CURRENT" });
+    expect(graphqlFetch.mock.calls[0]![1]).toEqual({ input: { metric: "ALERTED_BY_NEXT_DAY", onsetBasis: "CURRENT" } });
+    await caller().metrics.series({ metric: "ALERTED_BY_NEXT_DAY" });
+    expect(graphqlFetch.mock.calls[1]![1]).toEqual({ input: { metric: "ALERTED_BY_NEXT_DAY" } });
+    // The router knows one value: As delivered is the absence of the field.
+    await expect(caller().metrics.series({ metric: "ALERTED_BY_NEXT_DAY", onsetBasis: "AS_DELIVERED" as never })).rejects.toMatchObject({ code: "BAD_REQUEST" });
+  });
+
+  it("refuses both views to every role but a platform admin", async () => {
+    for (const role of ["analyst", "member", "viewer"]) {
+      signedInAs(role);
+      await expect(caller().metrics.series({ metric: "DETECTED_BY_NEXT_DAY" })).rejects.toMatchObject({ code: "FORBIDDEN" });
+      await expect(caller().metrics.series({ metric: "DETECTED_BY_NEXT_DAY", onsetBasis: "CURRENT" })).rejects.toMatchObject({ code: "FORBIDDEN" });
+    }
+    expect(graphqlFetch).not.toHaveBeenCalled();
+  });
+
   it("returns the unavailable state while clear-api lacks the registry", async () => {
     signedInAs("admin");
     graphqlFetch.mockRejectedValueOnce(

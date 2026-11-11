@@ -3876,6 +3876,18 @@
     "progress": {
       "title": "Progression dans le temps",
       "subtitle": "Une métrique à la fois, par jour, semaine ou mois. Un point creux est un intervalle que la période ne couvre qu'en partie ; l'infobulle indique n.",
+      "view": {
+        "label": "Vue",
+        "cardTitle": "{metric} · {view}",
+        "as-delivered": {
+          "name": "Tel que livré",
+          "description": "Chaque valeur telle que le pipeline l'a donnée à l'époque. Utilisez-la pour voir si un déploiement a amélioré CLEAR : les semaines passées ne bougent pas."
+        },
+        "same-ruler": {
+          "name": "Même règle",
+          "description": "Les mêmes détections et alertes, mesurées avec la date de début que CLEAR connaît aujourd'hui : chaque semaine a la même règle. Utilisez-la pour juger la rapidité de CLEAR : les semaines passées bougent quand CLEAR apprend une meilleure date de début."
+        }
+      },
       "metric": {
         "label": "Métrique"
       },

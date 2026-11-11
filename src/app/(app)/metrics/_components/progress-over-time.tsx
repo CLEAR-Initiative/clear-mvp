@@ -14,6 +14,7 @@ import {
   Stack,
   Switch,
   Table,
+  Tabs,
   Text,
   TextInput,
   UnstyledButton,
@@ -24,10 +25,13 @@ import { MetricsBodySkeleton } from "~/components/ui/metrics-page-skeleton";
 import { api } from "~/trpc/react";
 import {
   DEFAULT_METRIC,
+  DEFAULT_VIEW,
   GRANULARITIES,
   KNOWN_METRIC_KEYS,
   METRIC_UNITS,
+  METRIC_VIEWS,
   REPLAY_METRICS,
+  SAME_RULER_METRICS,
   beforeAfter,
   bucketsOfGroup,
   comparisonFrom,
@@ -37,6 +41,8 @@ import {
   latestMarkerInRange,
   markersByBucket,
   markersInRange,
+  metricForView,
+  onsetBasisOf,
   replayBuckets,
   shortVersion,
   totalsByBucket,
@@ -47,6 +53,7 @@ import {
   type MetricKey,
   type MetricSeries,
   type MetricUnit,
+  type MetricView,
   type ReplayRun,
   type SeriesMarker,
   type TotalBucket,
@@ -192,7 +199,11 @@ const isKnownUnit = (unit: string): unit is MetricUnit => (METRIC_UNITS as reado
  * from clear-api's registry (`metricDefinitions`, ADR-0015), read by day, week
  * or month from `metricSeries` (ADR-0014), with the changes recorded against
  * it (`metricAnnotations`, ADR-0016) drawn as markers and a before-and-after
- * around the latest one. Admins record a change from here. Shares the page's
+ * around the latest one. Admins record a change from here. Two tabs hold the
+ * two views of the delay metrics (Exponential #1431, clear-api ADR-0021):
+ * "As delivered", the default, and "Same ruler", which offers the four delay
+ * metrics only. The tab is in the URL, and the card title, the legend and
+ * the copied link name it. Shares the page's
  * range and country. Names are translated when this app knows the key;
  * otherwise the registry's English name shows.
  */
@@ -203,7 +214,11 @@ export function ProgressOverTime({ filters }: { filters: MetricsFilterValues }) 
   const utils = api.useUtils();
   // Metric, bucket size and grouping live in the URL too, so a view can be shared and reloaded.
   const url = useMetricsUrl();
-  const [chosen, setChosen] = useState<MetricKey>(url.state.metric ?? DEFAULT_METRIC);
+  const [view, setView] = useState<MetricView>(url.state.view ?? DEFAULT_VIEW);
+  const sameRuler = view === "same-ruler";
+  const onsetBasis = onsetBasisOf(view);
+  // Same ruler has the delay metrics only: a link that asks for another metric there opens the default one.
+  const [chosen, setChosen] = useState<MetricKey>(metricForView(view, url.state.metric ?? DEFAULT_METRIC));
   const [granularityChoice, setGranularityChoice] = useState<Granularity | null>(url.state.granularity);
   const [perSource, setPerSource] = useState(url.state.lines !== "all");
   const [copied, setCopied] = useState(false);
@@ -211,9 +226,18 @@ export function ProgressOverTime({ filters }: { filters: MetricsFilterValues }) 
     setChosen(key);
     url.update({ metric: key });
   };
+  const pickView = (next: MetricView) => {
+    const metricKey = metricForView(next, chosen);
+    setView(next);
+    setChosen(metricKey);
+    url.update({ view: next, metric: metricKey });
+  };
   const copyLink = async () => {
     try {
-      await navigator.clipboard.writeText(window.location.href);
+      // The link always names the view, so it cannot be read as the other one.
+      const link = new URL(window.location.href);
+      link.searchParams.set("view", view);
+      await navigator.clipboard.writeText(link.toString());
       setCopied(true);
       window.setTimeout(() => setCopied(false), 2000);
     } catch {
@@ -229,14 +253,16 @@ export function ProgressOverTime({ filters }: { filters: MetricsFilterValues }) 
     refetchOnWindowFocus: false,
     retry: (count, err) => !NO_RETRY.has(err.data?.code ?? "") && count < 2,
   });
-  const definitions = registry.data?.status === "ok" ? registry.data.definitions : null;
+  const registered = registry.data?.status === "ok" ? registry.data.definitions : null;
+  // The metrics this tab offers: every one as delivered, the delay metrics on the same ruler.
+  const definitions = registered && sameRuler ? registered.filter((d) => SAME_RULER_METRICS.includes(d.key)) : registered;
   const definition: MetricDefinition | null = definitions
     ? (definitions.find((d) => d.key === chosen) ?? definitions[0] ?? null)
     : null;
   const metric = definition?.key ?? chosen;
   const nameOf = (d: MetricDefinition) => (isKnown(d.key) ? t(`metrics.${d.key}`) : d.name);
   const nameOfKey = (key: MetricKey) => {
-    const d = definitions?.find((entry) => entry.key === key);
+    const d = registered?.find((entry) => entry.key === key);
     return d ? nameOf(d) : key;
   };
 
@@ -250,7 +276,7 @@ export function ProgressOverTime({ filters }: { filters: MetricsFilterValues }) 
   const groupBy = grouped ? ("SOURCE" as const) : undefined;
   // No placeholder data: a stale series under a new metric's title would mislead.
   const chart = api.metrics.series.useQuery(
-    { ...scopedInput, metric, granularity, groupBy },
+    { ...scopedInput, metric, granularity, groupBy, onsetBasis },
     {
       enabled: definition !== null,
       refetchOnWindowFocus: false,
@@ -261,7 +287,7 @@ export function ProgressOverTime({ filters }: { filters: MetricsFilterValues }) 
   const series = result?.status === "ok" ? result.series : null;
   // The Replay runs that re-located Signals in the range (clear-api ADR-0020),
   // for a metric that has a replay series. One can be drawn as a second line.
-  const replayable = REPLAY_METRICS.includes(metric);
+  const replayable = !sameRuler && REPLAY_METRICS.includes(metric);
   const replayList = api.metrics.replayRuns.useQuery(scopedInput, {
     enabled: definition !== null && replayable,
     refetchOnWindowFocus: false,
@@ -294,9 +320,10 @@ export function ProgressOverTime({ filters }: { filters: MetricsFilterValues }) 
   // range starts on, so a range opened close to the marker is not clipped.
   const latestMarker = series ? latestMarkerInRange(metric, series.from, series.to, markers) : null;
   const daily = api.metrics.series.useQuery(
-    { ...scopedInput, metric, granularity: "DAY", groupBy, from: latestMarker ? comparisonFrom(latestMarker) : undefined, to: series?.to },
+    { ...scopedInput, metric, granularity: "DAY", groupBy, onsetBasis, from: latestMarker ? comparisonFrom(latestMarker) : undefined, to: series?.to },
     {
-      enabled: latestMarker !== null,
+      // Same ruler shows no before-and-after: a change of ruler would read as a change of speed.
+      enabled: latestMarker !== null && !sameRuler,
       refetchOnWindowFocus: false,
       retry: (count, err) => !NO_RETRY.has(err.data?.code ?? "") && count < 2,
     },
@@ -341,11 +368,11 @@ export function ProgressOverTime({ filters }: { filters: MetricsFilterValues }) 
     series && historyView && replayRun && replaySeries
       ? withReplay(historyView, series, replaySeries, emphasis, t("replay.legend", { version: versionOf(replayRun) }))
       : null;
-  const view = replayView ?? historyView;
+  const chartView = replayView ?? historyView;
   const inRange = series ? markersInRange(metric, series.from, series.to, markers) : [];
-  const markerGroups: MarkerGroup[] = view
-    ? [...markersByBucket(view.points, inRange, granularity)].map(([label, group]) => ({
-        axisLabel: view.points.find((point) => point.label === label)!.axisLabel,
+  const markerGroups: MarkerGroup[] = chartView
+    ? [...markersByBucket(chartView.points, inRange, granularity)].map(([label, group]) => ({
+        axisLabel: chartView.points.find((point) => point.label === label)!.axisLabel,
         names: group.map((m) => m.label),
       }))
     : [];
@@ -356,7 +383,8 @@ export function ProgressOverTime({ filters }: { filters: MetricsFilterValues }) 
       ? bucketsOfGroup(dailySeries, focus).map(({ start, label, isPartial, numerator, denominator }) => ({ start, label, isPartial, numerator, denominator }))
       : totalsByBucket(dailySeries)
     : null;
-  const comparison = latestMarker && dayTotals ? beforeAfter(dayTotals, latestMarker) : null;
+  const comparison = !sameRuler && latestMarker && dayTotals ? beforeAfter(dayTotals, latestMarker) : null;
+  const viewName = t(`view.${view}.name`);
   const unit = (n: number) =>
     definition && isKnownUnit(definition.unit) ? t(`units.${definition.unit}`, { n }) : t("units.DEFAULT", { n });
   const utcDay = (iso: string) => format.dateTime(new Date(iso), { dateStyle: "medium", timeZone: "UTC" });
@@ -379,6 +407,21 @@ export function ProgressOverTime({ filters }: { filters: MetricsFilterValues }) 
           {copied ? t("copied") : t("copyLink")}
         </Button>
       </Group>
+      <Tabs value={view} onChange={(value) => value && pickView(value as MetricView)} keepMounted={false}>
+        <Tabs.List aria-label={t("view.label")}>
+          {METRIC_VIEWS.map((v) => (
+            <Tabs.Tab key={v} value={v}>
+              {t(`view.${v}.name`)}
+            </Tabs.Tab>
+          ))}
+        </Tabs.List>
+        {/* One panel for the tab that is open: the content is the same component with another view, and
+            the panel ties it to its tab for a screen reader. */}
+        <Tabs.Panel value={view} pt={16}>
+          <Stack gap={16}>
+      <Text size="sm" c="var(--color-text-secondary)" maw={720} data-testid="view-description">
+        {t(`view.${view}.description`)}
+      </Text>
       <Group gap={12} align="flex-end" wrap="wrap">
         <Select
           label={t("metric.label")}
@@ -444,7 +487,7 @@ export function ProgressOverTime({ filters }: { filters: MetricsFilterValues }) 
         </Text>
       )}
       {definitions && definitions.length > 0 && (
-        <MetricTiles definitions={definitions} selected={metric} onSelect={pickMetric} locationId={input.locationId} nameOf={nameOf} />
+        <MetricTiles definitions={definitions} selected={metric} onSelect={pickMetric} locationId={input.locationId} nameOf={nameOf} onsetBasis={onsetBasis} />
       )}
       {error ? (
         <Alert styles={noticeStyles("critical")} icon={<IconAlertTriangle size={16} />} title={t("error.title")}>
@@ -454,14 +497,17 @@ export function ProgressOverTime({ filters }: { filters: MetricsFilterValues }) 
         <Alert styles={noticeStyles("warning")} icon={<IconAlertTriangle size={16} />} title={t("unavailable.title")}>
           {t("unavailable.body")}
         </Alert>
-      ) : rangeError ? null : definition && series && view ? (
+      ) : rangeError ? null : definition && series && chartView ? (
           <CardSection
-            title={nameOf(definition)}
+            title={t("view.cardTitle", { metric: nameOf(definition), view: viewName })}
             subtitle={t("card.subtitle", { buckets: t(`bucketsOf.${granularity}`), from: utcDay(series.from), to: utcDay(series.to) })}
             action={
-              view.empty ? undefined : (
+              chartView.empty ? undefined : (
               <Group gap={12} wrap="wrap" aria-label={t("legend")}>
-                {view.lines.map((line) => (
+                <Text size="xs" fw={600} c="var(--color-text-primary)" data-testid="legend-view">
+                  {viewName}
+                </Text>
+                {chartView.lines.map((line) => (
                   <Group key={line.key} gap={6} wrap="nowrap">
                     <svg width={20} height={8} aria-hidden>
                       <line x1={0} x2={20} y1={4} y2={4} stroke={line.color} strokeWidth={line.width} strokeDasharray={line.dash} />
@@ -498,7 +544,7 @@ export function ProgressOverTime({ filters }: { filters: MetricsFilterValues }) 
               )
             }
           >
-            {view.empty ? (
+            {chartView.empty ? (
               <Alert styles={noticeStyles("info")} icon={<IconInfoCircle size={16} />} title={t("empty.title")}>
                 {t("empty.body")}
               </Alert>
@@ -534,14 +580,14 @@ export function ProgressOverTime({ filters }: { filters: MetricsFilterValues }) 
                 {t("replay.error", { message: replayChart.error.message })}
               </Text>
             )}
-            <SeriesChart data={view.points} lines={view.lines} markers={markerGroups} granularity={granularity} unit={unit} />
+            <SeriesChart data={chartView.points} lines={chartView.lines} markers={markerGroups} granularity={granularity} unit={unit} />
             {table && (
               <Box style={{ overflowX: "auto" }} mt={8}>
                 <Table fz="xs" striped withRowBorders={false} style={{ fontVariantNumeric: "tabular-nums" }}>
                   <Table.Thead>
                     <Table.Tr>
                       <Table.Th>{t("columns.bucket")}</Table.Th>
-                      {view.columns.map((line) => (
+                      {chartView.columns.map((line) => (
                         <Table.Th key={line.key} ta="right">
                           {line.label}
                         </Table.Th>
@@ -549,13 +595,13 @@ export function ProgressOverTime({ filters }: { filters: MetricsFilterValues }) 
                     </Table.Tr>
                   </Table.Thead>
                   <Table.Tbody>
-                    {view.points.map((point) => (
+                    {chartView.points.map((point) => (
                       <Table.Tr key={point.start}>
                         <Table.Td>
                           {point.label}
                           {point.isPartial ? ` (${t("partial")})` : ""}
                         </Table.Td>
-                        {view.columns.map((line) => {
+                        {chartView.columns.map((line) => {
                           const value = point[line.key] as number | null;
                           return (
                             <Table.Td key={line.key} ta="right">
@@ -718,6 +764,9 @@ export function ProgressOverTime({ filters }: { filters: MetricsFilterValues }) 
           <MetricsBodySkeleton />
         </Box>
       )}
+          </Stack>
+        </Tabs.Panel>
+      </Tabs>
     </Stack>
   );
 }
