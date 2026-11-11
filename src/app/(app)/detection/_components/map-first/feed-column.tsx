@@ -4,6 +4,7 @@ import { Fragment, forwardRef, useEffect, useImperativeHandle, useLayoutEffect, 
 import { useFormatter, useNow, useTranslations } from "next-intl";
 import { Checkbox, Loader } from "@mantine/core";
 import { IconArrowDown, IconArrowUp, IconArrowsSort, IconCheck, IconRefresh } from "@tabler/icons-react";
+import { BidiTitle } from "~/components/ui/bidi-title";
 import { getTypeChips } from "~/lib/disaster-types";
 import { severityColors } from "~/lib/constants/severity";
 import type { FeedItem } from "../../_lib/detection-model";
@@ -333,7 +334,9 @@ function FeedRow({
           {item.isAlert && <span className={css.alertBadge}>{t("feed.alertBadge")}</span>}
           {item.source && <span className={css.rowSource}>{item.source}</span>}
         </div>
-        <span className={css.rowTitle}>{item.title}</span>
+        <span className={css.rowTitle}>
+          <BidiTitle>{item.title}</BidiTitle>
+        </span>
         {(chips.length > 0 || item.signalCount != null) && (
           <div className={css.tags}>
             {chips.map((chip) => (
