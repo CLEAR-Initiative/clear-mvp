@@ -45,6 +45,8 @@ interface StoredFilters {
   /** The selected states and districts. */
   locIds?: string[];
   date?: string;
+  /** A window picked on the timeline that ends before today (wins over `date`). */
+  customRange?: { from: string; to: string } | null;
   severities?: string[];
   typeFilters?: string[];
   sources?: string[] | null;
@@ -264,6 +266,7 @@ export function useDetectionFilters({
     // after Map already switched to All Countries.
     if (!initial?.locationId) setSelectedLocIds(storedLocIds(storedFilters));
     if (storedFilters.date && !(initial?.from && initial.to)) setSelectedDate(storedFilters.date);
+    if (storedFilters.customRange && !(initial?.from && initial.to)) setCustomRange(storedFilters.customRange);
     if (storedFilters.severities) setActiveSeverities(new Set(storedFilters.severities));
     if (storedFilters.typeFilters) setSelectedTypeFilters(storedFilters.typeFilters);
     if (storedFilters.sources !== undefined) {
@@ -296,6 +299,8 @@ export function useDetectionFilters({
         setSelectedLocIds(visitLocIds);
         linkedRegionRef.current = visitLocIds.length > 0;
         if (visit.date) setSelectedDate(visit.date);
+        // The visit's own range, or none: not one restored from the page's defaults.
+        setCustomRange(visit.customRange ?? null);
         if (visit.severities) setActiveSeverities(new Set(visit.severities));
         if (visit.typeFilters) setSelectedTypeFilters(visit.typeFilters);
         if (visit.sources !== undefined) setActiveSources(visit.sources ? new Set(visit.sources) : null);
@@ -304,7 +309,11 @@ export function useDetectionFilters({
       }
       setSelectedLocIds(linkScope.region ? [linkScope.region.id] : []);
       linkedRegionRef.current = !!linkScope.region;
-      if (detectionDeepLink.date) setSelectedDate(detectionDeepLink.date);
+      if (detectionDeepLink.date) {
+        // The link's date wins over a saved timeline range.
+        setCustomRange(null);
+        setSelectedDate(detectionDeepLink.date);
+      }
       if (detectionDeepLink.severities) setActiveSeverities(new Set(detectionDeepLink.severities));
     },
     onGone: () => {
@@ -325,6 +334,7 @@ export function useDetectionFilters({
         country: selectedCountry,
         locIds: selectedLocIds,
         date: selectedDate,
+        customRange,
         severities: Array.from(activeSeverities),
         typeFilters: selectedTypeFilters,
         sources: activeSources ? Array.from(activeSources) : null,
@@ -341,7 +351,7 @@ export function useDetectionFilters({
     } catch {
       /* sessionStorage unavailable (SSR or private mode) */
     }
-  }, [storageReady, linkScope.status, detectionDeepLink.countryId, persistKey, selectedCountry, selectedLocIds, selectedDate, activeSeverities, selectedTypeFilters, activeSources, boundaryLevel]);
+  }, [storageReady, linkScope.status, detectionDeepLink.countryId, persistKey, selectedCountry, selectedLocIds, selectedDate, customRange, activeSeverities, selectedTypeFilters, activeSources, boundaryLevel]);
 
   // The country (or the starting area's country) the page is scoped to.
   const countryLocationId = useMemo(
@@ -366,6 +376,15 @@ export function useDetectionFilters({
     () => tree.find((c) => c.name === selectedCountry)?.states ?? [],
     [tree, selectedCountry],
   );
+
+  // Picked places belong to the page's country. A shared link's country holds
+  // for its visit only, so places saved during it can outlive it: once the
+  // country and its places are known, drop any from another country.
+  useEffect(() => {
+    if (!scopeReady || isLocationsLoading || overrideRegion || currentCountryStates.length === 0) return;
+    const inCountry = (id: string) => currentCountryStates.some((s) => s.id === id || s.districts.some((d) => d.id === id));
+    setSelectedLocIds((ids) => (ids.every(inCountry) ? ids : ids.filter(inCountry)));
+  }, [scopeReady, isLocationsLoading, overrideRegion, currentCountryStates]);
 
   const dateRange = useMemo(() => parseDateFilter(selectedDate), [selectedDate]);
   const fromIso = useMemo(() => customRange?.from ?? dateRange.start.toISOString(), [customRange, dateRange]);
@@ -430,6 +449,12 @@ export function useDetectionFilters({
     dateOptions: localizedDateOptions,
     customRange,
     setCustomRange,
+    /**
+     * Scope this visit to an area (a shared link's country) the way
+     * `initial.locationId` does: it holds until a country is picked and
+     * leaves the working country alone.
+     */
+    setStartingArea: setAreaOverride,
     // Filter popover
     severities: activeSeverities,
     setSeverities: setActiveSeverities,
