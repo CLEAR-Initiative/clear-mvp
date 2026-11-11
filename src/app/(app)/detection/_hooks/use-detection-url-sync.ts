@@ -28,6 +28,24 @@ export function rangeOfKey(key: string): Range | null {
   return Number.isNaN(Date.parse(from)) || Number.isNaN(Date.parse(to)) || from > to ? null : { from, to };
 }
 
+// A calendar month as the date filter names it ("Oct 2026", from the date
+// picker FilterBar still offers) and as the URL does ("2026-10").
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+/** "Oct 2026" -> "2026-10"; null for anything but a calendar month. */
+export function monthKeyOf(date: string): string | null {
+  const m = date.match(/^([A-Z][a-z]{2}) (\d{4})$/);
+  const idx = m ? MONTHS.indexOf(m[1]!) : -1;
+  return m && idx >= 0 ? `${m[2]}-${String(idx + 1).padStart(2, "0")}` : null;
+}
+
+/** "2026-10" -> "Oct 2026"; null for anything else. */
+export function monthOfKey(key: string): string | null {
+  const m = key.match(/^(\d{4})-(\d{2})$/);
+  const month = m ? MONTHS[Number(m[2]) - 1] : undefined;
+  return m && month ? `${month} ${m[1]}` : null;
+}
+
 /** The filters as query params; defaults are left out. */
 export function filtersToParams(f: {
   /** A country location id, ALL_COUNTRIES_PARAM, or null while unknown. */
@@ -43,7 +61,7 @@ export function filtersToParams(f: {
   return {
     c: f.country,
     r: f.locIds.length ? f.locIds.join("|") : null,
-    d: f.customRange ? rangeKey(f.customRange) : f.date === DEFAULT_DATE ? null : dateKeyOf(f.date),
+    d: f.customRange ? rangeKey(f.customRange) : f.date === DEFAULT_DATE ? null : (dateKeyOf(f.date) ?? monthKeyOf(f.date)),
     s: sev.length === 0 || sev.length === SEVERITIES.length ? null : sev.join(","),
     t: f.typeFilters.length ? f.typeFilters.join("|") : null,
     src: f.sources && f.sources.size ? [...f.sources].join("|") : null,
@@ -75,7 +93,7 @@ export function viewFromParams(params: URLSearchParams): LinkedView | null {
   return {
     country: params.get("c") || null,
     locIds: (params.get("r") ?? "").split("|").filter(Boolean),
-    date: (!customRange && d ? dateOfKey(d) : null) ?? DEFAULT_DATE,
+    date: (!customRange && d ? (dateOfKey(d) ?? monthOfKey(d)) : null) ?? DEFAULT_DATE,
     customRange,
     severities: new Set(severities.length ? severities : SEVERITIES),
     typeFilters: (params.get("t") ?? "").split("|").filter((v) => v.includes("::")),

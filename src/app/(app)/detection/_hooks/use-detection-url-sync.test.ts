@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { filtersToParams, rangeKey, rangeOfKey, viewFromParams } from "./use-detection-url-sync";
+import { filtersToParams, monthKeyOf, monthOfKey, rangeKey, rangeOfKey, viewFromParams } from "./use-detection-url-sync";
 
 const ALL_SEV = new Set(["critical", "high", "medium", "low"]);
 
@@ -37,6 +37,21 @@ describe("filtersToParams", () => {
     expect(filtersToParams({ country: null, locIds: [], date: "Last 30 days", customRange, severities: ALL_SEV, typeFilters: [], sources: null }).d).toBe(
       "2026-10-03..2026-11-02",
     );
+  });
+});
+
+describe("calendar months", () => {
+  it("round-trips a month of the date picker", () => {
+    expect(monthKeyOf("Oct 2026")).toBe("2026-10");
+    expect(monthOfKey("2026-10")).toBe("Oct 2026");
+    expect(monthKeyOf("Last 7 days")).toBeNull();
+    expect(monthOfKey("2026-13")).toBeNull();
+  });
+
+  it("keeps a saved month in the URL, so a reload does not reset it", () => {
+    const params = filtersToParams({ country: "c-sd", locIds: [], date: "Oct 2026", customRange: null, severities: ALL_SEV, typeFilters: [], sources: null });
+    expect(params.d).toBe("2026-10");
+    expect(viewFromParams(new URLSearchParams(`c=c-sd&d=${params.d}`))?.date).toBe("Oct 2026");
   });
 });
 
