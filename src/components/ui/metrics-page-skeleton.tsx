@@ -22,7 +22,8 @@ function ChartCardSkeleton() {
   );
 }
 
-/** The /metrics body while its first result loads: tiles, then the charts. */
+/** The /metrics body while its first result loads: tiles, the trend, then
+ * the histogram and exclusions. */
 export function MetricsBodySkeleton() {
   return (
     <Box>
@@ -36,6 +37,9 @@ export function MetricsBodySkeleton() {
           </Box>
         ))}
       </SimpleGrid>
+      <Box mb={16}>
+        <ChartCardSkeleton />
+      </Box>
       <SimpleGrid cols={{ base: 1, lg: 2 }} spacing={16}>
         <ChartCardSkeleton />
         <ChartCardSkeleton />

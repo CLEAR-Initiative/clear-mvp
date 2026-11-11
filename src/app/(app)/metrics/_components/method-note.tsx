@@ -7,7 +7,7 @@ import { CardSection } from "~/components/ui";
 /** How time to detection is measured, in plain language (clear-api ADR-0011). */
 export function MethodNote() {
   const t = useTranslations("metrics.method");
-  const items = ["counted", "excluded", "wholeDays", "definition"] as const;
+  const items = ["counted", "excluded", "wholeDays", "trend", "definition"] as const;
 
   return (
     <CardSection title={t("title")}>

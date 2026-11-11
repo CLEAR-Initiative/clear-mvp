@@ -82,6 +82,7 @@ describe("metrics router", () => {
     const [query, vars, headers] = graphqlFetch.mock.calls[0] as [string, Record<string, unknown>, Record<string, string>];
     expect(query).toContain("query DetectionMetrics($input: DetectionMetricsInput)");
     expect(query).toContain("detectionMetrics(input: $input)");
+    expect(query).toMatch(/weekly \{[^}]*eventsInRange/);
     expect(vars).toEqual({
       input: { from: "2026-07-01T00:00:00.000Z", to: "2026-09-30T23:59:59.999Z", locationId: "loc-sdn" },
     });
@@ -103,11 +104,13 @@ describe("metrics router", () => {
     if (result.status !== "ok") return;
     const m = result.metrics;
     expect(m.counted).toBe(20);
-    expect(m.shares).toEqual({ sameDay: 0.25, byNextDay: 0.75, withOnset: 0.75 });
+    expect(m.shares).toEqual({ sameDay: 0.25, byNextDay: 0.75, withOnset: 0.75, measured: 0.5 });
     expect(m.histogram[0]).toMatchObject({ daysAfterOnset: 0, count: 5, share: 0.25 });
     expect(m.histogram[8]).toMatchObject({ isOpenEnded: true, count: 5, share: 0.25 });
     expect(m.weekly[0]).toMatchObject({ sameDayShare: 0.25, byNextDayShare: 0.75 });
     expect(m.weekly[1]).toMatchObject({ isPartial: true, sameDayShare: null, byNextDayShare: null });
+    // A week without eventsInRange (an older clear-api) has no coverage.
+    expect(m.weekly[0]).toMatchObject({ eventsInRange: null, measuredShare: null });
     expect(m.exclusions).toEqual(METRICS.exclusions);
 
     graphqlFetch.mockResolvedValueOnce({
@@ -115,7 +118,7 @@ describe("metrics router", () => {
     });
     const empty = await caller().metrics.detection();
     if (empty.status !== "ok") throw new Error("expected ok");
-    expect(empty.metrics.shares).toEqual({ sameDay: null, byNextDay: null, withOnset: null });
+    expect(empty.metrics.shares).toEqual({ sameDay: null, byNextDay: null, withOnset: null, measured: null });
     expect(empty.metrics.histogram.every((row) => row.share === null)).toBe(true);
   });
 
@@ -127,14 +130,40 @@ describe("metrics router", () => {
     expect(graphqlFetch).not.toHaveBeenCalled();
   });
 
+  it("adds each week's coverage when clear-api reports its events in range", async () => {
+    signedInAs("admin");
+    graphqlFetch.mockResolvedValueOnce({
+      detectionMetrics: { ...METRICS, weekly: [{ ...METRICS.weekly[0]!, eventsInRange: 10 }] },
+    });
+    const result = await caller().metrics.detection();
+    if (result.status !== "ok") throw new Error("expected ok");
+    expect(result.metrics.weekly[0]).toMatchObject({ eventsInRange: 10, measuredShare: 0.4 });
+  });
+
+  it("falls back to the query without weekly eventsInRange on a clear-api that predates it", async () => {
+    signedInAs("admin");
+    graphqlFetch
+      .mockRejectedValueOnce(
+        new GraphQLRequestError('Cannot query field "eventsInRange" on type "DetectionWeek".', "GRAPHQL_VALIDATION_FAILED"),
+      )
+      .mockResolvedValueOnce({ detectionMetrics: METRICS });
+    const result = await caller().metrics.detection();
+    expect(result.status).toBe("ok");
+    expect(graphqlFetch).toHaveBeenCalledTimes(2);
+    const fallback = graphqlFetch.mock.calls[1]![0] as string;
+    expect(fallback).toMatch(/weekly \{ isoWeek weekStart counted/);
+    expect(fallback).not.toContain("eventsInRange counted sameDay byNextDay isPartial");
+  });
+
   it("returns the unavailable state while clear-api lacks the field", async () => {
     signedInAs("admin");
-    graphqlFetch.mockRejectedValueOnce(
+    // Both the query and its fallback are refused.
+    graphqlFetch.mockRejectedValue(
       new GraphQLRequestError('Cannot query field "detectionMetrics" on type "Query".', "GRAPHQL_VALIDATION_FAILED"),
     );
     await expect(caller().metrics.detection()).resolves.toEqual({ status: "unavailable" });
 
-    graphqlFetch.mockRejectedValueOnce(
+    graphqlFetch.mockRejectedValue(
       new GraphQLRequestError('Unknown type "DetectionMetricsInput".', "GRAPHQL_VALIDATION_FAILED"),
     );
     await expect(caller().metrics.detection()).resolves.toEqual({ status: "unavailable" });
