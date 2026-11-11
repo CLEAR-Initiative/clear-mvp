@@ -1,16 +1,16 @@
 import { test, expect } from "../support/test";
 
 /**
- * Case 1 — create a signal via the Create Signal modal (Detection header) and
+ * Case 1: create a signal via the Create Signal modal (Detection header) and
  * assert it lands in the Signals list. The async pipeline (process_manual_signal)
  * is out of the stack; we assert the signal was filed + rendered, not enriched.
  */
 test.describe("Create signal (case 1)", () => {
   test("a created signal appears in the Signals list", async ({ page }) => {
     await page.goto("/detection", { waitUntil: "domcontentloaded" });
-    // Wait for hydration + feed before clicking — a pre-hydrate click is a no-op
+    // Wait for hydration + feed before clicking: a pre-hydrate click is a no-op
     // on the React onClick handler and the modal never opens.
-    await expect(page.locator('a[href^="/event/"]').first()).toBeVisible();
+    await expect(page.locator('[data-testid^="feed-row-"]').first()).toBeVisible();
 
     await page.getByRole("button", { name: "Create Signal" }).click();
     const dialog = page.getByRole("dialog");

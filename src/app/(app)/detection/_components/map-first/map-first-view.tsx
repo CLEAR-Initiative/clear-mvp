@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useLocale, useTranslations } from "next-intl";
+import { useRouter } from "next/navigation";
 import { EventDetailDrawer } from "~/components/event-detail";
 import type { MapMarker } from "~/components/map/crisis-map";
 import type { BoundaryLevel } from "~/app/(app)/map/_components/map-settings-popover";
@@ -155,6 +156,7 @@ export function MapFirstView(props: MapFirstViewProps) {
   const tDet = useTranslations("detection");
   const tMap = useTranslations("map");
   const locale = useLocale();
+  const router = useRouter();
   const feedTab: FeedTab = tab === "alerts" || tab === "signals" || tab === "history" ? tab : "events";
 
   // ── UI state ──────────────────────────────────────────────────────────────
@@ -466,10 +468,15 @@ export function MapFirstView(props: MapFirstViewProps) {
     onNext: goNext,
   });
 
-  const onSelectRow = useCallback((it: FeedItem) => {
-    setSelectedId(it.id);
-    if (it.eventId) setPreviewEventId(it.eventId);
-  }, []);
+  const onSelectRow = useCallback(
+    (it: FeedItem) => {
+      setSelectedId(it.id);
+      // Events and alerts open in the side peek; a signal has none, so it opens its page.
+      if (it.eventId) setPreviewEventId(it.eventId);
+      else router.push(it.href);
+    },
+    [router],
+  );
 
   // Row hover highlights its pin; pin hover highlights its row.
   const hoveredItem = hoverId ? items.find((it) => it.id === hoverId) : null;

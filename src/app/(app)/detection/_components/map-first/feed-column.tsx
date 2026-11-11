@@ -1,7 +1,6 @@
 "use client";
 
 import { Fragment, forwardRef, useEffect, useImperativeHandle, useLayoutEffect, useRef, useState, type ReactNode } from "react";
-import Link from "next/link";
 import { useFormatter, useNow, useTranslations } from "next-intl";
 import { Checkbox, Loader } from "@mantine/core";
 import { IconArrowDown, IconArrowUp, IconArrowsSort, IconCheck, IconRefresh } from "@tabler/icons-react";
@@ -284,7 +283,14 @@ function FeedRow({
       tabIndex={0}
       data-testid={`feed-row-${item.id}`}
       className={`${css.row} ${selected ? css.rowSelected : ""} ${fresh ? css.rowFresh : ""}`}
-      onClick={() => onSelect(item)}
+      onClick={(e) => {
+        // Cmd or Ctrl opens the full page in a new tab, as a link would.
+        if (e.metaKey || e.ctrlKey) {
+          window.open(item.href, "_blank", "noopener");
+          return;
+        }
+        onSelect(item);
+      }}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
@@ -317,14 +323,6 @@ function FeedRow({
         </span>
         {item.place && <span className={css.metaPlace}>{item.place}</span>}
         {showState && <span className={css.metaState}>{item.stateName}</span>}
-        <Link
-          href={item.href}
-          className={css.open}
-          onClick={(e) => e.stopPropagation()}
-          data-testid={`open-${item.kind}-${item.id}`}
-        >
-          {t("mapFirst.open")}
-        </Link>
       </div>
       <div className={css.rowBody}>
         <div className={css.rowLine}>

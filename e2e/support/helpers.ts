@@ -26,20 +26,20 @@ export function eventRows(page: Page) {
  * its (seeded) title.
  *
  * A plain row click opens the preview drawer without mounting page-mode
- * chrome (Add to Crisis, Alert). Follow the row's "Open" href so those
- * actions stay reachable. "Back to Events" is page-only: the drawer
- * never renders it — so it is the signal we actually left the overlay.
+ * chrome (Add to Crisis, Alert), so go to the row's full event page so those
+ * actions stay reachable. "Back to Events" is page-only: the drawer never
+ * renders it, so it is the signal we actually left the overlay.
  */
 export async function gotoEventByTitle(page: Page, title: string) {
   await gotoDetectionEvents(page);
   const row = eventRows(page).filter({ hasText: title }).first();
   await expect(row).toBeVisible();
-  // The row's "Open" link goes to the full event page.
-  const href = await row.locator('a[href^="/event/"]').getAttribute("href");
-  if (!href) {
-    throw new Error(`event row "${title}" should link to /event/:id`);
+  // An event row's test id carries the event's id.
+  const id = (await row.getAttribute("data-testid"))?.replace(/^feed-row-/, "");
+  if (!id) {
+    throw new Error(`event row "${title}" should carry its event id`);
   }
-  await page.goto(href);
+  await page.goto(`/event/${id}?from=detection`);
   await expect(page.getByRole("link", { name: /Back to Events/i })).toBeVisible();
   await expect(page.getByText(title).first()).toBeVisible();
 }
