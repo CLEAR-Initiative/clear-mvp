@@ -258,6 +258,7 @@ export const signalsRouter = createTRPCRouter({
         orderBy: z.enum(SIGNAL_ORDER).optional(),
         teamId: z.string().nullish(),
         locationId: z.string().nullish(),
+        locationIds: z.array(z.string()).optional(),
         sourceNames: z.array(z.string()).optional(),
         severityMin: z.number().int().min(1).max(5).optional(),
         severityMax: z.number().int().min(1).max(5).optional(),
