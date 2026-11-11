@@ -33,6 +33,7 @@ import {
   placeState,
   qualifierAliases,
   typeLeaves,
+  upperFirst,
   type DateKey,
   type FeedTab,
   type QualifierKey,
@@ -261,7 +262,7 @@ export const QueryBar = forwardRef<QueryBarHandle, QueryBarProps>(function Query
           t: "val",
           key: "type",
           val: h.name,
-          label: h.name,
+          label: upperFirst(h.name),
           on: isL1Checked(typeFilters, hierarchy, h.name),
           pill: pill ? { color: pill.color, bg: pill.bg } : undefined,
           kids: !prefixed && !q && multi,
@@ -276,14 +277,15 @@ export const QueryBar = forwardRef<QueryBarHandle, QueryBarProps>(function Query
       // expanded; with text, under a matching event type or on their own.
       const underL1 = q ? l1Match : typesExpanded.has(h.name);
       for (const leaf of leaves) {
-        const leafMatch = matchesText(leaf.name, q) || (leaf.grouped && matchesText(leaf.group, q));
+        // The short name or clear-api's full one: "missiles" and "artillery" both find shelling.
+        const leafMatch = matchesText(leaf.label, q) || matchesText(leaf.name, q) || (leaf.grouped && matchesText(leaf.group, q));
         if (!underL1 && !(q && leafMatch)) continue;
         out.push({
           t: "val",
           key: "type",
           val: leaf.key,
-          label: leaf.name,
-          ctx: leaf.grouped ? leaf.group : undefined,
+          label: leaf.label,
+          ctx: leaf.grouped ? upperFirst(leaf.group) : undefined,
           sub: underL1 && !prefixed,
           on: typeFilters.includes(leaf.key),
           prefixed,

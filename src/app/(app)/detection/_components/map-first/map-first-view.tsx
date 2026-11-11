@@ -38,6 +38,7 @@ import {
   toggleInSet,
   toggleLocation,
   toggleTypeKey,
+  typePaths,
   typeSelectionLabels,
   type BarRange,
   type Dim,
@@ -561,6 +562,7 @@ export function MapFirstView(props: MapFirstViewProps) {
   const typesLabel = typeSelectionLabels(filters.typeFilters, hierarchy).join(", ");
   // Older filters may hold whole level-2 groups; the bar works in detailed types.
   const typeKeys = useMemo(() => normalizeTypeKeys(filters.typeFilters, hierarchy), [filters.typeFilters, hierarchy]);
+  const typePathMap = useMemo(() => typePaths(hierarchy), [hierarchy]);
   const sevLabel = SEVERITIES.filter((s) => filters.severities.has(s)).map((s) => tMap(`severities.${s}`));
   const sourcesLabel = filters.sources ? [...filters.sources].join(", ") : "";
   const tokens: QueryToken[] = [];
@@ -659,6 +661,7 @@ export function MapFirstView(props: MapFirstViewProps) {
           sortKey={feed.sort}
           onSortChange={onSort}
           timeMode={sortGroup === "published" ? "published" : "activity"}
+          typePaths={typePathMap}
           newCount={feed.newCount}
           onRefresh={onRefresh}
           selectedId={selectedId}

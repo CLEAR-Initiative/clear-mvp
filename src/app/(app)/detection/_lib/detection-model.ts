@@ -9,6 +9,7 @@
  */
 
 import type { HierarchyLevel1 } from "~/components/disaster-type-picker";
+import { getHazardName } from "~/lib/disaster-types";
 import { toMapPointGeometry } from "~/lib/geo/to-map-point";
 import { resolveLocationName } from "~/lib/location";
 import type { GqlAlert, GqlEvent, GqlLocation, GqlSignal } from "~/lib/types/graphql";
@@ -189,13 +190,24 @@ export function signalToItem(s: GqlSignal, states: readonly RegionState[], untit
 // name, so there level 3 is level 2. A detailed type's key is "<l1>::<l2>"
 // when it is its group's only type (the key filters stored before), else
 // "<l1>::<l2>::<l3>" (conflict's ACLED groups split into several).
+//
+// Keys and search use clear-api's names; what the filter and the feed cards
+// show is the short name from `~/lib/disaster-types`.
+
+/** "air or drone strike" -> "Air or drone strike" (clear-api's names are lower case). */
+export function upperFirst(text: string): string {
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
 
 export interface TypeLeaf {
   key: string;
   l1: string;
   /** Its level-2 group; shown as context when the group holds several types. */
   group: string;
+  /** clear-api's name, for keys and search. */
   name: string;
+  /** The name shown: the type's short name. */
+  label: string;
   codes: string[];
   /** The group holds other detailed types too. */
   grouped: boolean;
@@ -209,15 +221,37 @@ export function typeLeaves(hierarchy: readonly HierarchyLevel1[], l1?: string): 
     for (const g of h.groups) {
       const subs = g.subTypes ?? [];
       if (subs.length > 1) {
-        for (const sub of subs) {
-          out.push({ key: `${h.name}::${g.name}::${sub.name}`, l1: h.name, group: g.name, name: sub.name, codes: [sub.code], grouped: true });
-        }
+        const short = subs.map((sub) => getHazardName(sub.code, upperFirst(sub.name)));
+        subs.forEach((sub, i) => {
+          // Two types sharing a short name (a leftover duplicate) keep their own names.
+          const label = short.indexOf(short[i]!) === short.lastIndexOf(short[i]!) ? short[i]! : upperFirst(sub.name);
+          out.push({ key: `${h.name}::${g.name}::${sub.name}`, l1: h.name, group: g.name, name: sub.name, label, codes: [sub.code], grouped: true });
+        });
       } else {
-        out.push({ key: `${h.name}::${g.name}`, l1: h.name, group: g.name, name: subs[0]?.name ?? g.name, codes: g.codes, grouped: false });
+        const sub = subs[0];
+        const label = sub ? getHazardName(sub.code, upperFirst(sub.name)) : upperFirst(g.name);
+        out.push({ key: `${h.name}::${g.name}`, l1: h.name, group: g.name, name: sub?.name ?? g.name, label, codes: g.codes, grouped: false });
       }
     }
   }
   return out;
+}
+
+/**
+ * Each code's full name from clear-api, for hover text where the short name
+ * shows: "Conflict › Explosions or remote violence › Shelling or artillery or
+ * missile attack". A level that repeats the one above it is left out.
+ */
+export function typePaths(hierarchy: readonly HierarchyLevel1[]): Map<string, string> {
+  const paths = new Map<string, string>();
+  const join = (...names: string[]) => names.filter((n, i) => n !== names[i - 1]).map(upperFirst).join(" › ");
+  for (const h of hierarchy) {
+    for (const g of h.groups) {
+      for (const sub of g.subTypes ?? []) paths.set(sub.code.toLowerCase(), join(h.name, g.name, sub.name));
+      for (const code of g.codes) if (!paths.has(code.toLowerCase())) paths.set(code.toLowerCase(), join(h.name, g.name));
+    }
+  }
+  return paths;
 }
 
 /** Leaf keys of one event type. */
@@ -278,9 +312,9 @@ export function typeSelectionLabels(selected: readonly string[], hierarchy: read
     if (seen.has(l1)) continue;
     if (isL1Checked(picked, hierarchy, l1)) {
       seen.add(l1);
-      labels.push(l1);
+      labels.push(upperFirst(l1));
     } else {
-      labels.push(typeLeaves(hierarchy, l1).find((t) => t.key === key)?.name ?? key.split("::").pop()!);
+      labels.push(typeLeaves(hierarchy, l1).find((t) => t.key === key)?.label ?? upperFirst(key.split("::").pop()!));
     }
   }
   return labels;

@@ -29,6 +29,7 @@ import {
   toggleLocation,
   toggleTypeKey,
   typeLeaves,
+  typePaths,
   typeSelectionLabels,
   type FeedItem,
   type FilterState,
@@ -60,7 +61,7 @@ describe("event type selection", () => {
   it("clicking an L2 under a checked L1 keeps the other L2s", () => {
     const next = toggleTypeKey(["Conflict::battles", "Conflict::riots"], H, "Conflict::battles");
     expect(next).toEqual(["Conflict::riots"]);
-    expect(typeSelectionLabels(next, H)).toEqual(["riots"]);
+    expect(typeSelectionLabels(next, H)).toEqual(["Riots"]);
   });
 
   it("checking every L2 reads as the L1", () => {
@@ -309,6 +310,38 @@ describe("event types: level 1 and level 3", () => {
     expect(typeLeaves(T, "conflict")[0]).toMatchObject({ name: "air or drone strike", group: "explosions or remote violence", codes: ["rs"] });
   });
 
+  it("shows each detailed type's short name, and clear-api's when two would read the same", () => {
+    expect(typeLeaves(T, "conflict").map((t) => t.label)).toEqual(["Air or drone strike", "Shelling or missiles", "Mob violence", "Violent demonstration"]);
+    expect(typeLeaves(T, "natural hazard").map((t) => t.label)).toEqual(["Flood", "Drought"]);
+    const civilians: HierarchyLevel1[] = [
+      {
+        name: "conflict",
+        groups: [
+          {
+            name: "violence against civilians",
+            codes: ["vc", "vd", "va"],
+            subTypes: [
+              { name: "abduction / forced disappearance", code: "vc" },
+              { name: "abduction or forced disappearance", code: "vd" },
+              { name: "attack", code: "va" },
+            ],
+          },
+        ],
+      },
+    ];
+    expect(typeLeaves(civilians).map((t) => t.label)).toEqual(["Abduction / forced disappearance", "Abduction or forced disappearance", "Attack"]);
+    // A code this app has no short name for keeps clear-api's.
+    const unknown: HierarchyLevel1[] = [{ name: "space", groups: [{ name: "meteor", codes: ["zz"], subTypes: [{ name: "meteor", code: "zz" }] }] }];
+    expect(typeLeaves(unknown)[0]?.label).toBe("Meteor");
+  });
+
+  it("gives each code its full clear-api path, a repeated level once", () => {
+    const paths = typePaths(T);
+    expect(paths.get("rm")).toBe("Conflict › Explosions or remote violence › Shelling or artillery or missile attack");
+    expect(paths.get("fl")).toBe("Natural hazard › Flood");
+    expect(paths.get("ep")).toBe("Epidemic");
+  });
+
   it("reads an older whole-group selection as all of its detailed types", () => {
     expect(normalizeTypeKeys(["conflict::explosions or remote violence", "natural hazard::flood"], T)).toEqual([
       DRONE,
@@ -320,7 +353,7 @@ describe("event types: level 1 and level 3", () => {
   it("toggles event types over their detailed types", () => {
     const all = toggleTypeKey([], T, "conflict");
     expect(isL1Checked(all, T, "conflict")).toBe(true);
-    expect(typeSelectionLabels(all, T)).toEqual(["conflict"]);
+    expect(typeSelectionLabels(all, T)).toEqual(["Conflict"]);
     const withoutDrone = toggleTypeKey(all, T, DRONE);
     expect(withoutDrone).not.toContain(DRONE);
     expect(isL1Checked(withoutDrone, T, "conflict")).toBe(false);
@@ -328,9 +361,10 @@ describe("event types: level 1 and level 3", () => {
     expect(toggleTypeKey(["conflict::explosions or remote violence"], T, DRONE)).toEqual([SHELLING]);
   });
 
-  it("labels a lone detailed type by its own name", () => {
-    expect(typeSelectionLabels([DRONE], T)).toEqual(["air or drone strike"]);
-    expect(typeSelectionLabels(["natural hazard::flood"], T)).toEqual(["flood"]);
+  it("labels a lone detailed type by its own short name", () => {
+    expect(typeSelectionLabels([DRONE], T)).toEqual(["Air or drone strike"]);
+    expect(typeSelectionLabels([SHELLING], T)).toEqual(["Shelling or missiles"]);
+    expect(typeSelectionLabels(["natural hazard::flood"], T)).toEqual(["Flood"]);
   });
 
   it("expands detailed types and groups to their codes", () => {

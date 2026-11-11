@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useFormatter, useNow, useTranslations } from "next-intl";
 import { Checkbox, Loader } from "@mantine/core";
 import { IconArrowDown, IconArrowUp, IconArrowsSort, IconCheck, IconRefresh } from "@tabler/icons-react";
-import { getDisasterL2Pills, getDisasterPills } from "~/lib/disaster-types";
+import { getTypeChips } from "~/lib/disaster-types";
 import { severityColors } from "~/lib/constants/severity";
 import type { FeedItem } from "../../_lib/detection-model";
 import { useSortLabels, type SortChoice, type SortGroup } from "./query-bar";
@@ -33,6 +33,8 @@ interface FeedColumnProps {
   onSortChange: (key: string) => void;
   /** Rows show the published time ("Pub. 3 days ago") when sorted by it. */
   timeMode: "activity" | "published";
+  /** clear-api's full name per type code, the hover text of a type chip. */
+  typePaths: ReadonlyMap<string, string>;
   newCount: number;
   onRefresh: () => void;
   selectedId: string | null;
@@ -57,7 +59,7 @@ interface FeedColumnProps {
 export const FeedColumn = forwardRef<FeedColumnHandle, FeedColumnProps>(function FeedColumn(props, ref) {
   const {
     hidden, items, totalCount, narrowed, noun, scopeLabel, dateLabel, queryBar, sortChoices, sortKey, onSortChange,
-    timeMode, newCount, onRefresh, selectedId, onSelect, onHover, loading, isFetchingMore, hasMore, onLoadMore, recovery,
+    timeMode, typePaths, newCount, onRefresh, selectedId, onSelect, onHover, loading, isFetchingMore, hasMore, onLoadMore, recovery,
     onRecover, refreshKey, freshIds, checkedIds, onToggleCheck, bulkBar, skeleton,
   } = props;
   const t = useTranslations("detection.mapFirst");
@@ -134,6 +136,7 @@ export const FeedColumn = forwardRef<FeedColumnHandle, FeedColumnProps>(function
             key={item.id}
             item={item}
             timeMode={timeMode}
+            typePaths={typePaths}
             selected={selectedId === item.id}
             fresh={freshIds.has(item.id)}
             checked={checkedIds.includes(item.id)}
@@ -250,10 +253,11 @@ function SortMenu({ choices, value, onChange }: { choices: readonly SortChoice[]
 }
 
 function FeedRow({
-  item, timeMode, selected, fresh, checked, anyChecked, onToggleCheck, onSelect, onHover, registerRef,
+  item, timeMode, typePaths, selected, fresh, checked, anyChecked, onToggleCheck, onSelect, onHover, registerRef,
 }: {
   item: FeedItem;
   timeMode: "activity" | "published";
+  typePaths: ReadonlyMap<string, string>;
   selected: boolean;
   fresh: boolean;
   checked: boolean;
@@ -268,10 +272,7 @@ function FeedRow({
   const format = useFormatter();
   const now = useNow({ updateInterval: 60_000 });
   const sevText = severityColors[item.severity]?.text ?? "var(--color-text-muted)";
-  const pills = (() => {
-    const all = [...getDisasterPills(item.typeCodes), ...getDisasterL2Pills(item.typeCodes)];
-    return all.filter((p, i) => all.findIndex((q) => q.label === p.label) === i);
-  })();
+  const chips = getTypeChips(item.typeCodes);
   const showState = item.stateName && item.stateName !== item.place;
   const published = timeMode === "published";
   const time = published ? (item.firstAt ?? item.lastAt) : item.lastAt;
@@ -335,11 +336,18 @@ function FeedRow({
           {item.source && <span className={css.rowSource}>{item.source}</span>}
         </div>
         <span className={css.rowTitle}>{item.title}</span>
-        {(pills.length > 0 || item.signalCount != null) && (
+        {(chips.length > 0 || item.signalCount != null) && (
           <div className={css.tags}>
-            {pills.map((pill) => (
-              <span key={pill.label} className={css.pill} style={{ color: pill.color, background: pill.bg }}>
-                {pill.label}
+            {chips.map((chip) => (
+              <span
+                key={chip.key}
+                className={css.typeChip}
+                style={{ color: chip.color, background: chip.bg }}
+                title={[...new Set(chip.codes.map((code) => typePaths.get(code) ?? chip.label))].join("\n")}
+              >
+                {/* The map pin's glyph, as a mask so it takes the chip's colour. */}
+                <span aria-hidden className={css.typeChipIcon} style={{ WebkitMaskImage: `url(${chip.icon})`, maskImage: `url(${chip.icon})` }} />
+                <span className={css.typeChipLabel}>{chip.label}</span>
               </span>
             ))}
             {item.signalCount != null && (
