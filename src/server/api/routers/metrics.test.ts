@@ -296,6 +296,29 @@ describe("metrics.definitions and metrics.series", () => {
     expect(result).toEqual({ status: "ok", series: SERIES });
   });
 
+  it("passes a Replay run to metricSeries, and lists the Replay runs of a range", async () => {
+    signedInAs("admin");
+    graphqlFetch.mockResolvedValueOnce({ metricSeries: SERIES });
+    await caller().metrics.series({ metric: "DISTRICT_OR_FINER", replayRunId: "place-names-backfill:plan.jsonl" });
+    expect((graphqlFetch.mock.calls[0] as [string, Record<string, unknown>])[1]).toEqual({
+      input: { metric: "DISTRICT_OR_FINER", replayRunId: "place-names-backfill:plan.jsonl" },
+    });
+
+    const runs = [{ runId: "place-names-backfill:plan.jsonl", pipelineVersion: "def456", startedAt: "2026-11-09T10:00:00.000Z", signals: 40 }];
+    graphqlFetch.mockResolvedValueOnce({ locationReplayRuns: runs });
+    const result = await caller().metrics.replayRuns({ from: "2026-10-26T00:00:00.000Z", to: "2026-11-08T23:59:59.999Z", locationId: "loc-sdn" });
+    const [query, vars] = graphqlFetch.mock.calls[1] as [string, Record<string, unknown>];
+    expect(query).toContain("locationReplayRuns(input: $input) { runId pipelineVersion startedAt signals }");
+    expect(vars).toEqual({ input: { from: "2026-10-26T00:00:00.000Z", to: "2026-11-08T23:59:59.999Z", locationId: "loc-sdn" } });
+    expect(result).toEqual({ status: "ok", runs });
+  });
+
+  it("refuses the Replay runs to a non-admin", async () => {
+    signedInAs("analyst");
+    await expect(caller().metrics.replayRuns()).rejects.toMatchObject({ code: "FORBIDDEN" });
+    expect(graphqlFetch).not.toHaveBeenCalled();
+  });
+
   it("sends only the metric when nothing else was given, so clear-api applies its defaults", async () => {
     signedInAs("admin");
     graphqlFetch.mockResolvedValueOnce({ metricSeries: { ...SERIES, groups: [], buckets: [] } });

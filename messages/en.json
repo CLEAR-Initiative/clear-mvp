@@ -3969,7 +3969,17 @@
       },
       "copyLink": "Copy link",
       "copied": "Link copied",
-      "everyCountry": "Reads every country: the country filter does not apply to this metric."
+      "everyCountry": "Reads every country: the country filter does not apply to this metric.",
+      "replay": {
+        "label": "Replay run",
+        "placeholder": "None",
+        "noVersion": "unknown version",
+        "option": "{version} · {date} · {n, plural, one {# Signal} other {# Signals}}",
+        "legend": "Replay ({version})",
+        "coverage": "Replay run {version}, started {date}: it re-processed {replayed} of {total} Signals in range ({group}). The replay line shows what that pipeline version does with those Signals, in the bucket each was first located in. The other lines show what the pipeline delivered at the time.",
+        "error": "Could not load the replay line: {message}",
+        "listError": "Could not load the Replay runs: {message}"
+      }
     },
     "precision": {
       "title": "Location precision",

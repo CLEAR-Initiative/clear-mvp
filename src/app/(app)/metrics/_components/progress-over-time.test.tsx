@@ -4,7 +4,7 @@ import { cleanup, fireEvent, render, screen, within } from "@testing-library/rea
 import { MantineProvider } from "@mantine/core";
 import { NextIntlClientProvider } from "next-intl";
 import enMessages from "../../../../../messages/en.json";
-import type { MetricAnnotationsResult, MetricDefinition, MetricDefinitionsResult, MetricSeries, MetricSeriesResult, SeriesMarker } from "~/lib/metric-series";
+import type { MetricAnnotationsResult, MetricDefinition, MetricDefinitionsResult, MetricSeries, MetricSeriesResult, ReplayRunsResult, SeriesMarker } from "~/lib/metric-series";
 
 /**
  * The "Progress over time" section with metrics.definitions, metrics.series
@@ -16,10 +16,14 @@ import type { MetricAnnotationsResult, MetricDefinition, MetricDefinitionsResult
 
 type SeriesState = { data?: MetricSeriesResult; error?: { message: string; data?: { code: string } } | null };
 let seriesStates: Record<string, SeriesState> = {};
-const useSeries = vi.fn((input: { metric: string; granularity?: string }, _options?: unknown): SeriesState & { isFetching: boolean } => {
+const useSeries = vi.fn((input: { metric: string; granularity?: string; replayRunId?: string }, _options?: unknown): SeriesState & { isFetching: boolean } => {
+  // The replay series of a run is its own query; with no run chosen it is not enabled and has no data.
+  if ("replayRunId" in input) return { isFetching: false, error: null, ...(input.replayRunId ? (seriesStates[`replay:${input.replayRunId}`] ?? {}) : {}) };
   const key = `${input.metric}:${input.granularity ?? ""}`;
   return { isFetching: false, error: null, ...(seriesStates[key] ?? seriesStates["*"] ?? {}) };
 });
+let replayRunsState: { data?: ReplayRunsResult; error?: { message: string; data?: { code: string } } | null } = {};
+const useReplayRuns = vi.fn((..._args: unknown[]) => ({ isFetching: false, error: null, ...replayRunsState }));
 let definitionsState: { data?: MetricDefinitionsResult; error?: { message: string; data?: { code: string } } | null } = {};
 const useDefinitions = vi.fn((..._args: unknown[]) => ({ isFetching: false, error: null, ...definitionsState }));
 let annotationsState: { data?: MetricAnnotationsResult; error?: { message: string; data?: { code: string } } | null } = {};
@@ -33,6 +37,7 @@ vi.mock("~/trpc/react", () => ({
     metrics: {
       definitions: { useQuery: (...args: unknown[]) => useDefinitions(...args) },
       series: { useQuery: (...args: unknown[]) => useSeries(...(args as [{ metric: string; granularity?: string }, unknown])) },
+      replayRuns: { useQuery: (...args: unknown[]) => useReplayRuns(...args) },
       annotations: { useQuery: (...args: unknown[]) => useAnnotations(...args) },
       createAnnotation: { useMutation: () => ({ mutate: createMutate, isPending: false, error: null }) },
       deleteAnnotation: { useMutation: () => ({ mutate: deleteMutate, isPending: false, error: null }) },
@@ -89,6 +94,8 @@ afterEach(() => {
   seriesStates = {};
   definitionsState = {};
   annotationsState = {};
+  replayRunsState = {};
+  useReplayRuns.mockClear();
   search = "";
   replace.mockClear();
   useSeries.mockClear();
@@ -131,7 +138,9 @@ function daily(fromDay: number, toDay: number): MetricSeries {
   };
 }
 const filters = (from: string, to: string) => ({ from, to, locationId: null });
-const seriesCalls = () => useSeries.mock.calls.map(([input]) => input as Record<string, unknown>);
+/** The history series the component asked for; the replay series is its own query. */
+const seriesCalls = () =>
+  useSeries.mock.calls.map(([input]) => input as Record<string, unknown>).filter((input) => !("replayRunId" in input));
 
 describe("ProgressOverTime", () => {
   it("draws the metric by day with the recorded changes as markers, the before-and-after and the definition", () => {
@@ -332,5 +341,61 @@ describe("ProgressOverTime and a metric that reads every country", () => {
     expect(seriesCalls().some((input) => input.metric === "DISTRICT_OR_FINER" && input.locationId === "loc-sdn")).toBe(true);
     // The tile says so too, in a word.
     expect(screen.getByRole("button", { name: "Show Sources on schedule" })).toHaveTextContent("every country");
+  });
+});
+
+describe("ProgressOverTime and a Replay run", () => {
+  const RUN = { runId: "place-names-backfill:plan.jsonl", pipelineVersion: "def4567890abc", startedAt: "2026-11-09T10:00:00.000Z", signals: 150 };
+  /** What the run does with sudan-war-x: more Signals at a district, for part of the Signals in range. */
+  function replayed(): MetricSeries {
+    const series = daily(25, 30);
+    return {
+      ...series,
+      groups: ["sudan-war-x"],
+      buckets: series.buckets
+        .filter((bucket) => bucket.group === "sudan-war-x" && bucket.denominator > 0)
+        .map((bucket) => ({ ...bucket, numerator: 40, denominator: 50 })),
+    };
+  }
+
+  it("offers no run selector when no run re-located a Signal in range, or for a metric with no replay series", () => {
+    seriesStates["*"] = { data: { status: "ok", series: daily(25, 30) } };
+    replayRunsState = { data: { status: "ok", runs: [] } };
+    wrap(<ProgressOverTime filters={filters("2026-10-25", "2026-10-30")} />);
+    expect(screen.queryByRole("textbox", { name: "Replay run" })).not.toBeInTheDocument();
+    expect(screen.queryByTestId("replay-coverage")).not.toBeInTheDocument();
+    cleanup();
+
+    // A failed read is said, not shown as "no runs".
+    replayRunsState = { error: { message: "clear-api timed out" } };
+    wrap(<ProgressOverTime filters={filters("2026-10-25", "2026-10-30")} />);
+    expect(screen.getByTestId("replay-runs-error")).toHaveTextContent("Could not load the Replay runs: clear-api timed out");
+    cleanup();
+
+    replayRunsState = { data: { status: "ok", runs: [RUN] } };
+    search = "metric=DETECTED_BY_NEXT_DAY";
+    wrap(<ProgressOverTime filters={filters("2026-10-25", "2026-10-30")} />);
+    expect(screen.queryByRole("textbox", { name: "Replay run" })).not.toBeInTheDocument();
+  });
+
+  it("draws the chosen run as a second line, with its version in the legend and its coverage", () => {
+    seriesStates["DISTRICT_OR_FINER:DAY"] = { data: { status: "ok", series: daily(25, 30) } };
+    seriesStates[`replay:${RUN.runId}`] = { data: { status: "ok", series: replayed() } };
+    replayRunsState = { data: { status: "ok", runs: [RUN] } };
+    const { container } = wrap(<ProgressOverTime filters={filters("2026-10-25", "2026-10-30")} />);
+    // The runs are asked for the page's range.
+    expect(useReplayRuns.mock.calls[0]?.[0]).toMatchObject({ from: "2026-10-25T00:00:00.000Z" });
+    expect(container.querySelectorAll(".recharts-line")).toHaveLength(2);
+
+    fireEvent.click(screen.getByRole("textbox", { name: "Replay run" }));
+    fireEvent.click(screen.getByRole("option", { name: /^def4567 · Nov 9, 2026, 10:00.*· 150 Signals$/, hidden: true }));
+
+    // The replay series is asked for the same range, bucket size and grouping, with the run.
+    const asked = useSeries.mock.calls.map(([input]) => input as Record<string, unknown>).filter((input) => input.replayRunId === RUN.runId);
+    expect(asked.at(-1)).toMatchObject({ metric: "DISTRICT_OR_FINER", granularity: "DAY", groupBy: "SOURCE", from: "2026-10-25T00:00:00.000Z" });
+    expect(container.querySelectorAll(".recharts-line")).toHaveLength(3);
+    expect(screen.getByLabelText("Legend")).toHaveTextContent("Replay (def4567)");
+    // sudan-war-x has 368 Signals in range (27 to 30 Oct); the run re-processed 4 days of 50.
+    expect(screen.getByTestId("replay-coverage")).toHaveTextContent("Replay run def4567, started Nov 9, 2026: it re-processed 200 of 368 Signals in range (sudan-war-x).");
   });
 });

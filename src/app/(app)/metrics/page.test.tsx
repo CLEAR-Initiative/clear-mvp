@@ -43,6 +43,8 @@ vi.mock("~/trpc/react", () => ({
       locationPrecision: { useQuery: (...args: unknown[]) => usePrecisionQuery(...args) },
       definitions: { useQuery: (...args: unknown[]) => useSeriesQuery(...args) },
       series: { useQuery: (...args: unknown[]) => useSeriesQuery(...args) },
+      // No Replay run in these tests: the progress chart shows its history line only.
+      replayRuns: { useQuery: () => ({ isFetching: false, error: null, data: { status: "ok", runs: [] } }) },
       annotations: { useQuery: (...args: unknown[]) => useSeriesQuery(...args) },
       createAnnotation: { useMutation: () => ({ mutate: vi.fn(), isPending: false, error: null }) },
       deleteAnnotation: { useMutation: () => ({ mutate: vi.fn(), isPending: false, error: null }) },

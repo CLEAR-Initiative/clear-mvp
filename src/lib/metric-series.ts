@@ -97,6 +97,41 @@ export interface MetricSeries {
 export type MetricSeriesResult = { status: "ok"; series: MetricSeries } | { status: "unavailable" };
 
 /**
+ * One Replay run of the pipeline, as clear-api's `locationReplayRuns` returns
+ * it (clear-api ADR-0020): a run that re-located Signals a run had already
+ * finished. Its results can be drawn as a second line beside the history.
+ */
+export interface ReplayRun {
+  runId: string;
+  /** The clear-pipeline git SHA; null when the pipeline sent none. */
+  pipelineVersion: string | null;
+  startedAt: string;
+  /** How many Signals in range the run re-processed. */
+  signals: number;
+}
+
+/** `metrics.replayRuns`'s result: the runs, or clear-api not serving them yet. */
+export type ReplayRunsResult = { status: "ok"; runs: ReplayRun[] } | { status: "unavailable" };
+
+/** The metrics that have a replay series (clear-api ADR-0020). */
+export const REPLAY_METRICS: readonly string[] = ["DISTRICT_OR_FINER"];
+
+/** A short name for a pipeline version: the first seven characters of the git SHA. */
+export const shortVersion = (version: string | null) => (version ? version.slice(0, 7) : null);
+
+/**
+ * The buckets a replay line reads from a replay series: those of `group`
+ * when the series is grouped and has it, else every group added up. A group
+ * the run did not touch has no buckets, so its line is empty.
+ */
+export function replayBuckets(replay: MetricSeries, group: string | null): TotalBucket[] {
+  if (group && replay.groups.length > 0) {
+    return bucketsOfGroup(replay, group).map(({ start, label, isPartial, numerator, denominator }) => ({ start, label, isPartial, numerator, denominator }));
+  }
+  return totalsByBucket(replay);
+}
+
+/**
  * A change that should move a metric, as clear-api's `metricAnnotations`
  * returns it (ADR-0016): a deploy, a data import, a prompt version. Drawn as a
  * marker in the bucket holding its instant.

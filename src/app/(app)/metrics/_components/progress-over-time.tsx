@@ -27,6 +27,7 @@ import {
   GRANULARITIES,
   KNOWN_METRIC_KEYS,
   METRIC_UNITS,
+  REPLAY_METRICS,
   beforeAfter,
   bucketsOfGroup,
   comparisonFrom,
@@ -36,6 +37,8 @@ import {
   latestMarkerInRange,
   markersByBucket,
   markersInRange,
+  replayBuckets,
+  shortVersion,
   totalsByBucket,
   utcInstantFromLocalInput,
   type Granularity,
@@ -44,6 +47,7 @@ import {
   type MetricKey,
   type MetricSeries,
   type MetricUnit,
+  type ReplayRun,
   type SeriesMarker,
   type TotalBucket,
 } from "~/lib/metric-series";
@@ -57,6 +61,10 @@ import { useShareFormat } from "./use-share-format";
 export const MAX_LINES = 6;
 const ACCENT = "var(--color-accent)";
 const MUTED = "var(--color-text-muted)";
+/** The replay line: another hue than the history lines, and dashed, so it reads without colour too. */
+const REPLAY = "var(--color-info)";
+/** The point key of the replay line; no source is named this. */
+export const REPLAY_KEY = "__replay";
 /** Dash patterns that tell the muted lines apart beyond hue. */
 const DASHES = [undefined, "6 3", "2 3", "8 3 2 3", "4 2", "1 3"] as const;
 const NO_RETRY = new Set(["BAD_REQUEST", "FORBIDDEN", "UNAUTHORIZED"]);
@@ -136,6 +144,46 @@ export function buildView(
   return { lines, columns, points, empty };
 }
 
+/**
+ * The view with the replay line of one Replay run added (clear-api
+ * ADR-0020): what that run does with the same Signals, bucket by bucket,
+ * beside what the pipeline delivered at the time. The replay line follows the
+ * emphasised source when the chart is per source, else every source.
+ * `coverage` is how many of the Signals in range the run re-processed.
+ */
+export function withReplay(
+  view: ReturnType<typeof buildView>,
+  history: MetricSeries,
+  replay: MetricSeries,
+  emphasis: string | null,
+  label: string,
+): ReturnType<typeof buildView> & { coverage: { replayed: number; total: number } } {
+  const group = history.groups.length > 0 ? emphasis : null;
+  const cells = new Map(replayBuckets(replay, group).map((bucket) => [bucket.start, bucket]));
+  const line: SeriesLine = { key: REPLAY_KEY, label, color: REPLAY, width: 2, dash: "5 4" };
+  const points = view.points.map((point) => {
+    const cell = cells.get(point.start);
+    return {
+      ...point,
+      [REPLAY_KEY]: cell ? toPct(cell.numerator, cell.denominator) : null,
+      [`n:${REPLAY_KEY}`]: cell?.denominator ?? 0,
+    };
+  });
+  const base = group
+    ? bucketsOfGroup(history, group)
+    : totalsByBucket(history);
+  return {
+    ...view,
+    lines: [...view.lines, line],
+    columns: [...view.columns, line],
+    points,
+    coverage: {
+      replayed: [...cells.values()].reduce((sum, cell) => sum + cell.denominator, 0),
+      total: base.reduce((sum, bucket) => sum + bucket.denominator, 0),
+    },
+  };
+}
+
 const isKnown = (key: MetricKey): key is KnownMetricKey => (KNOWN_METRIC_KEYS as readonly string[]).includes(key);
 const isKnownUnit = (unit: string): unit is MetricUnit => (METRIC_UNITS as readonly string[]).includes(unit);
 
@@ -173,6 +221,7 @@ export function ProgressOverTime({ filters }: { filters: MetricsFilterValues }) 
     }
   };
   const [table, setTable] = useState(false);
+  const [replayChoice, setReplayChoice] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [draft, setDraft] = useState<{ when: string; label: string; link: string; metricKeys: string[] }>({ when: "", label: "", link: "", metricKeys: [] });
 
@@ -210,6 +259,26 @@ export function ProgressOverTime({ filters }: { filters: MetricsFilterValues }) 
   );
   const result = chart.data;
   const series = result?.status === "ok" ? result.series : null;
+  // The Replay runs that re-located Signals in the range (clear-api ADR-0020),
+  // for a metric that has a replay series. One can be drawn as a second line.
+  const replayable = REPLAY_METRICS.includes(metric);
+  const replayList = api.metrics.replayRuns.useQuery(scopedInput, {
+    enabled: definition !== null && replayable,
+    refetchOnWindowFocus: false,
+    retry: (count, err) => !NO_RETRY.has(err.data?.code ?? "") && count < 2,
+  });
+  const replayRuns: ReplayRun[] = replayable && replayList.data?.status === "ok" ? replayList.data.runs : [];
+  // A run that is not in the list for this range is not drawn.
+  const replayRun = replayRuns.find((run) => run.runId === replayChoice) ?? null;
+  const replayChart = api.metrics.series.useQuery(
+    { ...scopedInput, metric, granularity, groupBy, replayRunId: replayRun?.runId },
+    {
+      enabled: replayRun !== null,
+      refetchOnWindowFocus: false,
+      retry: (count, err) => !NO_RETRY.has(err.data?.code ?? "") && count < 2,
+    },
+  );
+  const replaySeries = replayRun && replayChart.data?.status === "ok" ? replayChart.data.series : null;
   // The changes recorded against this metric inside the range the series covers.
   const annotations = api.metrics.annotations.useQuery(
     { from: series?.from, to: series?.to, metric },
@@ -266,7 +335,13 @@ export function ProgressOverTime({ filters }: { filters: MetricsFilterValues }) 
       ? format.dateTime(new Date(start), { month: "short", year: "2-digit", timeZone: "UTC" })
       : format.dateTime(new Date(start), { day: "numeric", month: "short", timeZone: "UTC" });
   const emphasis = emphasisFor(definition, series?.groups ?? []);
-  const view = series ? buildView(series, emphasis, t("allSources"), axisLabel) : null;
+  const historyView = series ? buildView(series, emphasis, t("allSources"), axisLabel) : null;
+  const versionOf = (run: ReplayRun) => shortVersion(run.pipelineVersion) ?? t("replay.noVersion");
+  const replayView =
+    series && historyView && replayRun && replaySeries
+      ? withReplay(historyView, series, replaySeries, emphasis, t("replay.legend", { version: versionOf(replayRun) }))
+      : null;
+  const view = replayView ?? historyView;
   const inRange = series ? markersInRange(metric, series.from, series.to, markers) : [];
   const markerGroups: MarkerGroup[] = view
     ? [...markersByBucket(view.points, inRange, granularity)].map(([label, group]) => ({
@@ -346,7 +421,28 @@ export function ProgressOverTime({ filters }: { filters: MetricsFilterValues }) 
             pb={6}
           />
         )}
+        {replayRuns.length > 0 && (
+          <Select
+            label={t("replay.label")}
+            placeholder={t("replay.placeholder")}
+            data={replayRuns.map((run) => ({
+              value: run.runId,
+              // The start instant, to the minute, tells two runs of one version on one day apart.
+              label: t("replay.option", { version: versionOf(run), date: utcInstant(run.startedAt), n: run.signals }),
+            }))}
+            value={replayRun?.runId ?? null}
+            onChange={setReplayChoice}
+            clearable
+            size="xs"
+            w={{ base: "100%", xs: 300 }}
+          />
+        )}
       </Group>
+      {replayable && replayList.error && (
+        <Text size="xs" c="var(--color-critical)" role="alert" data-testid="replay-runs-error">
+          {t("replay.listError", { message: replayList.error.message })}
+        </Text>
+      )}
       {definitions && definitions.length > 0 && (
         <MetricTiles definitions={definitions} selected={metric} onSelect={pickMetric} locationId={input.locationId} nameOf={nameOf} />
       )}
@@ -420,6 +516,22 @@ export function ProgressOverTime({ filters }: { filters: MetricsFilterValues }) 
                   nBefore: comparison.before.denominator,
                   nAfter: comparison.after.denominator,
                 })}
+              </Text>
+            )}
+            {replayRun && replayView && (
+              <Text size="sm" c="var(--color-text-secondary)" mb={8} style={{ fontVariantNumeric: "tabular-nums" }} data-testid="replay-coverage">
+                {t("replay.coverage", {
+                  version: versionOf(replayRun),
+                  date: utcDay(replayRun.startedAt),
+                  group: (series.groups.length > 0 ? emphasis : null) ?? t("allSources"),
+                  replayed: replayView.coverage.replayed,
+                  total: replayView.coverage.total,
+                })}
+              </Text>
+            )}
+            {replayRun && replayChart.error && (
+              <Text size="xs" c="var(--color-critical)" mb={8} role="alert">
+                {t("replay.error", { message: replayChart.error.message })}
               </Text>
             )}
             <SeriesChart data={view.points} lines={view.lines} markers={markerGroups} granularity={granularity} unit={unit} />

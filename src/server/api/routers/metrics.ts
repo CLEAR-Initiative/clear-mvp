@@ -22,6 +22,8 @@ import {
   type MetricDefinitionsResult,
   type MetricSeries,
   type MetricSeriesResult,
+  type ReplayRun,
+  type ReplayRunsResult,
   type SeriesMarker,
 } from "~/lib/metric-series";
 import type { AgentMetrics, AgentMetricsResult, AgentQuestion, AgentQuestionsResult } from "~/lib/agent-metrics";
@@ -83,6 +85,13 @@ export const METRIC_SERIES_QUERY = `
       groups
       buckets { start label isPartial group numerator denominator }
     }
+  }
+`;
+
+/** The Replay runs with results for Signals in a range (clear-api ADR-0020). */
+export const LOCATION_REPLAY_RUNS_QUERY = `
+  query LocationReplayRuns($input: LocationReplayRunsInput) {
+    locationReplayRuns(input: $input) { runId pipelineVersion startedAt signals }
   }
 `;
 
@@ -266,6 +275,8 @@ export const metricsRouter = createTRPCRouter({
         to: z.string().datetime({ offset: true }).optional(),
         locationId: z.string().min(1).optional(),
         sourceNames: z.array(z.string().min(1)).max(50).optional(),
+        /** Read the replay series of this Replay run (clear-api ADR-0020). */
+        replayRunId: z.string().min(1).max(200).optional(),
       }),
     )
     .query(async ({ ctx, input }): Promise<MetricSeriesResult> => {
@@ -279,9 +290,42 @@ export const metricsRouter = createTRPCRouter({
       if (input.to) variables.to = input.to;
       if (input.locationId) variables.locationId = input.locationId;
       if (input.sourceNames?.length) variables.sourceNames = input.sourceNames;
+      if (input.replayRunId) variables.replayRunId = input.replayRunId;
       try {
         const data = await graphqlFetch<{ metricSeries: MetricSeries }>(METRIC_SERIES_QUERY, { input: variables }, cookieHeaders(ctx));
         return { status: "ok", series: data.metricSeries };
+      } catch (err) {
+        if (isGraphqlSchemaUnavailable(err)) return { status: "unavailable" };
+        toTrpcError(err);
+      }
+    }),
+
+  /** The Replay runs that re-located Signals in the range (clear-api
+   * ADR-0020), newest first: each can be drawn as a second line on location
+   * precision. `unavailable` while clear-api does not serve them yet. */
+  replayRuns: protectedProcedure
+    .input(
+      z
+        .object({
+          from: z.string().datetime({ offset: true }).optional(),
+          to: z.string().datetime({ offset: true }).optional(),
+          locationId: z.string().min(1).optional(),
+          sourceNames: z.array(z.string().min(1)).max(50).optional(),
+        })
+        .optional(),
+    )
+    .query(async ({ ctx, input }): Promise<ReplayRunsResult> => {
+      if (!isPlatformAdmin(ctx.user.role)) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Metrics are for platform admins" });
+      }
+      const variables: Record<string, string | string[]> = {};
+      if (input?.from) variables.from = input.from;
+      if (input?.to) variables.to = input.to;
+      if (input?.locationId) variables.locationId = input.locationId;
+      if (input?.sourceNames?.length) variables.sourceNames = input.sourceNames;
+      try {
+        const data = await graphqlFetch<{ locationReplayRuns: ReplayRun[] }>(LOCATION_REPLAY_RUNS_QUERY, { input: variables }, cookieHeaders(ctx));
+        return { status: "ok", runs: data.locationReplayRuns };
       } catch (err) {
         if (isGraphqlSchemaUnavailable(err)) return { status: "unavailable" };
         toTrpcError(err);
