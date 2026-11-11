@@ -386,16 +386,18 @@ export function MapFirstView(props: MapFirstViewProps) {
     // Recomputed when the frozen window moves (refresh or a new scope).
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters.snapshotTime]);
-  // Events per UTC day of firstSignalCreatedAt, the field the list's date
-  // filter uses. Days with no events have no bucket; they stay 0 below.
+  // The active feed's items per UTC day of the date its list filters on
+  // (signals: publishedAt; events and alerts: the event's first signal).
+  // Alert stats take every status, the feed only published ones. Signals
+  // carry no types. Days with nothing have no bucket; they stay 0 below.
   const dailyQ = api.alerts.entityStats.useQuery(
     {
-      entity: "event",
+      entity: feedTab === "signals" ? "signal" : feedTab === "alerts" ? "alert" : "event",
       groupBy: "day",
       teamId: filters.teamId,
       locationId: filters.selectedLocationId ?? undefined,
       locationIds: filters.multiLocIds,
-      eventTypes: filters.expandedTypeCodes ?? undefined,
+      eventTypes: feedTab === "signals" ? undefined : (filters.expandedTypeCodes ?? undefined),
       severityMin: filters.severityMin,
       severityMax: filters.severityMax,
       from: timelineWindow.from,
