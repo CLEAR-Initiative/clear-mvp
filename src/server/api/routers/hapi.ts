@@ -1,6 +1,20 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
+import { createTRPCRouter, protectedProcedure, publicProcedure } from "~/server/api/trpc";
+import {
+  internallyDisplaced,
+  ipcPhase3Plus,
+  mainAppeal,
+  peopleInNeed,
+  politicalViolence,
+  refugeesHosted,
+  type ConflictRow,
+  type FundingRow,
+  type IdpRow,
+  type IpcRow,
+  type NeedsRow,
+  type RefugeeRow,
+} from "~/server/api/hapi-country-figures";
 
 const HAPI_BASE = "https://hapi.humdata.org/api/v2";
 const HAPI_APP_ID = "Y2xlYXItbXZwOmRldkBzeW50cm8uZmk=";
@@ -15,7 +29,89 @@ interface HapiIdpRecord {
   location_name: string;
 }
 
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * One HAPI endpoint's rows, or null when the request fails. HAPI allows a
+ * burst of about ten requests and then answers 429 to part of them, and one
+ * country panel makes six, so rate-limited and server errors are retried
+ * with backoff. Next caches only 200 responses, so a retry is a real request.
+ */
+async function hapiRows<T>(path: string, params: Record<string, string>): Promise<T[] | null> {
+  const url = new URL(`${HAPI_BASE}/${path}`);
+  for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
+  url.searchParams.set("output_format", "json");
+  url.searchParams.set("limit", "10000");
+  const ATTEMPTS = 4;
+  for (let attempt = 1; attempt <= ATTEMPTS; attempt++) {
+    try {
+      const res = await fetch(url.toString(), {
+        headers: { "X-HDX-HAPI-APP-IDENTIFIER": HAPI_APP_ID },
+        next: { revalidate: 21600 }, // 6h - sources update monthly at most
+      } as RequestInit);
+      if (res.ok) {
+        const json = (await res.json()) as { data?: T[] };
+        return json.data ?? [];
+      }
+      if (res.status !== 429 && res.status < 500) return null;
+    } catch {
+      // network error: retry
+    }
+    if (attempt < ATTEMPTS) await sleep(700 * attempt + Math.random() * 500);
+  }
+  return null;
+}
+
 export const hapiRouter = createTRPCRouter({
+  /**
+   * Headline humanitarian figures for one country (Overview world map). Each
+   * figure is null when HAPI has no such data for the country; `failed` lists
+   * the sources whose request failed, so the panel can say "unavailable"
+   * rather than "no data". Signed-in only, so this is not an open proxy.
+   */
+  countryFigures: protectedProcedure
+    .input(z.object({ iso3: z.string().regex(/^[A-Za-z]{3}$/) }))
+    .query(async ({ input }) => {
+      const iso3 = input.iso3.toUpperCase();
+      const now = new Date();
+      const year = now.getUTCFullYear();
+      const threeMonthsAgo = new Date(Date.UTC(year, now.getUTCMonth() - 3, 1)).toISOString().slice(0, 10);
+
+      const [needs, refugees, idps, funding, conflict, ipc] = await Promise.all([
+        hapiRows<NeedsRow>("affected-people/humanitarian-needs", {
+          location_code: iso3, admin_level: "0", sector_code: "Intersectoral", population_status: "INN",
+        }),
+        hapiRows<RefugeeRow>("affected-people/refugees-persons-of-concern", {
+          asylum_location_code: iso3, gender: "all", age_range: "all", start_date: `${year - 3}-01-01`,
+        }),
+        hapiRows<IdpRow>("affected-people/idps", {
+          location_code: iso3, admin_level: "0", start_date: `${year - 2}-01-01`,
+        }),
+        hapiRows<FundingRow>("coordination-context/funding", { location_code: iso3 }),
+        hapiRows<ConflictRow>("coordination-context/conflict-events", {
+          location_code: iso3, event_type: "political_violence", start_date: threeMonthsAgo,
+        }),
+        hapiRows<IpcRow>("food-security-nutrition-poverty/food-security", {
+          location_code: iso3, admin_level: "0", ipc_phase: "3+", ipc_type: "current",
+        }),
+      ]);
+
+      const failed = Object.entries({ needs, refugees, idps, funding, conflict, ipc })
+        .filter(([, rows]) => rows === null)
+        .map(([source]) => source);
+
+      return {
+        iso3,
+        peopleInNeed: needs ? peopleInNeed(needs) : null,
+        refugeesHosted: refugees ? refugeesHosted(refugees) : null,
+        internallyDisplaced: idps ? internallyDisplaced(idps) : null,
+        appeal: funding ? mainAppeal(funding, year) : null,
+        politicalViolence: conflict ? politicalViolence(conflict, now) : null,
+        ipcPhase3Plus: ipc ? ipcPhase3Plus(ipc) : null,
+        failed,
+      };
+    }),
+
   getIdpTrend: publicProcedure
     .input(z.object({ locationCode: z.string().length(3) }))
     .query(async ({ input }) => {

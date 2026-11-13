@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { Box } from "@mantine/core";
-import { useMediaQuery } from "@mantine/hooks";
+import { useMediaQuery, useViewportSize } from "@mantine/hooks";
 import dynamic from "next/dynamic";
 import { api } from "~/trpc/react";
 import { useTeam } from "~/providers/team-provider";
@@ -11,7 +11,7 @@ import { useLastFocusedCountry } from "~/hooks/use-last-focused-country";
 import { browseMapCamera } from "~/lib/map/country-picker-camera";
 import { ALL_COUNTRIES, resolveSelectedCountry, useTeamCountry } from "~/hooks/use-team-country";
 import { useReportStaleCountryPick } from "~/lib/report-stale-country-pick";
-import { resolveCountryConfig } from "~/lib/constants/country-config";
+import { resolveCountryConfig, WORLD_VIEW } from "~/lib/constants/country-config";
 import { isoForCountryName } from "~/lib/constants/countries";
 import { scopeIsosMissingPaintableBoundaries } from "~/lib/geo/country-mask";
 import { locationInCountry } from "~/lib/location";
@@ -25,9 +25,27 @@ import { MapMarkerDetail } from "~/app/(app)/map/_components/map-marker-detail";
 import { MapPanelBar } from "~/app/(app)/map/_components/map-panel-bar";
 import type { DataView } from "~/app/(app)/map/_components/map-layers-panel";
 import type { BoundaryLevel } from "~/app/(app)/map/_components/map-settings-popover";
-import type { BaseMapType, MapMarker, MarkerScreenPoint } from "~/components/map/crisis-map";
+import type { BaseMapType, MapMarker, MarkerScreenPoint, PresenceHover } from "~/components/map/crisis-map";
+import {
+  BackToWorldButton,
+  OfficeLegend,
+  PresenceCard,
+  PresenceTooltip,
+} from "./_components/presence-map-overlays";
 import { RightPanel } from "./_components/right-panel";
+import { WorldCountryPanel } from "./_components/world-country-panel";
 import { useIsDark } from "~/hooks/use-is-dark";
+import { useFeatureEnabled, useFeatureFlags } from "~/components/feature-flags-provider";
+import {
+  NRC_OPERATING_COUNTRIES,
+  nrcOperatingCountry,
+} from "~/lib/data/nrc-operating-countries";
+
+/** Matches RightPanel's `sm:w-[380px]`. */
+const RIGHT_PANEL_WIDTH = 380;
+
+/** Share of the viewport height the country sheet takes on mobile. */
+const MOBILE_SHEET_SHARE = 0.55;
 
 /** App shell reserves these gutters for mobile chrome - bleed the map through them. */
 const MOBILE_TOP_GUTTER = 56;
@@ -55,6 +73,7 @@ export default function DashboardPage() {
   const { activeTeamId } = useTeam();
   const { getLocationId, getCenter, getZoom } = useLocations();
   const isMobile = useMediaQuery("(max-width: 48em)") === true;
+  const { height: viewportHeight } = useViewportSize();
 
   // Frame the map on the working country. Multi-country unset = all assigned
   // countries and WORLD_VIEW. One binding still pins.
@@ -85,6 +104,22 @@ export default function DashboardPage() {
     selectedCountry,
   );
   
+  // World map (flag `overview_world_map`): the Overview is a world map of
+  // NRC's operating countries and nothing else (no Detection markers, layers
+  // or team boundaries). Inspecting a country zooms, highlights it and fills
+  // the right panel without changing the working country.
+  const worldMode = useFeatureEnabled("overview_world_map");
+  // Until the flags load, `worldMode` is only the default. Rendering either
+  // layout then flashes the wrong one (and sizes the map for it), so the
+  // map, the panel and their queries wait for the real value.
+  const flagsReady = !useFeatureFlags().isLoading;
+  const countryMode = flagsReady && !worldMode;
+  const [inspectedIso, setInspectedIso] = useState<string | null>(null);
+  const [presenceHover, setPresenceHover] = useState<PresenceHover | null>(null);
+  const backToWorld = useCallback(() => {
+    setInspectedIso(null);
+  }, []);
+
   const handleCountryChange = useCallback(
     (value: string) => {
       if (value === ALL_COUNTRIES) {
@@ -115,12 +150,25 @@ export default function DashboardPage() {
   );
   const focusCountryL0Query = api.locations.getById.useQuery(
     { id: focusCountryId! },
-    { enabled: !!focusCountryId, staleTime: Infinity, refetchOnWindowFocus: false },
+    { enabled: !!focusCountryId && countryMode, staleTime: Infinity, refetchOnWindowFocus: false },
   );
-  const focusCountryGeometry = focusCountryL0Query.data?.geometry ?? undefined;
-  const focusCountryPCode = resolveCountryConfig(
-    selectedCountry && selectedCountry !== ALL_COUNTRIES ? selectedCountry : undefined,
-  )?.pCode;
+  const inspected = worldMode ? nrcOperatingCountry(inspectedIso) : undefined;
+  useEffect(() => {
+    if (!inspected) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") backToWorld();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [inspected, backToWorld]);
+
+  const workingFocusName =
+    selectedCountry && selectedCountry !== ALL_COUNTRIES ? selectedCountry : undefined;
+  // The presence map frames and paints its selected country itself, so the
+  // working-country focus is off in world mode.
+  const focusCountryGeometry = worldMode ? undefined : (focusCountryL0Query.data?.geometry ?? undefined);
+  const focusCountryPCode = worldMode ? undefined : resolveCountryConfig(workingFocusName)?.pCode;
+  const focusCountryName = worldMode ? undefined : workingFocusName;
   const [selectedMarker, setSelectedMarker] = useState<CrisisMarker | null>(null);
   const [detailAnchor, setDetailAnchor] = useState<MarkerScreenPoint | null>(null);
   const [detailChromeActive, setDetailChromeActive] = useState(false);
@@ -133,15 +181,15 @@ export default function DashboardPage() {
 
   const alertsQuery = api.alerts.alertsForMap.useQuery(
     { activeOnly: true, teamId: activeTeamId },
-    { enabled: dataView === "alert", placeholderData: (prev) => prev },
+    { enabled: countryMode && dataView === "alert", placeholderData: (prev) => prev },
   );
   const eventsQuery = api.alerts.eventsForMap.useQuery(
     { teamId: activeTeamId ?? undefined },
-    { enabled: dataView === "event", placeholderData: (prev) => prev },
+    { enabled: countryMode && dataView === "event", placeholderData: (prev) => prev },
   );
   const crisesQuery = api.alerts.getCrises.useQuery(
     undefined,
-    { enabled: dataView === "crisis", placeholderData: (prev) => prev },
+    { enabled: countryMode && dataView === "crisis", placeholderData: (prev) => prev },
   );
 
   // ── Admin-boundary + population overlay queries ─────────────────────────
@@ -150,19 +198,19 @@ export default function DashboardPage() {
   // bandwidth when the layer is off.
   const a0Query = api.locations.getAdminBoundaries.useQuery(
     { level: 0, countryIds: globalCountryIds },
-    { enabled: boundaryLevel === "A0" && isGlobalBrowse && scopeReady, staleTime: 1000 * 60 * 60, refetchOnWindowFocus: false },
+    { enabled: countryMode && boundaryLevel === "A0" && isGlobalBrowse && scopeReady, staleTime: 1000 * 60 * 60, refetchOnWindowFocus: false },
   );
   const a1Query = api.locations.getAdminBoundaries.useQuery(
     isGlobalBrowse
       ? { level: 1, countryIds: globalCountryIds }
       : { level: 1, countryId: focusCountryId ?? undefined },
-    { enabled: boundaryLevel === "A1" && boundariesReady, staleTime: 1000 * 60 * 60, refetchOnWindowFocus: false },
+    { enabled: countryMode && boundaryLevel === "A1" && boundariesReady, staleTime: 1000 * 60 * 60, refetchOnWindowFocus: false },
   );
   const a2Query = api.locations.getAdminBoundaries.useQuery(
     isGlobalBrowse
       ? { level: 2, countryIds: globalCountryIds }
       : { level: 2, countryId: focusCountryId ?? undefined },
-    { enabled: boundaryLevel === "A2" && boundariesReady, staleTime: 1000 * 60 * 60, refetchOnWindowFocus: false },
+    { enabled: countryMode && boundaryLevel === "A2" && boundariesReady, staleTime: 1000 * 60 * 60, refetchOnWindowFocus: false },
   );
   const mapboxAdmin1Isos = useMemo(
     () =>
@@ -185,7 +233,7 @@ export default function DashboardPage() {
 
   const populationQuery = api.locations.getPopulationBoundaries.useQuery(
     { countryId: focusCountryId ?? undefined },
-    { enabled: showPopulation && !!focusCountryId, staleTime: Infinity, refetchOnWindowFocus: false },
+    { enabled: countryMode && showPopulation && !!focusCountryId, staleTime: Infinity, refetchOnWindowFocus: false },
   );
   const populationBoundaries = useMemo(
     () => (showPopulation ? (populationQuery.data ?? []) : []),
@@ -193,6 +241,7 @@ export default function DashboardPage() {
   );
 
   const markers = useMemo(() => {
+    if (worldMode) return [];
     let allMarkers: CrisisMarker[] = [];
     if (dataView === "alert") allMarkers = alertsToMarkers(alertsQuery.data?.alerts ?? []);
     else if (dataView === "event") allMarkers = eventsToMarkers(eventsQuery.data?.events ?? []);
@@ -211,7 +260,7 @@ export default function DashboardPage() {
     }
     
     return allMarkers;
-  }, [dataView, alertsQuery.data, eventsQuery.data, crisesQuery.data, workingCountryId]);
+  }, [worldMode, dataView, alertsQuery.data, eventsQuery.data, crisesQuery.data, workingCountryId]);
 
   const handleMarkerClick = useCallback((marker: MapMarker, screenPoint: MarkerScreenPoint) => {
     const full = markers.find((m) => m.id === marker.id);
@@ -238,31 +287,46 @@ export default function DashboardPage() {
           background: "var(--color-bg-primary)",
         }}
       >
+        {flagsReady && (
         <CrisisMap
           markers={markers}
-          center={browseCamera.center}
-          zoom={isMobile && selectedCountry !== ALL_COUNTRIES ? browseCamera.zoom - 1 : browseCamera.zoom}
-          focusCountryPCode={focusCountryPCode}
-          focusCountryName={
-            selectedCountry && selectedCountry !== ALL_COUNTRIES
-              ? selectedCountry
-              : undefined
+          center={worldMode ? WORLD_VIEW.center : browseCamera.center}
+          zoom={
+            worldMode
+              ? WORLD_VIEW.zoom
+              : isMobile && selectedCountry !== ALL_COUNTRIES ? browseCamera.zoom - 1 : browseCamera.zoom
           }
+          focusCountryPCode={focusCountryPCode}
+          focusCountryName={focusCountryName}
           focusCountryGeometry={focusCountryGeometry}
-          adminBoundaries={adminBoundaries}
-          adminBoundaryLevel={adminBoundaryLevel}
-          scopeCountryIsos={scopeCountryIsos}
-          mapboxAdmin1Isos={mapboxAdmin1Isos}
-          populationBoundaries={populationBoundaries}
+          operatingCountries={worldMode ? NRC_OPERATING_COUNTRIES : undefined}
+          projection={worldMode ? "mercator" : "globe"}
+          countryFitInsetRight={worldMode && !isMobile ? RIGHT_PANEL_WIDTH : 0}
+          countryFitInsetBottom={
+            worldMode && isMobile && inspected ? Math.round(viewportHeight * MOBILE_SHEET_SHARE) + MOBILE_BOTTOM_GUTTER : 0
+          }
+          onCountrySelect={setInspectedIso}
+          selectedOperatingIso={worldMode ? (inspected?.iso2 ?? null) : null}
+          onPresenceHover={worldMode ? setPresenceHover : undefined}
+          adminBoundaries={worldMode ? undefined : adminBoundaries}
+          adminBoundaryLevel={worldMode ? undefined : adminBoundaryLevel}
+          scopeCountryIsos={worldMode ? undefined : scopeCountryIsos}
+          mapboxAdmin1Isos={worldMode ? undefined : mapboxAdmin1Isos}
+          populationBoundaries={worldMode ? undefined : populationBoundaries}
           className="w-full h-full"
           onMarkerClick={handleMarkerClick}
           showRoads={showRoads}
-          showNrcLocations={showNrcLocations}
+          showNrcLocations={!worldMode && showNrcLocations}
           baseMapType={baseMapType}
           hoveredMarkerId={
             detailChromeActive && selectedMarker ? selectedMarker.id : null
           }
         />
+        )}
+        {worldMode && !inspected && <PresenceCard count={NRC_OPERATING_COUNTRIES.length} />}
+        {inspected && <BackToWorldButton onClick={backToWorld} />}
+        {inspected && !isMobile && <OfficeLegend iso2={inspected.iso2} />}
+        {worldMode && presenceHover && <PresenceTooltip hover={presenceHover} />}
         {selectedMarker && (
           <MapMarkerDetail
             marker={selectedMarker}
@@ -275,29 +339,58 @@ export default function DashboardPage() {
             }}
           />
         )}
-        <MapPanelBar
-          dataView={dataView}
-          onDataViewChange={setDataView}
-          showPopulation={showPopulation}
-          onShowPopulationChange={setShowPopulation}
-          boundaryLevel={boundaryLevel}
-          onBoundaryLevelChange={setBoundaryLevel}
-          showRoads={showRoads}
-          onShowRoadsChange={setShowRoads}
-          showNrcLocations={showNrcLocations}
-          onShowNrcLocationsChange={setShowNrcLocations}
-          baseMapType={baseMapType}
-          onBaseMapTypeChange={setBaseMapType}
-        />
+        {countryMode && (
+          <MapPanelBar
+            dataView={dataView}
+            onDataViewChange={setDataView}
+            showPopulation={showPopulation}
+            onShowPopulationChange={setShowPopulation}
+            boundaryLevel={boundaryLevel}
+            onBoundaryLevelChange={setBoundaryLevel}
+            showRoads={showRoads}
+            onShowRoadsChange={setShowRoads}
+            showNrcLocations={showNrcLocations}
+            onShowNrcLocationsChange={setShowNrcLocations}
+            baseMapType={baseMapType}
+            onBaseMapTypeChange={setBaseMapType}
+          />
+        )}
+        {/* World map: the panel overlays the map, so the canvas never
+            resizes under a country fit (countryFitInsetRight frames around it). */}
+        {worldMode && inspected && !isMobile && (
+          <Box style={{ position: "absolute", top: 0, right: 0, bottom: 0, zIndex: 4 }}>
+            <WorldCountryPanel country={inspected} onClose={backToWorld} />
+          </Box>
+        )}
+        {/* Mobile: the same panel as a bottom sheet over the lower map. */}
+        {worldMode && inspected && isMobile && (
+          <Box
+            style={{
+              position: "absolute",
+              left: 0,
+              right: 0,
+              bottom: MOBILE_BOTTOM_GUTTER,
+              height: `${MOBILE_SHEET_SHARE * 100}vh`,
+              zIndex: 4,
+              borderRadius: "12px 12px 0 0",
+              overflow: "hidden",
+              boxShadow: "0 -4px 16px var(--map-overlay-shadow)",
+            }}
+          >
+            <WorldCountryPanel country={inspected} onClose={backToWorld} fullWidth />
+          </Box>
+        )}
       </Box>
-      <Box hiddenFrom="base" visibleFrom="sm">
-        <RightPanel
-          selectedCountry={selectedCountry}
-          onCountryChange={handleCountryChange}
-          onViewChange={() => {}}
-          activeView="single"
-        />
-      </Box>
+      {countryMode && (
+        <Box hiddenFrom="base" visibleFrom="sm">
+          <RightPanel
+            selectedCountry={selectedCountry}
+            onCountryChange={handleCountryChange}
+            onViewChange={() => {}}
+            activeView="single"
+          />
+        </Box>
+      )}
     </Box>
   );
 }

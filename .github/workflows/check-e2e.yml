@@ -63,7 +63,7 @@ jobs:
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ hashFiles('clear-mvp/bun.lockb') }}
+          key: playwright-${{ runner.os }}-${{ hashFiles('clear-mvp/bun.lock') }}
 
       - name: Install Chromium (cache miss)
         if: steps.playwright-cache.outputs.cache-hit != 'true'
@@ -109,6 +109,7 @@ jobs:
           docker compose -f docker-compose.e2e.yml -f docker-compose.e2e.ci.yml run --rm seed-event-types
           docker compose -f docker-compose.e2e.yml -f docker-compose.e2e.ci.yml run --rm seed-agent-key
           docker compose -f docker-compose.e2e.yml -f docker-compose.e2e.ci.yml run --rm seed-analysis
+          docker compose -f docker-compose.e2e.yml -f docker-compose.e2e.ci.yml run --rm seed-invite
 
       - name: Run Playwright smoke suite
         working-directory: clear-mvp

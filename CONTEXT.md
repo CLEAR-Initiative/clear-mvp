@@ -36,6 +36,19 @@ A user's daily allowance of **CLEAR Agent** usage. Once spent, the CLEAR Agent d
 turns until it resets.
 _Avoid_: "quota", "credits", "rate limit" (a rate limit is about bursts, the budget is about spend).
 
+**Agent metrics**:
+The **CLEAR Agent** section of the admin `/metrics` page: spend, cost per **Turn**, latency,
+tokens, tool calls, and what people ask, by ISO week, with a marker where the answering model
+changed. clear-api defines and computes it (`agentMetrics`, clear-api ADR-0013); this app only
+charts it. Question text is shown only on an explicit click, and clear-api logs that read.
+_Avoid_: "usage dashboard", "cost page" (it is one section of `/metrics`).
+
+**Turn**:
+One answer the **CLEAR Agent** gave, with the model, tokens, cost and latency recorded for it.
+The unit of the **Agent budget** and of **Agent metrics**; clear-api's term.
+_Avoid_: "request" (one turn makes several model requests), "message" (a turn is the answer plus
+its usage).
+
 **Current view**:
 What the user is looking at when they send a turn — the page, the Event/Signal/Crisis on
 screen, and the active map or detection filters — expressed as identifiers and filters, never
@@ -80,13 +93,16 @@ _Avoid_: using Alert for any raw Signal; "notification" (product push/tagging is
 
 **Time to detection** (TTD): defined by clear-api (its `CONTEXT.md` "Time to detection" entry and ADR-0011), shown read-only on the admin `/metrics` page, never recomputed here.
 
+**Progress over time**: the first section of the admin `/metrics` page. One metric at a time from clear-api's metric registry (its ADR-0015: `metricDefinitions` lists the keys with name, Notion dimension, unit, method text and time basis; `metricSeries` reads any of them as numerator over denominator per bucket by day, ISO week or calendar month, optionally grouped by source) through `metrics.definitions` and `metrics.series`. A key this app has a translation for shows it; any other shows the registry's English name, so a new metric appears without a frontend change. The markers drawn on it are clear-api's metric annotations (its ADR-0016): the changes recorded against the metric, read for the range through `metrics.annotations`, added and removed by admins from the section (`metrics.createAnnotation`, `metrics.deleteAnnotation`); the before-and-after beside the chart compares the seven whole days before the latest marker with the days after it, read over its own window. An "At a glance" grid above it shows every registry metric over the last 12 weeks, each tile selecting that metric. The whole page's state (range, country, metric, bucket size, grouping, the source picker) lives in the URL, so a view can be shared, reloaded or linked from a Notion metric row: `/metrics?metric=DISTRICT_OR_FINER&granularity=day&from=2026-10-25&to=2026-10-31`. Nothing about what counts is decided here. For a metric that has a replay series (location precision; clear-api ADR-0020), a "Replay run" selector lists the runs that re-located Signals in the range (`metrics.replayRuns`). The chosen run is a second, dashed line: what that pipeline version does with the same Signals, each in the bucket it was first located in, beside the history lines. A sentence above the chart states the run's coverage: how many of the Signals in range it re-processed. The run choice is not in the URL.
+
 ### Review
 
 **Inbox**:
 The one queue of **Review items** a reader may act on (`/inbox`): hotline threads for
 platform admins (`hotline_inbox`), **Proposed signals** for deciders, that is admins and
-analysts (`impact_prior_review`, a flag key kept from before the rename), and **Location
-challenges** for platform admins and the admins of the team each was filed for. One
+analysts (`impact_prior_review`, a flag key kept from before the rename), **Location
+challenges** for platform admins and the admins of the team each was filed for, and
+**Unresolved place names** (the Places tab) for the same people. One
 access rule (`src/lib/inbox-access.ts`) gates the page and its nav entry; clear-api's
 guards are the enforcement.
 _Avoid_: "hotline inbox" for the whole page — that is one kind of Review item.
@@ -94,13 +110,39 @@ _Avoid_: "hotline inbox" for the whole page — that is one kind of Review item.
 **Review item**:
 One thing in the **Inbox** waiting for a person's decision: a hotline thread (Add to
 CLEAR / Archive / Reject), a **Proposed signal** (accept, or reject with a rationale) or a
-**Location challenge** (accept the proposed point, place a different one, or decline). A
+**Location challenge** (accept the proposed point, place a different one, or decline) or an
+**Unresolved place name** (use a suggested place, place a point, not a place, or ambiguous). A
 Proposed signal is also decidable from its **Event** page: two doors, one decision. The
 Inbox groups an Event's Proposed signals into one entry and counts decisions waiting: one
-per thread, undecided Proposed signal or open Location challenge. In product copy the filter and an Event's group
+per thread, undecided Proposed signal, open Location challenge or open Unresolved place name. In product copy the filter and an Event's group
 read "Proposed signals"; a web request reads "Web search".
 _Avoid_: a whole ImpactPrior as a Review item — nothing proposes one any more (the
 **ImpactPrior** is computed).
+
+**Unresolved place name** (clear-api `UnresolvedPlaceName`, clear-api ADR-0019):
+A place name, as written in **Signals**, that geocoding could not place inside the Signal's
+area. One Review item per name, country and state, under the Inbox's **Places** tab, listed
+with the names most Signals use first. The decider resolves it once: **Use this place** (a
+suggested GeoNames place, or a district or landmark CLEAR already has), **Place on map**,
+**Not a place** or **Ambiguous**. A location answer becomes a **place alias** in clear-api, so
+the next Signal with that spelling is placed without review, and the Signals that wait on the
+name move at once. Who decides is the rule of ADR-0007: platform admins, and team admins for
+names in their team's area. The suggestions are optional help; nothing forces a decider to
+pick a gazetteer name (ADR-0003 is about challenges, and stays as it is).
+_Avoid_: "failed geocode" (the Signal still has a location: its state or country); "synonym"
+for a place alias in code.
+
+**Place alias** (clear-api `PlaceAlias`, clear-api ADR-0019):
+A spelling that CLEAR maps to one of its own locations, used before GeoNames when a Signal
+is placed. The Places tab's **Aliases** view is the list of them: spelling, the place it
+points to, where it applies (one state, or the whole country), its source (**Review**: a
+decider resolved an Unresolved place name; **Seed list**; **Added by hand**) and who added it.
+A decider adds a spelling before any post uses it, changes an alias's target, scope or note,
+or deletes it. A resolution writes two aliases, one for the Latin spelling and one for the
+Arabic one; they are separate rows. Deleting an alias sends its place name back to the queue
+and does not move Signals back. Everyone who decides reads the whole list; a team admin
+changes the aliases of their team's states, a platform admin all of them and the country-wide
+ones. The spelling is the alias's key, so it does not change: delete and add.
 
 **Proposed signal** (clear-api `CaseProposal`; "Web case" in older notes):
 One historical case the web Worker found while enriching an **Event**: when and where, the
@@ -250,6 +292,28 @@ legacy per-browser opt-out cookie is copied onto the account once.
 _Avoid_: calling this "telemetry" (that's clear-pipeline's LLM-call telemetry);
 adding an event property that can hold free text.
 
+### Brief
+
+**Brief**:
+A platform admin's hand-picked summary of one area over one **Brief window**, emailed to a
+**Recipient list**. Fixed sections: title and window, summary, counts, picked items
+(Alerts → Events → Signals, each with an optional analyst note) and closing notes. Built on
+the hidden, admin-only `/brief` page: the Brief on the left, Detection's History list with
+checkboxes on the right. A **draft** autosaves in clear-api; **sending** freezes it, and each
+picked item keeps the snapshot (title, severity, location, types, time) it was sent with.
+One area per Brief: a country, state or district. Cadence is daily, weekly or monthly.
+**Brief window**: the rolling 24 hours, 7 days or 30 days ending when the Brief was started
+(or last **Refreshed to now**). Alerts and Events fall in it by their first Signal, Signals by
+publication, the same as the History list and `entityStats`. A picked item from before the
+window is marked "from <date>".
+**Recipient list**: a named set of email addresses a Brief is sent to, managed on `/brief`.
+Addresses need not belong to CLEAR users; each email carries an unsubscribe link.
+**Alert Digest**: clear-api's automatic email of Alert titles to daily/weekly/monthly
+alert subscribers (`notifyAlertDigest`). Nothing calls it yet; a Brief is the hand-made
+counterpart, not a replacement.
+_Avoid_: "report" (collides with ReliefWeb reports, LogIE PAC reports and the Insights
+analysis PDF) and "digest" for a Brief; sending a Brief to alert subscribers.
+
 ### Detection detail navigation
 
 **Quick Navigation**:
@@ -392,8 +456,31 @@ Overview / Detection / Insights — not by Full Map or detail Back.
 _Avoid_: "focus country" for the choice (that is the map paint treatment); "selected
 country" without qualifier (ambiguous).
 
+**Operating country**:
+A country where NRC runs a country office (`src/lib/data/nrc-operating-countries.ts`).
+Public fact only: the list comes from NRC's internal country office fact sheet, but
+nothing else from that sheet (staff, people reached, budgets, donors) may enter this
+public repo. Pinned at the capital, not a surveyed office address (Sudan: Port Sudan).
+_Avoid_: "office location" for the pin; mixing it up with **Country scope** (a team's
+bindings).
+
+**Inspected country** (Overview world map, flag `overview_world_map`):
+An **Operating country** clicked on the Overview world map. With the flag on, the Overview
+is that world map whatever the **Working country** (no Detection markers): the "NRC presence
+map" design, with **Operating countries** filled orange and one NRC logo pin each, and a
+zoom floor at the NRC footprint. Clicking a fill or pin zooms to the country, keeps it lit
+while the other NRC countries fade (no dimming mask), shows its offices (Sudan's from the
+annual report data, elsewhere the country office only) and the right panel. The map paints
+it itself, not as the **Focus country**. The right panel shows: INFORM Risk, the country analysis (only when the country is in the team's
+scope, the Insights rule), HDX HAPI figures and ACAPS crisis severity, the same sections for
+every country. Local to the page: it never changes the **Working country** or its cookie.
+Back to world or Escape clears it.
+_Avoid_: setting the **Working country** from a world-map click (a team may not even be
+bound to that country).
+
 **Focus country** (map paint):
-The visual mask/tint treatment of the **Working country** on the map canvas — dim
+The visual mask/tint treatment of the **Working country** (or, on the Overview world
+map, the **Inspected country**) on the map canvas — dim
 non-focus countries, highlight border, optional blue tint (Simple only). A map concept,
 not a product-wide term.
 _Avoid_: calling the working-country choice "focus country" (that name is for the paint).

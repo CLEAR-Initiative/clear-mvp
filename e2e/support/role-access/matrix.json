@@ -72,6 +72,24 @@
       "onDeny": "redirect /dashboard"
     },
     {
+      "id": "nav-brief",
+      "area": "access",
+      "action": "Open /brief (hidden, admin-only Briefs; no nav entry)",
+      "route": "/brief",
+      "selectors": [],
+      "flags": [],
+      "source": "middleware.ts (/brief); routers/briefs.ts adminProcedure",
+      "expect": {
+        "admin": "allow",
+        "analyst": "hidden",
+        "member": "hidden",
+        "erm": "hidden",
+        "pending": "hidden",
+        "team_admin": "hidden"
+      },
+      "onDeny": "redirect /no-access"
+    },
+    {
       "id": "nav-ops",
       "area": "access",
       "action": "Operations/Cash nav items",
@@ -274,6 +292,26 @@
         "team_admin": "allow"
       },
       "note": "decideSignalLocationChallenge: the team_admin of the team it was filed for, or a platform admin, the filer included; analysts file them"
+    },
+    {
+      "id": "inbox-places",
+      "area": "inbox",
+      "action": "See Places tab + badge",
+      "route": "/inbox",
+      "selectors": [
+        "inbox-tab-places"
+      ],
+      "flags": [],
+      "source": "inbox-access.ts:73",
+      "expect": {
+        "admin": "allow",
+        "analyst": "hidden",
+        "member": "hidden",
+        "erm": "hidden",
+        "pending": "hidden",
+        "team_admin": "allow"
+      },
+      "note": "resolveUnresolvedPlaceName: a platform admin, or a team admin when the row's state is inside their team's area (clear-api ADR-0019); the same people as Location changes"
     },
     {
       "id": "inbox-decide",

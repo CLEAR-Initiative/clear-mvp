@@ -76,6 +76,7 @@ import {
   MinimapCardSkeleton,
 } from "~/components/ui/detail-navigation-skeletons";
 import { useAgentCurrentView } from "~/lib/agent-current-view";
+import { BidiTitle } from "~/components/ui/bidi-title";
 
 /** An event counts as active while its last signal is at most this old. */
 const ACTIVE_WINDOW_MS = 14 * 24 * 60 * 60 * 1000;
@@ -516,7 +517,7 @@ export function EventDetailContent({
               minWidth: 0,
             }}
           >
-            {displayTitle}
+            <BidiTitle>{displayTitle}</BidiTitle>
           </Text>
           <Group gap={6} style={{ flexShrink: 0, paddingTop: 3 }} wrap="nowrap">
             <Box

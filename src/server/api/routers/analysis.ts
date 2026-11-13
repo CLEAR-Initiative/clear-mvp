@@ -504,7 +504,7 @@ async function hydrateAnalysis(
     })
     .filter((r): r is NonNullable<typeof r> => r !== null);
 
-  return mapAnalysis(
+  const analysis = mapAnalysis(
     {
       ...row,
       data: {
@@ -514,6 +514,7 @@ async function hydrateAnalysis(
     },
     scopeName,
   );
+  return { ...analysis, citedEvents: [...eventMeta.values()].map(toAnalysisEvent) };
 }
 
 export const RECORD_REPORT_EXPORTED_MUTATION = `

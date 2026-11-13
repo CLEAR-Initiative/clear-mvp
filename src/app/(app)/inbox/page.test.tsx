@@ -7,6 +7,7 @@ import type {
   GqlHotlineInbox,
   GqlLocationChallengeToDecide,
   GqlReviewCaseProposal,
+  GqlUnresolvedPlaceName,
 } from "~/lib/types/graphql";
 
 /**
@@ -69,6 +70,32 @@ const locationsQuery = vi.fn((_input: unknown, opts: { enabled: boolean }) => ({
   isLoading: false,
   error: null,
 }));
+/** Open unresolved place names the reader may resolve. */
+let placesData: GqlUnresolvedPlaceName[] = [];
+/** Rows clear-api holds beyond the ones the router read. */
+let placesNotLoaded = 0;
+const placesQuery = vi.fn((_input: unknown, opts: { enabled: boolean }) => ({
+  data: opts.enabled ? { items: placesData, totalCount: placesData.length + placesNotLoaded } : undefined,
+  isFetching: false,
+  isLoading: false,
+  error: null,
+}));
+const placeInvalidate = { queue: vi.fn(async () => undefined), queueCount: vi.fn(async () => undefined) };
+const resolvePlaceMutate = vi.fn(
+  (_input: unknown, opts: { onSuccess?: (r: { id: string; status: string; signalsMoved: number }) => void }) =>
+    opts.onSuccess?.({ id: "pn-1", status: "RESOLVED", signalsMoved: 3 }),
+);
+vi.mock("~/lib/analytics/track", () => ({ track: vi.fn() }));
+vi.mock("./_components/aliases-view", () => ({
+  AliasesView: (props: { canPlaceAnywhere: boolean; onChanged?: () => void }) => (
+    <button
+      type="button"
+      data-testid="aliases-view"
+      data-anywhere={props.canPlaceAnywhere}
+      onClick={() => props.onChanged?.()}
+    />
+  ),
+}));
 /** A decision succeeds unless a test makes it fail. */
 const decideLocationMutate = vi.fn((_input: unknown, opts?: { onSuccess?: () => void }) => opts?.onSuccess?.());
 const locationInvalidate = {
@@ -109,7 +136,12 @@ vi.mock("~/trpc/react", () => ({
         getBySignal: { invalidate: locationInvalidate.getBySignal },
         correctedAt: { invalidate: locationInvalidate.correctedAt },
       },
+      placeNames: {
+        queue: { invalidate: placeInvalidate.queue },
+        queueCount: { invalidate: placeInvalidate.queueCount },
+      },
     }),
+    useQueries: () => [],
     auth: {
       me: {
         useQuery: () =>
@@ -155,6 +187,11 @@ vi.mock("~/trpc/react", () => ({
       toDecide: { useQuery: (input: unknown, opts: { enabled: boolean }) => locationsQuery(input, opts) },
       decide: { useMutation: () => ({ mutate: decideLocationMutate, isPending: false }) },
       placement: { useQuery: () => ({ data: null, isLoading: false, isSuccess: false }) },
+    },
+    placeNames: {
+      queue: { useQuery: (input: unknown, opts: { enabled: boolean }) => placesQuery(input, opts) },
+      suggestions: { useQuery: () => ({ data: [], isLoading: false }) },
+      resolve: { useMutation: () => ({ mutate: resolvePlaceMutate, isPending: false }) },
     },
     subscriptions: {
       disasterTypes: { useQuery: () => ({ isLoading: false, data: [] }) },
@@ -287,7 +324,27 @@ function locationChallenge(id: string): GqlLocationChallengeToDecide {
   };
 }
 
+function placeName(id: string, signalCount: number): GqlUnresolvedPlaceName {
+  return {
+    id,
+    nameNorm: `name ${id}`,
+    nameAsWritten: `Name ${id}`,
+    nameAr: "أم دباكر",
+    countryCode: "SD",
+    stateLocationId: "S1",
+    countryLocationId: "C1",
+    stateLocation: { id: "S1", name: "South Kordofan", level: 1 },
+    status: "OPEN",
+    signalCount,
+    firstSeenAt: "2026-10-20T09:00:00Z",
+    lastSeenAt: "2026-11-02T09:00:00Z",
+    signals: [],
+  };
+}
+
 beforeEach(() => {
+  placesData = [];
+  placesNotLoaded = 0;
   flagEnabled = true;
   flags = {};
   role = "admin";
@@ -403,7 +460,9 @@ describe("InboxPage access", () => {
       expect(locationsQuery).toHaveBeenLastCalledWith(undefined, expect.objectContaining({ enabled: true }));
       expect(screen.getByTestId("inbox-tab-community")).toHaveAttribute("data-active", "true");
       expect(screen.getByTestId("inbox-tab-proposals")).toHaveAttribute("data-active", "false");
+      expect(placesQuery).toHaveBeenLastCalledWith(undefined, expect.objectContaining({ enabled: true }));
       expect(screen.getByTestId("inbox-tab-locations")).toHaveAttribute("data-active", "false");
+      expect(screen.getByTestId("inbox-tab-places")).toHaveAttribute("data-active", "false");
       expect(screen.getAllByTestId("inbox-entry")).toHaveLength(2);
       cleanup();
     }
@@ -426,11 +485,14 @@ describe("InboxPage access", () => {
     // Wraps around, and Home goes back to the first tab.
     fireEvent.keyDown(proposals, { key: "ArrowRight" });
     expect(locations).toHaveAttribute("aria-selected", "true");
+    const places = screen.getByTestId("inbox-tab-places");
     fireEvent.keyDown(locations, { key: "ArrowRight" });
+    expect(places).toHaveAttribute("aria-selected", "true");
+    fireEvent.keyDown(places, { key: "ArrowRight" });
     expect(community).toHaveAttribute("aria-selected", "true");
     fireEvent.keyDown(community, { key: "End" });
-    expect(locations).toHaveAttribute("aria-selected", "true");
-    fireEvent.keyDown(locations, { key: "Home" });
+    expect(places).toHaveAttribute("aria-selected", "true");
+    fireEvent.keyDown(places, { key: "Home" });
     expect(community).toHaveFocus();
   });
 
@@ -503,6 +565,140 @@ describe("InboxPage Location challenges", () => {
     expect(locationInvalidate.getBySignal).toHaveBeenCalledWith({ signalId: "sig-lc-1" });
     expect(locationInvalidate.correctedAt).toHaveBeenCalledWith({ signalId: "sig-lc-1" });
     expect(locationInvalidate.signal).toHaveBeenCalledWith({ id: "sig-lc-1" });
+    expect(locationInvalidate.signalsForMap).toHaveBeenCalled();
+  });
+});
+
+describe("InboxPage places", () => {
+  it("hides the Places tab, and does not fetch it, for a reader who does not decide locations", () => {
+    for (const r of ["analyst", "erm"]) {
+      role = r;
+      renderPage();
+      expect(placesQuery).toHaveBeenLastCalledWith(undefined, expect.objectContaining({ enabled: false }));
+      expect(screen.queryByTestId("inbox-tab-places")).not.toBeInTheDocument();
+      cleanup();
+    }
+  });
+
+  it("lists the names most signals use first, with the Arabic spelling, and counts them as awaiting", () => {
+    role = "team_admin";
+    flagEnabled = false;
+    placesData = [placeName("pn-2", 2), placeName("pn-1", 7)];
+    renderPage();
+    fireEvent.click(screen.getByTestId("inbox-tab-places"));
+    const rows = screen.getAllByTestId("inbox-entry");
+    expect(rows.map((r) => r.getAttribute("data-kind"))).toEqual(["place_name", "place_name"]);
+    expect(rows[0]).toHaveTextContent("Name pn-1");
+    expect(rows[0]).toHaveTextContent('place.preview:{"count":7,"area":"South Kordofan"}');
+    expect(within(rows[0]!).getByTestId("inbox-place-arabic")).toHaveTextContent("أم دباكر");
+    expect(rows[1]).toHaveTextContent("Name pn-2");
+    expect(screen.getByText('awaiting:{"count":2}')).toBeInTheDocument();
+    expect(screen.getByTestId("inbox-pane")).toHaveAttribute("data-kind", "place_name");
+  });
+
+  it("switches the Places tab between its queue and the alias list", () => {
+    role = "admin";
+    flagEnabled = false;
+    placesData = [placeName("pn-1", 7)];
+    renderPage();
+    // The switch belongs to the Places tab only.
+    expect(screen.queryByTestId("inbox-places-view")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("inbox-tab-places"));
+    expect(screen.getByTestId("inbox-places-view-queue")).toHaveAttribute("aria-pressed", "true");
+    expect(screen.queryByTestId("aliases-view")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId("inbox-places-view-aliases"));
+    expect(screen.getByTestId("aliases-view")).toHaveAttribute("data-anywhere", "true");
+    expect(screen.getByRole("tabpanel")).toContainElement(screen.getByTestId("aliases-view"));
+    // The queue stays mounted under it, hidden, and comes back as it was.
+    expect(screen.getByTestId("inbox-list")).not.toBeVisible();
+    fireEvent.click(screen.getByTestId("inbox-places-view-queue"));
+    expect(screen.queryByTestId("aliases-view")).not.toBeInTheDocument();
+    expect(screen.getByTestId("inbox-list")).toBeVisible();
+
+    // Leaving the tab leaves the alias list too.
+    fireEvent.click(screen.getByTestId("inbox-places-view-aliases"));
+    fireEvent.click(screen.getByTestId("inbox-tab-locations"));
+    expect(screen.queryByTestId("aliases-view")).not.toBeInTheDocument();
+  });
+
+  it("shows a place name again when its alias is deleted in the same visit", () => {
+    role = "admin";
+    flagEnabled = false;
+    placesData = [placeName("pn-1", 7), placeName("pn-2", 2)];
+    renderPage();
+    fireEvent.click(screen.getByTestId("inbox-tab-places"));
+    fireEvent.click(screen.getByTestId("inbox-place-ambiguous"));
+    expect(screen.getAllByTestId("inbox-entry")).toHaveLength(1);
+    // The alias list reports a change (a deleted alias reopens its row; the
+    // refetched queue still holds pn-1 here).
+    fireEvent.click(screen.getByTestId("inbox-places-view-aliases"));
+    fireEvent.click(screen.getByTestId("aliases-view"));
+    fireEvent.click(screen.getByTestId("inbox-places-view-queue"));
+    expect(screen.getAllByTestId("inbox-entry")).toHaveLength(2);
+  });
+
+  it("keeps the queue's shortcuts off while the alias list is shown", () => {
+    role = "admin";
+    flagEnabled = false;
+    placesData = [placeName("pn-1", 7), placeName("pn-2", 2)];
+    renderPage();
+    fireEvent.click(screen.getByTestId("inbox-tab-places"));
+    const rows = () => screen.getAllByTestId("inbox-entry");
+    expect(rows()[0]).toHaveAttribute("data-selected", "true");
+    expect(rows()[1]).toHaveAttribute("data-unread", "true");
+
+    fireEvent.click(screen.getByTestId("inbox-places-view-aliases"));
+    fireEvent.keyDown(window, { key: "j" });
+    // The hidden queue did not move, and its second row is still unread.
+    expect(rows()[0]).toHaveAttribute("data-selected", "true");
+    expect(rows()[1]).toHaveAttribute("data-unread", "true");
+
+    fireEvent.click(screen.getByTestId("inbox-places-view-queue"));
+    fireEvent.keyDown(window, { key: "j" });
+    expect(rows()[1]).toHaveAttribute("data-selected", "true");
+  });
+
+  it("a team admin gets the alias list without the platform admin's reach", () => {
+    role = "team_admin";
+    flagEnabled = false;
+    renderPage();
+    fireEvent.click(screen.getByTestId("inbox-tab-places"));
+    fireEvent.click(screen.getByTestId("inbox-places-view-aliases"));
+    expect(screen.getByTestId("aliases-view")).toHaveAttribute("data-anywhere", "false");
+  });
+
+  it("says so when the queue is longer than the list, instead of claiming it is all loaded", () => {
+    role = "admin";
+    flagEnabled = false;
+    placesData = [placeName("pn-1", 7)];
+    placesNotLoaded = 3000;
+    renderPage();
+    fireEvent.click(screen.getByTestId("inbox-tab-places"));
+    expect(screen.getByTestId("inbox-list-footer")).toHaveTextContent('list.cut:{"count":1,"more":3000}');
+    // Only on the Places tab: the other tabs' lists are whole.
+    fireEvent.click(screen.getByTestId("inbox-tab-locations"));
+    expect(screen.getByTestId("inbox-list-footer")).not.toHaveTextContent("list.cut");
+  });
+
+  it("takes a resolved name out of the queue, says how many signals moved, and refreshes the badge", () => {
+    role = "admin";
+    flagEnabled = false;
+    placesData = [placeName("pn-1", 7), placeName("pn-2", 2)];
+    renderPage();
+    fireEvent.click(screen.getByTestId("inbox-tab-places"));
+    fireEvent.click(screen.getByTestId("inbox-place-ambiguous"));
+    expect(resolvePlaceMutate).toHaveBeenCalledWith(
+      { id: "pn-1", resolution: { kind: "AMBIGUOUS" } },
+      expect.objectContaining({ onSuccess: expect.any(Function) }),
+    );
+    expect(screen.getByTestId("inbox-toast")).toHaveTextContent('place.toast.ambiguous:{"count":3}');
+    expect(screen.getAllByTestId("inbox-entry")).toHaveLength(1);
+    expect(screen.getByTestId("inbox-place-name")).toHaveTextContent("Name pn-2");
+    expect(placeInvalidate.queue).toHaveBeenCalled();
+    expect(placeInvalidate.queueCount).toHaveBeenCalled();
+    // Signals moved: their places and the map's pins follow.
+    expect(locationInvalidate.signal).toHaveBeenCalled();
     expect(locationInvalidate.signalsForMap).toHaveBeenCalled();
   });
 });

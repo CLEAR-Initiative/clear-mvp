@@ -17,10 +17,10 @@ function source(id: string, title = id): SaSource {
   return { id, title, url: null, publishedAt: null, publisher: null };
 }
 
-function renderSources(sources: SaSource[]) {
+function renderSources(sources: SaSource[], include?: (source: SaSource) => boolean) {
   return render(
     <MantineProvider>
-      <SituationSources sources={sources} className="sources-card" />
+      <SituationSources sources={sources} className="sources-card" include={include} />
     </MantineProvider>,
   );
 }
@@ -46,6 +46,18 @@ describe("Analysis sources", () => {
     expect(list).not.toHaveTextContent("Untitled report");
     expect(list).not.toHaveTextContent(HAPI_ID);
     expect(list).not.toHaveTextContent("ReliefWeb report");
+  });
+
+  it("lists only the included sources, each under its own citation number", () => {
+    renderSources(
+      [source("r1", "OCHA update"), source("event:e1", "Shelling"), source("r2", "WFP brief")],
+      (s) => !s.id.startsWith("event:"),
+    );
+
+    const list = screen.getByTestId("analysis-sources");
+    expect(list).toHaveTextContent("1.OCHA update");
+    expect(list).toHaveTextContent("3.WFP brief");
+    expect(list).not.toHaveTextContent("Shelling");
   });
 
   it("tells two untitled HAPI figures apart by their indicator", () => {

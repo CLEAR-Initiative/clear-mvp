@@ -48,6 +48,17 @@ export const TEAM_ADMIN = { email: "e2e-team-admin@clearinitiative.io", password
 export const ORG_ADMIN = { email: "e2e-org-admin@clearinitiative.io", password: "password123" } as const;
 export const TEAM_MEMBER = { email: "e2e-team-member@clearinitiative.io", password: "password123" } as const;
 
+/**
+ * Pending invitations for the welcome-flow spec (case 26), seeded by
+ * e2e/support/invite-seed.ts. One per attempt, indexed by `testInfo.retry`,
+ * because accepting consumes the invitation. Keep in lockstep with that script.
+ */
+export const WELCOME_INVITES = [0, 1, 2].map((i) => ({
+  token: `e2e-welcome-invite-${i}`,
+  email: `e2e-invitee-${i}@clearinitiative.io`,
+}));
+export const WELCOME_INVITEE_PASSWORD = "password123";
+
 export const BASE_URL = process.env.E2E_BASE_URL ?? "http://localhost:3000";
 
 /**
@@ -88,7 +99,7 @@ export const SEEDED_ANALYSIS = {
   sourceTitle: "OCHA Sudan humanitarian update",
   /** An event citation id that is not a seeded event, so it cannot resolve to a title. */
   unresolvedEventCitation: "event:e2e-cited",
-  eventLabel: "Event",
+  untitledEvent: "Untitled event",
   /** 25_000_000 stock people in need on the WASH sector. */
   washPin: "25M",
   /** One leading range, not two figures. */

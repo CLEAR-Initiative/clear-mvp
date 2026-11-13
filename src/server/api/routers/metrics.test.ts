@@ -82,6 +82,7 @@ describe("metrics router", () => {
     const [query, vars, headers] = graphqlFetch.mock.calls[0] as [string, Record<string, unknown>, Record<string, string>];
     expect(query).toContain("query DetectionMetrics($input: DetectionMetricsInput)");
     expect(query).toContain("detectionMetrics(input: $input)");
+    expect(query).toMatch(/weekly \{[^}]*eventsInRange/);
     expect(vars).toEqual({
       input: { from: "2026-07-01T00:00:00.000Z", to: "2026-09-30T23:59:59.999Z", locationId: "loc-sdn" },
     });
@@ -103,11 +104,13 @@ describe("metrics router", () => {
     if (result.status !== "ok") return;
     const m = result.metrics;
     expect(m.counted).toBe(20);
-    expect(m.shares).toEqual({ sameDay: 0.25, byNextDay: 0.75, withOnset: 0.75 });
+    expect(m.shares).toEqual({ sameDay: 0.25, byNextDay: 0.75, withOnset: 0.75, measured: 0.5 });
     expect(m.histogram[0]).toMatchObject({ daysAfterOnset: 0, count: 5, share: 0.25 });
     expect(m.histogram[8]).toMatchObject({ isOpenEnded: true, count: 5, share: 0.25 });
     expect(m.weekly[0]).toMatchObject({ sameDayShare: 0.25, byNextDayShare: 0.75 });
     expect(m.weekly[1]).toMatchObject({ isPartial: true, sameDayShare: null, byNextDayShare: null });
+    // A week without eventsInRange (an older clear-api) has no coverage.
+    expect(m.weekly[0]).toMatchObject({ eventsInRange: null, measuredShare: null });
     expect(m.exclusions).toEqual(METRICS.exclusions);
 
     graphqlFetch.mockResolvedValueOnce({
@@ -115,7 +118,7 @@ describe("metrics router", () => {
     });
     const empty = await caller().metrics.detection();
     if (empty.status !== "ok") throw new Error("expected ok");
-    expect(empty.metrics.shares).toEqual({ sameDay: null, byNextDay: null, withOnset: null });
+    expect(empty.metrics.shares).toEqual({ sameDay: null, byNextDay: null, withOnset: null, measured: null });
     expect(empty.metrics.histogram.every((row) => row.share === null)).toBe(true);
   });
 
@@ -127,14 +130,40 @@ describe("metrics router", () => {
     expect(graphqlFetch).not.toHaveBeenCalled();
   });
 
+  it("adds each week's coverage when clear-api reports its events in range", async () => {
+    signedInAs("admin");
+    graphqlFetch.mockResolvedValueOnce({
+      detectionMetrics: { ...METRICS, weekly: [{ ...METRICS.weekly[0]!, eventsInRange: 10 }] },
+    });
+    const result = await caller().metrics.detection();
+    if (result.status !== "ok") throw new Error("expected ok");
+    expect(result.metrics.weekly[0]).toMatchObject({ eventsInRange: 10, measuredShare: 0.4 });
+  });
+
+  it("falls back to the query without weekly eventsInRange on a clear-api that predates it", async () => {
+    signedInAs("admin");
+    graphqlFetch
+      .mockRejectedValueOnce(
+        new GraphQLRequestError('Cannot query field "eventsInRange" on type "DetectionWeek".', "GRAPHQL_VALIDATION_FAILED"),
+      )
+      .mockResolvedValueOnce({ detectionMetrics: METRICS });
+    const result = await caller().metrics.detection();
+    expect(result.status).toBe("ok");
+    expect(graphqlFetch).toHaveBeenCalledTimes(2);
+    const fallback = graphqlFetch.mock.calls[1]![0] as string;
+    expect(fallback).toMatch(/weekly \{ isoWeek weekStart counted/);
+    expect(fallback).not.toContain("eventsInRange counted sameDay byNextDay isPartial");
+  });
+
   it("returns the unavailable state while clear-api lacks the field", async () => {
     signedInAs("admin");
-    graphqlFetch.mockRejectedValueOnce(
+    // Both the query and its fallback are refused.
+    graphqlFetch.mockRejectedValue(
       new GraphQLRequestError('Cannot query field "detectionMetrics" on type "Query".', "GRAPHQL_VALIDATION_FAILED"),
     );
     await expect(caller().metrics.detection()).resolves.toEqual({ status: "unavailable" });
 
-    graphqlFetch.mockRejectedValueOnce(
+    graphqlFetch.mockRejectedValue(
       new GraphQLRequestError('Unknown type "DetectionMetricsInput".', "GRAPHQL_VALIDATION_FAILED"),
     );
     await expect(caller().metrics.detection()).resolves.toEqual({ status: "unavailable" });
@@ -149,5 +178,402 @@ describe("metrics router", () => {
       code: "BAD_REQUEST",
       message: "The range can span at most 364 days",
     });
+  });
+});
+
+const PRECISION = {
+  from: "2026-10-26T00:00:00.000Z",
+  to: "2026-11-08T23:59:59.999Z",
+  signalsInRange: 30,
+  bySource: [
+    { source: "sudan-war-x", total: 20, noLocation: 2, country: 4, state: 6, district: 6, point: 2 },
+    { source: "dataminr", total: 10, noLocation: 0, country: 1, state: 0, district: 0, point: 9 },
+  ],
+  weekly: [
+    { isoWeek: "2026-W44", weekStart: "2026-10-26T00:00:00.000Z", source: "sudan-war-x", total: 20, noLocation: 2, country: 4, state: 6, district: 6, point: 2, isPartial: false },
+    { isoWeek: "2026-W44", weekStart: "2026-10-26T00:00:00.000Z", source: "dataminr", total: 10, noLocation: 0, country: 1, state: 0, district: 0, point: 9, isPartial: false },
+  ],
+  corrections: { open: 2, accepted: 1, corrected: 0, declined: 1, superseded: 0 },
+};
+
+describe("metrics.locationPrecision", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+    graphqlFetch.mockReset();
+  });
+
+  it("forwards the range, location and sources as the query's input", async () => {
+    signedInAs("admin");
+    graphqlFetch.mockResolvedValueOnce({ locationPrecisionMetrics: PRECISION });
+    await caller().metrics.locationPrecision({
+      from: "2026-10-26T00:00:00.000Z",
+      to: "2026-11-08T23:59:59.999Z",
+      locationId: "loc-sdn",
+      sourceNames: ["sudan-war-x", "dataminr"],
+    });
+    const [query, vars, headers] = graphqlFetch.mock.calls[0] as [string, Record<string, unknown>, Record<string, string>];
+    expect(query).toContain("query LocationPrecisionMetrics($input: LocationPrecisionMetricsInput)");
+    expect(query).toContain("locationPrecisionMetrics(input: $input)");
+    expect(vars).toEqual({
+      input: {
+        from: "2026-10-26T00:00:00.000Z",
+        to: "2026-11-08T23:59:59.999Z",
+        locationId: "loc-sdn",
+        sourceNames: ["sudan-war-x", "dataminr"],
+      },
+    });
+    expect(headers).toEqual({ Cookie: "better-auth.session_token=x" });
+  });
+
+  it("leaves out what was not given, so clear-api applies its defaults", async () => {
+    signedInAs("admin");
+    graphqlFetch.mockResolvedValueOnce({ locationPrecisionMetrics: PRECISION });
+    await caller().metrics.locationPrecision();
+    expect(graphqlFetch.mock.calls[0]![1]).toEqual({ input: {} });
+  });
+
+  it("adds the shares and totals to clear-api's counts", async () => {
+    signedInAs("admin");
+    graphqlFetch.mockResolvedValueOnce({ locationPrecisionMetrics: PRECISION });
+    const result = await caller().metrics.locationPrecision();
+    if (result.status !== "ok") throw new Error("expected ok");
+    expect(result.metrics.totals).toMatchObject({ total: 30, fine: 17 });
+    expect(result.metrics.bySource[0]).toMatchObject({ source: "sudan-war-x", fineShare: 0.4 });
+    expect(result.metrics.corrections).toMatchObject({ decided: 2, total: 4 });
+  });
+
+  it("rejects a non-admin without calling clear-api", async () => {
+    for (const role of ["analyst", "viewer", "pending"]) {
+      signedInAs(role);
+      await expect(caller().metrics.locationPrecision()).rejects.toMatchObject({ code: "FORBIDDEN" });
+    }
+    expect(graphqlFetch).not.toHaveBeenCalled();
+  });
+
+  it("returns the unavailable state while clear-api lacks the field", async () => {
+    signedInAs("admin");
+    graphqlFetch.mockRejectedValueOnce(
+      new GraphQLRequestError('Cannot query field "locationPrecisionMetrics" on type "Query".', "GRAPHQL_VALIDATION_FAILED"),
+    );
+    await expect(caller().metrics.locationPrecision()).resolves.toEqual({ status: "unavailable" });
+  });
+});
+
+const SERIES = {
+  metric: "DISTRICT_OR_FINER",
+  granularity: "DAY",
+  from: "2026-10-26T00:00:00.000Z",
+  to: "2026-10-27T23:59:59.999Z",
+  groups: ["sudan-war-x", "dataminr"],
+  buckets: [
+    { start: "2026-10-26T00:00:00.000Z", label: "2026-10-26", isPartial: false, group: "sudan-war-x", numerator: 8, denominator: 20 },
+    { start: "2026-10-27T00:00:00.000Z", label: "2026-10-27", isPartial: false, group: "sudan-war-x", numerator: 6, denominator: 10 },
+    { start: "2026-10-26T00:00:00.000Z", label: "2026-10-26", isPartial: false, group: "dataminr", numerator: 9, denominator: 10 },
+    { start: "2026-10-27T00:00:00.000Z", label: "2026-10-27", isPartial: false, group: "dataminr", numerator: 0, denominator: 0 },
+  ],
+};
+const DEFINITIONS = [
+  { key: "DETECTED_BY_NEXT_DAY", name: "Detected by next day", dimension: "TIMELINESS", unit: "EVENTS", description: "d", timeBasis: "t", groupable: false, adr: "ADR-0011" },
+  { key: "DISTRICT_OR_FINER", name: "At district or finer", dimension: "ACCURACY", unit: "SIGNALS", description: "d", timeBasis: "t", groupable: true, adr: "ADR-0012" },
+];
+
+describe("metrics.definitions and metrics.series", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+    graphqlFetch.mockReset();
+  });
+
+  it("lists the registry for an admin, as clear-api returns it", async () => {
+    signedInAs("admin");
+    graphqlFetch.mockResolvedValueOnce({ metricDefinitions: DEFINITIONS });
+    const result = await caller().metrics.definitions();
+    const [query, vars] = graphqlFetch.mock.calls[0] as [string, Record<string, unknown>];
+    expect(query).toContain("metricDefinitions { key name dimension unit description timeBasis groupable locationScoped adr }");
+    expect(vars).toEqual({});
+    expect(result).toEqual({ status: "ok", definitions: DEFINITIONS });
+  });
+
+  it("asks metricSeries with the metric, bucket size, grouping and range, and passes the series through", async () => {
+    signedInAs("admin");
+    graphqlFetch.mockResolvedValueOnce({ metricSeries: SERIES });
+    const result = await caller().metrics.series({
+      metric: "DISTRICT_OR_FINER",
+      granularity: "DAY",
+      groupBy: "SOURCE",
+      from: "2026-10-26T00:00:00.000Z",
+      to: "2026-10-27T23:59:59.999Z",
+      locationId: "loc-sdn",
+      sourceNames: ["sudan-war-x", "dataminr"],
+    });
+    const [query, vars, headers] = graphqlFetch.mock.calls[0] as [string, Record<string, unknown>, Record<string, string>];
+    expect(query).toContain("query MetricSeries($input: MetricSeriesInput!)");
+    expect(query).toContain("buckets { start label isPartial group numerator denominator }");
+    expect(vars).toEqual({
+      input: {
+        metric: "DISTRICT_OR_FINER",
+        granularity: "DAY",
+        groupBy: "SOURCE",
+        from: "2026-10-26T00:00:00.000Z",
+        to: "2026-10-27T23:59:59.999Z",
+        locationId: "loc-sdn",
+        sourceNames: ["sudan-war-x", "dataminr"],
+      },
+    });
+    expect(headers).toEqual({ Cookie: "better-auth.session_token=x" });
+    expect(result).toEqual({ status: "ok", series: SERIES });
+  });
+
+  it("passes a Replay run to metricSeries, and lists the Replay runs of a range", async () => {
+    signedInAs("admin");
+    graphqlFetch.mockResolvedValueOnce({ metricSeries: SERIES });
+    await caller().metrics.series({ metric: "DISTRICT_OR_FINER", replayRunId: "place-names-backfill:plan.jsonl" });
+    expect((graphqlFetch.mock.calls[0] as [string, Record<string, unknown>])[1]).toEqual({
+      input: { metric: "DISTRICT_OR_FINER", replayRunId: "place-names-backfill:plan.jsonl" },
+    });
+
+    const runs = [{ runId: "place-names-backfill:plan.jsonl", pipelineVersion: "def456", startedAt: "2026-11-09T10:00:00.000Z", signals: 40 }];
+    graphqlFetch.mockResolvedValueOnce({ locationReplayRuns: runs });
+    const result = await caller().metrics.replayRuns({ from: "2026-10-26T00:00:00.000Z", to: "2026-11-08T23:59:59.999Z", locationId: "loc-sdn" });
+    const [query, vars] = graphqlFetch.mock.calls[1] as [string, Record<string, unknown>];
+    expect(query).toContain("locationReplayRuns(input: $input) { runId pipelineVersion startedAt signals }");
+    expect(vars).toEqual({ input: { from: "2026-10-26T00:00:00.000Z", to: "2026-11-08T23:59:59.999Z", locationId: "loc-sdn" } });
+    expect(result).toEqual({ status: "ok", runs });
+  });
+
+  it("refuses the Replay runs to a non-admin", async () => {
+    signedInAs("analyst");
+    await expect(caller().metrics.replayRuns()).rejects.toMatchObject({ code: "FORBIDDEN" });
+    expect(graphqlFetch).not.toHaveBeenCalled();
+  });
+
+  it("sends only the metric when nothing else was given, so clear-api applies its defaults", async () => {
+    signedInAs("admin");
+    graphqlFetch.mockResolvedValueOnce({ metricSeries: { ...SERIES, groups: [], buckets: [] } });
+    await caller().metrics.series({ metric: "DETECTED_BY_NEXT_DAY" });
+    expect(graphqlFetch.mock.calls[0]![1]).toEqual({ input: { metric: "DETECTED_BY_NEXT_DAY" } });
+  });
+
+  it("rejects a non-admin without calling clear-api", async () => {
+    signedInAs("analyst");
+    await expect(caller().metrics.definitions()).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(caller().metrics.series({ metric: "DISTRICT_OR_FINER" })).rejects.toMatchObject({ code: "FORBIDDEN" });
+    expect(graphqlFetch).not.toHaveBeenCalled();
+  });
+
+  it("sends onsetBasis CURRENT for the Same ruler view and nothing for As delivered", async () => {
+    signedInAs("admin");
+    graphqlFetch.mockResolvedValue({ metricSeries: { ...SERIES, groups: [], buckets: [] } });
+    await caller().metrics.series({ metric: "ALERTED_BY_NEXT_DAY", onsetBasis: "CURRENT" });
+    expect(graphqlFetch.mock.calls[0]![1]).toEqual({ input: { metric: "ALERTED_BY_NEXT_DAY", onsetBasis: "CURRENT" } });
+    await caller().metrics.series({ metric: "ALERTED_BY_NEXT_DAY" });
+    expect(graphqlFetch.mock.calls[1]![1]).toEqual({ input: { metric: "ALERTED_BY_NEXT_DAY" } });
+    // The router knows one value: As delivered is the absence of the field.
+    await expect(caller().metrics.series({ metric: "ALERTED_BY_NEXT_DAY", onsetBasis: "AS_DELIVERED" as never })).rejects.toMatchObject({ code: "BAD_REQUEST" });
+  });
+
+  it("refuses both views to every role but a platform admin", async () => {
+    for (const role of ["analyst", "member", "viewer"]) {
+      signedInAs(role);
+      await expect(caller().metrics.series({ metric: "DETECTED_BY_NEXT_DAY" })).rejects.toMatchObject({ code: "FORBIDDEN" });
+      await expect(caller().metrics.series({ metric: "DETECTED_BY_NEXT_DAY", onsetBasis: "CURRENT" })).rejects.toMatchObject({ code: "FORBIDDEN" });
+    }
+    expect(graphqlFetch).not.toHaveBeenCalled();
+  });
+
+  it("returns the unavailable state while clear-api lacks the registry", async () => {
+    signedInAs("admin");
+    graphqlFetch.mockRejectedValueOnce(
+      new GraphQLRequestError('Cannot query field "metricDefinitions" on type "Query".', "GRAPHQL_VALIDATION_FAILED"),
+    );
+    await expect(caller().metrics.definitions()).resolves.toEqual({ status: "unavailable" });
+    graphqlFetch.mockRejectedValueOnce(
+      new GraphQLRequestError('Cannot query field "metricSeries" on type "Query".', "GRAPHQL_VALIDATION_FAILED"),
+    );
+    await expect(caller().metrics.series({ metric: "DETECTED_BY_NEXT_DAY" })).resolves.toEqual({ status: "unavailable" });
+  });
+
+  it("surfaces clear-api's refusal of a grouping or an unknown metric with its message", async () => {
+    signedInAs("admin");
+    graphqlFetch.mockRejectedValueOnce(new GraphQLRequestError("`DETECTED_SAME_DAY` has no groups; leave `groupBy` out.", "BAD_USER_INPUT"));
+    await expect(caller().metrics.series({ metric: "DETECTED_SAME_DAY", groupBy: "SOURCE" })).rejects.toMatchObject({
+      code: "BAD_REQUEST",
+      message: "`DETECTED_SAME_DAY` has no groups; leave `groupBy` out.",
+    });
+  });
+});
+
+const ANNOTATION = {
+  id: "ann-1",
+  at: "2026-10-29T18:33:00.000Z",
+  label: "Geocoding inside the model's area",
+  description: null,
+  link: "https://github.com/CLEAR-Initiative/clear-pipeline/pull/140",
+  metricKeys: ["DISTRICT_OR_FINER"],
+};
+
+describe("metrics.annotations, createAnnotation and deleteAnnotation", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+    graphqlFetch.mockReset();
+  });
+
+  it("lists the changes in a range for a metric, as clear-api returns them", async () => {
+    signedInAs("admin");
+    graphqlFetch.mockResolvedValueOnce({ metricAnnotations: [ANNOTATION] });
+    const result = await caller().metrics.annotations({ from: "2026-10-26T00:00:00.000Z", to: "2026-11-01T23:59:59.999Z", metric: "DISTRICT_OR_FINER" });
+    const [query, vars] = graphqlFetch.mock.calls[0] as [string, Record<string, unknown>];
+    expect(query).toContain("metricAnnotations(input: $input) { id at label description link metricKeys }");
+    expect(vars).toEqual({ input: { from: "2026-10-26T00:00:00.000Z", to: "2026-11-01T23:59:59.999Z", metric: "DISTRICT_OR_FINER" } });
+    expect(result).toEqual({ status: "ok", annotations: [ANNOTATION] });
+    graphqlFetch.mockResolvedValueOnce({ metricAnnotations: [] });
+    await caller().metrics.annotations();
+    expect(graphqlFetch.mock.calls[1]![1]).toEqual({ input: {} });
+  });
+
+  it("records and removes a change through clear-api's mutations", async () => {
+    signedInAs("admin");
+    graphqlFetch.mockResolvedValueOnce({ createMetricAnnotation: { ...ANNOTATION, id: "ann-2", label: "Prompt v3" } });
+    const created = await caller().metrics.createAnnotation({ at: "2026-10-31T13:13:00.000Z", label: "Prompt v3", metricKeys: ["DISTRICT_OR_FINER"] });
+    const [mutation, vars] = graphqlFetch.mock.calls[0] as [string, Record<string, unknown>];
+    expect(mutation).toContain("mutation CreateMetricAnnotation($input: CreateMetricAnnotationInput!)");
+    expect(vars).toEqual({ input: { at: "2026-10-31T13:13:00.000Z", label: "Prompt v3", metricKeys: ["DISTRICT_OR_FINER"] } });
+    expect(created).toMatchObject({ id: "ann-2", label: "Prompt v3" });
+    graphqlFetch.mockResolvedValueOnce({ deleteMetricAnnotation: true });
+    expect(await caller().metrics.deleteAnnotation({ id: "ann-2" })).toBe(true);
+    expect(graphqlFetch.mock.calls[1]![1]).toEqual({ id: "ann-2" });
+  });
+
+  it("refuses an incomplete change before calling clear-api, and a non-admin for everything", async () => {
+    signedInAs("admin");
+    await expect(caller().metrics.createAnnotation({ at: "2026-10-31T13:13:00.000Z", label: "  ", metricKeys: ["DISTRICT_OR_FINER"] })).rejects.toMatchObject({ code: "BAD_REQUEST" });
+    await expect(caller().metrics.createAnnotation({ at: "2026-10-31T13:13:00.000Z", label: "x", metricKeys: [] })).rejects.toMatchObject({ code: "BAD_REQUEST" });
+    await expect(caller().metrics.createAnnotation({ at: "2026-10-31T13:13:00.000Z", label: "x", link: "not a url", metricKeys: ["DISTRICT_OR_FINER"] })).rejects.toMatchObject({ code: "BAD_REQUEST" });
+    expect(graphqlFetch).not.toHaveBeenCalled();
+    signedInAs("analyst");
+    await expect(caller().metrics.annotations()).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(caller().metrics.createAnnotation({ at: "2026-10-31T13:13:00.000Z", label: "x", metricKeys: ["DISTRICT_OR_FINER"] })).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(caller().metrics.deleteAnnotation({ id: "ann-1" })).rejects.toMatchObject({ code: "FORBIDDEN" });
+    expect(graphqlFetch).not.toHaveBeenCalled();
+  });
+
+  it("returns the unavailable state while clear-api lacks annotations", async () => {
+    signedInAs("admin");
+    graphqlFetch.mockRejectedValueOnce(new GraphQLRequestError('Cannot query field "metricAnnotations" on type "Query".', "GRAPHQL_VALIDATION_FAILED"));
+    await expect(caller().metrics.annotations({ metric: "DISTRICT_OR_FINER" })).resolves.toEqual({ status: "unavailable" });
+  });
+});
+
+const AGENT = {
+  from: "2026-07-20T00:00:00.000Z",
+  to: "2026-10-14T12:00:00.000Z",
+  turns: 34,
+  turnsUnrecorded: 1,
+  conversations: 14,
+  newConversations: 12,
+  users: 5,
+  totalCostUsd: 7.51,
+  costPerTurnUsd: 0.22,
+  costPerTurnP95Usd: 0.52,
+  costPerConversationUsd: 0.54,
+  latencyMedianMs: 26000,
+  latencyP95Ms: 45000,
+  totalInputTokens: 3194000,
+  totalOutputTokens: 112000,
+  inputTokensPerTurn: 93955,
+  outputTokensPerTurn: 3291,
+  toolCallsPerTurn: 3.4,
+  turnsWithoutTools: 3,
+  turnsWithManyToolCalls: 4,
+  budgetLimitUsd: 2,
+  budgetHits: 0,
+  byModel: [{ model: "anthropic/claude-sonnet-5-5", turns: 34, costUsd: 7.51, inputTokens: 3194000, outputTokens: 112000 }],
+  byTool: [{ tool: "clear_list_events", calls: 30, turns: 22 }],
+  byPage: [{ page: "/dashboard", turns: 14 }],
+  weekly: [
+    {
+      isoWeek: "2026-W41",
+      weekStart: "2026-10-05T00:00:00.000Z",
+      isPartial: false,
+      turns: 10,
+      conversations: 4,
+      users: 3,
+      costUsd: 2.29,
+      costPerTurnUsd: 0.229,
+      latencyMedianMs: 25000,
+      inputTokensPerTurn: 90000,
+      toolCallsPerTurn: 3.1,
+      models: ["anthropic/claude-sonnet-5-5"],
+    },
+  ],
+};
+
+describe("metrics.agent", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+    graphqlFetch.mockReset();
+  });
+
+  it("forwards the dates only, never a location, and returns clear-api's payload as is", async () => {
+    signedInAs("admin");
+    graphqlFetch.mockResolvedValueOnce({ agentMetrics: AGENT });
+    const result = await caller().metrics.agent({ from: "2026-07-01T00:00:00.000Z", to: "2026-09-30T23:59:59.999Z" });
+    const [query, vars, headers] = graphqlFetch.mock.calls[0] as [string, Record<string, unknown>, Record<string, string>];
+    expect(query).toContain("query AgentMetrics($input: AgentMetricsInput)");
+    expect(query).toContain("agentMetrics(input: $input)");
+    expect(query).not.toContain("recentQuestions");
+    expect(vars).toEqual({ input: { from: "2026-07-01T00:00:00.000Z", to: "2026-09-30T23:59:59.999Z" } });
+    expect(headers).toEqual({ Cookie: "better-auth.session_token=x" });
+    expect(result).toEqual({ status: "ok", metrics: AGENT });
+  });
+
+  it("leaves out what was not given, so clear-api applies its default range", async () => {
+    signedInAs("admin");
+    graphqlFetch.mockResolvedValueOnce({ agentMetrics: AGENT });
+    await caller().metrics.agent();
+    expect(graphqlFetch.mock.calls[0]![1]).toEqual({ input: {} });
+  });
+
+  it("rejects a non-admin without calling clear-api", async () => {
+    for (const role of ["analyst", "viewer", "pending"]) {
+      signedInAs(role);
+      await expect(caller().metrics.agent()).rejects.toMatchObject({ code: "FORBIDDEN" });
+      await expect(caller().metrics.agentQuestions({})).rejects.toMatchObject({ code: "FORBIDDEN" });
+    }
+    expect(graphqlFetch).not.toHaveBeenCalled();
+  });
+
+  it("returns the unavailable state while clear-api lacks the field", async () => {
+    signedInAs("admin");
+    graphqlFetch.mockRejectedValueOnce(
+      new GraphQLRequestError('Cannot query field "agentMetrics" on type "Query".', "GRAPHQL_VALIDATION_FAILED"),
+    );
+    await expect(caller().metrics.agent()).resolves.toEqual({ status: "unavailable" });
+    graphqlFetch.mockRejectedValueOnce(
+      new GraphQLRequestError('Cannot query field "agentMetrics" on type "Query".', "GRAPHQL_VALIDATION_FAILED"),
+    );
+    await expect(caller().metrics.agentQuestions({})).resolves.toEqual({ status: "unavailable" });
+  });
+
+  it("asks for the questions in their own query, with the count, and returns them with the range", async () => {
+    signedInAs("admin");
+    const questions = [{ askedAt: "2026-10-06T09:00:00.000Z", question: "What's new in the last 24 hours?", page: "/dashboard" }];
+    graphqlFetch.mockResolvedValueOnce({ agentMetrics: { from: AGENT.from, to: AGENT.to, recentQuestions: questions } });
+    const result = await caller().metrics.agentQuestions({ from: "2026-07-01T00:00:00.000Z", first: 5 });
+    const [query, vars] = graphqlFetch.mock.calls[0] as [string, Record<string, unknown>];
+    expect(query).toContain("recentQuestions(first: $first)");
+    expect(vars).toEqual({ input: { from: "2026-07-01T00:00:00.000Z" }, first: 5 });
+    expect(result).toEqual({ status: "ok", from: AGENT.from, to: AGENT.to, questions });
+  });
+
+  it("defaults to 20 questions and refuses more than 50", async () => {
+    signedInAs("admin");
+    graphqlFetch.mockResolvedValueOnce({ agentMetrics: { from: AGENT.from, to: AGENT.to, recentQuestions: [] } });
+    await caller().metrics.agentQuestions({});
+    expect(graphqlFetch.mock.calls[0]![1]).toEqual({ input: {}, first: 20 });
+    await expect(caller().metrics.agentQuestions({ first: 51 })).rejects.toMatchObject({ code: "BAD_REQUEST" });
   });
 });

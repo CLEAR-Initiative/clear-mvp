@@ -127,6 +127,91 @@ export interface GqlLocationChallengeToDecide extends GqlSignalLocationChallenge
   } | null;
 }
 
+/* ─── Unresolved place names (clear-api ADR-0019) ─── */
+
+export type GqlUnresolvedPlaceNameStatus = "OPEN" | "RESOLVED" | "NOT_A_PLACE" | "AMBIGUOUS";
+
+/** One Signal that named an unresolved place name. */
+export interface GqlUnresolvedPlaceNameSignal {
+  signalId: string;
+  /** The spelling in this Signal. */
+  nameAsWritten: string;
+  /** NO_MATCH: no gazetteer candidate. OUTSIDE_AREA: one exists outside the Signal's area. */
+  reason: "NO_MATCH" | "OUTSIDE_AREA";
+  seenAt: string;
+  relocatedAt: string | null;
+  /** The area the pipeline chose for the Signal. */
+  areaLocation: { id: string; name: string; level: number } | null;
+  /** Null when the reader may not read the Signal. */
+  signal: { id: string; title: string | null; description: string | null; publishedAt: string | null } | null;
+}
+
+/** A place name geocoding could not place, as its decider reads it in the
+ *  Inbox (clear-api `unresolvedPlaceNames`). One row per country, spelling
+ *  and state. */
+export interface GqlUnresolvedPlaceName {
+  id: string;
+  nameNorm: string;
+  nameAsWritten: string;
+  nameAr: string | null;
+  countryCode: string;
+  stateLocationId: string | null;
+  countryLocationId: string | null;
+  stateLocation: { id: string; name: string; level: number } | null;
+  status: GqlUnresolvedPlaceNameStatus;
+  signalCount: number;
+  firstSeenAt: string;
+  lastSeenAt: string;
+  /** Up to 5, newest first. */
+  signals: GqlUnresolvedPlaceNameSignal[];
+}
+
+/** A spelling that CLEAR maps to one of its own locations (clear-api
+ *  `PlaceAlias`, ADR-0019). */
+export interface GqlPlaceAlias {
+  id: string;
+  nameNorm: string;
+  /** The spelling to show. */
+  nameDisplay: string;
+  countryCode: string;
+  /** Null: the alias applies in the whole country. */
+  scopeLocationId: string | null;
+  scopeLocation: { id: string; name: string } | null;
+  locationId: string;
+  location: { id: string; name: string; level: number; ancestors: { id: string; name: string; level: number }[] } | null;
+  source: "REVIEW" | "SEED" | "MANUAL";
+  createdByName: string | null;
+  createdAt: string;
+  note: string | null;
+  /** Whether the reader may change or delete it. */
+  canEdit: boolean;
+}
+
+/** A country an alias can belong to, with the states it can be scoped to. */
+export interface PlaceAliasCountry {
+  countryCode: string;
+  name: string;
+  countryLocationId: string | null;
+  states: { id: string; name: string }[];
+}
+
+/** A place a queued name can mean (clear-api `placeNameSuggestions`). */
+export interface GqlPlaceNameSuggestion {
+  kind: "GEONAMES" | "LOCATION";
+  geonamesId: number | null;
+  locationId: string | null;
+  name: string;
+  /** A CLEAR location's level: 2 district, 4 landmark. */
+  level: number | null;
+  featureClass: string | null;
+  featureCode: string | null;
+  latitude: number;
+  longitude: number;
+  score: number;
+  insideArea: boolean | null;
+  distanceKm: number | null;
+}
+
 /* ─── Event ─── */
 
 export interface GqlEvent {

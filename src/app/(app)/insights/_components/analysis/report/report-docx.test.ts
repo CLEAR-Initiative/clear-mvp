@@ -1,8 +1,9 @@
-import { describe, expect, it } from "vitest";
-import { renderToBuffer } from "@react-pdf/renderer";
+import { inflateRawSync } from "node:zlib";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { Packer } from "docx";
 import type { Analysis } from "~/server/api/mappers/analysis";
 import { REPORT_SECTIONS, projectReportMap } from "~/lib/analysis-report";
-import { ReportDocument, type ReportLabels } from "./report-document";
+import { buildReportDocument, drawReportMap, type ReportLabels } from "./report-docx";
 
 const square = (x: number, y: number, d = 1) => ({
   type: "Polygon",
@@ -23,7 +24,7 @@ const data = {
   figures: { displaced: 414252, affected: null, inNeed: 200000, returnees: null, fundingRequired: 4.2e9, fundingReceived: 1.1e9 },
   contextRisks: [{ key: "security", label: "Security", items: ["SAF and RSF clashes around al-Mazroub, 17 to 19 Sep.", "Drone strike on Mazrub on 25 Sep."], refs: [2], lineRefs: {} }],
   hazards: { hazards: [{ text: "Cholera: 45 cases in Bara.", refs: [1] }], vulnerabilities: [] },
-  displacement: { push: [{ text: "Attacks on civilians in Um Dibban.", refs: [2] }], return: [] },
+  displacement: { push: [{ text: "Attacks on civilians in Um Dibban.", refs: [2] }], return: [], summary: null, findings: [], dataCheck: null, flows: [], mapSince: null },
   sectors: [
     { id: "health", code: "HE", name: "Health", severity: "critical", impact: [], humanitarian: [], atRisk: [], needs: ["Cholera treatment capacity", "Measles vaccination"], interventions: ["WHO supplied cholera kits to Bara hospital."], coverage: [], refs: [1], lineRefs: {}, reportCount: 2, evidenceScope: "sector" },
     { id: "wash", code: "WA", name: "WASH", severity: "high", impact: [], humanitarian: [], atRisk: [], needs: ["Safe water in El Fāshir camps"], interventions: [], coverage: [], refs: [], lineRefs: {}, reportCount: 1, evidenceScope: "sector" },
@@ -48,27 +49,104 @@ const labels: ReportLabels = {
   displacement: "What is forcing people out", priorityNeeds: "Priority needs", responseActivities: "Response activities",
   noResponse: "None reported.", outlook: "Outlook", mostLikely: "Most likely", bestCase: "Best case", worstCase: "Worst case",
   sources: "Sources", eventLabel: "Event", hapiFigure: "HAPI figure", provenance: "Provenance", footer: "CLEAR · Bara",
-  page: (n, t) => `Page ${n} of ${t}`, severity: (k) => k,
+  page: (n, total) => `Page ${n} of ${total}`, severity: (k) => k,
 };
 
-describe("ReportDocument", () => {
-  it("renders a PDF with the map, figures and sources", async () => {
-    const map = projectReportMap({
-      country: square(22, 9, 16),
-      areas: [square(30, 13)],
-      events: [{ point: [30.5, 13.5], severity: 5 }, { point: [45, 40], severity: 2 }],
-      width: 515,
-      height: 250,
-    });
-    expect(map?.dots).toHaveLength(1);
-    const kpis = { inside: 414252, abroad: null, displacedTotal: 414252, returned: null, inNeed: { value: 200000, low: null, high: null, newestAt: null }, fundingReceived: 1.1e9, fundingRequired: 4.2e9 };
-    const buf = await renderToBuffer(
-      <ReportDocument sections={[...REPORT_SECTIONS]} data={data} kpis={kpis} map={map} labels={labels} scopeName="Bara, North Kordofan, Sudan" generatedLabel="Report created 29 Sep 2026 by admin@clearinitiative.io" />,
-    );
-    expect(buf.subarray(0, 5).toString()).toBe("%PDF-");
+/** A 1x1 PNG, standing in for the drawn map (tests have no canvas). */
+const PNG = Uint8Array.from(atob("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="), (c) => c.charCodeAt(0));
+
+const kpis = { inside: 414252, abroad: null, displacedTotal: 414252, returned: null, inNeed: { value: 200000, low: null, high: null, newestAt: null }, fundingReceived: 1.1e9, fundingRequired: 4.2e9 };
+
+/** One file from the .docx zip, read through the zip's central directory. */
+function zipEntry(buf: Buffer, name: string): string {
+  const end = buf.lastIndexOf(Buffer.from([0x50, 0x4b, 0x05, 0x06]));
+  let at = buf.readUInt32LE(end + 16);
+  for (let i = 0; i < buf.readUInt16LE(end + 10); i++) {
+    const method = buf.readUInt16LE(at + 10);
+    const size = buf.readUInt32LE(at + 20);
+    const nameLength = buf.readUInt16LE(at + 28);
+    const skip = nameLength + buf.readUInt16LE(at + 30) + buf.readUInt16LE(at + 32);
+    const local = buf.readUInt32LE(at + 42);
+    if (buf.toString("utf8", at + 46, at + 46 + nameLength) === name) {
+      const start = local + 30 + buf.readUInt16LE(local + 26) + buf.readUInt16LE(local + 28);
+      const raw = buf.subarray(start, start + size);
+      return (method === 8 ? inflateRawSync(raw) : raw).toString("utf8");
+    }
+    at += 46 + skip;
+  }
+  throw new Error(`${name} not in the zip`);
+}
+
+/** The visible text of a Word XML part, run by run. */
+const text = (xml: string) => [...xml.matchAll(/<w:t(?: [^>]*)?>([^<]*)<\/w:t>/g)].map((m) => m[1]).join("");
+
+/** The .docx bytes as a binary string: file names in a zip are stored uncompressed. */
+async function build(overrides: Partial<Parameters<typeof buildReportDocument>[0]> = {}) {
+  const map = projectReportMap({
+    country: square(22, 9, 16),
+    areas: [square(30, 13)],
+    events: [{ point: [30.5, 13.5], severity: 5 }],
+    width: 515,
+    height: 250,
+  });
+  const doc = buildReportDocument({
+    sections: [...REPORT_SECTIONS],
+    data,
+    kpis,
+    map,
+    mapPng: PNG,
+    labels,
+    scopeName: "Bara, North Kordofan, Sudan",
+    generatedLabel: "Report created 29 Sep 2026 by admin@clearinitiative.io",
+    ...overrides,
+  });
+  const buf = await Packer.toBuffer(doc);
+  return { buf, names: buf.toString("latin1") };
+}
+
+describe("buildReportDocument", () => {
+  it("builds a Word file with the map image", async () => {
+    const { buf, names } = await build();
+    expect(buf.subarray(0, 2).toString()).toBe("PK");
+    expect(names).toContain("word/document.xml");
+    expect(names).toContain("word/footer");
+    expect(names).toMatch(/word\/media\/[^"]+\.png/);
   }, 30_000);
 
-  it("renders a Sudan-sized report to a PDF file", async () => {
+  it("leaves the map out when it could not be drawn", async () => {
+    const { names } = await build({ mapPng: null });
+    expect(names).not.toMatch(/word\/media\//);
+  }, 30_000);
+
+  it("writes the findings, references, diacritics and sources", async () => {
+    const { buf } = await build();
+    const body = text(zipEntry(buf, "word/document.xml"));
+    expect(body).toContain("Drone strike on Mazrub killed up to 9 on 25 Sep. [2]");
+    expect(body).toContain("Cholera: 45 cases in Bara. [1]");
+    expect(body).toContain("Safe water in El Fāshir camps");
+    expect(body).toContain("https://reliefweb.int/r1");
+    expect(zipEntry(buf, "word/_rels/document.xml.rels")).toContain('Target="https://reliefweb.int/r1"');
+  }, 30_000);
+
+  it("numbers pages with Word fields around the translated label", async () => {
+    const { buf } = await build();
+    const footer = zipEntry(buf, "word/footer1.xml");
+    expect(footer).toMatch(/PAGE/);
+    expect(footer).toMatch(/NUMPAGES/);
+    expect(text(footer)).toContain("CLEAR · Bara");
+    expect(text(footer)).toMatch(/Page .* of /);
+  }, 30_000);
+
+  it("keeps only the chosen sections, in the chosen order", async () => {
+    const { buf } = await build({ sections: ["sources", "keyDevelopments"] });
+    const body = text(zipEntry(buf, "word/document.xml"));
+    expect(body.indexOf("1. Sources")).toBeGreaterThanOrEqual(0);
+    expect(body.indexOf("2. Key developments")).toBeGreaterThan(body.indexOf("1. Sources"));
+    expect(body).not.toContain("Scope map");
+    expect(body).not.toContain("Cholera: 45 cases in Bara.");
+  }, 30_000);
+
+  it("builds a Sudan-sized report in time", async () => {
     const sentence = "Fighting, displacement and disease continue across Sudan. ";
     const paragraph = (label: string) => `${label}: ${sentence.repeat(12)}`;
     const lines = (n: number, label: string) => Array.from({ length: n }, (_, i) => paragraph(`${label} ${i}`));
@@ -102,7 +180,7 @@ describe("ReportDocument", () => {
         lineRefs: {},
       })),
       hazards: { hazards: lines(8, "Hazard").map((text) => ({ text, refs: [1] })), vulnerabilities: [] },
-      displacement: { push: lines(8, "Displacement").map((text) => ({ text, refs: [2] })), return: [] },
+      displacement: { push: lines(8, "Displacement").map((text) => ({ text, refs: [2] })), return: [], summary: null, findings: [], dataCheck: null, flows: [], mapSince: null },
       sectors: Array.from({ length: 8 }, (_, i) => sector(i)),
       sources: Array.from({ length: 40 }, (_, i) => ({
         id: `r${i}`,
@@ -137,19 +215,35 @@ describe("ReportDocument", () => {
       fundingRequired: 4.2e9,
     };
     const started = Date.now();
-    const buf = await renderToBuffer(
-      <ReportDocument
-        sections={[...REPORT_SECTIONS]}
-        data={sudan}
-        kpis={kpis}
-        map={map}
-        labels={{ ...labels, scopeKind: "Country analysis", footer: "CLEAR · Sudan" }}
-        scopeName="Sudan"
-        generatedLabel="Report created 27 Oct 2026 by analyst@clearinitiative.io"
-      />,
-    );
+    const doc = buildReportDocument({
+      sections: [...REPORT_SECTIONS],
+      data: sudan,
+      kpis,
+      map,
+      mapPng: PNG,
+      labels: { ...labels, scopeKind: "Country analysis", footer: "CLEAR · Sudan" },
+      scopeName: "Sudan",
+      generatedLabel: "Report created 27 Oct 2026 by analyst@clearinitiative.io",
+    });
+    const buf = await Packer.toBuffer(doc);
     expect(Date.now() - started).toBeLessThan(25_000);
     expect(buf.byteLength).toBeGreaterThan(1000);
-    expect(buf.subarray(0, 5).toString()).toBe("%PDF-");
+    expect(buf.subarray(0, 2).toString()).toBe("PK");
   }, 30_000);
+});
+
+describe("drawReportMap", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  it("returns null instead of throwing when the canvas fails", async () => {
+    vi.stubGlobal("Path2D", class {});
+    vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockImplementation(() => {
+      throw new Error("canvas blocked");
+    });
+    const map = projectReportMap({ country: square(22, 9, 16), areas: [], events: [], width: 515, height: 250 });
+    await expect(drawReportMap(map!)).resolves.toBeNull();
+  });
 });

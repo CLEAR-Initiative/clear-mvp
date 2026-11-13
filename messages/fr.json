@@ -1417,6 +1417,74 @@
         "createSignal": "Échec de la création du signal",
         "createAlert": "Échec de la création de l'alerte"
       }
+    },
+    "worldMap": {
+      "backToWorld": "Retour au monde",
+      "presenceEyebrow": "Présence du NRC",
+      "presenceCount": "pays · cliquez sur l'un d'eux pour plus de détails",
+      "countryTooltip": "Bureau pays à {city}",
+      "countryOfficeName": "Bureau pays de {city}"
+    },
+    "worldPanel": {
+      "office": "Bureau pays du NRC · {city}",
+      "close": "Retour au monde",
+      "risk": {
+        "title": "Risque INFORM",
+        "source": "Source : JRC {edition}",
+        "sourceShort": "Source : JRC INFORM Risk",
+        "noData": "Aucun score de risque INFORM pour ce pays.",
+        "unavailable": "Le risque INFORM est indisponible pour le moment.",
+        "drivers": "Principaux facteurs",
+        "pillars": {
+          "hazard": "Aléas et exposition",
+          "vulnerability": "Vulnérabilité",
+          "coping": "Manque de capacité d'adaptation"
+        },
+        "class": {
+          "veryHigh": "Très élevé",
+          "high": "Élevé",
+          "medium": "Moyen",
+          "low": "Faible",
+          "veryLow": "Très faible"
+        }
+      },
+      "analysis": {
+        "title": "Analyse pays",
+        "none": "Pas encore d'analyse pour ce pays.",
+        "updated": "Mise à jour {when}",
+        "open": "Ouvrir l'analyse"
+      },
+      "figures": {
+        "title": "Situation humanitaire",
+        "sourceOf": "Source : {source}, via HDX HAPI",
+        "noData": "Aucune donnée de cette source",
+        "unavailable": "Indisponible pour le moment",
+        "old": "Date de plus d'un an",
+        "peopleInNeed": "Personnes dans le besoin",
+        "plan": "Plan de réponse {year}",
+        "internallyDisplaced": "Déplacés internes",
+        "refugeesHosted": "Réfugiés et autres personnes à protéger",
+        "foodInsecurity": "Insécurité alimentaire (IPC 3+)",
+        "shareOfPopulation": "{share} de la population analysée · {date}",
+        "funding": "Financement humanitaire",
+        "funded": "Financé à {pct} %",
+        "appeal": "d'un appel de {amount}, {year}",
+        "politicalViolence": "Événements de violence politique",
+        "fatalities": "{count, plural, one {# décès} other {# décès}} · {month}"
+      },
+      "severity": {
+        "title": "Gravité de la crise",
+        "source": "Source : indice de gravité INFORM d'ACAPS",
+        "none": "Aucune crise suivie par ACAPS pour ce pays.",
+        "unavailable": "La gravité de la crise est indisponible pour le moment.",
+        "category": {
+          "1": "Très faible",
+          "2": "Faible",
+          "3": "Moyenne",
+          "4": "Élevée",
+          "5": "Très élevée"
+        }
+      }
     }
   },
   "detection": {
@@ -1699,6 +1767,106 @@
         "frequency": "Fréquence",
         "variables": "Variables"
       }
+    },
+    "mapFirst": {
+      "live": "En direct · mis à jour {relative}",
+      "noun": {
+        "events": "{count, plural, one {événement} other {événements}}",
+        "alerts": "{count, plural, one {alerte} other {alertes}}",
+        "signals": "{count, plural, one {signal} other {signaux}}"
+      },
+      "count": "<b>{total}</b> {noun} · {scope} · {date}",
+      "countNarrowed": "<b>{shown}</b> sur {total} {noun} · {scope} · {date}",
+      "newCount": "{count} nouveaux",
+      "empty": {
+        "events": "Aucun événement ne correspond",
+        "alerts": "Aucune alerte ne correspond",
+        "signals": "Aucun signal ne correspond",
+        "remove": "Retirer <b>{what}</b> · affiche {count}",
+        "longer": "Essayez une période plus longue.",
+        "search": "la recherche « {query} »"
+      },
+      "allCountries": "Tous les pays",
+      "levels": "{count} niveaux",
+      "typesCount": "{count} types",
+      "sourcesCount": "{count} sources",
+      "last24h": "Dernières 24 heures",
+      "lastDays": "{count} derniers jours",
+      "showTimeline": "Afficher la frise (T)",
+      "hideTimeline": "Masquer la frise (T)",
+      "totalNoun": "{total} {noun}",
+      "presets": {
+        "24h": "24 h",
+        "7d": "7 j",
+        "30d": "30 j",
+        "90d": "90 j"
+      },
+      "timelineSummary": "{range} · <b>{total}</b> {noun}",
+      "today": "Aujourd'hui",
+      "hideList": "Masquer la liste",
+      "showList": "Afficher la liste",
+      "places": "{count, plural, one {# lieu} other {# lieux}}",
+      "qb": {
+        "label": "Rechercher et filtrer",
+        "placeholder": "Rechercher ou filtrer…",
+        "placeholderMore": "Ajouter un filtre ou rechercher…",
+        "clear": "Effacer la recherche et les filtres",
+        "removeToken": "Retirer le filtre {key}:",
+        "tokenTitle": "{token} · cliquer pour modifier",
+        "filterBy": "Filtrer par",
+        "filters": "Filtres",
+        "pickOne": "Un seul choix",
+        "pickMany": "Un ou plusieurs choix",
+        "search": "Rechercher « <b>{query}</b> »",
+        "noMatches": "Aucun résultat pour « {query} ».",
+        "state": "État",
+        "showDistricts": "Afficher les districts (→)",
+        "hideDistricts": "Masquer les districts (←)",
+        "expand": "Afficher les sous-types (→)",
+        "collapse": "Masquer les sous-types (←)",
+        "keys": {
+          "in": "Lieu",
+          "type": "Type d'événement",
+          "severity": "Gravité",
+          "source": "Source",
+          "since": "Période",
+          "sort": "Ordre de tri"
+        },
+        "hint": {
+          "navigate": "naviguer",
+          "select": "choisir",
+          "toggle": "cocher",
+          "complete": "compléter",
+          "districts": "districts",
+          "remove": "retirer le filtre",
+          "close": "fermer"
+        }
+      },
+      "sort": {
+        "title": "Tri : {group} · {option}",
+        "menu": "Ordre de tri",
+        "group": {
+          "activity": "Dernière activité",
+          "severity": "Gravité",
+          "published": "Publication"
+        },
+        "option": {
+          "newest": "Plus récents d'abord",
+          "oldest": "Plus anciens d'abord",
+          "highest": "Plus graves d'abord"
+        },
+        "short": {
+          "activity": "Activité",
+          "severity": "Gravité",
+          "published": "Publication"
+        }
+      },
+      "time": {
+        "pub": "Publ.",
+        "published": "Publication",
+        "activity": "Dernière activité"
+      },
+      "mapLabel": "{name} · cliquer pour filtrer, Maj+clic pour ajouter"
     }
   },
   "eventDetail": {
@@ -2754,6 +2922,7 @@
       "pins": {
         "source": "Actuel",
         "proposed": "Proposé",
+        "suggestion": "Suggéré",
         "placed": "Votre point"
       },
       "unavailable": "La carte n’a pas pu se charger. Vous pouvez quand même rechercher le lieu ou saisir ses coordonnées."
@@ -2787,7 +2956,8 @@
     "tabs": {
       "community": "Signaux communautaires",
       "proposals": "Signaux proposés",
-      "locations": "Changements d’emplacement"
+      "locations": "Changements d’emplacement",
+      "places": "Lieux"
     },
     "filters": {
       "community": "Tous",
@@ -2795,7 +2965,8 @@
       "unclassified": "Non classés",
       "chatter": "Bavardage",
       "proposals": "Signaux proposés",
-      "locations": "Changements d’emplacement"
+      "locations": "Changements d’emplacement",
+      "places": "Lieux"
     },
     "search": "Rechercher texte, réf. d'admission",
     "sort": {
@@ -2804,6 +2975,7 @@
     },
     "list": {
       "allLoaded": "Les {count} entrées de cette vue sont chargées",
+      "cut": "{count} chargés. {more, plural, one {# autre n’est pas affiché} other {# autres ne sont pas affichés}} : traitez-en quelques-uns, puis rechargez.",
       "empty": "Plus rien dans cette vue",
       "priorEntries": "{count, plural, one {# entrée précédente} other {# entrées précédentes}}"
     },
@@ -2920,7 +3092,8 @@
     },
     "kinds": {
       "cases": "Signaux proposés",
-      "location": "Emplacement"
+      "location": "Emplacement",
+      "place": "Nom de lieu"
     },
     "event": {
       "untitled": "Événement sans titre",
@@ -2965,6 +3138,127 @@
         "outsideCoverage": "Ce lieu est hors des zones couvertes par CLEAR.",
         "conflict": "Ce changement a déjà été tranché, ou remplacé par un plus récent.",
         "failed": "Impossible d’enregistrer la décision. Réessayez."
+      }
+    },
+    "place": {
+      "preview": "{count, plural, one {# signal} other {# signaux}} · {area}",
+      "seen": "{count, plural, one {# signal} other {# signaux}} dans {area} · vu pour la dernière fois le {date}",
+      "posts": "{count, plural, one {La publication qui le cite} other {Publications qui le citent}}",
+      "noPosts": "Aucune publication à afficher.",
+      "postHidden": "Vous ne pouvez pas lire ce signal.",
+      "openSignal": "Ouvrir le signal",
+      "reasons": {
+        "NO_MATCH": "Aucune correspondance dans {area}",
+        "OUTSIDE_AREA": "Un lieu de ce nom existe en dehors de {area}"
+      },
+      "suggestions": "Lieux possibles",
+      "suggestionsLoading": "Recherche de lieux…",
+      "noSuggestions": "Aucun lieu au nom proche. Placez un point sur la carte.",
+      "kinds": {
+        "geonames": "Lieu GeoNames",
+        "district": "District dans CLEAR",
+        "landmark": "Repère dans CLEAR"
+      },
+      "where": {
+        "inside": "Dans {area}",
+        "outside": "À {km} km de {area}",
+        "unknown": "Distance inconnue"
+      },
+      "placeTitle": "Placer le point",
+      "placeHint": "Cliquez sur la carte à l’endroit où se trouve {name}, ou recherchez le lieu. Vous pouvez aussi saisir ses coordonnées.",
+      "actions": {
+        "use": "Utiliser ce lieu",
+        "place": "Placer sur la carte",
+        "save": "Enregistrer ce point",
+        "cancel": "Annuler",
+        "notAPlace": "Pas un lieu",
+        "ambiguous": "Ambigu"
+      },
+      "toast": {
+        "resolved": "Lieu enregistré. {count, plural, =0 {Aucun signal déplacé.} one {# signal déplacé.} other {# signaux déplacés.}}",
+        "notAPlace": "Marqué comme n’étant pas un lieu. Il ne reviendra pas.",
+        "ambiguous": "Marqué comme ambigu. Il reste hors de la file jusqu’à sa résolution."
+      },
+      "errors": {
+        "forbidden": "Vous ne pouvez pas placer ce lieu ici : il est en dehors de l’État de ce nom de lieu.",
+        "badPlace": "Ce lieu est en dehors du pays, ou en dehors des zones couvertes par CLEAR.",
+        "conflict": "Ce nom de lieu a déjà été résolu, ou son orthographe a déjà un alias.",
+        "failed": "Impossible d’enregistrer la réponse. Réessayez."
+      }
+    },
+    "placesView": {
+      "queue": "File",
+      "aliases": "Alias",
+      "label": "Vue des lieux"
+    },
+    "aliases": {
+      "search": "Rechercher une orthographe ou un lieu",
+      "sourceAll": "Toutes les sources",
+      "count": "{count, plural, one {# alias} other {# alias}}",
+      "add": "Ajouter un alias",
+      "edit": "Modifier",
+      "delete": "Supprimer",
+      "cancel": "Annuler",
+      "loadError": "Impossible de charger les alias. Réessayez.",
+      "empty": "Aucun alias pour l’instant. Résolvez un nom de lieu dans la file, ou ajoutez-en un ici.",
+      "noMatch": "Aucun alias ne correspond.",
+      "loadMore": "Charger plus ({shown} sur {total})",
+      "targetGone": "Le lieu n’existe plus",
+      "wholeCountry": "Tout le pays ({country})",
+      "noAuthor": "CLEAR",
+      "columns": {
+        "spelling": "Orthographe",
+        "target": "Désigne",
+        "scope": "S’applique dans",
+        "source": "Source",
+        "author": "Ajouté par",
+        "added": "Ajouté le",
+        "actions": "Actions"
+      },
+      "sources": {
+        "REVIEW": "Revue",
+        "SEED": "Liste initiale",
+        "MANUAL": "Ajouté à la main"
+      },
+      "levels": {
+        "landmark": "Repère",
+        "district": "District",
+        "area": "Zone"
+      },
+      "deleteTitle": "Supprimer cet alias ?",
+      "deleteBody": "CLEAR ne placera plus <b>{name}</b> avec cet alias. Le nom de lieu retourne dans la file.",
+      "deleteKeeps": "Les signaux déjà déplacés par cet alias restent où ils sont.",
+      "deleteYes": "Supprimer l’alias",
+      "form": {
+        "addTitle": "Ajouter un alias de lieu",
+        "editTitle": "Modifier un alias de lieu",
+        "spelling": "Orthographe",
+        "spellingHelp": "Le nom tel que les publications l’écrivent, en caractères latins.",
+        "spellingFixed": "L’orthographe ne peut pas changer. Pour la changer, supprimez cet alias et ajoutez-en un autre.",
+        "arabic": "Orthographe arabe (facultatif)",
+        "arabicHelp": "Elle reçoit son propre alias vers le même lieu.",
+        "country": "Pays",
+        "scope": "S’applique dans",
+        "scopeHelp": "L’alias sert seulement aux publications placées dans cet État.",
+        "wholeCountry": "Tout le pays ({country})",
+        "target": "Où est-ce ?",
+        "keep": "Garder : {place}",
+        "pick": "Un lieu connu de CLEAR ou de GeoNames",
+        "point": "Un point sur la carte",
+        "targetSearch": "Rechercher le lieu",
+        "targetSearchHelp": "Recherchez sous un autre nom si le lieu est connu autrement. Cela ne change pas l’orthographe de l’alias.",
+        "suggestionsNeed": "Saisissez l’orthographe et choisissez où elle s’applique pour voir des lieux.",
+        "outsideScope": "à {km} km en dehors",
+        "note": "Note (facultatif)",
+        "saveNew": "Ajouter l’alias",
+        "saveChange": "Enregistrer"
+      },
+      "errors": {
+        "forbidden": "Vous ne pouvez pas modifier cet alias, ni le placer ici : il est en dehors de la zone de votre équipe. Un administrateur de la plateforme le peut.",
+        "badInput": "Ce lieu ou ce périmètre n’est pas valide pour cet alias.",
+        "conflict": "Cette orthographe a déjà un alias dans ce périmètre.",
+        "gone": "Cet alias n’existe plus. Rechargez la liste.",
+        "failed": "Enregistrement impossible. Réessayez."
       }
     },
     "cases": {
@@ -3068,8 +3362,26 @@
       "push": "Ce qui pousse les gens à partir",
       "return": "Intentions de retour",
       "count": "{count, plural, one {# constat} other {# constats}}",
+      "hazardsCount": "{count, plural, one {# aléa} other {# aléas}}",
       "showAll": "Tout afficher ({count})",
+      "showAllHazards": "Afficher les {count} aléas",
       "showLess": "Afficher moins",
+      "displacementMetaMap": "{count, plural, one {# constat} other {# constats}} · carte des déplacements",
+      "dataCheck": "Vérification des données",
+      "movementTitle": "Où les gens se sont déplacés",
+      "movementSince": "Depuis {since}",
+      "movementAria": "Carte des flux de déplacement depuis, vers et au sein de {scope}",
+      "movementInside": "déplacés à l'intérieur",
+      "movementLegendOut": "Départs · plus épais = plus de personnes",
+      "movementLegendBack": "Retours",
+      "movementLegendUnknown": "Ampleur inconnue",
+      "movementLegendBadge": "Renvoie au constat",
+      "groupsLabel": "Afficher les mouvements de",
+      "groupIdp": "Déplacés internes",
+      "groupRefugee": "Réfugiés",
+      "groupsEmpty": "Aucun constat pour les groupes sélectionnés.",
+      "movementLegendEvent": "Causé par un événement",
+      "movementLegendPoint": "Déplacés par un événement, selon le nombre de personnes",
       "forecast": "Prévisions",
       "forecastTag": "Projections, non observées",
       "forecastNote": "Ce que les sources prévoient. Séparé des faits ci-dessus.",
@@ -3077,7 +3389,42 @@
       "bestCase": "Meilleur scénario",
       "worstCase": "Pire scénario",
       "hazardsTitle": "Aléas et vulnérabilités",
-      "hazardsMeta": "{hazards, plural, one {# aléa} other {# aléas}} · {vulnerabilities, plural, one {# vulnérabilité} other {# vulnérabilités}}"
+      "hazardsMeta": "{hazards, plural, one {# aléa} other {# aléas}} · {vulnerabilities, plural, one {# vulnérabilité} other {# vulnérabilités}}",
+      "shocks": "Chocs et aléas",
+      "hazardsHint": "Chocs en cours et menaces à venir",
+      "aggravating": "Facteurs aggravants",
+      "aggravatingHint": "Ce qui aggrave le choc",
+      "mitigating": "Facteurs atténuants",
+      "mitigatingHint": "Ce qui en réduit l'impact",
+      "aggravatingCount": "{count, plural, one {# facteur aggravant} other {# facteurs aggravants}}",
+      "mitigatingCount": "{count, plural, one {# facteur atténuant} other {# facteurs atténuants}}",
+      "noneFound": "Rien dans les sources pour cette zone."
+    },
+    "access": {
+      "title": "Accès humanitaire",
+      "meta": "{topics, plural, one {# thème} other {# thèmes}} · {count, plural, one {# constat} other {# constats}}"
+    },
+    "topics": {
+      "economic_fragility": "Fragilité économique",
+      "environment_technology": "Pressions environnementales et technologiques",
+      "governance_policy": "Faiblesses de gouvernance et de politiques",
+      "social_inequality": "Inégalités sociales",
+      "resource_shortfalls": "Ressources insuffisantes pour la réponse",
+      "coordination_failures": "Défaillances de coordination",
+      "preparedness": "Préparation aux urgences",
+      "risk_reduction": "Réduction des risques",
+      "recovery_support": "Soutien au relèvement",
+      "protective_infrastructure": "Infrastructures de protection",
+      "public_warning": "Alerte du public",
+      "response_surge": "Renforcement de la réponse",
+      "people_facing_gaps": "Personnes privées d'accès",
+      "physical": "Contraintes physiques",
+      "security": "Contraintes de sécurité",
+      "relief_to_population": "L'aide jusqu'aux personnes",
+      "population_to_relief": "Les personnes jusqu'à l'aide",
+      "barriers": "Obstacles",
+      "constraints": "Contraintes",
+      "other": "Autres"
     },
     "needs": {
       "severityIntro": "Chaque secteur est évalué par l'analyse à partir des rapports sectoriels qu'elle cite.",
@@ -3088,16 +3435,14 @@
       "noFigure": "Pas de chiffre de personnes dans le besoin"
     },
     "events": {
-      "title": "Événements dans cette zone",
-      "empty": "Aucun événement enregistré dans cette zone sur cette période.",
-      "loading": "Chargement des événements…",
-      "error": "Les événements n'ont pas pu être chargés.",
+      "title": "Événements cités",
+      "empty": "Cette analyse ne cite aucun événement.",
       "untitled": "Événement sans titre",
       "severity": "Gravité {value}",
-      "count": "Échantillon : {shown} sur {total}"
+      "count": "{count, plural, one {# événement} other {# événements}}"
     },
     "sources": {
-      "title": "Sources citées"
+      "title": "Rapports cités"
     },
     "contexts": {
       "title": "Risques contextuels",
@@ -3230,7 +3575,7 @@
         "empty": "Rien dans cette analyse pour cette section",
         "alwaysIncluded": "La version, l'auteur et les numéros de page sont toujours inclus.",
         "cancel": "Annuler",
-        "create": "Télécharger le PDF ({count, plural, one {# section} other {# sections}})",
+        "create": "Télécharger le fichier Word ({count, plural, one {# section} other {# sections}})",
         "counts": {
           "keyDevelopments": "Résumé et {count, plural, =0 {aucun point clé} one {# point clé} other {# points clés}}",
           "map": "Zone avec {count, plural, one {# événement} other {# événements}}",
@@ -3277,6 +3622,25 @@
       "evidenceSitrepNote": "Plus de 30 jours : conservé, non utilisé dans les chiffres ni le résumé",
       "evidenceUploadedKind": "Ajouté à l'instant",
       "evidenceUploadedNote": "Conservé. Pas encore lu dans cette page.",
+      "evidenceNotUploaded": "Non envoyé. Il est seulement sur ce navigateur.",
+      "evidenceAddedAt": "Ajouté {time}",
+      "evidenceUploadedAt": "Envoyé {time}",
+      "journey": {
+        "uploading": "Envoi",
+        "uploaded": "Envoyé",
+        "failed": "Échec de l'envoi",
+        "failedDetail": "Le serveur n'a pas accepté le fichier. Il est seulement sur ce navigateur.",
+        "retry": "Réessayer",
+        "processing": "Traitement",
+        "processingDetail": "Lecture du texte, des lieux et des dates. La prochaine mise à jour de cette analyse pourra l'utiliser.",
+        "processed": "Traité",
+        "analysis": "Analyse",
+        "cited": "Cité en {n}",
+        "citedStep": "Cité dans cette analyse",
+        "citedDetail": "Source {n}",
+        "notInUpdate": "Absent de la dernière mise à jour",
+        "notInUpdateDetail": "Cette analyse a été mise à jour après l'envoi sans citer le fichier."
+      },
       "discussionTitle": "Discussion",
       "discussionComments": "{count, plural, one {# commentaire} other {# commentaires}}",
       "discussionEmpty": "Pas encore de commentaires. Lancez la discussion.",
@@ -3309,6 +3673,7 @@
         "contexts": "Risques de contexte",
         "hazards": "Aléas",
         "vulnerabilities": "Vulnérabilités",
+        "access": "Accès humanitaire",
         "displacement": "Déplacement",
         "forecast": "Prévision"
       }
@@ -3499,8 +3864,7 @@
     },
     "tiles": {
       "counted": {
-        "label": "Événements mesurés",
-        "detail": "sur {total, number} événements de la période"
+        "label": "Couverture mesurée"
       },
       "byNextDay": {
         "label": "Détectés au plus tard le lendemain"
@@ -3512,7 +3876,12 @@
         "label": "Événements avec une date de début"
       },
       "ofCounted": "{n, number} sur {counted, number} mesurés",
-      "ofInRange": "{n, number} sur {total, number} de la période"
+      "ofInRange": "{n, number} sur {total, number} de la période",
+      "delta": {
+        "points": "{points} pts",
+        "vs": "contre {previous} avant",
+        "none": "Pas de chiffre antérieur"
+      }
     },
     "histogram": {
       "title": "Jours entre le début et le premier signal",
@@ -3528,19 +3897,36 @@
       }
     },
     "weekly": {
-      "title": "Tendance hebdomadaire",
-      "subtitle": "Part des événements mesurés de chaque semaine ISO",
+      "title": "Tendance",
+      "subtitle": {
+        "rolling": "Part des événements mesurés sur les {weeks} semaines jusqu'à chaque semaine",
+        "weekly": "Part des événements mesurés de chaque semaine ISO"
+      },
       "legend": "Légende",
       "series": {
         "byNextDay": "Au plus tard le lendemain",
-        "sameDay": "Même jour"
+        "sameDay": "Même jour",
+        "measured": "Couverture mesurée"
       },
       "partial": "partielle",
       "tooltip": {
         "week": "{week} · à partir du {start}",
         "n": "n = {n, plural, one {# événement mesuré} other {# événements mesurés}}",
-        "partial": "Semaine partielle : encore en cours"
-      }
+        "partial": "Semaine partielle : encore en cours",
+        "window": "{weeks, plural, one {Semaine} other {# semaines}} jusqu'à {week} (semaine du {start})",
+        "nOfRange": "n = {n, plural, one {# événement mesuré} other {# événements mesurés}} sur {total, number} de la période"
+      },
+      "mode": {
+        "label": "Vue de la tendance",
+        "rolling": "Glissant sur {weeks} semaines",
+        "weekly": "Hebdomadaire"
+      },
+      "loading": "Chargement de la tendance…",
+      "error": "Impossible de charger la tendance : {message}",
+      "empty": "Aucun événement mesuré pour l'instant dans les semaines de la tendance.",
+      "footnote": "Toujours au moins {weeks} semaines, jusqu'à la date de fin choisie. Le filtre pays s'applique.",
+      "coverageNote": "La couverture est la part des événements de la période qui ont pu être mesurés : lisez les courbes du délai de détection à sa lumière, car une meilleure semaine avec une couverture plus faible n'a peut-être mesuré que des événements plus faciles.",
+      "coverageUnavailable": "Une courbe de couverture apparaîtra quand l'API CLEAR de cet environnement indiquera les événements de chaque semaine."
     },
     "empty": {
       "title": "Aucun événement mesurable sur cette période",
@@ -3575,6 +3961,7 @@
         "counted": "Un événement n'est mesuré que s'il a une date de début, que son premier signal porte une heure réelle et que ce signal date du jour du début ou après.",
         "excluded": "Tous les autres événements de la période sont exclus, pour l'une de quatre raisons : aucun signal ingéré, pas de date de début, un premier signal daté sans heure, ou un premier signal daté d'avant le début (une erreur de données).",
         "wholeDays": "Le début est enregistré au jour près : le délai se compte donc en jours entiers (même jour = 0, lendemain = 1).",
+        "trend": "La tendance classe chaque événement dans la semaine où CLEAR a reçu son premier signal. Une part glissante regroupe les événements de la fenêtre au lieu de faire la moyenne des parts hebdomadaires : une semaine calme ne pèse que ce qu'elle contient.",
         "definition": "La définition complète est l'ADR-0011 de clear-api, « Time to detection »."
       }
     },
@@ -3585,7 +3972,345 @@
       "country": "Pays",
       "allCountries": "Tous les pays",
       "hint": "Les jours sont en UTC. Laissez les dates vides pour les 12 dernières semaines."
-    }
+    },
+    "progress": {
+      "title": "Progression dans le temps",
+      "subtitle": "Une métrique à la fois, par jour, semaine ou mois. Un point creux est un intervalle que la période ne couvre qu'en partie ; l'infobulle indique n.",
+      "view": {
+        "label": "Vue",
+        "cardTitle": "{metric} · {view}",
+        "as-delivered": {
+          "name": "Tel que livré",
+          "description": "Chaque valeur telle que le pipeline l'a donnée à l'époque. Utilisez-la pour voir si un déploiement a amélioré CLEAR : les semaines passées ne bougent pas."
+        },
+        "same-ruler": {
+          "name": "Même règle",
+          "description": "Les mêmes détections et alertes, mesurées avec la date de début que CLEAR connaît aujourd'hui : chaque semaine a la même règle. Utilisez-la pour juger la rapidité de CLEAR : les semaines passées bougent quand CLEAR apprend une meilleure date de début."
+        }
+      },
+      "metric": {
+        "label": "Métrique"
+      },
+      "dimensions": {
+        "TIMELINESS": "Rapidité",
+        "ACCURACY": "Exactitude",
+        "COVERAGE": "Couverture",
+        "RELIABILITY": "Fiabilité",
+        "USEFULNESS": "Utilité"
+      },
+      "metrics": {
+        "DETECTED_BY_NEXT_DAY": "Détecté le lendemain au plus tard",
+        "DETECTED_SAME_DAY": "Détecté le jour même",
+        "ALERTED_BY_NEXT_DAY": "Alerte émise le lendemain au plus tard",
+        "ALERTED_SAME_DAY": "Alerte émise le jour même",
+        "DISTRICT_OR_FINER": "Au district ou plus fin",
+        "SIGNALS_GROUPED": "Signaux regroupés",
+        "EVENTS_WITH_ONE_SIGNAL": "Événements à un seul signal",
+        "ACLED_EVENTS_ALERTED": "Événements ACLED alertés à proximité",
+        "SOURCES_ON_SCHEDULE": "Sources dans les délais",
+        "EVENTS_ESCALATED": "Événements escaladés"
+      },
+      "granularity": {
+        "label": "Intervalles",
+        "DAY": "Jour",
+        "WEEK": "Semaine",
+        "MONTH": "Mois"
+      },
+      "bucketsOf": {
+        "DAY": "Jours",
+        "WEEK": "Semaines ISO",
+        "MONTH": "Mois"
+      },
+      "card": {
+        "subtitle": "{buckets} du {from} au {to}"
+      },
+      "perSource": "Une ligne par source",
+      "allSources": "Toutes les sources",
+      "legend": "Légende",
+      "partial": "partiel",
+      "deployMarker": "déploiement",
+      "showTable": "Vue tableau",
+      "hideTable": "Masquer le tableau",
+      "columns": {
+        "bucket": "Intervalle"
+      },
+      "markers": {
+        "several": "{n, plural, one {# changement} other {# changements}}"
+      },
+      "tooltip": {
+        "week": "{week} · à partir du {start}",
+        "partial": "Intervalle partiel : la période n'en couvre qu'une partie",
+        "changes": "Changements dans cet intervalle"
+      },
+      "units": {
+        "EVENTS": "n = {n, plural, one {# événement mesuré} other {# événements mesurés}}",
+        "SIGNALS": "n = {n, plural, one {# signal} other {# signaux}}",
+        "SOURCE_DAYS": "n = {n, plural, one {# source-jour} other {# sources-jours}}",
+        "ACLED_EVENTS": "n = {n, plural, one {# événement ACLED} other {# événements ACLED}}",
+        "DEFAULT": "n = {n, number}"
+      },
+      "chip": {
+        "title": "Depuis {marker} ({date}) :",
+        "body": "{group} {before} sur les 7 jours précédents, {after} depuis (n = {nBefore, number} et {nAfter, number})"
+      },
+      "loading": "Chargement de la série…",
+      "error": {
+        "title": "Impossible de charger la série"
+      },
+      "unavailable": {
+        "title": "Registre des métriques pas encore déployé",
+        "body": "L'API CLEAR de cet environnement ne sert pas encore le registre des métriques ni leurs séries (clear-api ADR-0014 et ADR-0015). Les cartes ci-dessous fonctionnent toujours."
+      },
+      "empty": {
+        "title": "Rien à tracer sur cette période",
+        "body": "Aucun événement mesuré ni signal localisé ne tombe dans cette période pour cette métrique."
+      },
+      "definition": {
+        "timeBasis": "Base temporelle : {timeBasis} · {adr}"
+      },
+      "annotations": {
+        "title": "Changements sur la période",
+        "add": "Ajouter un changement",
+        "when": "Quand (UTC)",
+        "label": "Libellé",
+        "link": "Lien (facultatif)",
+        "metrics": "Métriques",
+        "save": "Enregistrer",
+        "cancel": "Annuler",
+        "remove": "Retirer",
+        "removeNamed": "Retirer {label}",
+        "empty": "Aucun changement enregistré sur cette période.",
+        "unavailable": "L'API CLEAR de cet environnement ne sert pas encore les annotations de métriques (clear-api ADR-0016).",
+        "columns": {
+          "when": "Quand",
+          "label": "Changement",
+          "metrics": "Métriques"
+        },
+        "error": "Impossible de charger les changements : {message}",
+        "loading": "Chargement des changements…"
+      },
+      "overview": {
+        "title": "En un coup d'œil",
+        "subtitle": "Chaque métrique sur les 12 dernières semaines, par semaine, selon le filtre pays. Choisissez-en une pour la voir ci-dessous.",
+        "current": "{week}",
+        "currentPartial": "{week}, à ce jour",
+        "noData": "Pas de données sur les 12 dernières semaines",
+        "loading": "Chargement…",
+        "error": "Chargement impossible",
+        "unavailable": "Non servi par cette API",
+        "select": "Afficher {metric}",
+        "everyCountry": "tous les pays"
+      },
+      "copyLink": "Copier le lien",
+      "copied": "Lien copié",
+      "everyCountry": "Lit tous les pays : le filtre par pays ne s'applique pas à cette métrique.",
+      "replay": {
+        "label": "Exécution de rejeu",
+        "placeholder": "Aucune",
+        "noVersion": "version inconnue",
+        "option": "{version} · {date} · {n, plural, one {# signal} other {# signaux}}",
+        "legend": "Rejeu ({version})",
+        "coverage": "Exécution de rejeu {version}, lancée le {date} : elle a retraité {replayed} des {total} signaux de la période ({group}). La ligne de rejeu montre ce que cette version du pipeline fait de ces signaux, dans l'intervalle où chacun a été localisé pour la première fois. Les autres lignes montrent ce que le pipeline a livré à l'époque.",
+        "error": "Impossible de charger la ligne de rejeu : {message}",
+        "listError": "Impossible de charger les exécutions de rejeu : {message}"
+      }
+    },
+    "precision": {
+      "title": "Précision de localisation",
+      "subtitle": "Avec quelle finesse le pipeline a placé les signaux qu'il a localisés. Le regroupement se fait par district : un signal au district ou plus fin peut rejoindre un événement ; un signal laissé au niveau de l'État ou du pays devient toujours son propre événement.",
+      "loading": "Chargement de la précision de localisation…",
+      "range": "Affichage du {from} au {to}",
+      "error": {
+        "title": "Impossible de charger la précision de localisation"
+      },
+      "unavailable": {
+        "title": "Précision de localisation pas encore déployée",
+        "body": "L'API CLEAR de cet environnement ne sert pas encore la précision de localisation. La section se remplira dès que ce sera le cas."
+      },
+      "empty": {
+        "title": "Aucun signal localisé sur cette période",
+        "body": "Rien n'a été ingéré et localisé sur cette période pour les sources sélectionnées."
+      },
+      "sources": {
+        "label": "Sources",
+        "placeholder": "Toutes les sources"
+      },
+      "tiles": {
+        "fine": {
+          "label": "Au district ou plus fin"
+        },
+        "emphasis": {
+          "label": "{source} au district ou plus fin"
+        },
+        "noLocation": {
+          "label": "Sans localisation"
+        },
+        "corrections": {
+          "label": "Contestations de localisation",
+          "sub": "{open, number} ouvertes · {decided, number} tranchées"
+        },
+        "ofSignals": "{n, number} sur {total, number} signaux",
+        "none": "aucun sur la période"
+      },
+      "levels": {
+        "noLocation": "Sans localisation",
+        "country": "Pays",
+        "state": "État",
+        "district": "District",
+        "point": "Point"
+      },
+      "bySource": {
+        "title": "Où atterrit chaque source",
+        "subtitle": "Signaux localisés sur la période, par niveau de leur localisation, du plus grossier au plus fin",
+        "legend": "Légende",
+        "tooltip": "{count, number} · {share}",
+        "n": "n = {n, plural, one {# signal} other {# signaux}}",
+        "showTable": "Vue tableau",
+        "hideTable": "Masquer le tableau",
+        "columns": {
+          "source": "Source",
+          "signals": "Signaux",
+          "fine": "District ou plus fin"
+        }
+      },
+      "weekly": {
+        "title": "Tendance hebdomadaire",
+        "subtitle": "Part des signaux localisés de chaque semaine ISO au district ou plus fin, par source",
+        "legend": "Légende",
+        "partial": "partielle",
+        "deployMarker": "déploiement",
+        "showTable": "Vue tableau",
+        "hideTable": "Masquer le tableau",
+        "columns": {
+          "week": "Semaine"
+        },
+        "tooltip": {
+          "week": "{week} · à partir du {start}",
+          "n": "{n, plural, one {# signal} other {# signaux}}",
+          "partial": "Semaine partielle : encore en cours"
+        },
+        "severalChanges": "{n, plural, one {# changement} other {# changements}}"
+      },
+      "method": {
+        "title": "Comment la précision de localisation est mesurée",
+        "intro": "La précision de localisation est la finesse avec laquelle le pipeline a placé les signaux qu'il a localisés, lue dans la localisation enregistrée sur chaque signal.",
+        "points": {
+          "counted": "Un signal compte lorsqu'un pipeline l'a ingéré (ni soumis ni saisi à la main) et qu'il n'est ni rétracté ni factice. Chacun compte une fois, au niveau de sa localisation : aucune, pays, État, district ou un point dans un district.",
+          "level": "La localisation est la localisation générale du signal ou, pour un signal de déplacement, son origine. District ou plus fin signifie district plus point, ce que le regroupement peut utiliser.",
+          "week": "Un signal appartient à la semaine ISO où il a été localisé (traité, sinon collecté), de sorte qu'un déploiement du pipeline apparaît dans la semaine où il a eu lieu. Un signal retraité passe dans la semaine où il a été relocalisé.",
+          "correctness": "Ceci mesure la finesse d'une localisation, pas sa justesse. Les contestations de localisation déposées sur la période sont affichées comme indicateur indirect tant qu'un échantillon vérifié par un analyste n'existe pas.",
+          "definition": "clear-api définit la métrique (ADR-0012) et renvoie des comptes ; cette page ne fait que les convertir en parts."
+        }
+      }
+    },
+    "detection": {
+      "title": "Délai de détection"
+    },
+    "agent": {
+      "title": "Agent CLEAR",
+      "scope": "Tous les pays, sur la période ci-dessus. Le filtre pays ne s'applique pas à l'Agent.",
+      "loading": "Chargement des métriques de l'Agent…",
+      "error": {
+        "title": "Impossible de charger les métriques de l'Agent"
+      },
+      "unavailable": {
+        "title": "API des métriques de l'Agent pas encore déployée",
+        "body": "L'API CLEAR de cet environnement ne sert pas encore l'usage de l'Agent. La section se remplira dès que ce sera le cas."
+      },
+      "range": "Affichage du {from} au {to}",
+      "empty": {
+        "title": "Aucun tour de l'Agent sur cette période",
+        "body": "{unrecorded, plural, =0 {Personne n'a rien demandé à l'Agent sur cette période.} one {Une réponse a été écrite mais son usage n'a jamais été enregistré ; rien d'autre ne s'est passé.} other {# réponses ont été écrites mais leur usage n'a jamais été enregistré ; rien d'autre ne s'est passé.}}"
+      },
+      "budget": "Budget {limit} par utilisateur et par jour · {hits, plural, =0 {aucun jour-utilisateur ne l'a atteint} one {# jour-utilisateur l'a atteint} other {# jours-utilisateur l'ont atteint}}.",
+      "unrecorded": "{n, plural, one {# réponse n'a pas d'usage enregistré et n'est pas comptée.} other {# réponses n'ont pas d'usage enregistré et ne sont pas comptées.}}",
+      "tiles": {
+        "spend": {
+          "label": "Dépense",
+          "sub": "{perConversation} par conversation"
+        },
+        "costPerTurn": {
+          "label": "Coût par tour",
+          "sub": "p95 {p95}"
+        },
+        "latency": {
+          "label": "Latence médiane",
+          "sub": "p95 {p95}"
+        },
+        "turns": {
+          "label": "Tours",
+          "sub": "{conversations, plural, one {# conversation} other {# conversations}} · {users, plural, one {# utilisateur} other {# utilisateurs}}"
+        }
+      },
+      "weekly": {
+        "legend": "Légende",
+        "modelChanged": "changement de modèle",
+        "partial": "partielle",
+        "costPerTurnUsd": {
+          "title": "Coût par tour, par semaine",
+          "subtitle": "Coût moyen d'un tour, USD",
+          "series": "Coût par tour"
+        },
+        "latencyMedianMs": {
+          "title": "Latence par semaine",
+          "subtitle": "Secondes médianes jusqu'à une réponse",
+          "series": "Latence médiane"
+        },
+        "inputTokensPerTurn": {
+          "title": "Tokens d'entrée par semaine",
+          "subtitle": "Tokens d'entrée moyens par tour, toutes étapes cumulées",
+          "series": "Tokens d'entrée par tour"
+        },
+        "tooltip": {
+          "week": "{week} · à partir du {start}",
+          "n": "n = {n, plural, one {# tour} other {# tours}}",
+          "models": "Modèles : {models}",
+          "modelChanged": "Changement de modèle cette semaine",
+          "partial": "Semaine partielle : en cours"
+        }
+      },
+      "breakdown": {
+        "title": "À quoi sert l'Agent",
+        "subtitle": "{perTurn} appels d'outils par tour · {many, plural, one {# tour} other {# tours}} avec plus de 5 · {none, plural, one {# tour} other {# tours}} sans aucun",
+        "tools": "Outils",
+        "pages": "Demandé depuis",
+        "models": "Modèles",
+        "empty": "Rien sur cette période",
+        "unknown": "inconnu",
+        "other": "{n, plural, one {# autre} other {# autres}}",
+        "columns": {
+          "tool": "Outil",
+          "calls": "Appels",
+          "turns": "Tours",
+          "page": "Page",
+          "model": "Modèle",
+          "cost": "Coût"
+        }
+      },
+      "questions": {
+        "title": "Questions récentes",
+        "subtitle": "Ce que les gens ont demandé, du plus récent au plus ancien, sans l'auteur",
+        "show": "Afficher les {n} dernières",
+        "audit": "Charger les questions est une lecture administrateur de ces conversations et est journalisé comme tel.",
+        "loading": "Chargement…",
+        "unavailable": "L'API CLEAR de cet environnement ne sert pas encore les questions.",
+        "none": "Aucune question sur cette période.",
+        "unknownPage": "sans page"
+      },
+      "method": {
+        "title": "Comment c'est mesuré",
+        "intro": "L'usage de l'Agent CLEAR, tel que clear-api l'enregistre à chaque tour.",
+        "points": {
+          "turn": "Un tour est une réponse donnée par l'Agent, avec le modèle, les tokens, le coût et la latence enregistrés pour elle.",
+          "inRange": "Un tour appartient au jour et à la semaine où son usage a été enregistré, la même horloge que le budget quotidien.",
+          "tokens": "Les tokens d'entrée sont cumulés sur chaque étape de la boucle d'outils d'un tour ; un tour peut donc en déclarer bien plus qu'une seule requête n'en contient.",
+          "pages": "La page d'origine d'une question est la première partie de la route depuis laquelle elle a été posée ; les identifiants sont omis.",
+          "questions": "Le texte des questions n'est lu que lorsque vous demandez à le voir, et cette lecture est journalisée comme une lecture administrateur de ces conversations.",
+          "definition": "La définition complète est l'ADR-0013 de clear-api, « Agent usage metrics »."
+        }
+      }
+    },
+    "rangeVs": "Du {from} au {to}, comparé au {prevFrom} – {prevTo}"
   },
   "usageAnalytics": {
     "profile": {
@@ -3658,5 +4383,198 @@
       "note": "Totaux mensuels des 12 derniers mois par organisation, équipe et rôle. Les groupes de moins de 5 personnes et les administrateurs de la plateforme sont exclus.",
       "button": "Télécharger l'export NRC (CSV)"
     }
+  },
+  "brief": {
+    "page": {
+      "title": "Briefs",
+      "breadcrumb": "Briefs"
+    },
+    "composer": {
+      "window": "Période du {start} au {end}",
+      "notFound": "Ce Brief n'existe pas ou a été supprimé.",
+      "loadError": "Impossible de charger ce Brief.",
+      "back": "Tous les Briefs",
+      "titleLabel": "Titre du Brief",
+      "titleRequired": "Le titre ne peut pas être vide ; le précédent est conservé.",
+      "refresh": "Actualiser jusqu'à maintenant",
+      "refreshError": "Impossible d'actualiser la période : {message}",
+      "markdownHint": "**gras**, *italique*, - puces, [lien](https://…)",
+      "preview": "Aperçu",
+      "empty": "—",
+      "saveError": "Impossible d'enregistrer : {message}",
+      "unsaved": "Une modification n'a pas pu être enregistrée, rien n'a donc été envoyé. Vérifiez le Brief et réessayez.",
+      "leaveConfirm": "Votre dernière modification de ce Brief n'est pas encore enregistrée. Quitter quand même ?"
+    },
+    "groups": {
+      "alert": "Alertes",
+      "event": "Événements",
+      "signal": "Signaux"
+    },
+    "items": {
+      "emptyGroup": "Rien de sélectionné pour l'instant.",
+      "addError": "Impossible d'ajouter l'élément : {message}",
+      "removeError": "Impossible de retirer l'élément : {message}",
+      "earlier": "du {date}",
+      "noneSent": "Aucun.",
+      "drag": "Faire glisser pour réordonner {title}",
+      "remove": "Retirer du Brief",
+      "removeLabel": "Retirer {title} du Brief",
+      "notePlaceholder": "Ajouter une note (facultatif)",
+      "noteLabel": "Note sur {title}",
+      "noteError": "Impossible d'enregistrer la note : {message}",
+      "reorderError": "Impossible de réordonner : {message}"
+    },
+    "send": {
+      "test": "M'envoyer un test",
+      "testToAddress": "Envoyer un test",
+      "testSent": "Test envoyé à votre adresse e-mail.",
+      "testSentTo": "Test envoyé à {email}.",
+      "testRefused": "Le fournisseur d'e-mail a refusé le test.",
+      "testError": "Impossible d'envoyer le test : {message}",
+      "testRecipient": {
+        "open": "Adresse e-mail de test",
+        "label": "Envoyer les tests à",
+        "placeholder": "vous@exemple.org",
+        "hint": "Enregistrée dans ce navigateur uniquement. Laissez vide pour utiliser votre propre adresse.",
+        "invalid": "Saisissez une adresse e-mail valide.",
+        "save": "Enregistrer",
+        "reset": "Utiliser mon adresse",
+        "tooltip": "Envoi à {email}",
+        "notStored": "Ce navigateur n'a pas permis d'enregistrer l'adresse. Elle s'applique jusqu'à ce que vous quittiez la page."
+      },
+      "open": "Envoyer…",
+      "title": "Envoyer le Brief",
+      "list": "Liste de destinataires",
+      "listPlaceholder": "Choisir une liste",
+      "listOption": "{name} ({count, plural, one {# destinataire} other {# destinataires}})",
+      "noLists": "Aucune liste avec des destinataires pour l'instant.",
+      "manageLists": "Gérer les listes de destinataires",
+      "cancel": "Annuler",
+      "next": "Suivant",
+      "back": "Retour",
+      "confirm": "Envoyer à {list} ({count, plural, one {# destinataire} other {# destinataires}}) ?",
+      "freezes": "L'envoi fige le Brief : il ne pourra plus être modifié.",
+      "send": "Envoyer",
+      "error": "Impossible d'envoyer : {message}",
+      "result": "Envoyé à {sent}, échec pour {failed}.",
+      "partial": "Les e-mails en échec ne sont pas renvoyés.",
+      "done": "Terminé",
+      "unknownList": "une liste supprimée",
+      "sentNotice": "Envoyé le {date} à {list} : {sent} envoyés, {failed} en échec.",
+      "frozen": "Un Brief envoyé est figé : ses éléments gardent ce qu'ils affichaient à l'envoi."
+    },
+    "list": {
+      "new": "Nouveau Brief",
+      "empty": "Aucun Brief pour l'instant. Commencez-en un avec Nouveau Brief.",
+      "loadError": "Impossible de charger les Briefs.",
+      "delete": "Supprimer le brouillon",
+      "deleteConfirm": "Supprimer le brouillon « {title} » ? Cette action est irréversible.",
+      "deleteError": "Impossible de supprimer le brouillon : {message}",
+      "columns": {
+        "title": "Brief",
+        "area": "Zone",
+        "window": "Période",
+        "status": "Statut",
+        "sentAt": "Envoyé"
+      },
+      "loadMore": "Charger plus"
+    },
+    "cadence": {
+      "daily": "Quotidien",
+      "weekly": "Hebdomadaire",
+      "monthly": "Mensuel"
+    },
+    "status": {
+      "draft": "Brouillon",
+      "sent": "Envoyé"
+    },
+    "new": {
+      "title": {
+        "daily": "Nouveau Brief quotidien",
+        "weekly": "Nouveau Brief hebdomadaire",
+        "monthly": "Nouveau Brief mensuel"
+      },
+      "window": {
+        "daily": "Couvre les dernières 24 heures, jusqu'à maintenant.",
+        "weekly": "Couvre les 7 derniers jours, jusqu'à maintenant.",
+        "monthly": "Couvre les 30 derniers jours, jusqu'à maintenant."
+      },
+      "country": "Pays",
+      "countryPlaceholder": "Choisir un pays",
+      "region": "État ou district (facultatif)",
+      "cancel": "Annuler",
+      "submit": "Commencer le Brief",
+      "error": "Impossible de commencer le Brief : {message}"
+    },
+    "sections": {
+      "summary": "Résumé",
+      "counts": "Décomptes",
+      "items": "Éléments sélectionnés",
+      "closingNotes": "Notes de clôture"
+    },
+    "save": {
+      "saving": "Enregistrement…",
+      "saved": "Enregistré",
+      "error": "Non enregistré"
+    },
+    "counts": {
+      "none": "Aucun sur cette période.",
+      "byType": "Types",
+      "bySource": "Sources",
+      "more": "+{count} de plus"
+    },
+    "picker": {
+      "dateBrief": "Période du Brief",
+      "date24h": "Dernières 24 heures",
+      "date7d": "7 derniers jours",
+      "date30d": "30 derniers jours",
+      "dateCustom": "Période personnalisée",
+      "from": "Du",
+      "to": "Au"
+    },
+    "lists": {
+      "open": "Listes de destinataires",
+      "title": "Listes de destinataires",
+      "intro": "Ensembles nommés d'adresses e-mail auxquels un Brief peut être envoyé. Les adresses n'ont pas besoin d'un compte CLEAR ; chaque e-mail contient un lien de désinscription.",
+      "newName": "Nom de la nouvelle liste",
+      "create": "Créer",
+      "loading": "Chargement des listes…",
+      "loadError": "Impossible de charger les listes.",
+      "empty": "Aucune liste pour l'instant.",
+      "recipients": "{count, plural, one {# destinataire} other {# destinataires}}",
+      "unsubscribed": "Désinscrit",
+      "remove": "Retirer l'adresse",
+      "removeLabel": "Retirer {email}",
+      "removeError": "Impossible de retirer l'adresse : {message}",
+      "addEmail": "nom@exemple.org",
+      "addEmailLabel": "Ajouter une adresse à {list}",
+      "add": "Ajouter"
+    },
+    "pdf": {
+      "button": "Télécharger le PDF",
+      "eyebrow": "Brief {cadence}",
+      "org": "Conseil norvégien pour les réfugiés · CLEAR",
+      "classification": "Usage interne et partage privé uniquement",
+      "footer": "CLEAR · {title}",
+      "generated": "PDF créé le {date} dans CLEAR ({status}).",
+      "page": "Page {n} sur {total}",
+      "error": "Le PDF n'a pas pu être créé. Veuillez réessayer.",
+      "unsupportedLocale": "Les PDF ne peuvent pas encore être créés en arabe. Passez en anglais, français ou espagnol pour en créer un."
+    },
+    "copy": {
+      "button": "Copier",
+      "done": "Copié",
+      "plainOnly": "Ce navigateur n'a copié que du texte brut.",
+      "error": "Impossible de copier le Brief."
+    }
+  },
+  "errorBoundary": {
+    "title": "Une erreur est survenue",
+    "message": "Cette page a rencontré une erreur. Un rechargement suffit généralement. Si le problème persiste, prévenez l'équipe CLEAR.",
+    "updatedTitle": "CLEAR a été mis à jour",
+    "updatedMessage": "Une nouvelle version a été publiée pendant que cette page était ouverte. Rechargez pour continuer.",
+    "reload": "Recharger la page",
+    "tryAgain": "Réessayer",
+    "reference": "Référence : {digest}"
   }
 }

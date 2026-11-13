@@ -57,12 +57,13 @@ function analysis(item = "8.58 / \u20138.6 million people are displaced"): Analy
       },
     ],
     hazards: { hazards: [], vulnerabilities: [] },
-    displacement: { push: [], return: [] },
+    displacement: { push: [], return: [], summary: null, findings: [], dataCheck: null, flows: [], mapSince: null },
     sectors: [],
     sources: [],
     changes: { comparedTo: null, notes: {} },
     scenarios: null,
     eventSourceIds: [],
+    citedEvents: [],
     keyFindings: [],
   };
 }

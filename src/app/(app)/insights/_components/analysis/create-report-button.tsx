@@ -18,19 +18,19 @@ import {
   withDeadline,
   type ReportSectionChoice,
 } from "~/lib/analysis-report";
-import type { ReportLabels } from "./report/report-document";
+import type { ReportLabels } from "./report/report-docx";
 import { ReportBuilderModal } from "./report-builder-modal";
 
-/** A4 content width at the report's margins, in PDF points. */
+/** A4 content width at the report's margins, in points. */
 const MAP_WIDTH = 515;
 const MAP_HEIGHT = 250;
 
-/** Scripts the PDF's built-in font and layout engine can't set (no shaping / bidi). */
+/** Right-to-left scripts: the report is laid out left to right only. */
 const UNSUPPORTED_LOCALES = new Set(["ar"]);
 
 /**
- * "Create Report": the analysis version on screen as a downloadable PDF
- * situation report (PRD v5, R31). Frontend-only for now: nothing is stored,
+ * "Create Report": the analysis version on screen as a downloadable Word
+ * (.docx) situation report (PRD v5, R31). Frontend-only for now: nothing is stored,
  * so there is no report history or server-side immutability yet (R33, R34).
  */
 export function CreateReportButton({
@@ -131,29 +131,27 @@ export function CreateReportButton({
         severity: (key) => tSeverity(key as "critical"),
       };
 
-      const [{ pdf }, { ReportDocument }] = await Promise.all([
-        import("@react-pdf/renderer"),
-        import("./report/report-document"),
-      ]);
+      const { buildReportDocx, drawReportMap } = await import("./report/report-docx");
+      const sections = chosen.filter((x) => x.included).map((x) => x.key);
+      const mapPng = map && sections.includes("map") ? await drawReportMap(map) : null;
       const blob = await withDeadline(
-        pdf(
-          <ReportDocument
-            sections={chosen.filter((x) => x.included).map((x) => x.key)}
-            data={data}
-            kpis={kpiValues(data, figures)}
-            map={map}
-            labels={labels}
-            scopeName={scopeName}
-            generatedLabel={t("generated", { date: date(now.toISOString(), true), author })}
-          />,
-        ).toBlob(),
+        buildReportDocx({
+          sections,
+          data,
+          kpis: kpiValues(data, figures),
+          map,
+          mapPng,
+          labels,
+          scopeName,
+          generatedLabel: t("generated", { date: date(now.toISOString(), true), author }),
+        }),
         REPORT_BUILD_TIMEOUT_MS,
       );
 
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = reportFileName(scopeName, now);
+      a.download = reportFileName(scopeName, now, "sitrep", "docx");
       a.click();
       setTimeout(() => URL.revokeObjectURL(url), 10_000);
       setBuilding(false);

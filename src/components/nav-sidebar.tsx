@@ -208,12 +208,19 @@ export function NavSidebar({
     staleTime: 60_000,
     refetchInterval: 120_000,
   });
+  // Open unresolved place names the reader may resolve add to it too.
+  const placeCount = api.placeNames.queueCount.useQuery(undefined, {
+    enabled: reviewAccess.places,
+    staleTime: 60_000,
+    refetchInterval: 120_000,
+  });
   const liveUnread = useInboxUnread(proposedCount.data?.count);
   const inboxBadge = inboxBadgeLabel({
     proposals: reviewAccess.proposals ? (liveUnread ?? proposedCount.data?.count) : undefined,
     proposalsCapped: reviewAccess.proposals && liveUnread == null && !!proposedCount.data?.capped,
     locations: reviewAccess.locations ? locationCount.data?.count : undefined,
     locationsCapped: reviewAccess.locations && !!locationCount.data?.capped,
+    places: reviewAccess.places ? placeCount.data?.count : undefined,
   });
   const badges: Partial<Record<NavItemKey, string>> = { inbox: inboxBadge };
 

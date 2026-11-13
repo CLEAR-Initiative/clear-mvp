@@ -23,6 +23,7 @@ import {
   attachmentKey,
   isCaseGroupEntry,
   isLocationChallengeEntry,
+  isPlaceNameEntry,
   needsTranslation,
   shownTranslation,
   type CaseGroupEntry,
@@ -30,6 +31,7 @@ import {
   type InboxAttachment,
   type InboxEntry,
   type LocationChallengeEntry,
+  type PlaceNameEntry,
   type RejectReason,
   type VoiceTranscript,
 } from "~/lib/hotline-inbox";
@@ -38,6 +40,8 @@ import type { GqlCaseProposal, GqlCaseProposalDecision, GqlReviewCaseProposal } 
 import { CaseProposalRow } from "~/components/impact-prior/case-proposal-row";
 import { InboxEntryPills } from "./classification-pill";
 import { LocationChallengePane } from "./location-challenge-pane";
+import { PlaceNamePane } from "./place-name-pane";
+import type { PlaceNameResolutionKind } from "~/lib/place-names";
 import { VoiceNote } from "./voice-note";
 import styles from "../inbox.module.css";
 
@@ -58,6 +62,8 @@ interface ReadingPaneProps {
   canPlaceAnywhere?: boolean;
   /** A Location challenge was decided from its pane. */
   onLocationDecided?: (entry: LocationChallengeEntry, decision: LocationChallengeDecision) => void;
+  /** An unresolved place name was resolved from its pane. */
+  onPlaceResolved?: (entry: PlaceNameEntry, kind: PlaceNameResolutionKind, signalsMoved: number) => void;
   busy: boolean;
   error: string | null;
   rejectOpen: boolean;
@@ -303,6 +309,17 @@ export function ReadingPane(props: ReadingPaneProps) {
         entry={entry}
         canPlaceAnywhere={!!props.canPlaceAnywhere}
         onDecided={(decided, decision) => props.onLocationDecided?.(decided, decision)}
+        onBack={props.onBack}
+      />
+    );
+  }
+  if (isPlaceNameEntry(entry)) {
+    return (
+      <PlaceNamePane
+        key={entry.id}
+        entry={entry}
+        canPlaceAnywhere={!!props.canPlaceAnywhere}
+        onResolved={(resolved, kind, moved) => props.onPlaceResolved?.(resolved, kind, moved)}
         onBack={props.onBack}
       />
     );

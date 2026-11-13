@@ -164,14 +164,12 @@ vi.mock("~/trpc/react", () => ({
   },
 }));
 
-const pdfSections = vi.fn();
-const pdfToBlob = vi.fn(async () => new Blob(["%PDF-"]));
-vi.mock("@react-pdf/renderer", () => ({
-  pdf: (el: { props: { sections: string[] } }) => (
-    pdfSections(el.props.sections), { toBlob: () => pdfToBlob() }
-  ),
+const reportSections = vi.fn();
+const reportToBlob = vi.fn(async () => new Blob(["PK"]));
+vi.mock("./report/report-docx", () => ({
+  buildReportDocx: (input: { sections: string[] }) => (reportSections(input.sections), reportToBlob()),
+  drawReportMap: async () => null,
 }));
-vi.mock("./report/report-document", () => ({ ReportDocument: () => null }));
 
 class ResizeObserverStub {
   observe() {}
@@ -209,7 +207,7 @@ function analysis(overrides: Partial<Analysis> = {}): Analysis {
       { key: "security", label: "Security", items: ["Drone strikes on markets.", "Frontlines active."], refs: [], lineRefs: {} },
     ],
     hazards: { hazards: [{ text: "Cholera outbreak.", refs: [2] }], vulnerabilities: [] },
-    displacement: { push: [{ text: "Conflict drives movement.", refs: [] }], return: [] },
+    displacement: { push: [{ text: "Conflict drives movement.", refs: [] }], return: [], summary: null, findings: [], dataCheck: null, flows: [], mapSince: null },
     sectors: [
       {
         id: "health",
@@ -235,6 +233,7 @@ function analysis(overrides: Partial<Analysis> = {}): Analysis {
     changes: { comparedTo: null, notes: {} },
     scenarios: { description: null, mostLikely: "Fighting continues.", bestCase: null, worstCase: null, refs: [2] },
     eventSourceIds: ["event:e1"],
+    citedEvents: events.items,
     keyFindings: [],
     ...overrides,
   };
@@ -315,7 +314,7 @@ afterEach(() => {
   cleanup();
   vi.clearAllMocks();
   vi.useRealTimers();
-  pdfToBlob.mockImplementation(async () => new Blob(["%PDF-"]));
+  reportToBlob.mockImplementation(async () => new Blob(["%PDF-"]));
 });
 
 describe("Insights > Analysis tab", () => {
@@ -393,14 +392,17 @@ describe("Insights > Analysis tab", () => {
     expect(screen.getByText("Hospitals struck.")).toBeInTheDocument();
   });
 
-  it("lists cited sources and the scope's events on the sources tab", () => {
+  it("lists cited reports on the left and cited events on the right of the sources tab", () => {
     renderPage();
     fireEvent.click(screen.getByRole("tab", { name: "analysis.tabs.sources" }));
-    expect(screen.getByText("OCHA update")).toBeInTheDocument();
-    expect(screen.getByTestId("analysis-sources")).toHaveAttribute("data-surface", "card");
+    const sources = screen.getByTestId("analysis-sources");
+    expect(sources).toHaveAttribute("data-surface", "card");
+    expect(within(sources).getByText("OCHA update")).toBeInTheDocument();
+    expect(sources).not.toHaveTextContent("Shelling");
     expect(screen.getByTestId("analysis-events")).toHaveAttribute("data-surface", "page");
     const row = screen.getByTestId("analysis-event-row");
     expect(row).toHaveAttribute("href", "/event/e1?from=analysis");
+    expect(row).toHaveTextContent("2.");
     expect(within(row).getByText("Shelling in El Fasher")).toBeInTheDocument();
   });
 
@@ -894,18 +896,18 @@ describe("Insights > Analysis tab", () => {
     expect(screen.getByTestId("report-include-responseActivities")).toBeDisabled();
     fireEvent.click(screen.getByTestId("report-include-contexts"));
     fireEvent.click(screen.getByTestId("report-builder-create"));
-    await vi.waitFor(() => expect(pdfSections).toHaveBeenCalled());
-    const sections = pdfSections.mock.calls[0]![0] as string[];
+    await vi.waitFor(() => expect(reportSections).toHaveBeenCalled());
+    const sections = reportSections.mock.calls[0]![0] as string[];
     expect(sections).not.toContain("contexts");
     expect(sections).not.toContain("responseActivities");
     expect(sections.slice(0, 3)).toEqual(["keyDevelopments", "currentStatus", "map"]);
     await vi.waitFor(() => expect(click).toHaveBeenCalled());
-    expect(downloads[0]).toMatch(/^sitrep-sudan-\d{4}-\d{2}-\d{2}\.pdf$/);
+    expect(downloads[0]).toMatch(/^sitrep-sudan-\d{4}-\d{2}-\d{2}\.docx$/);
     click.mockRestore();
   });
 
-  it("shows the report error and clears the busy state when the PDF build never finishes", async () => {
-    pdfToBlob.mockImplementation(() => new Promise(() => {}));
+  it("shows the report error and clears the busy state when the report build never finishes", async () => {
+    reportToBlob.mockImplementation(() => new Promise(() => {}));
     renderPage();
     fireEvent.click(screen.getByTestId("analysis-create-report"));
     const create = await screen.findByTestId("report-builder-create");

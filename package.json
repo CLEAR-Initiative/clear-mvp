@@ -21,7 +21,7 @@
     "test:e2e": "playwright test",
     "e2e": "bash e2e/run-local.sh",
     "e2e:up": "docker compose -f docker-compose.e2e.yml up -d --build --wait db redis api web",
-    "e2e:seed": "docker compose -f docker-compose.e2e.yml run --rm seed && docker compose -f docker-compose.e2e.yml run --rm seed-roles && docker compose -f docker-compose.e2e.yml run --rm seed-ground && docker compose -f docker-compose.e2e.yml run --rm seed-event-types && docker compose -f docker-compose.e2e.yml run --rm seed-agent-key && docker compose -f docker-compose.e2e.yml run --rm seed-analysis",
+    "e2e:seed": "docker compose -f docker-compose.e2e.yml run --rm seed && docker compose -f docker-compose.e2e.yml run --rm seed-roles && docker compose -f docker-compose.e2e.yml run --rm seed-ground && docker compose -f docker-compose.e2e.yml run --rm seed-event-types && docker compose -f docker-compose.e2e.yml run --rm seed-agent-key && docker compose -f docker-compose.e2e.yml run --rm seed-analysis && docker compose -f docker-compose.e2e.yml run --rm seed-invite",
     "e2e:down": "docker compose -f docker-compose.e2e.yml down -v --remove-orphans"
   },
   "dependencies": {
@@ -46,6 +46,7 @@
     "better-auth": "^1.6.22",
     "clear-nextjs-frontend": ".",
     "clsx": "^2.1.1",
+    "docx": "9.14.0",
     "driver.js": "^1.6.0",
     "next": "^15.5.28",
     "next-intl": "^4.13.0",

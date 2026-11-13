@@ -26,6 +26,7 @@ import { resolveLocationName } from "~/lib/location";
 import type { MapMarker } from "~/components/map/crisis-map";
 import { severityColors, severityLabels } from "~/lib/constants/severity";
 import { useMarkerHover } from "~/hooks/use-marker-hover";
+import { BidiTitle } from "~/components/ui/bidi-title";
 
 const CrisisMap = dynamic(
   () => import("~/components/map/crisis-map").then((m) => m.CrisisMap),
@@ -206,7 +207,7 @@ export function LiveAlertsTab({
                           {format.relativeTime(new Date(alert.event.lastSignalCreatedAt), now)}
                         </Text>
                       </Group>
-                      <Text fw={600} size="sm" c="var(--color-text-primary)" lineClamp={1} mb={4}>{displayTitle}</Text>
+                      <Text fw={600} size="sm" c="var(--color-text-primary)" lineClamp={1} mb={4}><BidiTitle>{displayTitle}</BidiTitle></Text>
                       <Group gap={12}>
                         {resolveLocationName(location) && (
                           <Group gap={3} style={{ flexShrink: 0 }}>
@@ -277,12 +278,10 @@ export function LiveAlertsTab({
               onMarkerHover={onMarkerHover}
             />
             <MapPanelBar
-              dataView="alert"
-              onDataViewChange={() => {}}
               showPopulation={showPopulation}
               onShowPopulationChange={setShowPopulation}
-              boundaryLevel={boundaryLevel ?? "A1"}
-              onBoundaryLevelChange={onBoundaryLevelChange ?? (() => {})}
+              boundaryLevel={boundaryLevel}
+              onBoundaryLevelChange={onBoundaryLevelChange}
             />
           </Box>
         </Card>

@@ -101,14 +101,14 @@ test.describe("Insights", () => {
     await page.getByRole("tab", { name: "Sources & Events" }).click();
     const sources = page.getByTestId("analysis-sources");
     await expect(sources).toContainText(SEEDED_ANALYSIS.sourceTitle);
-    await expect(sources).toContainText(SEEDED_ANALYSIS.eventLabel);
     await expect(sources).not.toContainText(SEEDED_ANALYSIS.unresolvedEventCitation);
-    // The events query has already settled for the map, so this is the loaded list,
-    // not the loading flash. A settled list with events must not say it is empty.
+    // Cited events are listed beside the reports. The seeded event citation is not a
+    // real event, so its row has no title and never shows the raw citation id.
     const events = page.getByTestId("analysis-events");
-    await expect(events).toContainText(/Sample: \d+ of \d+/);
-    await expect(events).not.toContainText("No events recorded");
-    await expect(events).not.toContainText("Loading events…");
+    await expect(events).toContainText("Events cited");
+    await expect(events.getByTestId("analysis-event-row")).toHaveCount(1);
+    await expect(events).toContainText(SEEDED_ANALYSIS.untitledEvent);
+    await expect(events).not.toContainText(SEEDED_ANALYSIS.unresolvedEventCitation);
 
     await page.goto("/insights?automation=not-a-real-automation", { waitUntil: "domcontentloaded" });
     await expect(page).toHaveURL(/\/insights\?/);

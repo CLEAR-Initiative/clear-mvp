@@ -132,13 +132,25 @@ const ICON_CATEGORIES = [
 ] as const;
 
 interface MapPanelBarProps {
-  dataView: DataView;
-  onDataViewChange: (v: DataView) => void;
-  showPopulation: boolean;
-  onShowPopulationChange: (v: boolean) => void;
+  /**
+   * EVERY control below follows one rule, with no exceptions: it renders only
+   * when BOTH its value and its handler are supplied. Omit the pair and the
+   * control is gone rather than present-but-dead — a page that can't service a
+   * control (e.g. /detection, whose data view is fixed per tab) leaves it out.
+   *
+   * These used to default to a shared `noop`, so a page that forgot to wire one
+   * got a control that rendered and swallowed every click. Keep new controls
+   * on this pattern: optional pair + an `xEnabled` guard around the block,
+   * including the block's own SectionLabel and trailing Divider so hiding it
+   * leaves no orphan heading or rule.
+   */
+  dataView?: DataView;
+  onDataViewChange?: (v: DataView) => void;
+  showPopulation?: boolean;
+  onShowPopulationChange?: (v: boolean) => void;
   populationLoading?: boolean;
-  boundaryLevel: BoundaryLevel;
-  onBoundaryLevelChange: (v: BoundaryLevel) => void;
+  boundaryLevel?: BoundaryLevel;
+  onBoundaryLevelChange?: (v: BoundaryLevel) => void;
   showRoads?: boolean;
   onShowRoadsChange?: (v: boolean) => void;
   showNrcLocations?: boolean;
@@ -169,11 +181,13 @@ interface MapPanelBarProps {
    * When provided, a Filters icon appears below Legend on small screens.
    */
   filters?: ReactNode;
+  /**
+   * Which edge of the map the icon column sits on. Default "left". On
+   * "right" (/detection's rail) the panels open towards the map, to the left
+   * of the icons. Content is the same either way.
+   */
+  placement?: "left" | "right";
 }
-
-const noop = () => {
-  /* callers that omit layer-toggle handlers get a no-op */
-};
 
 function IconBtn({
   icon: Icon, active, title, onClick, testId, tourId,
@@ -326,22 +340,34 @@ export function MapPanelBar({
   showPopulation, onShowPopulationChange,
   populationLoading = false,
   boundaryLevel, onBoundaryLevelChange,
-  showRoads = true, onShowRoadsChange = noop,
-  showNrcLocations = false, onShowNrcLocationsChange = noop,
+  showRoads, onShowRoadsChange,
+  showNrcLocations, onShowNrcLocationsChange,
   showBlockages,
-  onShowBlockagesChange = noop,
+  onShowBlockagesChange,
   blockagesHint,
   blockagesLoading = false,
   showSeismicSignals,
-  onShowSeismicSignalsChange = noop,
+  onShowSeismicSignalsChange,
   seismicSignalsHint,
   seismicSignalsLoading = false,
-  baseMapType = "simple", onBaseMapTypeChange = noop,
-  keepPanelsOpen = false, onKeepPanelsOpenChange = noop,
+  baseMapType, onBaseMapTypeChange,
+  keepPanelsOpen, onKeepPanelsOpenChange,
   filters,
+  placement = "left",
 }: MapPanelBarProps) {
-  const blockagesEnabled = showBlockages !== undefined;
-  const seismicSignalsEnabled = showSeismicSignals !== undefined;
+  // Unlike the controls above, an unwired blockages/seismic toggle falls back to
+  // a Coming-soon stub rather than vanishing — the feature is announced, not
+  // absent. Both halves still required, so a half-wired toggle can't look live.
+  const blockagesEnabled = showBlockages !== undefined && onShowBlockagesChange !== undefined;
+  const seismicSignalsEnabled = showSeismicSignals !== undefined && onShowSeismicSignalsChange !== undefined;
+  // Same idiom, now applied to every control: value AND handler, or no control.
+  const baseMapEnabled = baseMapType !== undefined && onBaseMapTypeChange !== undefined;
+  const roadsEnabled = showRoads !== undefined && onShowRoadsChange !== undefined;
+  const nrcEnabled = showNrcLocations !== undefined && onShowNrcLocationsChange !== undefined;
+  const keepPanelsEnabled = keepPanelsOpen !== undefined && onKeepPanelsOpenChange !== undefined;
+  const dataViewEnabled = dataView !== undefined && onDataViewChange !== undefined;
+  const populationEnabled = showPopulation !== undefined && onShowPopulationChange !== undefined;
+  const boundariesEnabled = boundaryLevel !== undefined && onBoundaryLevelChange !== undefined;
   const t = useTranslations("map");
   const [active, setActive] = useState<PanelId | null>(null);
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
@@ -352,13 +378,23 @@ export function MapPanelBar({
   return (
     // Mobile: clear the status/safe area + floating burger. Desktop: below the filter bar.
     <Box
-      data-map-chrome-left
-      className="absolute z-20 top-14 left-4 sm:top-20"
+      data-map-chrome-left={placement === "left" ? true : undefined}
+      className={
+        placement === "right"
+          ? "absolute z-20 top-4 right-4 bottom-4 pointer-events-none"
+          : "absolute z-20 top-14 left-4 sm:top-20 bottom-4 pointer-events-none"
+      }
     >
-      <Group gap={4} align="flex-start" wrap="nowrap">
+      <Group
+        gap={4}
+        align="flex-start"
+        wrap="nowrap"
+        h="100%"
+        style={placement === "right" ? { flexDirection: "row-reverse" } : undefined}
+      >
 
         {/* Icon column — Filters is mobile-only (third button under Legend) */}
-        <Stack gap={4}>
+        <Stack gap={4} className="pointer-events-auto">
           <IconBtn icon={IconLayersLinked} active={active === "layers"} title={t("panels.layers")} onClick={() => toggle("layers")} testId="map-layers-toggle" tourId="map-layers" />
           <IconBtn icon={IconList}         active={active === "legend"} title={t("panels.legend")} onClick={() => toggle("legend")} />
           {filters != null && (
@@ -374,15 +410,18 @@ export function MapPanelBar({
           )}
         </Stack>
 
-        {/* Panel content — capped height + internal scroll on mobile */}
+        {/* Panel content — height capped to the MAP container (not the viewport),
+            so an embedded map (e.g. /detection's card) scrolls the panel
+            internally instead of clipping it. */}
         {active && (
           <Box
-            className="flex flex-col max-h-[min(52vh,calc(100dvh-160px))] sm:max-h-[min(72vh,calc(100vh-120px))]"
+            className="flex flex-col max-h-full pointer-events-auto"
             data-tour={active === "layers" ? "map-layers-panel" : undefined}
           style={{
             width: 260,
             maxWidth: "calc(100vw - 72px)",
-            // Frost: translucent fill + blur. Keep map container free of
+            // Frost tokens (globals.css): opaque by default, translucent + blurred
+            // on the full-bleed map route. Keep the map container free of
             // `isolation: isolate` so Chromium can sample the WebGL canvas.
             background: "var(--map-frost-bg-muted)",
             backdropFilter: "var(--map-frost-blur)",
@@ -397,70 +436,86 @@ export function MapPanelBar({
                 <PanelHeader>{t("panels.layers")}</PanelHeader>
                 <Box style={{ overflowY: "auto", flex: 1, minHeight: 0, WebkitOverflowScrolling: "touch" }}>
                 <Stack gap={0} px={12} py={10}>
-                  <SectionLabel>{t("panels.baseMap")}</SectionLabel>
-                  <SegmentedControl
-                    value={baseMapType}
-                    onChange={(v) => onBaseMapTypeChange(v as BaseMapType)}
-                    data={BASE_MAP_OPTIONS.map((o) => ({ value: o.value, label: t(`panels.${o.labelKey}`) }))}
-                    size="xs"
-                    fullWidth
-                    styles={{ label: { fontSize: 11, padding: "3px 6px" } }}
-                    mb={10}
-                  />
+                  {baseMapEnabled && (
+                    <>
+                      <SectionLabel>{t("panels.baseMap")}</SectionLabel>
+                      <SegmentedControl
+                        value={baseMapType}
+                        onChange={(v) => onBaseMapTypeChange(v as BaseMapType)}
+                        data={BASE_MAP_OPTIONS.map((o) => ({ value: o.value, label: t(`panels.${o.labelKey}`) }))}
+                        size="xs"
+                        fullWidth
+                        styles={{ label: { fontSize: 11, padding: "3px 6px" } }}
+                        mb={10}
+                      />
+                    </>
+                  )}
 
-                  <SectionLabel>{t("panels.overlays")}</SectionLabel>
-                  <LayerCheckRow
-                    label={t("panels.roads")}
-                    checked={showRoads}
-                    onChange={onShowRoadsChange}
-                  />
-
-                  <Divider color="var(--color-bg-muted)" my={10} />
+                  {roadsEnabled && (
+                    <>
+                      <SectionLabel>{t("panels.overlays")}</SectionLabel>
+                      <LayerCheckRow
+                        label={t("panels.roads")}
+                        checked={showRoads}
+                        onChange={onShowRoadsChange}
+                      />
+                      <Divider color="var(--color-bg-muted)" my={10} />
+                    </>
+                  )}
 
                   {/* "None" on the level select turns boundaries off — no separate Visible toggle */}
-                  <SectionLabel>{t("panels.boundaries")}</SectionLabel>
-                  <Select
-                    size="xs"
-                    value={boundaryLevel}
-                    onChange={(v) => onBoundaryLevelChange((v ?? "A1") as BoundaryLevel)}
-                    data={BOUNDARY_OPTIONS.map((o) => ({ value: o.value, label: t(`boundaries.${o.labelKey}`) }))}
-                    styles={{ input: { fontWeight: 600, fontSize: 12 } }}
-                  />
-
-                  <Divider color="var(--color-bg-muted)" my={10} />
+                  {boundariesEnabled && (
+                    <>
+                      <SectionLabel>{t("panels.boundaries")}</SectionLabel>
+                      <Select
+                        size="xs"
+                        value={boundaryLevel}
+                        onChange={(v) => onBoundaryLevelChange((v ?? "A1") as BoundaryLevel)}
+                        data={BOUNDARY_OPTIONS.map((o) => ({ value: o.value, label: t(`boundaries.${o.labelKey}`) }))}
+                        styles={{ input: { fontWeight: 600, fontSize: 12 } }}
+                      />
+                      <Divider color="var(--color-bg-muted)" my={10} />
+                    </>
+                  )}
 
                   {/* "None" data view hides markers — no separate Visible toggle */}
-                  <SectionLabel>{t("panels.markers")}</SectionLabel>
-                  <Box style={{ marginInlineStart: -6, paddingInlineEnd: 10 }}>
-                    <SegmentedControl
-                      value={dataView}
-                      onChange={(v) => onDataViewChange(v as DataView)}
-                      data={DATA_VIEW_OPTIONS.map((o) => ({ value: o.value, label: t(`dataViews.${o.labelKey}`) }))}
-                      size="xs"
-                      fullWidth
-                      styles={{
-                        root: {
-                          background: "transparent",
-                          padding: 0,
-                        },
-                        label: { fontSize: 11, padding: "3px 4px" },
-                      }}
-                      mb={6}
-                    />
-                  </Box>
+                  {dataViewEnabled && (
+                    <>
+                      <SectionLabel>{t("panels.markers")}</SectionLabel>
+                      <Box style={{ marginInlineStart: -6, paddingInlineEnd: 10 }}>
+                        <SegmentedControl
+                          value={dataView}
+                          onChange={(v) => onDataViewChange(v as DataView)}
+                          data={DATA_VIEW_OPTIONS.map((o) => ({ value: o.value, label: t(`dataViews.${o.labelKey}`) }))}
+                          size="xs"
+                          fullWidth
+                          styles={{
+                            root: {
+                              background: "transparent",
+                              padding: 0,
+                            },
+                            label: { fontSize: 11, padding: "3px 4px" },
+                          }}
+                          mb={6}
+                        />
+                      </Box>
+                      <Divider color="var(--color-bg-muted)" my={10} />
+                    </>
+                  )}
 
-                  <Divider color="var(--color-bg-muted)" my={10} />
-
-                  <SectionLabel>{t("panels.population")}</SectionLabel>
-                  <LayerCheckRow
-                    label={t("panels.population")}
-                    checked={showPopulation}
-                    onChange={onShowPopulationChange}
-                    trailing={populationLoading ? <Loader size={12} /> : undefined}
-                  />
-                  <LayerStubRow label={t("panels.idpDensity")} hint={t("panels.comingSoon")} />
-
-                  <Divider color="var(--color-bg-muted)" my={10} />
+                  {populationEnabled && (
+                    <>
+                      <SectionLabel>{t("panels.population")}</SectionLabel>
+                      <LayerCheckRow
+                        label={t("panels.population")}
+                        checked={showPopulation}
+                        onChange={onShowPopulationChange}
+                        trailing={populationLoading ? <Loader size={12} /> : undefined}
+                      />
+                      <LayerStubRow label={t("panels.idpDensity")} hint={t("panels.comingSoon")} />
+                      <Divider color="var(--color-bg-muted)" my={10} />
+                    </>
+                  )}
 
                   {/* Hazards: Seismic activity live when enabled */}
                   <SectionLabel>{t("panels.hazards")}</SectionLabel>
@@ -505,31 +560,37 @@ export function MapPanelBar({
                   ) : (
                     <LayerStubRow label={t("panels.blockages")} hint={t("panels.comingSoon")} />
                   )}
-                  <LayerCheckRow
-                    label={t("panels.nrcLocations")}
-                    checked={showNrcLocations}
-                    onChange={onShowNrcLocationsChange}
-                  />
-                  {showNrcLocations && (
-                    <Text
-                      size="xs"
-                      c="var(--color-text-muted)"
-                      style={{ fontSize: 10, lineHeight: 1.35, marginTop: 2, marginBottom: 2 }}
-                    >
-                      {t("nrcOffices.centroidDisclaimer")}
-                    </Text>
+                  {nrcEnabled && (
+                    <>
+                      <LayerCheckRow
+                        label={t("panels.nrcLocations")}
+                        checked={showNrcLocations}
+                        onChange={onShowNrcLocationsChange}
+                      />
+                      {showNrcLocations && (
+                        <Text
+                          size="xs"
+                          c="var(--color-text-muted)"
+                          style={{ fontSize: 10, lineHeight: 1.35, marginTop: 2, marginBottom: 2 }}
+                        >
+                          {t("nrcOffices.centroidDisclaimer")}
+                        </Text>
+                      )}
+                    </>
                   )}
 
                   {/* Interaction preference — not cartography (desktop only) */}
-                  <Box visibleFrom="sm">
-                    <Divider color="var(--color-bg-muted)" my={10} />
-                    <SectionLabel>{t("panels.panelsSection")}</SectionLabel>
-                    <LayerCheckRow
-                      label={t("panels.keepPanelsOpen")}
-                      checked={keepPanelsOpen}
-                      onChange={onKeepPanelsOpenChange}
-                    />
-                  </Box>
+                  {keepPanelsEnabled && (
+                    <Box visibleFrom="sm">
+                      <Divider color="var(--color-bg-muted)" my={10} />
+                      <SectionLabel>{t("panels.panelsSection")}</SectionLabel>
+                      <LayerCheckRow
+                        label={t("panels.keepPanelsOpen")}
+                        checked={keepPanelsOpen}
+                        onChange={onKeepPanelsOpenChange}
+                      />
+                    </Box>
+                  )}
                 </Stack>
                 </Box>
               </>

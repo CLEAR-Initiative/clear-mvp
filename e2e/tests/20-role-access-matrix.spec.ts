@@ -6,7 +6,8 @@
  *
  * WHAT RUNS AUTOMATICALLY (green baseline):
  *   • deny-side checks — a surface/control that must be HIDDEN for a role, and
- *     the /admin → /dashboard redirect. Absence is robust regardless of seed data.
+ *     the middleware redirects a case names in `onDeny` (/admin → /dashboard,
+ *     /brief → /no-access). Absence is robust regardless of seed data.
  *   • load-time presence — nav links, tabs, and inbox filter pills that render
  *     from access alone (no record needed).
  *
@@ -31,7 +32,15 @@ type Case = {
   id: string; area: string; action: string; route: string;
   selectors: string[]; flags: string[]; source: string; note?: string;
   expect?: Record<string, string>;
+  /** "redirect <path>": middleware sends a denied persona there. */
+  onDeny?: string;
 };
+
+/** The path a denied persona is redirected to, when the case says so. */
+function denyRedirect(c: Case): string | null {
+  const m = /^redirect (\/\S*)$/.exec(c.onDeny ?? "");
+  return m ? m[1]! : null;
+}
 type RoleCase = { id: string; action: string; route: string; source: string; roles: Record<string, string> };
 type Matrix = {
   cases: Case[]; roleCases: RoleCase[];
@@ -82,7 +91,7 @@ function absenceAssertable(sel: string): boolean {
 
 /**
  * Only the robust deny-side runs automatically: a control/surface that must be
- * HIDDEN for this role, or the /admin → /dashboard redirect. Positive ("can do
+ * HIDDEN for this role, or a middleware redirect (`onDeny`). Positive ("can do
  * it") cases and anything needing a record/action stay `test.fixme` — their
  * selectors are explorer-reported hints that need verifying against the build.
  */
@@ -90,18 +99,19 @@ function autoRunnable(c: Case, status: string): boolean {
   const spec = STATUS[status];
   if (!spec) return false;
   if (routeOf(c.route).dynamic) return false;
-  if (c.id.startsWith("nav-admin") && spec.kind === "hidden") return true; // redirect
+  if (denyRedirect(c) && spec.kind === "hidden") return true; // middleware redirect
   if (spec.kind === "hidden") return (c.selectors || []).some(absenceAssertable);
   return false;
 }
 
 async function assertCase(page: Page, c: Case) {
   const { path } = routeOf(c.route);
-  if (c.id.startsWith("nav-admin")) {
-    // Non-admins are bounced off /admin to /dashboard.
+  const redirect = denyRedirect(c);
+  if (redirect) {
+    // Middleware bounces the persona (e.g. /admin → /dashboard, /brief → /no-access).
     await page.goto(path, { waitUntil: "domcontentloaded" });
-    await page.waitForURL("**/dashboard", { timeout: 20_000 });
-    expect(page.url()).toContain("/dashboard");
+    await page.waitForURL(`**${redirect}`, { timeout: 20_000 });
+    expect(new URL(page.url()).pathname).toBe(redirect);
     return;
   }
   await page.goto(path, { waitUntil: "domcontentloaded" });

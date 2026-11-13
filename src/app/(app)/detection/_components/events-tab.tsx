@@ -32,6 +32,7 @@ import { MapPanelBar } from "~/app/(app)/map/_components/map-panel-bar";
 import { useMarkerHover } from "~/hooks/use-marker-hover";
 import { useDetailKeyboardNav } from "~/hooks/use-detail-keyboard-nav";
 import { EventBulkBar } from "./event-bulk-bar";
+import { BidiTitle } from "~/components/ui/bidi-title";
 
 const CrisisMap = dynamic(
   () => import("~/components/map/crisis-map").then((m) => m.CrisisMap),
@@ -323,7 +324,7 @@ export function EventsTab({
                         {sourceName && <Badge size="xs" variant="light" color="gray" style={{ fontSize: 10 }}>{sourceName}</Badge>}
                       </Group>
                       <Text fw={600} size="sm" c="var(--color-text-primary)" lineClamp={1} mb={4}>
-                        {displayTitle}
+                        <BidiTitle>{displayTitle}</BidiTitle>
                       </Text>
                       <Group gap={12}>
                         {resolveLocationName(location) && (
@@ -406,12 +407,10 @@ export function EventsTab({
               onMarkerHover={onMarkerHover}
             />
             <MapPanelBar
-              dataView="event"
-              onDataViewChange={() => {}}
               showPopulation={showPopulation}
               onShowPopulationChange={setShowPopulation}
-              boundaryLevel={boundaryLevel ?? "A1"}
-              onBoundaryLevelChange={onBoundaryLevelChange ?? (() => {})}
+              boundaryLevel={boundaryLevel}
+              onBoundaryLevelChange={onBoundaryLevelChange}
             />
           </Box>
         </Card>

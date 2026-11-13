@@ -70,7 +70,7 @@ export async function middleware(request: NextRequest) {
     request.cookies.get("better-auth.session_token");
 
   if (!sessionCookie) {
-    return redirectToLogin(request, pathname);
+    return redirectToLogin(request);
   }
 
   // Forward the full Cookie header so Better Auth can use its in-cookie
@@ -81,7 +81,7 @@ export async function middleware(request: NextRequest) {
   const result = await verifySession(cookieHeader);
 
   if (!result.ok && result.reason === "unauthorized") {
-    return redirectToLogin(request, pathname);
+    return redirectToLogin(request);
   }
 
   // Transient backend failure → let the request through. Downstream resolvers
@@ -106,6 +106,11 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL("/no-access", request.url));
   }
 
+  // Briefs are a hidden, admin-only page; clear-api's FORBIDDEN is the real gate.
+  if ((pathname === "/brief" || pathname.startsWith("/brief/")) && !isPlatformAdmin(result.role)) {
+    return NextResponse.redirect(new URL("/no-access", request.url));
+  }
+
   const response = nextWithPathname(request, pathname);
 
   // Seed the locale cookie from the user's persisted language preference
@@ -124,9 +129,13 @@ export async function middleware(request: NextRequest) {
   return response;
 }
 
-function redirectToLogin(request: NextRequest, pathname: string) {
+function redirectToLogin(request: NextRequest) {
   const loginUrl = new URL("/auth/login", request.url);
-  loginUrl.searchParams.set("callbackUrl", pathname);
+  // Keep the query: pages such as /metrics hold their whole state in it, so a
+  // shared link must open the same view after sign-in. The login page checks
+  // the value with safeCallbackUrl before it navigates.
+  const { pathname, search } = request.nextUrl;
+  loginUrl.searchParams.set("callbackUrl", pathname + search);
   return NextResponse.redirect(loginUrl);
 }
 

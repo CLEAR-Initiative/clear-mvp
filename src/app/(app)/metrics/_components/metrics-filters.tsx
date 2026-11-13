@@ -24,6 +24,13 @@ export function metricsQueryInput(values: MetricsFilterValues): { from?: string;
   return input;
 }
 
+/** The Agent query's input: the dates alone. The Agent is not scoped to a
+ * country, so the country pick never reaches it. */
+export function agentQueryInput(values: MetricsFilterValues): { from?: string; to?: string } {
+  const { from, to } = metricsQueryInput(values);
+  return { ...(from ? { from } : {}), ...(to ? { to } : {}) };
+}
+
 /** Date range and country for the metrics. Every country, not the team's:
  * this is a platform-admin page. Only countries from the loaded location
  * tree are offered, so a pick always has an id to filter by — never

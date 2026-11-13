@@ -5,6 +5,7 @@ import type {
   GqlGroundInboxThread,
   GqlHotlineInbox,
   GqlLocationChallengeToDecide,
+  GqlUnresolvedPlaceName,
   GqlReviewCaseProposal,
 } from "~/lib/types/graphql";
 import { locationChain, signalLocationOf, signalPlaceLabel } from "./location-challenge";
@@ -45,24 +46,30 @@ export interface GroundTranslationState {
 /** The Inbox's tabs: hotline threads ("community signals"), the proposed
  * signals (web cases) and Location challenges. The page shows only the tabs
  * whose kind the reader may see. */
-export const INBOX_TABS = ["community", "proposals", "locations"] as const;
+export const INBOX_TABS = ["community", "proposals", "locations", "places"] as const;
 export type InboxTab = (typeof INBOX_TABS)[number];
 
 /** The filters inside the tabs: every hotline thread ("community"), the
  * three hotline classifications, the proposed signals and the Location
  * challenges. */
-export const INBOX_FILTERS = ["community", "reports", "unclassified", "chatter", "proposals", "locations"] as const;
+export const INBOX_FILTERS = ["community", "reports", "unclassified", "chatter", "proposals", "locations", "places"] as const;
 export type InboxFilter = (typeof INBOX_FILTERS)[number];
 
 /** The tab a filter belongs to. */
 export function tabOf(filter: InboxFilter): InboxTab {
-  return filter === "proposals" || filter === "locations" ? filter : "community";
+  return filter === "proposals" || filter === "locations" || filter === "places" ? filter : "community";
 }
 
 /** Which tabs apply to a reader who sees these kinds. */
-export function tabsFor(access: { hotline: boolean; proposals: boolean; locations: boolean }): InboxTab[] {
+export function tabsFor(access: { hotline: boolean; proposals: boolean; locations: boolean; places?: boolean }): InboxTab[] {
   return INBOX_TABS.filter((tab) =>
-    tab === "proposals" ? access.proposals : tab === "locations" ? access.locations : access.hotline,
+    tab === "proposals"
+      ? access.proposals
+      : tab === "locations"
+        ? access.locations
+        : tab === "places"
+          ? !!access.places
+          : access.hotline,
   );
 }
 
@@ -140,7 +147,7 @@ export interface InboxAttachment {
 }
 
 /** What an Inbox entry is about; each kind has its own row and pane. */
-export type InboxEntryKind = "hotline_thread" | "cases" | "location_challenge";
+export type InboxEntryKind = "hotline_thread" | "cases" | "location_challenge" | "place_name";
 
 /** What every kind of entry carries: enough to list, select, search and
  * sort it. */
@@ -213,7 +220,16 @@ export interface LocationChallengeEntry extends InboxEntryBase {
   sentAt: string;
 }
 
-export type InboxEntry = HotlineEntry | CaseGroupEntry | LocationChallengeEntry;
+/** One unresolved place name: a place name, as written in Signals, that
+ * geocoding could not place (clear-api ADR-0019). The id is `place:<rowId>`. */
+export interface PlaceNameEntry extends InboxEntryBase {
+  kind: "place_name";
+  row: GqlUnresolvedPlaceName;
+  /** When a Signal last named it (ISO). */
+  sentAt: string;
+}
+
+export type InboxEntry = HotlineEntry | CaseGroupEntry | LocationChallengeEntry | PlaceNameEntry;
 
 export function isHotlineEntry(entry: InboxEntry): entry is HotlineEntry {
   return entry.kind === "hotline_thread";
@@ -225,6 +241,33 @@ export function isCaseGroupEntry(entry: InboxEntry): entry is CaseGroupEntry {
 
 export function isLocationChallengeEntry(entry: InboxEntry): entry is LocationChallengeEntry {
   return entry.kind === "location_challenge";
+}
+
+export function isPlaceNameEntry(entry: InboxEntry): entry is PlaceNameEntry {
+  return entry.kind === "place_name";
+}
+
+/** The id of an unresolved place name's entry. */
+export function placeNameEntryId(rowId: string): string {
+  return `place:${rowId}`;
+}
+
+/**
+ * Open unresolved place names as Review items, one per row (clear-api lists
+ * the names most Signals use first). `text` carries the Arabic spelling, the
+ * state and each Signal's own spelling, so search finds a row by any of them.
+ */
+export function buildPlaceNameEntries(rows: GqlUnresolvedPlaceName[]): PlaceNameEntry[] {
+  return rows.map((row) => ({
+    id: placeNameEntryId(row.id),
+    kind: "place_name",
+    row,
+    title: row.nameAsWritten,
+    text: [row.nameAr, row.stateLocation?.name, row.nameNorm, ...row.signals.map((s) => s.nameAsWritten)]
+      .filter((part): part is string => !!part)
+      .join(" "),
+    sentAt: row.lastSeenAt,
+  }));
 }
 
 /** The id of a Location challenge's entry. */
@@ -508,6 +551,8 @@ export function matchesFilter(entry: InboxEntry, filter: InboxFilter): boolean {
       return isCaseGroupEntry(entry);
     case "locations":
       return isLocationChallengeEntry(entry);
+    case "places":
+      return isPlaceNameEntry(entry);
   }
 }
 
@@ -532,7 +577,10 @@ export function sortEntries<T extends InboxEntry>(entries: T[], sort: InboxSort)
   const byTime = (a: InboxEntry, b: InboxEntry) => Date.parse(b.sentAt) - Date.parse(a.sentAt);
   const sorted = [...entries];
   if (sort === "newest") return sorted.sort(byTime);
-  return sorted.sort((a, b) => entryRank(a) - entryRank(b) || byTime(a, b));
+  // Place names: the ones most Signals use first (one answer moves them all).
+  const bySignals = (a: InboxEntry, b: InboxEntry) =>
+    isPlaceNameEntry(a) && isPlaceNameEntry(b) ? b.row.signalCount - a.row.signalCount : 0;
+  return sorted.sort((a, b) => entryRank(a) - entryRank(b) || bySignals(a, b) || byTime(a, b));
 }
 
 export function visibleEntries<T extends InboxEntry>(
@@ -554,7 +602,7 @@ export function entryWeight(entry: InboxEntry): number {
 }
 
 export function countByFilter(entries: InboxEntry[]): Record<InboxFilter, number> {
-  const counts: Record<InboxFilter, number> = { community: 0, reports: 0, unclassified: 0, chatter: 0, proposals: 0, locations: 0 };
+  const counts: Record<InboxFilter, number> = { community: 0, reports: 0, unclassified: 0, chatter: 0, proposals: 0, locations: 0, places: 0 };
   for (const e of entries) {
     for (const f of INBOX_FILTERS) if (matchesFilter(e, f)) counts[f] += entryWeight(e);
   }
@@ -568,7 +616,7 @@ export function countByFilter(entries: InboxEntry[]): Record<InboxFilter, number
  * `countByFilter`: work still waiting after it has been opened.
  */
 export function countUnreadByFilter(entries: InboxEntry[], readIds: ReadonlySet<string>): Record<InboxFilter, number> {
-  const counts: Record<InboxFilter, number> = { community: 0, reports: 0, unclassified: 0, chatter: 0, proposals: 0, locations: 0 };
+  const counts: Record<InboxFilter, number> = { community: 0, reports: 0, unclassified: 0, chatter: 0, proposals: 0, locations: 0, places: 0 };
   for (const e of entries) {
     const weight = unreadWeight(e, readIds);
     for (const f of INBOX_FILTERS) if (matchesFilter(e, f)) counts[f] += weight;

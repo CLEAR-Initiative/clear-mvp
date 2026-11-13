@@ -33,7 +33,11 @@ export function WelcomeStepper({ activeStep }: WelcomeStepperProps) {
             >
               {index + 1}
             </Box>
-            <Text size="sm" fw={active ? 700 : 500} c={active ? "#161618" : "#71717a"}>
+            <Text
+              size="sm"
+              fw={active ? 700 : 500}
+              c={active ? "var(--color-text-primary)" : "var(--color-text-secondary)"}
+            >
               {label}
             </Text>
             {index < steps.length - 1 && (
