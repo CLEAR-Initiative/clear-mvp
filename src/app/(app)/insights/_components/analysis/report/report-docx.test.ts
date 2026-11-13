@@ -1,8 +1,9 @@
-import { describe, expect, it } from "vitest";
+import { inflateRawSync } from "node:zlib";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { Packer } from "docx";
 import type { Analysis } from "~/server/api/mappers/analysis";
 import { REPORT_SECTIONS, projectReportMap } from "~/lib/analysis-report";
-import { buildReportDocument, type ReportLabels } from "./report-docx";
+import { buildReportDocument, drawReportMap, type ReportLabels } from "./report-docx";
 
 const square = (x: number, y: number, d = 1) => ({
   type: "Polygon",
@@ -56,6 +57,29 @@ const PNG = Uint8Array.from(atob("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
 
 const kpis = { inside: 414252, abroad: null, displacedTotal: 414252, returned: null, inNeed: { value: 200000, low: null, high: null, newestAt: null }, fundingReceived: 1.1e9, fundingRequired: 4.2e9 };
 
+/** One file from the .docx zip, read through the zip's central directory. */
+function zipEntry(buf: Buffer, name: string): string {
+  const end = buf.lastIndexOf(Buffer.from([0x50, 0x4b, 0x05, 0x06]));
+  let at = buf.readUInt32LE(end + 16);
+  for (let i = 0; i < buf.readUInt16LE(end + 10); i++) {
+    const method = buf.readUInt16LE(at + 10);
+    const size = buf.readUInt32LE(at + 20);
+    const nameLength = buf.readUInt16LE(at + 28);
+    const skip = nameLength + buf.readUInt16LE(at + 30) + buf.readUInt16LE(at + 32);
+    const local = buf.readUInt32LE(at + 42);
+    if (buf.toString("utf8", at + 46, at + 46 + nameLength) === name) {
+      const start = local + 30 + buf.readUInt16LE(local + 26) + buf.readUInt16LE(local + 28);
+      const raw = buf.subarray(start, start + size);
+      return (method === 8 ? inflateRawSync(raw) : raw).toString("utf8");
+    }
+    at += 46 + skip;
+  }
+  throw new Error(`${name} not in the zip`);
+}
+
+/** The visible text of a Word XML part, run by run. */
+const text = (xml: string) => [...xml.matchAll(/<w:t(?: [^>]*)?>([^<]*)<\/w:t>/g)].map((m) => m[1]).join("");
+
 /** The .docx bytes as a binary string: file names in a zip are stored uncompressed. */
 async function build(overrides: Partial<Parameters<typeof buildReportDocument>[0]> = {}) {
   const map = projectReportMap({
@@ -92,6 +116,34 @@ describe("buildReportDocument", () => {
   it("leaves the map out when it could not be drawn", async () => {
     const { names } = await build({ mapPng: null });
     expect(names).not.toMatch(/word\/media\//);
+  }, 30_000);
+
+  it("writes the findings, references, diacritics and sources", async () => {
+    const { buf } = await build();
+    const body = text(zipEntry(buf, "word/document.xml"));
+    expect(body).toContain("Drone strike on Mazrub killed up to 9 on 25 Sep. [2]");
+    expect(body).toContain("Cholera: 45 cases in Bara. [1]");
+    expect(body).toContain("Safe water in El Fāshir camps");
+    expect(body).toContain("https://reliefweb.int/r1");
+    expect(zipEntry(buf, "word/_rels/document.xml.rels")).toContain('Target="https://reliefweb.int/r1"');
+  }, 30_000);
+
+  it("numbers pages with Word fields around the translated label", async () => {
+    const { buf } = await build();
+    const footer = zipEntry(buf, "word/footer1.xml");
+    expect(footer).toMatch(/PAGE/);
+    expect(footer).toMatch(/NUMPAGES/);
+    expect(text(footer)).toContain("CLEAR · Bara");
+    expect(text(footer)).toMatch(/Page .* of /);
+  }, 30_000);
+
+  it("keeps only the chosen sections, in the chosen order", async () => {
+    const { buf } = await build({ sections: ["sources", "keyDevelopments"] });
+    const body = text(zipEntry(buf, "word/document.xml"));
+    expect(body.indexOf("1. Sources")).toBeGreaterThanOrEqual(0);
+    expect(body.indexOf("2. Key developments")).toBeGreaterThan(body.indexOf("1. Sources"));
+    expect(body).not.toContain("Scope map");
+    expect(body).not.toContain("Cholera: 45 cases in Bara.");
   }, 30_000);
 
   it("builds a Sudan-sized report in time", async () => {
@@ -178,4 +230,20 @@ describe("buildReportDocument", () => {
     expect(buf.byteLength).toBeGreaterThan(1000);
     expect(buf.subarray(0, 2).toString()).toBe("PK");
   }, 30_000);
+});
+
+describe("drawReportMap", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  it("returns null instead of throwing when the canvas fails", async () => {
+    vi.stubGlobal("Path2D", class {});
+    vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockImplementation(() => {
+      throw new Error("canvas blocked");
+    });
+    const map = projectReportMap({ country: square(22, 9, 16), areas: [], events: [], width: 515, height: 250 });
+    await expect(drawReportMap(map!)).resolves.toBeNull();
+  });
 });

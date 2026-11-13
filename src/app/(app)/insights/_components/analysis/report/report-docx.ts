@@ -412,47 +412,52 @@ export function buildReportDocx(input: ReportInput): Promise<Blob> {
 
 /**
  * Draw the scope map onto a canvas and return it as PNG bytes. Null where the
- * browser can't draw it (no canvas or Path2D, as in tests); the report then
- * leaves the map out rather than failing.
+ * browser can't draw it (no canvas or Path2D, as in tests) or drawing throws;
+ * the report then leaves the map out rather than failing.
  */
 export async function drawReportMap(map: ReportMap): Promise<Uint8Array | null> {
   if (typeof document === "undefined" || typeof Path2D === "undefined") return null;
-  const canvas = document.createElement("canvas");
-  canvas.width = map.width * MAP_SCALE;
-  canvas.height = map.height * MAP_SCALE;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return null;
-  const hex = (c: string) => `#${c}`;
-  ctx.scale(MAP_SCALE, MAP_SCALE);
-  ctx.fillStyle = hex(C.bgMuted);
-  ctx.fillRect(0, 0, map.width, map.height);
-  ctx.beginPath();
-  ctx.rect(0, 0, map.width, map.height);
-  ctx.clip();
-  if (map.country) {
-    const country = new Path2D(map.country);
-    ctx.fillStyle = "#FFFFFF";
-    ctx.fill(country);
-    ctx.strokeStyle = hex(C.borderDark);
-    ctx.lineWidth = 0.8;
-    ctx.stroke(country);
-  }
-  for (const d of map.areas) {
-    const area = new Path2D(d);
-    ctx.fillStyle = hex(C.accentLight);
-    ctx.fill(area);
-    ctx.strokeStyle = hex(C.accent);
-    ctx.lineWidth = 1.2;
-    ctx.stroke(area);
-  }
-  ctx.globalAlpha = 0.85;
-  for (const dot of map.dots) {
-    const sev = dot.severity ?? 0;
-    ctx.fillStyle = hex(sev >= 4 ? C.critical : sev >= 3 ? C.warning : C.info);
+  try {
+    const canvas = document.createElement("canvas");
+    canvas.width = map.width * MAP_SCALE;
+    canvas.height = map.height * MAP_SCALE;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return null;
+    const hex = (c: string) => `#${c}`;
+    ctx.scale(MAP_SCALE, MAP_SCALE);
+    ctx.fillStyle = hex(C.bgMuted);
+    ctx.fillRect(0, 0, map.width, map.height);
     ctx.beginPath();
-    ctx.arc(dot.x, dot.y, 2.2, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.rect(0, 0, map.width, map.height);
+    ctx.clip();
+    if (map.country) {
+      const country = new Path2D(map.country);
+      ctx.fillStyle = "#FFFFFF";
+      ctx.fill(country);
+      ctx.strokeStyle = hex(C.borderDark);
+      ctx.lineWidth = 0.8;
+      ctx.stroke(country);
+    }
+    for (const d of map.areas) {
+      const area = new Path2D(d);
+      ctx.fillStyle = hex(C.accentLight);
+      ctx.fill(area);
+      ctx.strokeStyle = hex(C.accent);
+      ctx.lineWidth = 1.2;
+      ctx.stroke(area);
+    }
+    ctx.globalAlpha = 0.85;
+    for (const dot of map.dots) {
+      const sev = dot.severity ?? 0;
+      ctx.fillStyle = hex(sev >= 4 ? C.critical : sev >= 3 ? C.warning : C.info);
+      ctx.beginPath();
+      ctx.arc(dot.x, dot.y, 2.2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/png"));
+    return blob ? new Uint8Array(await blob.arrayBuffer()) : null;
+  } catch {
+    // A blocked or failing canvas costs the map, not the report.
+    return null;
   }
-  const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/png"));
-  return blob ? new Uint8Array(await blob.arrayBuffer()) : null;
 }
