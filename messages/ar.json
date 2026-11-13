@@ -3575,7 +3575,7 @@
         "empty": "لا يوجد محتوى لهذا القسم في هذا التحليل",
         "alwaysIncluded": "تُضمَّن دائمًا النسخة والمؤلف وأرقام الصفحات.",
         "cancel": "إلغاء",
-        "create": "تنزيل PDF ({count, plural, one {قسم واحد} two {قسمان} few {# أقسام} many {# قسمًا} other {# قسم}})",
+        "create": "تنزيل ملف Word ({count, plural, one {قسم واحد} two {قسمان} few {# أقسام} many {# قسمًا} other {# قسم}})",
         "counts": {
           "keyDevelopments": "الملخص و{count, plural, =0 {بلا نتائج رئيسية} one {نتيجة رئيسية واحدة} two {نتيجتان رئيسيتان} few {# نتائج رئيسية} many {# نتيجة رئيسية} other {# نتيجة رئيسية}}",
           "map": "النطاق مع {count, plural, one {حدث واحد} two {حدثين} few {# أحداث} many {# حدثًا} other {# حدث}}",

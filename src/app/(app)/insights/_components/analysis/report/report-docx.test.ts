@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { renderToBuffer } from "@react-pdf/renderer";
+import { Packer } from "docx";
 import type { Analysis } from "~/server/api/mappers/analysis";
 import { REPORT_SECTIONS, projectReportMap } from "~/lib/analysis-report";
-import { ReportDocument, type ReportLabels } from "./report-document";
+import { buildReportDocument, type ReportLabels } from "./report-docx";
 
 const square = (x: number, y: number, d = 1) => ({
   type: "Polygon",
@@ -48,27 +48,53 @@ const labels: ReportLabels = {
   displacement: "What is forcing people out", priorityNeeds: "Priority needs", responseActivities: "Response activities",
   noResponse: "None reported.", outlook: "Outlook", mostLikely: "Most likely", bestCase: "Best case", worstCase: "Worst case",
   sources: "Sources", eventLabel: "Event", hapiFigure: "HAPI figure", provenance: "Provenance", footer: "CLEAR · Bara",
-  page: (n, t) => `Page ${n} of ${t}`, severity: (k) => k,
+  page: (n, total) => `Page ${n} of ${total}`, severity: (k) => k,
 };
 
-describe("ReportDocument", () => {
-  it("renders a PDF with the map, figures and sources", async () => {
-    const map = projectReportMap({
-      country: square(22, 9, 16),
-      areas: [square(30, 13)],
-      events: [{ point: [30.5, 13.5], severity: 5 }, { point: [45, 40], severity: 2 }],
-      width: 515,
-      height: 250,
-    });
-    expect(map?.dots).toHaveLength(1);
-    const kpis = { inside: 414252, abroad: null, displacedTotal: 414252, returned: null, inNeed: { value: 200000, low: null, high: null, newestAt: null }, fundingReceived: 1.1e9, fundingRequired: 4.2e9 };
-    const buf = await renderToBuffer(
-      <ReportDocument sections={[...REPORT_SECTIONS]} data={data} kpis={kpis} map={map} labels={labels} scopeName="Bara, North Kordofan, Sudan" generatedLabel="Report created 29 Sep 2026 by admin@clearinitiative.io" />,
-    );
-    expect(buf.subarray(0, 5).toString()).toBe("%PDF-");
+/** A 1x1 PNG, standing in for the drawn map (tests have no canvas). */
+const PNG = Uint8Array.from(atob("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="), (c) => c.charCodeAt(0));
+
+const kpis = { inside: 414252, abroad: null, displacedTotal: 414252, returned: null, inNeed: { value: 200000, low: null, high: null, newestAt: null }, fundingReceived: 1.1e9, fundingRequired: 4.2e9 };
+
+/** The .docx bytes as a binary string: file names in a zip are stored uncompressed. */
+async function build(overrides: Partial<Parameters<typeof buildReportDocument>[0]> = {}) {
+  const map = projectReportMap({
+    country: square(22, 9, 16),
+    areas: [square(30, 13)],
+    events: [{ point: [30.5, 13.5], severity: 5 }],
+    width: 515,
+    height: 250,
+  });
+  const doc = buildReportDocument({
+    sections: [...REPORT_SECTIONS],
+    data,
+    kpis,
+    map,
+    mapPng: PNG,
+    labels,
+    scopeName: "Bara, North Kordofan, Sudan",
+    generatedLabel: "Report created 29 Sep 2026 by admin@clearinitiative.io",
+    ...overrides,
+  });
+  const buf = await Packer.toBuffer(doc);
+  return { buf, names: buf.toString("latin1") };
+}
+
+describe("buildReportDocument", () => {
+  it("builds a Word file with the map image", async () => {
+    const { buf, names } = await build();
+    expect(buf.subarray(0, 2).toString()).toBe("PK");
+    expect(names).toContain("word/document.xml");
+    expect(names).toContain("word/footer");
+    expect(names).toMatch(/word\/media\/[^"]+\.png/);
   }, 30_000);
 
-  it("renders a Sudan-sized report to a PDF file", async () => {
+  it("leaves the map out when it could not be drawn", async () => {
+    const { names } = await build({ mapPng: null });
+    expect(names).not.toMatch(/word\/media\//);
+  }, 30_000);
+
+  it("builds a Sudan-sized report in time", async () => {
     const sentence = "Fighting, displacement and disease continue across Sudan. ";
     const paragraph = (label: string) => `${label}: ${sentence.repeat(12)}`;
     const lines = (n: number, label: string) => Array.from({ length: n }, (_, i) => paragraph(`${label} ${i}`));
@@ -137,19 +163,19 @@ describe("ReportDocument", () => {
       fundingRequired: 4.2e9,
     };
     const started = Date.now();
-    const buf = await renderToBuffer(
-      <ReportDocument
-        sections={[...REPORT_SECTIONS]}
-        data={sudan}
-        kpis={kpis}
-        map={map}
-        labels={{ ...labels, scopeKind: "Country analysis", footer: "CLEAR · Sudan" }}
-        scopeName="Sudan"
-        generatedLabel="Report created 27 Oct 2026 by analyst@clearinitiative.io"
-      />,
-    );
+    const doc = buildReportDocument({
+      sections: [...REPORT_SECTIONS],
+      data: sudan,
+      kpis,
+      map,
+      mapPng: PNG,
+      labels: { ...labels, scopeKind: "Country analysis", footer: "CLEAR · Sudan" },
+      scopeName: "Sudan",
+      generatedLabel: "Report created 27 Oct 2026 by analyst@clearinitiative.io",
+    });
+    const buf = await Packer.toBuffer(doc);
     expect(Date.now() - started).toBeLessThan(25_000);
     expect(buf.byteLength).toBeGreaterThan(1000);
-    expect(buf.subarray(0, 5).toString()).toBe("%PDF-");
+    expect(buf.subarray(0, 2).toString()).toBe("PK");
   }, 30_000);
 });

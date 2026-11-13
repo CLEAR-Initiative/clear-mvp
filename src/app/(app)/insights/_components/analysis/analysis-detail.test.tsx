@@ -98,8 +98,7 @@ vi.mock("~/trpc/react", () => ({
       }),
   },
 }));
-vi.mock("@react-pdf/renderer", () => ({ pdf: () => ({ toBlob: async () => new Blob([]) }) }));
-vi.mock("./report/report-document", () => ({ ReportDocument: () => null }));
+vi.mock("./report/report-docx", () => ({ buildReportDocx: async () => new Blob([]), drawReportMap: async () => null }));
 
 class ResizeObserverStub {
   observe() {}

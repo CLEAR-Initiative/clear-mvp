@@ -153,7 +153,7 @@ export const REPORT_BUILD_TIMEOUT_MS = 25_000;
 /** Resolves with `work`, or rejects once `ms` passes without a result. */
 export function withDeadline<T>(work: Promise<T>, ms: number): Promise<T> {
   return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error("PDF build timed out")), ms);
+    const timer = setTimeout(() => reject(new Error("Report build timed out")), ms);
     work.then(
       (value) => {
         clearTimeout(timer);
@@ -161,14 +161,14 @@ export function withDeadline<T>(work: Promise<T>, ms: number): Promise<T> {
       },
       (error: unknown) => {
         clearTimeout(timer);
-        reject(error instanceof Error ? error : new Error("PDF build failed"));
+        reject(error instanceof Error ? error : new Error("Report build failed"));
       },
     );
   });
 }
 
 /** "sitrep-sheikan-north-kordofan-sudan-2026-09-29.pdf" */
-export function reportFileName(scopeName: string, at: Date, prefix = "sitrep"): string {
+export function reportFileName(scopeName: string, at: Date, prefix = "sitrep", extension = "pdf"): string {
   const slug = scopeName
     .normalize("NFKD")
     .replace(/\p{M}/gu, "")
@@ -176,7 +176,7 @@ export function reportFileName(scopeName: string, at: Date, prefix = "sitrep"): 
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "")
     .slice(0, 80);
-  return `${prefix}-${slug || "analysis"}-${at.toISOString().slice(0, 10)}.pdf`;
+  return `${prefix}-${slug || "analysis"}-${at.toISOString().slice(0, 10)}.${extension}`;
 }
 
 /** Report sections in their default order. Provenance and page numbers are always included. */

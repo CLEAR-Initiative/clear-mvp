@@ -66,6 +66,10 @@ describe("analysis report helpers", () => {
       "brief-daily-brief-sudan-2026-10-30.pdf",
     );
   });
+
+  it("takes another file extension", () => {
+    expect(reportFileName("Sudan", new Date("2026-10-30T08:00:00Z"), "sitrep", "docx")).toBe("sitrep-sudan-2026-10-30.docx");
+  });
 });
 
 describe("report sections", () => {

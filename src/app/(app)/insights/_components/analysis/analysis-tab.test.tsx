@@ -164,14 +164,12 @@ vi.mock("~/trpc/react", () => ({
   },
 }));
 
-const pdfSections = vi.fn();
-const pdfToBlob = vi.fn(async () => new Blob(["%PDF-"]));
-vi.mock("@react-pdf/renderer", () => ({
-  pdf: (el: { props: { sections: string[] } }) => (
-    pdfSections(el.props.sections), { toBlob: () => pdfToBlob() }
-  ),
+const reportSections = vi.fn();
+const reportToBlob = vi.fn(async () => new Blob(["PK"]));
+vi.mock("./report/report-docx", () => ({
+  buildReportDocx: (input: { sections: string[] }) => (reportSections(input.sections), reportToBlob()),
+  drawReportMap: async () => null,
 }));
-vi.mock("./report/report-document", () => ({ ReportDocument: () => null }));
 
 class ResizeObserverStub {
   observe() {}
@@ -316,7 +314,7 @@ afterEach(() => {
   cleanup();
   vi.clearAllMocks();
   vi.useRealTimers();
-  pdfToBlob.mockImplementation(async () => new Blob(["%PDF-"]));
+  reportToBlob.mockImplementation(async () => new Blob(["%PDF-"]));
 });
 
 describe("Insights > Analysis tab", () => {
@@ -898,18 +896,18 @@ describe("Insights > Analysis tab", () => {
     expect(screen.getByTestId("report-include-responseActivities")).toBeDisabled();
     fireEvent.click(screen.getByTestId("report-include-contexts"));
     fireEvent.click(screen.getByTestId("report-builder-create"));
-    await vi.waitFor(() => expect(pdfSections).toHaveBeenCalled());
-    const sections = pdfSections.mock.calls[0]![0] as string[];
+    await vi.waitFor(() => expect(reportSections).toHaveBeenCalled());
+    const sections = reportSections.mock.calls[0]![0] as string[];
     expect(sections).not.toContain("contexts");
     expect(sections).not.toContain("responseActivities");
     expect(sections.slice(0, 3)).toEqual(["keyDevelopments", "currentStatus", "map"]);
     await vi.waitFor(() => expect(click).toHaveBeenCalled());
-    expect(downloads[0]).toMatch(/^sitrep-sudan-\d{4}-\d{2}-\d{2}\.pdf$/);
+    expect(downloads[0]).toMatch(/^sitrep-sudan-\d{4}-\d{2}-\d{2}\.docx$/);
     click.mockRestore();
   });
 
-  it("shows the report error and clears the busy state when the PDF build never finishes", async () => {
-    pdfToBlob.mockImplementation(() => new Promise(() => {}));
+  it("shows the report error and clears the busy state when the report build never finishes", async () => {
+    reportToBlob.mockImplementation(() => new Promise(() => {}));
     renderPage();
     fireEvent.click(screen.getByTestId("analysis-create-report"));
     const create = await screen.findByTestId("report-builder-create");
