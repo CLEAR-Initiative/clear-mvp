@@ -3575,7 +3575,7 @@
         "empty": "Este análisis no tiene nada para esta sección",
         "alwaysIncluded": "La versión, el autor y los números de página siempre se incluyen.",
         "cancel": "Cancelar",
-        "create": "Descargar PDF ({count, plural, one {# sección} other {# secciones}})",
+        "create": "Descargar archivo Word ({count, plural, one {# sección} other {# secciones}})",
         "counts": {
           "keyDevelopments": "Resumen y {count, plural, =0 {ningún hallazgo clave} one {# hallazgo clave} other {# hallazgos clave}}",
           "map": "Zona con {count, plural, one {# evento} other {# eventos}}",

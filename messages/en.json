@@ -3575,7 +3575,7 @@
         "empty": "Nothing in this analysis for this section",
         "alwaysIncluded": "The version stamp, author and page numbers are always included.",
         "cancel": "Cancel",
-        "create": "Download PDF ({count, plural, one {# section} other {# sections}})",
+        "create": "Download Word file ({count, plural, one {# section} other {# sections}})",
         "counts": {
           "keyDevelopments": "Summary and {count, plural, =0 {no key findings} one {# key finding} other {# key findings}}",
           "map": "Scope with {count, plural, one {# event} other {# events}}",

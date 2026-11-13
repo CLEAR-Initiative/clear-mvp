@@ -57,7 +57,7 @@ const s = StyleSheet.create({
   itemMeta: { fontSize: 8, color: C.secondary, marginTop: 2 },
   earlier: { fontSize: 8, color: C.info, fontFamily: "Helvetica-Bold" },
   note: { marginTop: 4 },
-  // An explicit height keeps the fixed footer from growing page after page (see report-document.tsx).
+  // An explicit height keeps the fixed footer from growing page after page.
   footer: { position: "absolute", bottom: 20, left: 40, right: 40, height: 12, flexDirection: "row", justifyContent: "space-between", fontSize: 7, color: C.muted },
 });
 

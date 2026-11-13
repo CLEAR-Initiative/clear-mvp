@@ -3575,7 +3575,7 @@
         "empty": "Rien dans cette analyse pour cette section",
         "alwaysIncluded": "La version, l'auteur et les numéros de page sont toujours inclus.",
         "cancel": "Annuler",
-        "create": "Télécharger le PDF ({count, plural, one {# section} other {# sections}})",
+        "create": "Télécharger le fichier Word ({count, plural, one {# section} other {# sections}})",
         "counts": {
           "keyDevelopments": "Résumé et {count, plural, =0 {aucun point clé} one {# point clé} other {# points clés}}",
           "map": "Zone avec {count, plural, one {# événement} other {# événements}}",
