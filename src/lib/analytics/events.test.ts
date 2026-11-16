@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, afterEach } from "vitest";
-import { ANALYTICS_EVENTS, ID, ROUTE, isAllowedEvent } from "./events";
+import { ANALYTICS_EVENTS, ID, ROUTE, isAllowedEvent, isRecordId } from "./events";
 import { identityData, track } from "./track";
 
 describe("analytics event allowlist", () => {
@@ -17,6 +17,25 @@ describe("analytics event allowlist", () => {
       );
       expect(isAllowedEvent(name, props), name).toBe(true);
     }
+  });
+
+  describe("ID property values", () => {
+    it.each([
+      ["a Prisma cuid", "cmvtdzfl0000fl307lu5gzbq3"],
+      ["a case id", "case0123456789abcdef0123456789abcdef"],
+      ["a pipeline UUIDv5", "5c1e8f2a-3b4d-5e6f-8a9b-0c1d2e3f4a5b"],
+    ])("accepts %s", (_name, value) => {
+      expect(isRecordId(value)).toBe(true);
+    });
+
+    it.each([
+      ["free text", "Floods in Kassala"],
+      ["an upper-case UUIDv5", "5C1E8F2A-3B4D-5E6F-8A9B-0C1D2E3F4A5B"],
+      ["a UUIDv4", "5c1e8f2a-3b4d-4e6f-8a9b-0c1d2e3f4a5b"],
+      ["a case id that is too long", "case0123456789abcdef0123456789abcdef0"],
+    ])("rejects %s", (_name, value) => {
+      expect(isRecordId(value)).toBe(false);
+    });
   });
 
   it("rejects unknown event names", () => {
