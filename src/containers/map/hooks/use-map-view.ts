@@ -34,6 +34,12 @@ export function serializeZoom(zoom: number): string {
   return String(Number(zoom.toFixed(1)));
 }
 
+export type MapView = { center: LngLat; zoom: number };
+
+export function isSameView(a: MapView, b: MapView): boolean {
+  return serializeCenter(a.center) === serializeCenter(b.center) && serializeZoom(a.zoom) === serializeZoom(b.zoom);
+}
+
 const viewParsers = {
   center: createParser({ parse: parseCenter, serialize: serializeCenter }).withDefault(WORLD_VIEW.center),
   zoom: createParser({ parse: parseZoom, serialize: serializeZoom }).withDefault(WORLD_VIEW.zoom),
@@ -43,7 +49,7 @@ export function useMapView() {
   const [{ center, zoom }, setQuery] = useQueryStates(viewParsers, { throttleMs: 1000 });
 
   const setView = useCallback(
-    (view: { center: LngLat; zoom: number }) => {
+    (view: MapView) => {
       void setQuery(view);
     },
     [setQuery],

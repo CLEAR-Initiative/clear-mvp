@@ -1,5 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { parseCenter, parseZoom, serializeCenter, serializeZoom } from "./use-map-view";
+import { isSameView, parseCenter, parseZoom, serializeCenter, serializeZoom } from "./use-map-view";
+
+describe("isSameView", () => {
+  it("treats a camera that only differs from the URL by rounding as the same view", () => {
+    expect(isSameView({ center: [12.3456789, 45.6789123], zoom: 3.14 }, { center: [12.34568, 45.67891], zoom: 3.1 })).toBe(true);
+  });
+
+  it("treats a different center or zoom as a different view", () => {
+    expect(isSameView({ center: [12, 45], zoom: 3 }, { center: [30, 15], zoom: 3 })).toBe(false);
+    expect(isSameView({ center: [12, 45], zoom: 3 }, { center: [12, 45], zoom: 5 })).toBe(false);
+  });
+});
 
 describe("center param", () => {
   it("reads lng,lat and writes it rounded to 5 decimals, about 1 m", () => {

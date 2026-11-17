@@ -1,10 +1,10 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import ReactMapGL, { NavigationControl, type MapRef, type ViewStateChangeEvent } from "react-map-gl/mapbox";
 import { useIsDark } from "~/hooks/use-is-dark";
 import { BASEMAP_STYLES, PROJECTION, ZOOM_RANGE } from "./constants";
-import { useMapView } from "./hooks/use-map-view";
+import { isSameView, useMapView, type LngLat } from "./hooks/use-map-view";
 import { findLabelAnchorId } from "./label-anchor";
 import { LayerManager } from "./layer-manager";
 import { Legend } from "./legend";
@@ -34,6 +34,14 @@ export default function MapV2() {
     map.on("style.load", updateLabelAnchor);
     setLoaded(true);
   }, []);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !loaded) return;
+    const camera = { center: map.getCenter().toArray() as LngLat, zoom: map.getZoom() };
+    if (isSameView(camera, { center, zoom })) return;
+    map.flyTo({ center, zoom });
+  }, [center, zoom, loaded]);
 
   return (
     <>
