@@ -14,6 +14,11 @@ Sentry.init({
   environment: process.env.NEXT_PUBLIC_SENTRY_ENV ?? "development",
   tracesSampleRate: 0.2,
 
+  // Send envelopes through our own origin (src/app/api/monitoring/route.ts).
+  // Ad blockers and work proxies drop requests to the GlitchTip host, and
+  // those are the users whose map fails to load.
+  tunnel: "/api/monitoring",
+
   // Capture browser session replays at low rate for hard-to-reproduce bugs.
   // 0 means off entirely; uncomment if you want it.
   // replaysSessionSampleRate: 0,
