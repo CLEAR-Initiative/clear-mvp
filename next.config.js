@@ -66,6 +66,11 @@ export default withPWA({
   // Reloading on reconnect races the Observe IndexedDB drain: the dying
   // page and the new page both POST the same queued signal (~30ms apart).
   reloadOnOnline: false,
+  // We register the service worker ourselves (src/components/register-service-worker.tsx).
+  // The plugin's auto-register calls `window.workbox.register()` without a
+  // catch, so a browser that refuses (link scanners, private windows, a page
+  // unloading mid-registration) became an unhandled rejection in Sentry.
+  register: false,
   // Branded document when a navigation fails offline (hard refresh / uncached
   // route). Self-contained static HTML so it does not depend on JS chunks.
   fallbacks: {
