@@ -98,6 +98,8 @@
   --map-ai-on-gradient: #FFFFFF;
   --map-accent: #D1381D;
   --map-on-accent: #FFFFFF;
+  --map-road-corridor: #976E49;
+  --map-road-minor: #AEB1B7;
 }
 
 /* ============================================
@@ -162,6 +164,8 @@
   --map-ai-on-gradient: #FFFFFF;
   --map-accent: #D1381D;
   --map-on-accent: #FFFFFF;
+  --map-road-corridor: #B0926D;
+  --map-road-minor: #757575;
 }
 
 /* Base styles */

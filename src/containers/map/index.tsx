@@ -9,6 +9,7 @@ import { offsetCssVars, useEaseToOffset, useMapOffset, type MapOffset } from "./
 import { findLabelAnchorId } from "./label-anchor";
 import { findReliefAnchorId } from "./basemaps/relief-anchor";
 import { Topography } from "./basemaps/topography";
+import { MapSettingsLayers } from "./basemaps/map-settings-layers";
 import { MapControls } from "./controls";
 import { useBasemap } from "./hooks/use-basemap";
 import { LayerManager } from "./layer-manager";
@@ -75,6 +76,7 @@ export default function MapV2({ offset: offsetProp }: { offset?: Partial<MapOffs
       >
         <AttributionControl position="bottom-right" compact />
         {loaded && basemap === "topography" && <Topography beforeId={reliefAnchorId} />}
+        {loaded && <MapSettingsLayers basemap={basemap} />}
         {loaded && <LayerManager labelAnchorId={labelAnchorId} />}
         <MapControls />
       </ReactMapGL>

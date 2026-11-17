@@ -4634,6 +4634,11 @@
       "label": "Commandes de la carte",
       "collapse": "Masquer les commandes de la carte",
       "expand": "Afficher les commandes de la carte"
+    },
+    "mapSettings": {
+      "title": "Paramètres de la carte",
+      "roads": "Routes",
+      "labels": "Libellés"
     }
   }
 }
