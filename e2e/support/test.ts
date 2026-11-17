@@ -19,7 +19,7 @@ import { test as base, expect, type BrowserContext, type TestInfo } from "@playw
  * Hydration mismatches (React #418/#423/#425) fail the test too. They used to
  * fire on every page of the app shell: the server rendered the nav before
  * auth.me resolved and the client hydrated it with the user (see
- * src/app/(app)/layout.tsx). In prod each one reached GlitchTip. React
+ * src/app/(app)/app-shell.tsx). In prod each one reached GlitchTip. React
  * recovers by re-rendering on the client, so nothing on screen shows it.
  */
 

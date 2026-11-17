@@ -1,0 +1,111 @@
+import { Suspense } from "react";
+import { cookies, headers } from "next/headers";
+import { Box, Group } from "@mantine/core";
+import { NavSidebar } from "~/components/nav-sidebar";
+import { NavSidebarFallback } from "~/components/nav-sidebar-fallback";
+import { MobileBottomNav } from "~/components/mobile-bottom-nav";
+import { FeatureFlagsProvider } from "~/components/feature-flags-provider";
+import { AgentProvider, AgentViewBoundary } from "~/components/agent/agent-provider";
+import { AgentDrawer } from "~/components/agent/agent-drawer";
+import { TeamProvider } from "~/providers/team-provider";
+import { WorkingCountryProvider } from "~/providers/working-country-provider";
+import { OnboardingGuard } from "~/components/onboarding-guard";
+import { ProductTourHost } from "~/components/onboarding/product-tour-host";
+import { ConsoleBufferInit } from "~/components/console-buffer-init";
+import { UsageTracker } from "~/components/analytics/usage-tracker";
+import { UsageNoticeAfterOnboarding } from "~/components/analytics/usage-notice";
+import {
+  PageTransitionProvider,
+  PageTransitionVeil,
+} from "~/components/page-transition";
+import { api, HydrateClient } from "~/trpc/server";
+import { WORKING_COUNTRY_COOKIE } from "~/lib/working-country-cookie";
+import { isMapPath } from "~/lib/is-map-path";
+import {
+  NAV_COLLAPSED_COOKIE,
+  parseNavCollapsedCookie,
+} from "~/lib/nav-collapsed-cookie";
+
+/**
+ * The (app) shell: providers, nav and main column around every app page.
+ * Rendered by `layout.tsx` inside a Suspense boundary; see there for why.
+ */
+export async function AppShell({ children }: { children: React.ReactNode }) {
+  // Prefetch auth.me so the client cache is hydrated on first paint. Await
+  // it: a pending query is dehydrated as a promise, so the server rendered
+  // the shell with no user while the client hydrated with one. The nav then
+  // differed for anyone whose role adds entries (Inbox, Admin), and React
+  // threw #418 on every full page load. auth.me never throws and gives up
+  // after 5 s per lookup.
+  await api.auth.me.prefetch();
+
+  // Read working country cookie for SSR hydration
+  const cookieStore = await cookies();
+  const workingCountryCookie = cookieStore.get(WORKING_COUNTRY_COOKIE)?.value;
+  const pathname = (await headers()).get("x-pathname") ?? "";
+  const mapNavOverlay = isMapPath(pathname);
+  const navCollapsed = parseNavCollapsedCookie(
+    cookieStore.get(NAV_COLLAPSED_COOKIE)?.value,
+  );
+
+  return (
+    <HydrateClient>
+      <TeamProvider>
+        <WorkingCountryProvider initialCookieValue={workingCountryCookie}>
+          <FeatureFlagsProvider>
+          <AgentProvider>
+          <ConsoleBufferInit />
+          <UsageTracker />
+          <PageTransitionProvider>
+            <Suspense fallback={null}>
+              <OnboardingGuard>
+                <Group
+                  gap={0}
+                  align="stretch"
+                  wrap="nowrap"
+                  style={{
+                    minHeight: "100vh",
+                    background: "var(--color-bg-primary)",
+                  }}
+                >
+                  <Suspense
+                    fallback={
+                      <NavSidebarFallback
+                        overlay={mapNavOverlay}
+                        collapsed={navCollapsed}
+                      />
+                    }
+                  >
+                    <NavSidebar initialCollapsed={navCollapsed} />
+                  </Suspense>
+                  <Box
+                    component="main"
+                    style={{
+                      flex: 1,
+                      minWidth: 0,
+                      display: "flex",
+                      flexDirection: "column",
+                      background: "var(--color-bg-primary)",
+                      position: "relative",
+                    }}
+                    pt={{ base: 56, sm: 0 }}
+                    pb={{ base: 72, sm: 0 }}
+                  >
+                    <AgentViewBoundary>{children}</AgentViewBoundary>
+                    <PageTransitionVeil />
+                  </Box>
+                </Group>
+                <MobileBottomNav />
+                <ProductTourHost />
+                <UsageNoticeAfterOnboarding />
+                <AgentDrawer />
+              </OnboardingGuard>
+            </Suspense>
+          </PageTransitionProvider>
+          </AgentProvider>
+        </FeatureFlagsProvider>
+      </WorkingCountryProvider>
+      </TeamProvider>
+    </HydrateClient>
+  );
+}

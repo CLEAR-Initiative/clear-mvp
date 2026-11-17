@@ -137,19 +137,21 @@ export const authRouter = createTRPCRouter({
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), SESSION_TIMEOUT_MS);
 
-      let res: Response;
+      // The timer covers the body too: the app shell waits for this query, and
+      // a server that sends headers and then stalls must not hold it past the
+      // limit. An abort mid-body rejects res.json(); the outer catch answers
+      // unauthenticated.
+      let raw: unknown;
       try {
-        res = await fetch(`${API_URL}/api/auth/get-session`, {
+        const res = await fetch(`${API_URL}/api/auth/get-session`, {
           headers: { Cookie: cookie },
           signal: controller.signal,
         });
+        if (!res.ok) return { authenticated: false, user: null };
+        raw = await res.json();
       } finally {
         clearTimeout(timeout);
       }
-
-      if (!res.ok) return { authenticated: false, user: null };
-
-      const raw: unknown = await res.json();
 
       // Apollo API returns null for unauthenticated requests
       if (raw === null) return { authenticated: false, user: null };

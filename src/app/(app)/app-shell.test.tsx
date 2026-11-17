@@ -30,9 +30,11 @@ vi.mock("~/trpc/server", () => ({
   HydrateClient: stub,
 }));
 
+import { isValidElement, Suspense } from "react";
+import { AppShell } from "./app-shell";
 import AppLayout from "./layout";
 
-describe("AppLayout", () => {
+describe("AppShell", () => {
   // A pending auth.me is dehydrated as a promise: the server then renders
   // the nav with no user and the client hydrates it with one, so admins and
   // deciders got a different nav and React #418 on every full page load.
@@ -41,7 +43,7 @@ describe("AppLayout", () => {
     prefetch.mockReturnValue(new Promise<void>((r) => (resolve = r)));
 
     let rendered = false;
-    const layout = AppLayout({ children: null }).then((tree) => {
+    const layout = AppShell({ children: null }).then((tree) => {
       rendered = true;
       return tree;
     });
@@ -53,5 +55,22 @@ describe("AppLayout", () => {
     resolve();
     await layout;
     expect(rendered).toBe(true);
+  });
+});
+
+describe("AppLayout", () => {
+  // Next.js renders a layout as `[assets, layout]`. An async layout reaches
+  // the browser as a lazy in that array, and when it suspended during
+  // hydration React dropped the array from every useId below (Mantine class
+  // names and ids no longer matched the server HTML). The layout itself must
+  // return a plain element at once, with the async shell under Suspense.
+  it("returns the shell inside a Suspense boundary without awaiting anything", () => {
+    const tree = AppLayout({ children: "page" });
+    expect(tree).not.toBeInstanceOf(Promise);
+    expect(isValidElement(tree)).toBe(true);
+    const boundary = tree as React.ReactElement<{ children: React.ReactElement<{ children: unknown }> }>;
+    expect(boundary.type).toBe(Suspense);
+    expect(boundary.props.children.type).toBe(AppShell);
+    expect(boundary.props.children.props.children).toBe("page");
   });
 });
