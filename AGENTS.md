@@ -115,6 +115,9 @@ you make a decision that a future reader would otherwise reverse, add an ADR.
   thresholds.
 - New server-side env vars are read through `src/server/env.ts` and documented in
   `.env.example` and the README table.
+- A `catch` that turns a failure into an error state on screen calls `reportHandledError` from
+  `src/lib/report-handled-error.ts`, with a `feature` and `stage`. Sentry only sees errors that
+  throw past us, so a handled error that isn't reported never reaches GlitchTip or Matrix.
 - Keep tRPC procedures thin. Business rules belong in clear-api; this app shapes data for the UI.
 
 ## Related repositories
