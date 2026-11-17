@@ -14,8 +14,17 @@ function envelope(dsn: string): string {
 }
 
 describe("envelopeTarget", () => {
-  it("points an envelope for our DSN at that project's envelope endpoint", () => {
-    expect(envelopeTarget(DSN, DSN)).toBe("https://sentry.example.org/api/4/envelope/");
+  it("points an envelope for our DSN at that project's envelope endpoint, with our key", () => {
+    // GlitchTip answers 403 to an envelope POST with no sentry_key.
+    expect(envelopeTarget(DSN, DSN)).toBe(
+      "https://sentry.example.org/api/4/envelope/?sentry_key=abc123&sentry_version=7",
+    );
+  });
+
+  it("authenticates with our key, not the one the client sent", () => {
+    expect(envelopeTarget("https://other@sentry.example.org/4", DSN)).toBe(
+      "https://sentry.example.org/api/4/envelope/?sentry_key=abc123&sentry_version=7",
+    );
   });
 
   it("refuses another host, another project, or no DSN configured", () => {
@@ -24,6 +33,7 @@ describe("envelopeTarget", () => {
     expect(envelopeTarget(DSN, undefined)).toBeNull();
     expect(envelopeTarget(undefined, DSN)).toBeNull();
     expect(envelopeTarget("not a url", DSN)).toBeNull();
+    expect(envelopeTarget(DSN, "https://sentry.example.org/4")).toBeNull();
   });
 });
 
@@ -49,7 +59,7 @@ describe("POST /api/monitoring", () => {
 
     expect(res.status).toBe(200);
     const [url, init] = fetchMock.mock.calls[0]!;
-    expect(url).toBe("https://sentry.example.org/api/4/envelope/");
+    expect(url).toBe("https://sentry.example.org/api/4/envelope/?sentry_key=abc123&sentry_version=7");
     expect(new TextDecoder().decode(init.body as Uint8Array)).toBe(body);
   });
 
