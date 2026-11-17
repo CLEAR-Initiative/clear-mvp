@@ -27,8 +27,13 @@ import {
 } from "~/lib/nav-collapsed-cookie";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
-  // Prefetch auth.me so the client cache is hydrated on first paint
-  void api.auth.me.prefetch();
+  // Prefetch auth.me so the client cache is hydrated on first paint. Await
+  // it: a pending query is dehydrated as a promise, so the server rendered
+  // the shell with no user while the client hydrated with one. The nav then
+  // differed for anyone whose role adds entries (Inbox, Admin), and React
+  // threw #418 on every full page load. auth.me never throws and gives up
+  // after 5 s per lookup.
+  await api.auth.me.prefetch();
 
   // Read working country cookie for SSR hydration
   const cookieStore = await cookies();

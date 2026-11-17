@@ -16,13 +16,12 @@ import { test as base, expect, type BrowserContext, type TestInfo } from "@playw
  * default `context` is watched automatically; a spec that opens its own context
  * with `browser.newContext()` must call `watchForCrashes(ctx)` on it.
  *
- * Hydration mismatches (React #418/#423/#425) do not fail the test: React
- * recovers by re-rendering on the client, and they fire on most pages today
- * (server and browser time zones differ). They are attached to the report as a
- * `hydration-mismatch` annotation instead.
+ * Hydration mismatches (React #418/#423/#425) fail the test too. They used to
+ * fire on every page of the app shell: the server rendered the nav before
+ * auth.me resolved and the client hydrated it with the user (see
+ * src/app/(app)/layout.tsx). In prod each one reached GlitchTip. React
+ * recovers by re-rendering on the client, so nothing on screen shows it.
  */
-
-const HYDRATION_MISMATCH = /Minified React error #(418|423|425)\b|Hydration failed|hydrating/;
 
 const crashes = new WeakMap<TestInfo, string[]>();
 
@@ -32,10 +31,6 @@ export function watchForCrashes(context: BrowserContext): void {
   context.on("weberror", (webError) => {
     const err = webError.error();
     const where = webError.page()?.url() ?? "unknown page";
-    if (HYDRATION_MISMATCH.test(err.message)) {
-      info.annotations.push({ type: "hydration-mismatch", description: `${where}: ${err.message}` });
-      return;
-    }
     const list = crashes.get(info) ?? [];
     list.push(`${where}\n${err.stack ?? err.message}`);
     crashes.set(info, list);
