@@ -1,4 +1,9 @@
-export const PROJECTION = "globe";
+export const PROJECTION = "mercator";
+
+export const WORLD_BOUNDS: [[number, number], [number, number]] = [
+  [-180, -60],
+  [180, 75],
+];
 
 export const ZOOM_RANGE = { min: 0, max: 22 } as const;
 

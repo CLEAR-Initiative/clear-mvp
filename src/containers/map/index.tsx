@@ -1,10 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import ReactMapGL, { AttributionControl, type MapRef, type ViewStateChangeEvent } from "react-map-gl/mapbox";
+import { useCallback, useRef, useState } from "react";
+import ReactMapGL, { AttributionControl, type MapRef } from "react-map-gl/mapbox";
 import { useIsDark } from "~/hooks/use-is-dark";
 import { BASEMAP_STYLES, PROJECTION, ZOOM_RANGE } from "./constants";
-import { isSameView, useMapView, type LngLat } from "./hooks/use-map-view";
 import { offsetCssVars, useEaseToOffset, useMapOffset, type MapOffset } from "./hooks/use-map-offset";
 import { findLabelAnchorId } from "./label-anchor";
 import { findReliefAnchorId } from "./basemaps/relief-anchor";
@@ -12,6 +11,7 @@ import { Topography } from "./basemaps/topography";
 import { MapSettingsLayers } from "./basemaps/map-settings-layers";
 import { MapControls } from "./controls";
 import { useBasemap } from "./hooks/use-basemap";
+import { useUrlView } from "./hooks/use-url-view";
 import { LayerManager } from "./layer-manager";
 
 import "mapbox-gl/dist/mapbox-gl.css";
@@ -20,19 +20,11 @@ export default function MapV2({ offset: offsetProp }: { offset?: Partial<MapOffs
   const isDark = useIsDark();
   const offset = useMapOffset(offsetProp);
   const mapRef = useRef<MapRef>(null);
-  const { center, zoom, setView } = useMapView();
-  const [initialViewState] = useState(() => ({ longitude: center[0], latitude: center[1], zoom }));
   const [basemap] = useBasemap();
   const [labelAnchorId, setLabelAnchorId] = useState<string | undefined>();
   const [reliefAnchorId, setReliefAnchorId] = useState<string | undefined>();
   const [loaded, setLoaded] = useState(false);
-
-  const onMoveEnd = useCallback(
-    ({ viewState }: ViewStateChangeEvent) => {
-      setView({ center: [viewState.longitude, viewState.latitude], zoom: viewState.zoom });
-    },
-    [setView],
-  );
+  const { initialViewState, onMoveEnd, fitWorldOnLoad } = useUrlView(mapRef, loaded);
 
   const onLoad = useCallback(() => {
     const map = mapRef.current;
@@ -44,16 +36,11 @@ export default function MapV2({ offset: offsetProp }: { offset?: Partial<MapOffs
     };
     updateAnchors();
     map.on("style.load", updateAnchors);
+    map.getMap().touchZoomRotate.disableRotation();
+    map.getMap().keyboard.disableRotation();
+    fitWorldOnLoad();
     setLoaded(true);
-  }, []);
-
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map || !loaded) return;
-    const camera = { center: map.getCenter().toArray() as LngLat, zoom: map.getZoom() };
-    if (isSameView(camera, { center, zoom })) return;
-    map.flyTo({ center, zoom });
-  }, [center, zoom, loaded]);
+  }, [fitWorldOnLoad]);
 
   useEaseToOffset(mapRef, offset, loaded);
 
@@ -69,6 +56,7 @@ export default function MapV2({ offset: offsetProp }: { offset?: Partial<MapOffs
         attributionControl={false}
         minZoom={ZOOM_RANGE.min}
         maxZoom={ZOOM_RANGE.max}
+        dragRotate={false}
         initialViewState={{ ...initialViewState, padding: offset }}
         onMoveEnd={onMoveEnd}
         onLoad={onLoad}

@@ -1,6 +1,5 @@
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import { createParser, useQueryStates } from "nuqs";
-import { WORLD_VIEW } from "~/lib/constants/country-config";
 import { ZOOM_RANGE } from "../constants";
 
 export type LngLat = [number, number];
@@ -41,8 +40,8 @@ export function isSameView(a: MapView, b: MapView): boolean {
 }
 
 const viewParsers = {
-  center: createParser({ parse: parseCenter, serialize: serializeCenter }).withDefault(WORLD_VIEW.center),
-  zoom: createParser({ parse: parseZoom, serialize: serializeZoom }).withDefault(WORLD_VIEW.zoom),
+  center: createParser({ parse: parseCenter, serialize: serializeCenter }),
+  zoom: createParser({ parse: parseZoom, serialize: serializeZoom }),
 };
 
 export function useMapView() {
@@ -55,5 +54,12 @@ export function useMapView() {
     [setQuery],
   );
 
-  return { center, zoom, setView };
+  const lng = center?.[0];
+  const lat = center?.[1];
+  const view = useMemo<MapView | null>(
+    () => (lng != null && lat != null && zoom != null ? { center: [lng, lat], zoom } : null),
+    [lng, lat, zoom],
+  );
+
+  return { view, setView };
 }
