@@ -93,6 +93,10 @@ import {
   shouldElevatePointPin,
 } from "~/lib/map/pin-elevation";
 import { bridgeMetaToCtrlForPitch } from "~/lib/map/meta-pitch-bridge";
+// Mapbox GL JS comes from its CDN, not the bundle: bundling it crashed
+// webpack's JSON.parse optimisation.
+import { createMapboxMap, loadMapboxGL, mapLoadStage } from "~/lib/map/load-mapbox-gl";
+import { reportHandledError } from "~/lib/report-handled-error";
 import { flyToOrientation, countryFitPadding, fitBoundsCameraOptions } from "~/lib/map/marker-detail-camera";
 import {
   framedCountryAfterFocusChange,
@@ -429,30 +433,6 @@ const severityColors: Record<string, string> = {
   low: "#059669",
 };
 
-
-/**
- * Load mapbox-gl from CDN to avoid webpack JSON.parse optimisation crash.
- */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function loadMapboxGL(): Promise<any> {
-  return new Promise((resolve, reject) => {
-    if ((window as unknown as Record<string, unknown>).mapboxgl) {
-      resolve((window as unknown as Record<string, unknown>).mapboxgl);
-      return;
-    }
-    if (!document.querySelector('link[href*="mapbox-gl"]')) {
-      const link = document.createElement("link");
-      link.rel = "stylesheet";
-      link.href = "https://api.mapbox.com/mapbox-gl-js/v3.9.4/mapbox-gl.css";
-      document.head.appendChild(link);
-    }
-    const script = document.createElement("script");
-    script.src = "https://api.mapbox.com/mapbox-gl-js/v3.9.4/mapbox-gl.js";
-    script.onload = () => resolve((window as unknown as Record<string, unknown>).mapboxgl);
-    script.onerror = () => reject(new Error("Failed to load Mapbox GL JS"));
-    document.head.appendChild(script);
-  });
-}
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type MapboxGLAny = any;
@@ -915,6 +895,8 @@ export function CrisisMap({
     if (!mapContainer.current || !MAPBOX_TOKEN) return;
     let cancelled = false;
 
+    let styleErrorReported = false;
+
     loadMapboxGL().then((mapboxgl) => {
       if (cancelled || !mapContainer.current || map.current) return;
       mbRef.current = mapboxgl;
@@ -922,7 +904,7 @@ export function CrisisMap({
 
       // First-visit intro: start at WORLD_VIEW (globe) if introFromGlobe is true.
       // fitBounds will fly to the country afterwards (bumped duration for intro).
-      map.current = new mapboxgl.Map({
+      map.current = createMapboxMap(mapboxgl, {
         container: mapContainer.current,
         style: mapStyle,
         center: introFromGlobe ? WORLD_VIEW.center : center,
@@ -939,9 +921,16 @@ export function CrisisMap({
       map.current.on("error", (e: { error?: { message?: string; status?: number } }) => {
         if (cancelled || mapReadyRef.current) return;
         const isOffline = !navigator.onLine || e.error?.status === 0;
-        const message = isOffline
-          ? "No internet connection detected. Please check your network and try again."
-          : e.error?.message ?? "Failed to load map data. Please try again.";
+        // Mapbox can fire several of these before giving up; one report is enough.
+        if (!styleErrorReported) {
+          styleErrorReported = true;
+          reportHandledError(e.error?.message ?? "Mapbox error before the map loaded", {
+            feature: "map",
+            stage: "style",
+            extra: { status: e.error?.status },
+          });
+        }
+        const message = tRef.current(isOffline ? "loadError.offline" : "loadError.style");
         onLoadError?.({ message, isOffline });
       });
 
@@ -996,12 +985,14 @@ export function CrisisMap({
 
       // Stash disposer on the map instance for effect cleanup below.
       (map.current as MapboxGLAny).__clearMetaPitchBridge = removeMetaPitchBridge;
-    }).catch((err: Error) => {
+    }).catch((err: unknown) => {
       if (cancelled) return;
+      // Covers the whole `.then` above: the CDN script, the WebGL check and
+      // the map constructor each fail with their own stage.
+      const stage = mapLoadStage(err);
+      reportHandledError(err, { feature: "map", stage });
       const isOffline = !navigator.onLine;
-      const message = isOffline
-        ? "No internet connection detected. Please check your network and try again."
-        : "Failed to load map library. Please refresh the page.";
+      const message = tRef.current(isOffline ? "loadError.offline" : `loadError.${stage}`);
       onLoadError?.({ message, isOffline });
     });
 

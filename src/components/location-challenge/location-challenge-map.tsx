@@ -3,7 +3,13 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useIsDark } from "~/hooks/use-is-dark";
-import { loadMapboxGL, type MapboxGL } from "~/lib/map/load-mapbox-gl";
+import {
+  createMapboxMap,
+  loadMapboxGL,
+  mapLoadStage,
+  type MapboxGL,
+} from "~/lib/map/load-mapbox-gl";
+import { reportHandledError } from "~/lib/report-handled-error";
 import styles from "./location-challenge-map.module.css";
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? "";
@@ -134,7 +140,7 @@ export function LocationChallengeMap({
         if (cancelled || !containerRef.current) return;
         gl.accessToken = MAPBOX_TOKEN;
         const center = source ?? proposed;
-        const map = new gl.Map({
+        const map = createMapboxMap(gl, {
           container: containerRef.current,
           style: mapStyle(styleRef.current),
           center: center ? [center.lng, center.lat] : [30, 15],
@@ -157,8 +163,13 @@ export function LocationChallengeMap({
         glRef.current = gl;
         mapRef.current = map;
       })
-      .catch(() => {
-        if (!cancelled) setFailed(true);
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        reportHandledError(err, {
+          feature: "location-challenge-map",
+          stage: mapLoadStage(err),
+        });
+        setFailed(true);
       });
     return () => {
       cancelled = true;

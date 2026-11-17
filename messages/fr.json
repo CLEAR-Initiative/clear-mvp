@@ -2192,6 +2192,13 @@
       "label": "Altitude",
       "qualifier": "approx. · MNT",
       "unavailable": "—"
+    },
+    "loadError": {
+      "offline": "Aucune connexion Internet détectée. Vérifiez votre réseau et réessayez.",
+      "script": "Impossible de charger la bibliothèque cartographique de Mapbox. Votre réseau, votre VPN ou une extension du navigateur bloque peut-être api.mapbox.com.",
+      "webgl": "Votre navigateur ne peut pas afficher la carte, car WebGL est désactivé ou non pris en charge. Activez l'accélération matérielle dans les paramètres du navigateur, ou essayez un autre navigateur.",
+      "init": "La carte n'a pas pu démarrer. Veuillez actualiser la page.",
+      "style": "Échec du chargement des données de la carte. Veuillez réessayer."
     }
   },
   "nav": {
