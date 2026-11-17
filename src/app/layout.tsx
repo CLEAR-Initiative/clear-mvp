@@ -14,6 +14,7 @@ import { getLocale, getMessages, getTranslations } from "next-intl/server";
 
 import { TRPCReactProvider } from "~/trpc/react";
 import { ChunkErrorReload } from "~/components/chunk-error-reload";
+import { RegisterServiceWorker } from "~/components/register-service-worker";
 import { clearTheme } from "~/app/config/themes";
 import { localeDirection, isLocale, defaultLocale } from "~/i18n/config";
 import { isMapPath } from "~/lib/is-map-path";
@@ -115,6 +116,7 @@ export default async function RootLayout({
         suppressHydrationWarning
       >
         <ChunkErrorReload />
+        <RegisterServiceWorker />
         <DirectionProvider initialDirection={dir} detectDirection={false}>
           <MantineProvider theme={clearTheme} defaultColorScheme="auto">
             <NextIntlClientProvider locale={locale} messages={messages}>
