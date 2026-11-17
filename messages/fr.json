@@ -4583,5 +4583,18 @@
     "reload": "Recharger la page",
     "tryAgain": "Réessayer",
     "reference": "Référence : {digest}"
+  },
+  "mapV2": {
+    "layers": {
+      "signals": {
+        "title": "Signaux"
+      }
+    },
+    "errors": {
+      "layerUnavailable": {
+        "title": "Couche de carte indisponible",
+        "description": "Certaines couches de la carte ne peuvent pas être affichées pour le moment. Réessayez plus tard."
+      }
+    }
   }
 }

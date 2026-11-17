@@ -146,6 +146,14 @@ export const FEATURE_FLAGS: FeatureFlagDefinition[] = [
     tier: 4,
     defaultEnabled: false,
   },
+  {
+    key: "map_v2",
+    label: "Map v2",
+    description:
+      "Rebuilt map at /map-v2, in progress (src/containers/map). Not in the nav. The route returns 404 while this is off.",
+    tier: 4,
+    defaultEnabled: false,
+  },
 ];
 
 export const TIER_LABELS: Record<number, string> = {

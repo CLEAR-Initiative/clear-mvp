@@ -4583,5 +4583,18 @@
     "reload": "Recargar página",
     "tryAgain": "Reintentar",
     "reference": "Referencia: {digest}"
+  },
+  "mapV2": {
+    "layers": {
+      "signals": {
+        "title": "Señales"
+      }
+    },
+    "errors": {
+      "layerUnavailable": {
+        "title": "Capa del mapa no disponible",
+        "description": "Algunas capas del mapa no se pueden mostrar ahora. Inténtalo más tarde."
+      }
+    }
   }
 }

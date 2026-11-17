@@ -146,6 +146,7 @@ src/
 │   ├── agent/            CLEAR Agent (Mastra) and its tools
 │   └── env.ts            Server-side env access
 ├── components/           Shared UI
+├── containers/map/       Map v2 at /map-v2, behind the `map_v2` flag; imports nothing from the old map (ADR 0008)
 ├── lib/                  Non-React helpers (types, severity, disaster types, auth client)
 ├── i18n/                 Locale setup (strings live in /messages)
 ├── trpc/  providers/  hooks/  styles/
@@ -153,7 +154,7 @@ src/
 ```
 
 **Stack:** Next.js 15 (App Router) · React 19 · tRPC 11 + TanStack Query 5 · Mantine 8 +
-Tailwind 4 · Better Auth (sessions live in clear-api) · Mapbox GL · Mastra (CLEAR Agent) ·
+Tailwind 4 · Better Auth (sessions live in clear-api) · Mapbox GL (map v2: react-map-gl + nuqs) · Mastra (CLEAR Agent) ·
 next-intl · Sentry.
 
 ### Conventions worth knowing

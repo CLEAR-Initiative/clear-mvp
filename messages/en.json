@@ -4583,5 +4583,18 @@
     "reload": "Reload page",
     "tryAgain": "Try again",
     "reference": "Reference: {digest}"
+  },
+  "mapV2": {
+    "layers": {
+      "signals": {
+        "title": "Signals"
+      }
+    },
+    "errors": {
+      "layerUnavailable": {
+        "title": "Map layer unavailable",
+        "description": "Some map layers cannot be shown right now. Try again later."
+      }
+    }
   }
 }
