@@ -31,7 +31,7 @@ export type CurrentViewFilters = Partial<Record<CurrentViewFilterKey, CurrentVie
 /** List filters are capped: the Agent needs the scope, not a dump. */
 export const CURRENT_VIEW_MAX_LIST = 50;
 
-/** An entity, team or location id (cuid-shaped). Also what Agent navigation accepts. */
+/** An entity, team or location id: a charset check, not a format check. Also what Agent navigation accepts. */
 export const ID_PATTERN = /^[A-Za-z0-9_-]{1,128}$/;
 /** An app path: no query, no fragment, no other origin. */
 export const PATH_PATTERN = /^\/[A-Za-z0-9_\-/]{0,199}$/;

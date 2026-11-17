@@ -15,6 +15,12 @@ describe("routePattern", () => {
     expect(routePattern("/search/Sudan%20floods")).toBe("/search/:id");
   });
 
+  it("collapses every Signal id format", () => {
+    expect(routePattern("/signal/cmvtdzfl0000fl307lu5gzbq3")).toBe("/signal/:id");
+    expect(routePattern("/signal/case0123456789abcdef0123456789abcdef")).toBe("/signal/:id");
+    expect(routePattern("/signal/5c1e8f2a-3b4d-5e6f-8a9b-0c1d2e3f4a5b")).toBe("/signal/:id");
+  });
+
   it("drops the query string and hash", () => {
     expect(routePattern("/detection?q=khartoum#top")).toBe("/detection");
   });
