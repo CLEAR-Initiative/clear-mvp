@@ -90,10 +90,11 @@ export function AgentDrawer() {
   const endSide = rtl ? "left" : "right";
   // The Agent page shows the Thread full-screen already.
   const onAgentPage = pathname === "/agent";
+  const hidden = onAgentPage || pathname.startsWith("/map-v2");
 
   return (
     <>
-      {!onAgentPage && !open && (
+      {!hidden && !open && (
         <Affix
           position={{
             bottom: "calc(88px + env(safe-area-inset-bottom, 0px))",
@@ -119,7 +120,7 @@ export function AgentDrawer() {
       )}
 
       <Drawer.Root
-        opened={open && !onAgentPage}
+        opened={open && !hidden}
         onClose={() => setOpen(false)}
         position="right"
         // Never wider than the screen; full width on a phone.
