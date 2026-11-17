@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { envelopeTarget, POST } from "./route";
+import { envelopeTarget } from "~/lib/sentry-tunnel";
+import { POST } from "./route";
 
 const DSN = "https://abc123@sentry.example.org/4";
 

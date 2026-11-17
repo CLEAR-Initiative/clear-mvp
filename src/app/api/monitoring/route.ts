@@ -11,27 +11,9 @@
  * only forwards envelopes addressed to our own DSN, to that DSN's host.
  */
 
-const MAX_ENVELOPE_BYTES = 1024 * 1024;
+import { envelopeTarget } from "~/lib/sentry-tunnel";
 
-/**
- * The GlitchTip envelope URL for an envelope whose header names `headerDsn`,
- * or null when that DSN is not ours.
- */
-export function envelopeTarget(headerDsn: unknown, ourDsn: string | undefined): string | null {
-  if (!ourDsn || typeof headerDsn !== "string") return null;
-  let ours: URL;
-  let theirs: URL;
-  try {
-    ours = new URL(ourDsn);
-    theirs = new URL(headerDsn);
-  } catch {
-    return null;
-  }
-  if (theirs.host !== ours.host || theirs.pathname !== ours.pathname) return null;
-  const projectId = ours.pathname.replace(/^\/+|\/+$/g, "");
-  if (!/^\d+$/.test(projectId)) return null;
-  return `${ours.protocol}//${ours.host}/api/${projectId}/envelope/`;
-}
+const MAX_ENVELOPE_BYTES = 1024 * 1024;
 
 function headerDsn(body: Uint8Array): unknown {
   const newline = body.indexOf(0x0a);
