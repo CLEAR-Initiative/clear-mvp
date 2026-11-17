@@ -26,14 +26,14 @@ export default function MapV2() {
     [setView],
   );
 
-  const onStyleChange = useCallback(() => {
-    setLabelAnchorId(findLabelAnchorId(mapRef.current?.getStyle()?.layers));
-  }, []);
-
   const onLoad = useCallback(() => {
-    onStyleChange();
+    const map = mapRef.current;
+    if (!map) return;
+    const updateLabelAnchor = () => setLabelAnchorId(findLabelAnchorId(map.getStyle()?.layers));
+    updateLabelAnchor();
+    map.on("style.load", updateLabelAnchor);
     setLoaded(true);
-  }, [onStyleChange]);
+  }, []);
 
   return (
     <>
@@ -41,13 +41,14 @@ export default function MapV2() {
         ref={mapRef}
         mapboxAccessToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN}
         mapStyle={BASEMAP_STYLES.simple[isDark ? "dark" : "light"]}
+        // Mapbox's diffed setStyle never fires style.load, which the label anchor relies on.
+        styleDiffing={false}
         projection={PROJECTION}
         minZoom={ZOOM_RANGE.min}
         maxZoom={ZOOM_RANGE.max}
         initialViewState={initialViewState}
         onMoveEnd={onMoveEnd}
         onLoad={onLoad}
-        onStyleData={onStyleChange}
         style={{ width: "100%", height: "100%" }}
       >
         <NavigationControl position="bottom-right" showCompass={false} />
