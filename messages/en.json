@@ -4639,6 +4639,11 @@
       "title": "Map settings",
       "roads": "Roads",
       "labels": "Labels"
+    },
+    "signalTooltip": {
+      "signal": "Signal",
+      "severity": "Severity",
+      "untitled": "Untitled signal"
     }
   }
 }

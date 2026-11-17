@@ -4639,6 +4639,11 @@
       "title": "Ajustes del mapa",
       "roads": "Carreteras",
       "labels": "Etiquetas"
+    },
+    "signalTooltip": {
+      "signal": "Señal",
+      "severity": "Severidad",
+      "untitled": "Señal sin título"
     }
   }
 }

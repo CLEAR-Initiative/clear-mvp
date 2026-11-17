@@ -4639,6 +4639,11 @@
       "title": "Paramètres de la carte",
       "roads": "Routes",
       "labels": "Libellés"
+    },
+    "signalTooltip": {
+      "signal": "Signal",
+      "severity": "Gravité",
+      "untitled": "Signal sans titre"
     }
   }
 }

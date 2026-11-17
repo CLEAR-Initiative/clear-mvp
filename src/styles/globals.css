@@ -38,6 +38,7 @@
   --color-severity-high: #EC9837;
   --color-severity-medium: #F9D468;
   --color-severity-low: #7CB729;
+  --color-severity-on: #171717;
   --color-info: #2563EB;
   --color-info-light: #DBEAFE;
   --color-ai: #7C3AED;
@@ -139,6 +140,7 @@
   --color-severity-high:     #EC9837;
   --color-severity-medium:   #F9D468;
   --color-severity-low:      #7CB729;
+  --color-severity-on:       #171717;
   --color-info:           #60A5FA;
   --color-info-light:     #0D1F3D;
   --color-ai:             #A78BFA;
@@ -634,6 +636,20 @@ nextjs-portal {
     0 0 0 4px rgba(9, 9, 11, 0.85),
     0 8px 28px rgba(0, 0, 0, 0.28) !important;
   border-radius: 10px;
+}
+
+/* Map v2 tooltips draw their own card; drop Mapbox's popup chrome. */
+.map-v2-tooltip {
+  pointer-events: none;
+}
+.map-v2-tooltip .mapboxgl-popup-content {
+  padding: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+}
+.map-v2-tooltip .mapboxgl-popup-tip {
+  display: none;
 }
 
 /* LogIE Blockages hover popup — beat Mapbox’s default white chrome */
