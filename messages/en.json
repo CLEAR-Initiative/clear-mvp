@@ -2192,6 +2192,13 @@
       "label": "Altitude",
       "qualifier": "approx. · DEM",
       "unavailable": "—"
+    },
+    "loadError": {
+      "offline": "No internet connection detected. Please check your network and try again.",
+      "script": "Couldn't load the map library from Mapbox. Your network, VPN or a browser extension may be blocking api.mapbox.com.",
+      "webgl": "Your browser can't draw the map because WebGL is turned off or not supported. Turn on hardware acceleration in your browser settings, or try another browser.",
+      "init": "The map couldn't start. Please refresh the page.",
+      "style": "Failed to load map data. Please try again."
     }
   },
   "nav": {
