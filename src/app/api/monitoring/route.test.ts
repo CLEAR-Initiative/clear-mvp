@@ -75,6 +75,42 @@ describe("POST /api/monitoring", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  it("stops reading a stream once it passes the cap, with no Content-Length to go on", async () => {
+    const chunk = new Uint8Array(256 * 1024);
+    let pulled = 0;
+    const stream = new ReadableStream<Uint8Array>({
+      pull(controller) {
+        pulled++;
+        controller.enqueue(chunk);
+      },
+    });
+
+    const res = await POST(
+      new Request("http://app/api/monitoring", {
+        method: "POST",
+        body: stream,
+        // Node's fetch Request needs this for a streamed body.
+        duplex: "half",
+      } as RequestInit),
+    );
+
+    expect(res.status).toBe(413);
+    // An endless stream: we stopped a chunk or two past 1 MB, not at the end.
+    expect(pulled).toBeLessThan(10);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("refuses a declared Content-Length over the cap before reading", async () => {
+    const res = await POST(
+      new Request("http://app/api/monitoring", {
+        method: "POST",
+        body: "x",
+        headers: { "content-length": String(5 * 1024 * 1024) },
+      }),
+    );
+    expect(res.status).toBe(413);
+  });
+
   it("answers 502 when GlitchTip can't be reached", async () => {
     fetchMock.mockRejectedValue(new Error("ECONNREFUSED"));
     const res = await POST(

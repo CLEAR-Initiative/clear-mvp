@@ -46,8 +46,15 @@ describe("loadMapboxGL", () => {
 
 describe("createMapboxMap", () => {
   const getContext = vi.spyOn(HTMLCanvasElement.prototype, "getContext");
+  const loseContext = vi.fn();
+  const webglContext = {
+    getExtension: (name: string) => (name === "WEBGL_lose_context" ? { loseContext } : null),
+  } as unknown as RenderingContext;
 
-  afterEach(() => getContext.mockReset());
+  afterEach(() => {
+    getContext.mockReset();
+    loseContext.mockReset();
+  });
 
   it("fails at stage webgl before calling Mapbox when the browser has no WebGL", async () => {
     getContext.mockReturnValue(null);
@@ -59,7 +66,7 @@ describe("createMapboxMap", () => {
   });
 
   it("labels a constructor WebGL failure as webgl and anything else as init", async () => {
-    getContext.mockReturnValue({} as RenderingContext);
+    getContext.mockReturnValue(webglContext);
     const { createMapboxMap } = await freshLoader();
 
     const webglFails = {
@@ -77,8 +84,21 @@ describe("createMapboxMap", () => {
     expect(() => createMapboxMap(otherFails, {})).toThrow(expect.objectContaining({ stage: "init" }));
   });
 
+  it("probes WebGL once per page and releases the probe context", async () => {
+    getContext.mockReturnValue(webglContext);
+    const { createMapboxMap } = await freshLoader();
+    const gl = { Map: vi.fn(() => ({})) };
+
+    createMapboxMap(gl, {});
+    createMapboxMap(gl, {});
+
+    expect(getContext).toHaveBeenCalledTimes(1);
+    expect(loseContext).toHaveBeenCalledTimes(1);
+    expect(gl.Map).toHaveBeenCalledTimes(2);
+  });
+
   it("returns the map when Mapbox constructs one", async () => {
-    getContext.mockReturnValue({} as RenderingContext);
+    getContext.mockReturnValue(webglContext);
     const { createMapboxMap } = await freshLoader();
     const map = {};
     const gl = { Map: vi.fn(() => map) };

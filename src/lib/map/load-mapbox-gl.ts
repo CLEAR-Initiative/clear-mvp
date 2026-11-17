@@ -63,14 +63,27 @@ export function loadMapboxGL(): Promise<MapboxGL> {
   return loading;
 }
 
-/** Whether this browser can create a WebGL context at all. */
+let webglAvailable: boolean | null = null;
+
+/**
+ * Whether this browser can create a WebGL context at all. Probes once per
+ * page and releases the probe's context straight away, so it doesn't count
+ * against the browser's limit on live contexts.
+ */
 export function hasWebGL(): boolean {
+  if (webglAvailable !== null) return webglAvailable;
   try {
     const canvas = document.createElement("canvas");
-    return !!(canvas.getContext("webgl2") ?? canvas.getContext("webgl"));
+    const ctx = (canvas.getContext("webgl2") ?? canvas.getContext("webgl")) as
+      | WebGLRenderingContext
+      | WebGL2RenderingContext
+      | null;
+    ctx?.getExtension("WEBGL_lose_context")?.loseContext();
+    webglAvailable = !!ctx;
   } catch {
-    return false;
+    webglAvailable = false;
   }
+  return webglAvailable;
 }
 
 /**

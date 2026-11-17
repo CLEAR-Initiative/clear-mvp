@@ -11,7 +11,7 @@
  * only forwards envelopes addressed to our own DSN, to that DSN's host.
  */
 
-import { envelopeTarget } from "~/lib/sentry-tunnel";
+import { envelopeTarget, readCapped } from "~/lib/sentry-tunnel";
 
 const MAX_ENVELOPE_BYTES = 1024 * 1024;
 
@@ -26,8 +26,9 @@ function headerDsn(body: Uint8Array): unknown {
 }
 
 export async function POST(request: Request): Promise<Response> {
-  const body = new Uint8Array(await request.arrayBuffer());
-  if (body.byteLength === 0 || body.byteLength > MAX_ENVELOPE_BYTES) {
+  // Public endpoint: never buffer more than the cap, whatever the client sends.
+  const body = await readCapped(request, MAX_ENVELOPE_BYTES);
+  if (!body || body.byteLength === 0) {
     return new Response(null, { status: 413 });
   }
 
