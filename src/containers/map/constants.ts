@@ -2,9 +2,23 @@ export const PROJECTION = "globe";
 
 export const ZOOM_RANGE = { min: 0, max: 22 } as const;
 
-export const BASEMAP_STYLES = {
+export const BASEMAP_IDS = ["simple", "satellite", "topography"] as const;
+
+export type BasemapId = (typeof BASEMAP_IDS)[number];
+
+export const DEFAULT_BASEMAP: BasemapId = "simple";
+
+export const BASEMAP_STYLES: Record<BasemapId, { light: string; dark: string }> = {
   simple: {
     light: "mapbox://styles/mapbox/light-v11",
     dark: "mapbox://styles/mapbox/dark-v11",
   },
-} as const;
+  topography: {
+    light: "mapbox://styles/mapbox/light-v11",
+    dark: "mapbox://styles/mapbox/dark-v11",
+  },
+  satellite: {
+    light: "mapbox://styles/mapbox/satellite-streets-v12",
+    dark: "mapbox://styles/mapbox/satellite-streets-v12",
+  },
+};

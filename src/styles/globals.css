@@ -89,6 +89,9 @@
   --map-glass-bg: rgba(255, 255, 255, 0.86);
   --map-tooltip-bg: rgba(255, 255, 255, 0.97);
   --map-overlay-shadow: rgba(0, 0, 0, 0.14);
+  --map-hillshade-shadow: #57534E;
+  --map-hillshade-highlight: #FFFFFF;
+  --map-contour: #A8A29E;
 }
 
 /* ============================================
@@ -144,6 +147,9 @@
   --map-glass-bg: rgba(26, 26, 26, 0.78);
   --map-tooltip-bg: rgba(17, 17, 17, 0.94);
   --map-overlay-shadow: rgba(0, 0, 0, 0.5);
+  --map-hillshade-shadow: #1C1C22;
+  --map-hillshade-highlight: #A1A1AA;
+  --map-contour: #57534E;
 }
 
 /* Base styles */

@@ -338,7 +338,7 @@ choice; shipping operational layers before the triad is correct.
 
 **Topography** (basemap):
 The relief basemap in the triad. **Hybrid**: readable top-down relief by default
-(**hillshade** + **terrain mesh** together), with a real DEM-backed mesh (Mapbox
+(**hillshade** + **contour lines** + **terrain mesh** together), with a real DEM-backed mesh (Mapbox
 `setTerrain` on the existing terrain DEM — not Cesium) so optional tilt reveals true
 3D height. Visual **exaggeration is Country-band boosted** (stronger at z5–8, relaxes
 toward Site) so Topography is obviously distinct from Simple where program managers
@@ -360,6 +360,24 @@ _Avoid_: auto-pitch on selecting Topography; a separate “3D” Layers toggle f
 silent tilt with no teaching; persistent tilt chrome; leaving the mesh stuck after
 switching to Simple or Satellite; resetting pitch on basemap swap; draping DEM on
 Satellite or Simple in this wedge.
+
+**Map settings**:
+The panel under the basemap choice that holds **Roads**, **Labels** and the admin
+boundary level. Settings apply on every basemap in the triad.
+_Avoid_: putting Map settings in the Layers panel; treating a setting as a basemap.
+
+**Roads** (overlay):
+The basemap's road network: road lines, road names and route shields, shown or hidden
+together on every basemap. On **Simple** and **Topography** it is drawn with the
+corridor-first emphasis (trunk corridors stand out from minor roads).
+_Avoid_: confusing it with **Access** or **Blockages**; leaving road names visible when
+Roads is off.
+
+**Labels**:
+Every basemap text and icon that is not part of **Roads**: country, state and place
+names, points of interest, water and natural features. Turning off both **Roads** and
+Labels leaves a clean basemap.
+_Avoid_: treating road names as Labels.
 
 **Point altitude**:
 The DEM elevation (metres) sampled at a map point while **Topography** is active
