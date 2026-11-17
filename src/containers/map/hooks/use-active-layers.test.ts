@@ -10,6 +10,14 @@ describe("layers param", () => {
     expect(parseLayers(value)).toEqual([{ id: "signals", visibility: true, opacity: 1 }]);
   });
 
+  it("keeps only the first entry when an id repeats", () => {
+    const value = JSON.stringify([
+      { id: "signals", visibility: true, opacity: 1 },
+      { id: "signals", visibility: false, opacity: 0.3 },
+    ]);
+    expect(parseLayers(value)).toEqual([{ id: "signals", visibility: true, opacity: 1 }]);
+  });
+
   it("drops an item with an out-of-range opacity", () => {
     expect(parseLayers(JSON.stringify([{ id: "signals", visibility: true, opacity: 2 }]))).toEqual([]);
   });

@@ -24,7 +24,7 @@ export function parseLayers(value: string): ActiveLayer[] | null {
   const layers: ActiveLayer[] = [];
   for (const item of raw) {
     const parsed = activeLayerSchema.safeParse(item);
-    if (parsed.success && isLayerId(parsed.data.id)) {
+    if (parsed.success && isLayerId(parsed.data.id) && !layers.some((layer) => layer.id === parsed.data.id)) {
       layers.push({ ...parsed.data, id: parsed.data.id });
     }
   }
