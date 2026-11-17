@@ -43,12 +43,13 @@ const eslintConfig = [
   {
     files: ["src/containers/map/**"],
     rules: {
-      "no-restricted-imports": [
+      "import/no-restricted-paths": [
         "error",
         {
-          patterns: [
+          zones: [
             {
-              group: ["~/components/map/*", "~/lib/map/*", "~/app/(app)/map/*"],
+              target: "./src/containers/map",
+              from: ["./src/components/map", "./src/lib/map", "./src/app/(app)/map"],
               message: "Map v2 is built in isolation from the old map.",
             },
           ],
