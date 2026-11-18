@@ -2760,7 +2760,16 @@
         "selectUserPlaceholder": "اختر مستخدماً",
         "noMatchingUsers": "لا يوجد مستخدمون مطابقون",
         "roleLabel": "الدور",
-        "add": "إضافة"
+        "add": "إضافة",
+        "notInOrgUseInvite": "ليس في هذه المنظمة بعد. ادعُه عبر البريد الإلكتروني أدناه.",
+        "invite": {
+          "emailLabel": "دعوة عبر البريد الإلكتروني",
+          "emailPlaceholder": "name@example.org",
+          "roleLabel": "الدور",
+          "submit": "دعوة",
+          "sent": "تم إرسال الدعوة إلى {email}. سينضم إلى هذا الفريق بدور {role} عند قبولها.",
+          "addedExisting": "{email} موجود بالفعل في المنظمة وتمت إضافته إلى هذا الفريق."
+        }
       },
       "locations": {
         "title": "نطاق المواقع",
