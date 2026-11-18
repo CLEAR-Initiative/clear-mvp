@@ -1,4 +1,4 @@
-import { isLayerId } from "./layers/ids";
+import { isLayerId } from "./layers/registry";
 
 type StyleLayer = { id: string; type: string; source?: unknown };
 

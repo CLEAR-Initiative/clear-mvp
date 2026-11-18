@@ -1,6 +1,6 @@
 import { createParser, useQueryState } from "nuqs";
 import { z } from "zod";
-import { isLayerId, type LayerId } from "../layers/ids";
+import { isLayerId, type LayerId } from "../layers/registry";
 
 export type ActiveLayer = { id: LayerId; visibility: boolean; opacity: number };
 

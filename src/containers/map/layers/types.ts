@@ -1,5 +1,5 @@
 import type { ComponentType } from "react";
-import type { LayerId } from "./ids";
+import type { LayerId } from "./registry";
 
 export type LayerProps = {
   id: LayerId;
