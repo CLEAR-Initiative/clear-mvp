@@ -9,10 +9,9 @@ import { useResizeOnContainerChange } from "./hooks/use-resize-on-container-chan
 import { findLabelAnchorId } from "./label-anchor";
 import { findReliefAnchorId } from "./basemaps/relief-anchor";
 import { Topography } from "./basemaps/topography";
-import { MapControls } from "./controls";
+import { MapControls, MapStartControls } from "./controls";
 import { useBasemap } from "./hooks/use-basemap";
 import { LayerManager } from "./layer-manager";
-import { Legend } from "./legend";
 
 import "mapbox-gl/dist/mapbox-gl.css";
 
@@ -78,7 +77,7 @@ export default function MapV2() {
         {loaded && <LayerManager labelAnchorId={labelAnchorId} />}
         <MapControls />
       </ReactMapGL>
-      <Legend />
+      <MapStartControls />
     </>
   );
 }

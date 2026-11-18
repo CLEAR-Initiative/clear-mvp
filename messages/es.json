@@ -4618,7 +4618,8 @@
     },
     "controls": {
       "zoomIn": "Acercar",
-      "zoomOut": "Alejar"
+      "zoomOut": "Alejar",
+      "askAi": "Preguntar a la IA"
     }
   }
 }

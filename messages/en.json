@@ -4618,7 +4618,8 @@
     },
     "controls": {
       "zoomIn": "Zoom in",
-      "zoomOut": "Zoom out"
+      "zoomOut": "Zoom out",
+      "askAi": "Ask AI"
     }
   }
 }

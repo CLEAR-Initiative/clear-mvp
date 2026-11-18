@@ -4618,7 +4618,8 @@
     },
     "controls": {
       "zoomIn": "Zoom avant",
-      "zoomOut": "Zoom arrière"
+      "zoomOut": "Zoom arrière",
+      "askAi": "Demander à l'IA"
     }
   }
 }

@@ -92,6 +92,10 @@
   --map-hillshade-shadow: #57534E;
   --map-hillshade-highlight: #FFFFFF;
   --map-contour: #A8A29E;
+  --map-element-shadow: 0 2px 4px rgba(0, 0, 0, 0.32);
+  --map-ai-start: #1F2C84;
+  --map-ai-end: #FB531F;
+  --map-ai-on-gradient: #FFFFFF;
 }
 
 /* ============================================
@@ -150,6 +154,10 @@
   --map-hillshade-shadow: #1C1C22;
   --map-hillshade-highlight: #A1A1AA;
   --map-contour: #57534E;
+  --map-element-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+  --map-ai-start: #8C95F2;
+  --map-ai-end: #FB531F;
+  --map-ai-on-gradient: #FFFFFF;
 }
 
 /* Base styles */
