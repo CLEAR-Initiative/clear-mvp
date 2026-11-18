@@ -4601,15 +4601,15 @@
       "title": "Mapa base",
       "simple-light": {
         "title": "Mapa claro",
-        "description": "Versión clara del mapa base de"
+        "description": "Versión clara del mapa base de Mapbox"
       },
       "simple-dark": {
         "title": "Mapa oscuro",
-        "description": "Versión oscura del mapa base de"
+        "description": "Versión oscura del mapa base de Mapbox"
       },
       "satellite": {
         "title": "Mapa satelital",
-        "description": "Versión satelital del mapa base de"
+        "description": "Versión satelital del mapa base de Mapbox"
       },
       "topography": {
         "title": "Topografía",

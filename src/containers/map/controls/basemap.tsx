@@ -19,8 +19,6 @@ const THUMBNAILS: Record<Variant, string> = {
   topography: "/images/map-v2/basemaps/topography.png",
 };
 
-const FROM_MAPBOX: ReadonlySet<Variant> = new Set(["simple-light", "simple-dark", "satellite"]);
-
 function variantOf(id: BasemapId, isDark: boolean): Variant {
   if (id === "simple") return isDark ? "simple-dark" : "simple-light";
   return id;
@@ -77,20 +75,9 @@ export function BasemapControl() {
                       <Text component="span" size="xs" lh="18px">
                         {t(`${variant}.title`)}
                       </Text>
-                      <Group component="span" gap={6} wrap="nowrap">
-                        <Text component="span" fz={10} lh="16px" c="var(--color-text-secondary)">
-                          {t(`${variant}.description`)}
-                        </Text>
-                        {FROM_MAPBOX.has(variant) && (
-                          <Image
-                            src="/images/map-v2/basemaps/mapbox-logo.png"
-                            alt="Mapbox"
-                            width={41}
-                            height={16}
-                            style={{ filter: isDark ? "invert(1)" : undefined }}
-                          />
-                        )}
-                      </Group>
+                      <Text component="span" fz={10} lh="16px" c="var(--color-text-secondary)">
+                        {t(`${variant}.description`)}
+                      </Text>
                     </Stack>
                     <Radio value={id} size="xs" color="var(--color-accent)" />
                   </Group>

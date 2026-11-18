@@ -4601,15 +4601,15 @@
       "title": "Basemap",
       "simple-light": {
         "title": "Light map",
-        "description": "Light basemap version from"
+        "description": "Light basemap version from Mapbox"
       },
       "simple-dark": {
         "title": "Dark map",
-        "description": "Dark basemap version from"
+        "description": "Dark basemap version from Mapbox"
       },
       "satellite": {
         "title": "Satellite map",
-        "description": "Satellite basemap version from"
+        "description": "Satellite basemap version from Mapbox"
       },
       "topography": {
         "title": "Topography",

@@ -4601,15 +4601,15 @@
       "title": "Fond de carte",
       "simple-light": {
         "title": "Carte claire",
-        "description": "Version claire du fond de carte par"
+        "description": "Version claire du fond de carte par Mapbox"
       },
       "simple-dark": {
         "title": "Carte sombre",
-        "description": "Version sombre du fond de carte par"
+        "description": "Version sombre du fond de carte par Mapbox"
       },
       "satellite": {
         "title": "Carte satellite",
-        "description": "Version satellite du fond de carte par"
+        "description": "Version satellite du fond de carte par Mapbox"
       },
       "topography": {
         "title": "Topographie",
