@@ -107,6 +107,19 @@ describe("InviteByEmail", () => {
     expect(invalidate).toHaveBeenCalledWith({ id: "team-1" });
   });
 
+  it("sends one invite when Enter is pressed again while the first is in flight", async () => {
+    let resolve!: (v: { status: string }) => void;
+    inviteMutate.mockReturnValue(new Promise((r) => (resolve = r)));
+    render(<Harness initial="new@example.org" />);
+    fireEvent.keyDown(emailInput(), { key: "Enter" });
+    fireEvent.keyDown(emailInput(), { key: "Enter" });
+    fireEvent.click(inviteButton());
+    expect(inviteMutate).toHaveBeenCalledOnce();
+
+    resolve({ status: "pending" });
+    expect(await screen.findByRole("status")).toBeTruthy();
+  });
+
   it("shows the API error and keeps the email", async () => {
     inviteMutate.mockRejectedValue(
       new Error("A pending invitation already exists for this email."),

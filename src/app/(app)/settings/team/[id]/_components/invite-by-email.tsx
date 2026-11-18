@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Button, Group, Select, Text, TextInput } from "@mantine/core";
 import { useTranslations } from "next-intl";
 import { IconMail } from "@tabler/icons-react";
@@ -52,12 +52,15 @@ export function InviteByEmail({
   const invite = api.invitations.invite.useMutation();
   const [role, setRole] = useState<TeamRole>("team_member");
   const [outcome, setOutcome] = useState<Outcome | null>(null);
+  const inFlight = useRef(false);
 
   const trimmed = email.trim();
   const valid = looksLikeEmail(trimmed);
 
   async function handleInvite() {
-    if (!valid) return;
+    // The ref blocks a second Enter before `isPending` reaches a re-render.
+    if (!valid || inFlight.current || invite.isPending) return;
+    inFlight.current = true;
     setOutcome(null);
     try {
       const result = await invite.mutateAsync({
@@ -78,6 +81,8 @@ export function InviteByEmail({
         kind: "error",
         message: err instanceof Error ? err.message : String(err),
       });
+    } finally {
+      inFlight.current = false;
     }
   }
 
