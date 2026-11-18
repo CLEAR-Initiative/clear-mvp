@@ -22,6 +22,7 @@ type MapProps = {
   countryFitInsetBottom?: number;
   onPresenceHover?: (hover: unknown) => void;
   onLoadError?: (error: { message: string; isOffline: boolean }) => void;
+  onLoad?: () => void;
 };
 const mapProps: { current: MapProps } = { current: {} };
 
@@ -251,5 +252,17 @@ describe("Overview map load failure", () => {
     fireEvent.click(screen.getByRole("button", { name: "Try Again" }));
     expect(screen.queryByRole("alert")).toBeNull();
     expect(screen.getByTestId("crisis-map")).toBeTruthy();
+  });
+});
+
+describe("Overview map recovering after an early error", () => {
+  it("clears the error once the map loads anyway", () => {
+    renderPage();
+    act(() => mapProps.current.onLoadError?.({ message: "The map style could not load.", isOffline: false }));
+    expect(screen.getByRole("alert")).toBeTruthy();
+
+    act(() => mapProps.current.onLoad?.());
+
+    expect(screen.queryByRole("alert")).toBeNull();
   });
 });

@@ -186,6 +186,8 @@ export default function DashboardPage() {
   const handleMapLoadError = useCallback((error: { message: string }) => {
     setMapLoadError(error.message);
   }, []);
+  // A tile can fail before the style is up and the map still load: clear it then.
+  const handleMapLoaded = useCallback(() => setMapLoadError(null), []);
   const handleRetryMapLoad = useCallback(() => {
     setMapLoadError(null);
     setMapRetryNonce((n) => n + 1);
@@ -334,6 +336,7 @@ export default function DashboardPage() {
             detailChromeActive && selectedMarker ? selectedMarker.id : null
           }
           onLoadError={handleMapLoadError}
+          onLoad={handleMapLoaded}
           key={mapRetryNonce}
         />
         )}

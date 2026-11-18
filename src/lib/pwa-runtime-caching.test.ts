@@ -1,5 +1,7 @@
-import { describe, expect, it } from "vitest";
-import { runtimeCaching } from "./pwa-runtime-caching";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { runtimeCaching, signedOutGuard } from "./pwa-runtime-caching";
+import { clearSignedInCaches } from "./service-worker-caches";
+import { FakeCacheStorage } from "./fake-cache-storage.test-helper";
 
 type Entry = (typeof runtimeCaching)[number];
 
@@ -47,5 +49,82 @@ describe("service worker runtime caching", () => {
 
   it("still caches same-origin pages, so Observe opens offline", () => {
     expect(cacheFor(`${APP_ORIGIN}/observe`)).toBe("pages");
+  });
+});
+
+describe("sign-out guard on the service worker's caches", () => {
+  const request = new Request(`${APP_ORIGIN}/api/trpc/auth.me`);
+  const response = () => new Response("{\"user\":\"previous person\"}");
+  let now = 1_000;
+
+  function setUp() {
+    const storage = new FakeCacheStorage();
+    vi.stubGlobal("caches", storage);
+    vi.spyOn(Date, "now").mockImplementation(() => now);
+    return storage;
+  }
+
+  /** What Workbox does for one request: note the start, then (later) try to cache. */
+  async function startRequest() {
+    const state: Record<string, unknown> = {};
+    await signedOutGuard.requestWillFetch({ request, state } as never);
+    return state;
+  }
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+    now = 1_000;
+  });
+
+  it("is on every route", () => {
+    for (const entry of runtimeCaching) {
+      expect(entry.options?.plugins).toContain(signedOutGuard);
+    }
+  });
+
+  it("caches as before when nobody has signed out", async () => {
+    setUp();
+    const state = await startRequest();
+    const res = response();
+    expect(await signedOutGuard.cacheWillUpdate({ request, response: res, state } as never)).toBe(res);
+  });
+
+  it("refuses a response whose request was still in flight at sign-out", async () => {
+    setUp();
+    const state = await startRequest();
+    now = 2_000;
+    await clearSignedInCaches();
+    now = 2_500;
+
+    expect(await signedOutGuard.cacheWillUpdate({ request, response: response(), state } as never)).toBeNull();
+  });
+
+  it("caches the next person's requests, started after the sign-out", async () => {
+    setUp();
+    now = 2_000;
+    await clearSignedInCaches();
+    now = 3_000;
+    const state = await startRequest();
+    const res = response();
+
+    expect(await signedOutGuard.cacheWillUpdate({ request, response: res, state } as never)).toBe(res);
+  });
+
+  it("removes the entry when the sign-out lands between the check and the write", async () => {
+    const storage = setUp();
+    const state = await startRequest();
+    const res = response();
+    // Checked before the sign-out, so the write goes ahead...
+    expect(await signedOutGuard.cacheWillUpdate({ request, response: res, state } as never)).toBe(res);
+    now = 2_000;
+    await clearSignedInCaches();
+    // ...and lands after it, reopening "apis" with the old user's response.
+    await (await storage.open("apis")).put(request, res);
+    expect(storage.entries("apis")).toEqual([request.url]);
+
+    await signedOutGuard.cacheDidUpdate({ cacheName: "apis", request, state } as never);
+
+    expect(storage.entries("apis")).toEqual([]);
   });
 });
