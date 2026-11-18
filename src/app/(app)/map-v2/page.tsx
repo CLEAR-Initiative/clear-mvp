@@ -1,9 +1,5 @@
-"use client";
-
-import dynamic from "next/dynamic";
 import { Box } from "@mantine/core";
-
-const MapV2 = dynamic(() => import("~/containers/map"), { ssr: false });
+import { MapV2 } from "~/containers/map/lazy";
 
 export default function MapV2Page() {
   return (
