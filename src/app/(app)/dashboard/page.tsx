@@ -23,6 +23,7 @@ import {
 } from "~/app/(app)/map/_components/map-markers-data";
 import { MapMarkerDetail } from "~/app/(app)/map/_components/map-marker-detail";
 import { MapPanelBar } from "~/app/(app)/map/_components/map-panel-bar";
+import { MapErrorState } from "~/app/(app)/map/_components/map-loading-overlay";
 import type { DataView } from "~/app/(app)/map/_components/map-layers-panel";
 import type { BoundaryLevel } from "~/app/(app)/map/_components/map-settings-popover";
 import type { BaseMapType, MapMarker, MarkerScreenPoint, PresenceHover } from "~/components/map/crisis-map";
@@ -178,6 +179,17 @@ export default function DashboardPage() {
   const [showRoads, setShowRoads] = useState(true);
   const [showNrcLocations, setShowNrcLocations] = useState(false);
   const [baseMapType, setBaseMapType] = useState<BaseMapType>("simple");
+  // A map that fails to load (offline, script or style blocked) says so,
+  // rather than leaving a black canvas. Retry remounts the map.
+  const [mapLoadError, setMapLoadError] = useState<string | null>(null);
+  const [mapRetryNonce, setMapRetryNonce] = useState(0);
+  const handleMapLoadError = useCallback((error: { message: string }) => {
+    setMapLoadError(error.message);
+  }, []);
+  const handleRetryMapLoad = useCallback(() => {
+    setMapLoadError(null);
+    setMapRetryNonce((n) => n + 1);
+  }, []);
 
   const alertsQuery = api.alerts.alertsForMap.useQuery(
     { activeOnly: true, teamId: activeTeamId },
@@ -321,7 +333,12 @@ export default function DashboardPage() {
           hoveredMarkerId={
             detailChromeActive && selectedMarker ? selectedMarker.id : null
           }
+          onLoadError={handleMapLoadError}
+          key={mapRetryNonce}
         />
+        )}
+        {mapLoadError && (
+          <MapErrorState message={mapLoadError} onRetry={handleRetryMapLoad} contained />
         )}
         {worldMode && !inspected && <PresenceCard count={NRC_OPERATING_COUNTRIES.length} />}
         {inspected && <BackToWorldButton onClick={backToWorld} />}

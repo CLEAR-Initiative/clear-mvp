@@ -21,6 +21,7 @@ type MapProps = {
   countryFitInsetRight?: number;
   countryFitInsetBottom?: number;
   onPresenceHover?: (hover: unknown) => void;
+  onLoadError?: (error: { message: string; isOffline: boolean }) => void;
 };
 const mapProps: { current: MapProps } = { current: {} };
 
@@ -236,5 +237,19 @@ describe("Overview world map", () => {
     renderPage();
     expect(mapProps.current.focusCountryName).toBe("Sudan");
     expect(screen.getByTestId("panel-country").textContent).toBe("Sudan");
+  });
+});
+
+describe("Overview map load failure", () => {
+  it("says the map could not load instead of leaving a black canvas, and retries", () => {
+    renderPage();
+    expect(screen.queryByRole("alert")).toBeNull();
+
+    act(() => mapProps.current.onLoadError?.({ message: "The map style could not load.", isOffline: false }));
+    expect(screen.getByRole("alert").textContent).toContain("The map style could not load.");
+
+    fireEvent.click(screen.getByRole("button", { name: "Try Again" }));
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(screen.getByTestId("crisis-map")).toBeTruthy();
   });
 });

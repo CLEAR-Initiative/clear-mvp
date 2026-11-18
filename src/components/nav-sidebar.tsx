@@ -30,6 +30,7 @@ import {
 import { cn } from "~/lib/utils";
 import { clearAgentSession } from "~/components/agent/agent-provider";
 import { clearAnalysisCollaboration } from "~/lib/analysis-collaboration";
+import { clearSignedInCaches } from "~/lib/service-worker-caches";
 import { authClient } from "~/lib/auth-client";
 import { NrcLogoMark } from "~/components/ui/nrc-logo-mark";
 import { colors, fontSizesPx, spacingPx } from "~/lib/tokens";
@@ -275,6 +276,7 @@ export function NavSidebar({
     // app key ever needs clearing on sign-out, remove it explicitly here.
     clearAgentSession(); // the active Agent Thread belongs to this user
     clearAnalysisCollaboration();
+    await clearSignedInCaches(); // the service worker's copies of this user's pages and data
     window.location.href = "/auth/login";
   };
 
