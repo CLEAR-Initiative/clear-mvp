@@ -5,6 +5,7 @@ import ReactMapGL, { NavigationControl, type MapRef, type ViewStateChangeEvent }
 import { useIsDark } from "~/hooks/use-is-dark";
 import { BASEMAP_STYLES, PROJECTION, ZOOM_RANGE } from "./constants";
 import { isSameView, useMapView, type LngLat } from "./hooks/use-map-view";
+import { useResizeOnContainerChange } from "./hooks/use-resize-on-container-change";
 import { findLabelAnchorId } from "./label-anchor";
 import { LayerManager } from "./layer-manager";
 import { Legend } from "./legend";
@@ -42,6 +43,8 @@ export default function MapV2() {
     if (isSameView(camera, { center, zoom })) return;
     map.flyTo({ center, zoom });
   }, [center, zoom, loaded]);
+
+  useResizeOnContainerChange(mapRef, loaded);
 
   return (
     <>
