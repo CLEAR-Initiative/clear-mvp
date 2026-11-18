@@ -24,18 +24,13 @@ import { api } from "~/trpc/react";
 import type { TeamLocation } from "~/lib/types/teams";
 import { isPlatformAdmin } from "~/lib/roles";
 import { WebhooksSection } from "./_components/webhooks-section";
-
-const TEAM_ROLE_OPTIONS = [
-  "team_admin",
-  "analyst",
-  "emergency_response_manager",
-  "team_member",
-] as const;
-type TeamRole = (typeof TEAM_ROLE_OPTIONS)[number];
-
-function isTeamRole(v: string): v is TeamRole {
-  return (TEAM_ROLE_OPTIONS as readonly string[]).includes(v);
-}
+import {
+  InviteByEmail,
+  TEAM_ROLE_OPTIONS,
+  isTeamRole,
+  looksLikeEmail,
+  type TeamRole,
+} from "./_components/invite-by-email";
 
 // Roles with admin-level privileges over a team.
 const TEAM_ADMIN_ROLES = new Set(["team_admin"]);
@@ -73,6 +68,10 @@ export default function TeamSettingsPage() {
 
   const [newMemberId, setNewMemberId] = useState("");
   const [newMemberRole, setNewMemberRole] = useState<TeamRole>("team_member");
+  // Email for the "Invite by email" row. Typing an unknown email into the
+  // Add member search copies it here, since Select clears its search on blur.
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [memberSearch, setMemberSearch] = useState("");
 
   const team = teamQuery.data;
   const currentUser = meQuery.data?.user;
@@ -305,10 +304,22 @@ export default function TeamSettingsPage() {
                 data={addableMembers}
                 value={newMemberId || null}
                 onChange={(v) => setNewMemberId(v ?? "")}
+                onSearchChange={(v) => {
+                  setMemberSearch(v);
+                  const q = v.trim().toLowerCase();
+                  const matchesMember = addableMembers.some((m) =>
+                    m.label.toLowerCase().includes(q),
+                  );
+                  if (looksLikeEmail(v) && !matchesMember) setInviteEmail(v.trim());
+                }}
                 disabled={orgQuery.isLoading || addableMembers.length === 0}
                 size="xs"
                 searchable
-                nothingFoundMessage={t("members.noMatchingUsers")}
+                nothingFoundMessage={
+                  looksLikeEmail(memberSearch)
+                    ? t("members.notInOrgUseInvite")
+                    : t("members.noMatchingUsers")
+                }
                 w={280}
               />
               <Select
@@ -331,6 +342,14 @@ export default function TeamSettingsPage() {
                 {t("members.add")}
               </Button>
             </Group>
+          )}
+          {canManageRoles && orgId && (
+            <InviteByEmail
+              teamId={id}
+              organisationId={orgId}
+              email={inviteEmail}
+              onEmailChange={setInviteEmail}
+            />
           )}
         </Box>
 

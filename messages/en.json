@@ -2760,7 +2760,16 @@
         "selectUserPlaceholder": "Select a user",
         "noMatchingUsers": "No matching users",
         "roleLabel": "Role",
-        "add": "Add"
+        "add": "Add",
+        "notInOrgUseInvite": "Not in this organisation yet. Invite them by email below.",
+        "invite": {
+          "emailLabel": "Invite by email",
+          "emailPlaceholder": "name@example.org",
+          "roleLabel": "Role",
+          "submit": "Invite",
+          "sent": "Invite sent to {email}. They join this team as {role} when they accept it.",
+          "addedExisting": "{email} is already in the organisation and has been added to this team."
+        }
       },
       "locations": {
         "title": "Location Scope",

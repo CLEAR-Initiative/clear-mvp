@@ -2760,7 +2760,16 @@
         "selectUserPlaceholder": "Seleccione un usuario",
         "noMatchingUsers": "Ningún usuario coincide",
         "roleLabel": "Rol",
-        "add": "Añadir"
+        "add": "Añadir",
+        "notInOrgUseInvite": "Aún no está en esta organización. Invítele por correo abajo.",
+        "invite": {
+          "emailLabel": "Invitar por correo",
+          "emailPlaceholder": "nombre@ejemplo.org",
+          "roleLabel": "Rol",
+          "submit": "Invitar",
+          "sent": "Invitación enviada a {email}. Se unirá a este equipo como {role} cuando la acepte.",
+          "addedExisting": "{email} ya está en la organización y se ha añadido a este equipo."
+        }
       },
       "locations": {
         "title": "Alcance de ubicación",

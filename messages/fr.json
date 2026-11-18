@@ -2760,7 +2760,16 @@
         "selectUserPlaceholder": "Sélectionnez un utilisateur",
         "noMatchingUsers": "Aucun utilisateur correspondant",
         "roleLabel": "Rôle",
-        "add": "Ajouter"
+        "add": "Ajouter",
+        "notInOrgUseInvite": "Pas encore dans cette organisation. Invitez cette personne par e-mail ci-dessous.",
+        "invite": {
+          "emailLabel": "Inviter par e-mail",
+          "emailPlaceholder": "nom@exemple.org",
+          "roleLabel": "Rôle",
+          "submit": "Inviter",
+          "sent": "Invitation envoyée à {email}. La personne rejoindra cette équipe en tant que {role} après l'avoir acceptée.",
+          "addedExisting": "{email} fait déjà partie de l'organisation et a été ajouté(e) à cette équipe."
+        }
       },
       "locations": {
         "title": "Périmètre géographique",
