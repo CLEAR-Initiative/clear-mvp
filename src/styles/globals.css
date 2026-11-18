@@ -330,6 +330,9 @@ body[data-nav-overlay="true"] {
   .mapboxgl-ctrl-bottom-right {
     bottom: 76px !important;
   }
+  .map-v2 .mapboxgl-ctrl-bottom-right {
+    bottom: 0 !important;
+  }
 }
 
 /* Mapbox overrides - ensure map fills container */

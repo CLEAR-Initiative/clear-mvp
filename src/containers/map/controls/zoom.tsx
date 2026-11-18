@@ -5,7 +5,7 @@ import { IconMinus, IconPlus } from "@tabler/icons-react";
 import { useTranslations } from "next-intl";
 import { useMap } from "react-map-gl/mapbox";
 
-const BUTTON_STYLE = { display: "flex", alignItems: "center", justifyContent: "center", width: 20, height: 14 };
+const BUTTON_STYLE = { display: "flex", alignItems: "center", justifyContent: "center", width: 32, height: 30 };
 
 export function ZoomControl() {
   const t = useTranslations("mapV2.controls");
@@ -13,10 +13,8 @@ export function ZoomControl() {
 
   return (
     <Stack
-      gap={8}
+      gap={0}
       align="center"
-      p={6}
-      py={8}
       style={{ background: "var(--color-bg-white)", borderRadius: 2, boxShadow: "var(--shadow-xs)" }}
     >
       <UnstyledButton aria-label={t("zoomIn")} onClick={() => map?.zoomIn()} style={BUTTON_STYLE}>
