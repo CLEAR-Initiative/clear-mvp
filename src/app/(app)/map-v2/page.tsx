@@ -3,7 +3,7 @@ import { MapV2 } from "~/containers/map/lazy";
 
 export default function MapV2Page() {
   return (
-    <Box h="100dvh" w="100%" pos="relative">
+    <Box className="map-v2" h="100dvh" w="100%" pos="relative">
       <MapV2 />
     </Box>
   );

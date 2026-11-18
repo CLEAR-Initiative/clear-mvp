@@ -335,6 +335,12 @@ body[data-nav-overlay="true"] {
   display: none !important;
 }
 
+/* Mapbox's terms of service require the logo and attribution on the map. */
+.map-v2 .mapboxgl-ctrl-logo,
+.map-v2 .mapboxgl-ctrl-attrib {
+  display: block !important;
+}
+
 .mapboxgl-popup-content {
   border-radius: 0 !important;
   padding: 12px 16px !important;
