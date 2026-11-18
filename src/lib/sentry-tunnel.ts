@@ -4,6 +4,11 @@
 /**
  * The GlitchTip envelope URL for an envelope whose header names `headerDsn`,
  * or null when that DSN is not ours.
+ *
+ * The URL carries our DSN's public key as `sentry_key`. GlitchTip reads the
+ * key from the query string or an X-Sentry-Auth header, never from the
+ * envelope's own `dsn`, and answers 403 "Denied" without one. The browser SDK
+ * leaves both off when it posts to a tunnel.
  */
 export function envelopeTarget(headerDsn: unknown, ourDsn: string | undefined): string | null {
   if (!ourDsn || typeof headerDsn !== "string") return null;
@@ -17,8 +22,9 @@ export function envelopeTarget(headerDsn: unknown, ourDsn: string | undefined): 
   }
   if (theirs.host !== ours.host || theirs.pathname !== ours.pathname) return null;
   const projectId = ours.pathname.replace(/^\/+|\/+$/g, "");
-  if (!/^\d+$/.test(projectId)) return null;
-  return `${ours.protocol}//${ours.host}/api/${projectId}/envelope/`;
+  if (!/^\d+$/.test(projectId) || !ours.username) return null;
+  const query = new URLSearchParams({ sentry_key: ours.username, sentry_version: "7" });
+  return `${ours.protocol}//${ours.host}/api/${projectId}/envelope/?${query}`;
 }
 
 /**
