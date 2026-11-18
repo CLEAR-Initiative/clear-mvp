@@ -4583,5 +4583,18 @@
     "reload": "إعادة تحميل الصفحة",
     "tryAgain": "إعادة المحاولة",
     "reference": "المرجع: {digest}"
+  },
+  "mapV2": {
+    "layers": {
+      "signals": {
+        "title": "الإشارات"
+      }
+    },
+    "errors": {
+      "layerUnavailable": {
+        "title": "طبقة الخريطة غير متاحة",
+        "description": "تعذّر عرض بعض طبقات الخريطة الآن. حاول مرة أخرى لاحقًا."
+      }
+    }
   }
 }

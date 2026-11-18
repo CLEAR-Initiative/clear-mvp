@@ -34,6 +34,10 @@
   --color-warning-light: #FEF3C7;
   --color-success: #059669;
   --color-success-light: #D1FAE5;
+  --color-severity-critical: #E84E5B;
+  --color-severity-high: #EC9837;
+  --color-severity-medium: #F9D468;
+  --color-severity-low: #7CB729;
   --color-info: #2563EB;
   --color-info-light: #DBEAFE;
   --color-ai: #7C3AED;
@@ -120,6 +124,10 @@
   --color-warning-light:  #2D2010;
   --color-success:        #34D399;
   --color-success-light:  #0D2D1E;
+  --color-severity-critical: #E84E5B;
+  --color-severity-high:     #EC9837;
+  --color-severity-medium:   #F9D468;
+  --color-severity-low:      #7CB729;
   --color-info:           #60A5FA;
   --color-info-light:     #0D1F3D;
   --color-ai:             #A78BFA;
@@ -325,6 +333,12 @@ body[data-nav-overlay="true"] {
 .mapboxgl-ctrl-logo,
 .mapboxgl-ctrl-attrib {
   display: none !important;
+}
+
+/* Mapbox's terms of service require the logo and attribution on the map. */
+.map-v2 .mapboxgl-ctrl-logo,
+.map-v2 .mapboxgl-ctrl-attrib {
+  display: block !important;
 }
 
 .mapboxgl-popup-content {

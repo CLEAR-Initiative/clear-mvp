@@ -40,6 +40,23 @@ const eslintConfig = [
       ],
     },
   },
+  {
+    files: ["src/containers/map/**"],
+    rules: {
+      "import/no-restricted-paths": [
+        "error",
+        {
+          zones: [
+            {
+              target: "./src/containers/map",
+              from: ["./src/components/map", "./src/lib/map", "./src/app/(app)/map"],
+              message: "Map v2 is built in isolation from the old map.",
+            },
+          ],
+        },
+      ],
+    },
+  },
 ];
 
 export default eslintConfig;
