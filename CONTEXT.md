@@ -330,6 +330,21 @@ _Avoid_: white overlays; page-level content fade-in; opacity-0 entry animations 
 
 ### Map foundation
 
+**Signal cluster**:
+A group of **Signals** that sit close together on the map at the current zoom, drawn as
+one numbered circle. In the **Global** view it is a plain blue circle. The design shows a
+donut with the severity mix once a country is chosen; that is not built yet. Clicking it
+zooms in until it splits.
+_Avoid_: "event" or "crisis" for a cluster (a cluster is a map grouping, not a
+**Detection**); "donut" for the Global blue circle.
+
+**Stacked signals**:
+**Signals** that share exactly the same point, often a country or city centre. Zooming
+never splits them, so they stay a **Signal cluster** at every zoom and cannot be opened
+from the map until the panel lists a selected cluster's signals.
+_Avoid_: spiderfying stacks on map v2; "duplicates" (stacked signals are distinct
+signals at one place).
+
 **Basemap triad**:
 Exactly one basemap is active: **Simple**, **Topography**, or **Satellite**. Not a
 Satellite checkbox stacked on Simple.
