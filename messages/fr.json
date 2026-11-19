@@ -4604,6 +4604,31 @@
         "title": "Couche de carte indisponible",
         "description": "Certaines couches de la carte ne peuvent pas être affichées pour le moment. Réessayez plus tard."
       }
+    },
+    "basemaps": {
+      "button": "Fond de carte",
+      "title": "Fond de carte",
+      "simple-light": {
+        "title": "Carte claire",
+        "description": "Version claire du fond de carte par Mapbox"
+      },
+      "simple-dark": {
+        "title": "Carte sombre",
+        "description": "Version sombre du fond de carte par Mapbox"
+      },
+      "satellite": {
+        "title": "Carte satellite",
+        "description": "Version satellite du fond de carte par Mapbox"
+      },
+      "topography": {
+        "title": "Topographie",
+        "description": "Détails du relief et courbes de niveau"
+      }
+    },
+    "controls": {
+      "zoomIn": "Zoom avant",
+      "zoomOut": "Zoom arrière",
+      "askAi": "Demander à l'IA"
     }
   }
 }

@@ -4604,6 +4604,31 @@
         "title": "Map layer unavailable",
         "description": "Some map layers cannot be shown right now. Try again later."
       }
+    },
+    "basemaps": {
+      "button": "Basemap",
+      "title": "Basemap",
+      "simple-light": {
+        "title": "Light map",
+        "description": "Light basemap version from Mapbox"
+      },
+      "simple-dark": {
+        "title": "Dark map",
+        "description": "Dark basemap version from Mapbox"
+      },
+      "satellite": {
+        "title": "Satellite map",
+        "description": "Satellite basemap version from Mapbox"
+      },
+      "topography": {
+        "title": "Topography",
+        "description": "Terrain details and contour lines"
+      }
+    },
+    "controls": {
+      "zoomIn": "Zoom in",
+      "zoomOut": "Zoom out",
+      "askAi": "Ask AI"
     }
   }
 }

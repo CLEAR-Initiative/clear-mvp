@@ -4604,6 +4604,31 @@
         "title": "Capa del mapa no disponible",
         "description": "Algunas capas del mapa no se pueden mostrar ahora. Inténtalo más tarde."
       }
+    },
+    "basemaps": {
+      "button": "Mapa base",
+      "title": "Mapa base",
+      "simple-light": {
+        "title": "Mapa claro",
+        "description": "Versión clara del mapa base de Mapbox"
+      },
+      "simple-dark": {
+        "title": "Mapa oscuro",
+        "description": "Versión oscura del mapa base de Mapbox"
+      },
+      "satellite": {
+        "title": "Mapa satelital",
+        "description": "Versión satelital del mapa base de Mapbox"
+      },
+      "topography": {
+        "title": "Topografía",
+        "description": "Detalles del terreno y curvas de nivel"
+      }
+    },
+    "controls": {
+      "zoomIn": "Acercar",
+      "zoomOut": "Alejar",
+      "askAi": "Preguntar a la IA"
     }
   }
 }

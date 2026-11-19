@@ -90,10 +90,11 @@ export function AgentDrawer() {
   const endSide = rtl ? "left" : "right";
   // The Agent page shows the Thread full-screen already.
   const onAgentPage = pathname === "/agent";
+  const hideLauncher = onAgentPage || pathname.startsWith("/map-v2");
 
   return (
     <>
-      {!onAgentPage && !open && (
+      {!hideLauncher && !open && (
         <Affix
           position={{
             bottom: "calc(88px + env(safe-area-inset-bottom, 0px))",

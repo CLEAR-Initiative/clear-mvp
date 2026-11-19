@@ -17,7 +17,6 @@ export function Legend() {
       shadow="sm"
       p="sm"
       radius="md"
-      style={{ position: "absolute", bottom: 32, left: 16, zIndex: 1 }}
     >
       <Stack gap="sm">
         {visibleLayers.map(({ id }) => {
