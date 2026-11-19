@@ -416,6 +416,11 @@ interface CrisisMapProps {
   /** Fired when the map fails to load (offline, style error, etc.). */
   onLoadError?: (error: { message: string; isOffline: boolean }) => void;
   /**
+   * Fired once the style has loaded. A tile can fail before that and still
+   * report through `onLoadError`, so a page showing that error clears it here.
+   */
+  onLoad?: () => void;
+  /**
    * Overlay content inside the map shell (same stacking context as Mapbox
    * markers). Used by `/map` spaghetti connectors so lines sit under pins.
    */
@@ -765,6 +770,7 @@ export function CrisisMap({
   onMapClick,
   introFromGlobe = false,
   onLoadError,
+  onLoad,
   children,
 }: CrisisMapProps) {
   const t = useTranslations("map");
@@ -814,6 +820,8 @@ export function CrisisMap({
   const onClusterExpandRef = useRef(onClusterExpand);
   const onMapMoveRef = useRef(onMapMove);
   const onMapClickRef = useRef(onMapClick);
+  const onLoadRef = useRef(onLoad);
+  onLoadRef.current = onLoad;
   const locationPickActiveRef = useRef(locationPickActive);
   const showNavigationRef = useRef(showNavigation);
   showNavigationRef.current = showNavigation;
@@ -954,6 +962,7 @@ export function CrisisMap({
           // (basemap/roads/theme) actually calls setStyle instead of being skipped.
           appliedStyleRef.current = mapStyleRef.current;
           setLoaded(true);
+          onLoadRef.current?.();
         }
       });
 

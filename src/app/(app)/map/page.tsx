@@ -336,6 +336,9 @@ function MapPageContent() {
     setRetryNonce((prev) => prev + 1);
   }, []);
 
+  // A tile can fail before the style is up and the map still load: clear it then.
+  const handleMapLoaded = useCallback(() => setMapLoadError(null), []);
+
   /* ---- Fetch data ---- */
 
   // Timeline state. Stored as "YYYY-MM"; null means "all time".
@@ -2495,6 +2498,7 @@ function MapPageContent() {
           locationPickActive={locationCorrectionDraft?.phase === "picking"}
           onMapClick={handleLocationCorrectionMapClick}
           onLoadError={handleMapLoadError}
+          onLoad={handleMapLoaded}
           key={retryNonce}
         >
           {/* Spaghetti under markers (CrisisMap marker z-index 2); panels stay outside. */}
