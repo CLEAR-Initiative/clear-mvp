@@ -24,8 +24,8 @@
   color: transparent;
 }
 
-.iconHover {
-  display: none;
+.icon {
+  flex-shrink: 0;
 }
 
 .button:hover,
@@ -39,12 +39,8 @@
   color: var(--map-ai-on-gradient);
 }
 
-.button:hover .icon,
-.button:focus-visible .icon {
-  display: none;
-}
-
-.button:hover .iconHover,
-.button:focus-visible .iconHover {
-  display: block;
+.button:hover .iconStroke,
+.button:focus-visible .iconStroke {
+  stroke: var(--map-ai-on-gradient);
+  stroke-width: 2;
 }
