@@ -17,6 +17,7 @@ import { markSettingsComplete } from "~/lib/onboarding/storage";
 import { notifyOnboardingChange } from "~/hooks/use-onboarding-state";
 import { api } from "~/trpc/react";
 import { defaultTimeZone, isLocale, localeLabels, locales } from "~/i18n/config";
+import { useTimeZoneOptions } from "~/i18n/use-time-zone-options";
 import { useTeam } from "~/providers/team-provider";
 
 export default function WelcomeSettingsPage() {
@@ -36,6 +37,7 @@ export default function WelcomeSettingsPage() {
   const [timezone, setTimezone] = useState<string>(currentTimeZone ?? defaultTimeZone);
   const [teamId, setTeamId] = useState<string | null>(activeTeamId);
   const [submitting, setSubmitting] = useState(false);
+  const timeZoneOptions = useTimeZoneOptions(timezone);
 
   useEffect(() => {
     if (detailsQuery.data?.language) setLanguage(detailsQuery.data.language);
@@ -110,10 +112,8 @@ export default function WelcomeSettingsPage() {
             label={tProfile("preferences.timezone")}
             value={timezone}
             onChange={(v) => setTimezone(v ?? defaultTimeZone)}
-            data={[
-              { value: "Africa/Khartoum", label: tProfile("edit.timezoneKhartoum") },
-              { value: "UTC", label: tProfile("edit.timezoneUtc") },
-            ]}
+            data={timeZoneOptions}
+            searchable
             allowDeselect={false}
           />
 
