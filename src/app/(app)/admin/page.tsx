@@ -50,6 +50,7 @@ import { PageHeader, StatsGrid } from "~/components/ui";
 import type { StatItem } from "~/components/ui";
 import { colors, fontSizesPx, spacingPx } from "~/lib/tokens";
 import { sortUsersStable } from "./users-order";
+import { inviteTeamsLabel } from "./invite-teams";
 
 /* ─── Shared ──────────────────────────────────────────────── */
 const border = `1px solid ${colors.border}`;
@@ -2010,14 +2011,14 @@ function InvitationsPanel() {
                       </Badge>
                     </Table.Td>
                     <Table.Td>
-                      {invite.team ? (
+                      {inviteTeamsLabel(invite) ? (
                         <Text
                           style={{
                             fontSize: fontSizesPx.base,
                             color: colors.textSecondary,
                           }}
                         >
-                          {invite.team.name} ({invite.teamRole ?? "team_member"})
+                          {inviteTeamsLabel(invite)}
                         </Text>
                       ) : (
                         <Text
