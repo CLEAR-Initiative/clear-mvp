@@ -26,28 +26,31 @@ function worldCopyOffset(lng: number): number {
   return Math.floor((lng + 180) / 360);
 }
 
-export function viewClusters(
-  index: SignalIndex,
-  { west, south, east, north }: ViewBounds,
-  zoom: number,
-): { clusters: ClusterMarker[]; points: SignalFeatureCollection } {
+const WORLD_BBOX: [number, number, number, number] = [-180, -90, 180, 90];
+
+export function worldPoints(index: SignalIndex, zoom: number): SignalFeatureCollection {
+  const points = index
+    .getClusters(WORLD_BBOX, zoom)
+    .filter((feature) => !("cluster" in feature.properties) || !feature.properties.cluster) as SignalFeature[];
+  return { type: "FeatureCollection", features: points };
+}
+
+export function viewClusters(index: SignalIndex, { west, south, east, north }: ViewBounds, zoom: number): ClusterMarker[] {
   const clusters: ClusterMarker[] = [];
-  const points: SignalFeature[] = [];
   const firstCopy = worldCopyOffset(west);
   const lastCopy = worldCopyOffset(east);
 
-  for (const feature of index.getClusters([west, south, east, north], zoom)) {
+  for (const feature of index.getClusters(WORLD_BBOX, zoom)) {
     const properties = feature.properties;
-    if (!("cluster" in properties) || !properties.cluster) {
-      points.push(feature as SignalFeature);
-      continue;
-    }
-    const clusterId = properties.cluster_id;
-    const expansionZoom = index.getClusterExpansionZoom(clusterId);
+    if (!("cluster" in properties) || !properties.cluster) continue;
     const [lng, lat] = feature.geometry.coordinates as [number, number];
+    if (lat < south || lat > north) continue;
+    const clusterId = properties.cluster_id;
+    let expansionZoom: number | undefined;
     for (let copy = firstCopy; copy <= lastCopy; copy++) {
       const shifted = lng + 360 * copy;
       if (shifted < west || shifted > east) continue;
+      expansionZoom ??= index.getClusterExpansionZoom(clusterId);
       clusters.push({
         key: `${clusterId}:${copy}`,
         clusterId,
@@ -59,7 +62,7 @@ export function viewClusters(
     }
   }
 
-  return { clusters, points: { type: "FeatureCollection", features: points } };
+  return clusters;
 }
 
 export function clusterSize(count: number): { outer: number; inner: number } {

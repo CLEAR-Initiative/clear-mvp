@@ -2,41 +2,57 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useMap } from "react-map-gl/mapbox";
-import { createSignalIndex, viewClusters, type ClusterMarker } from "./clusters";
+import { createSignalIndex, viewClusters, worldPoints, type ClusterMarker, type ViewBounds } from "./clusters";
 import type { SignalFeatureCollection } from "./to-features";
 
 type ClusterView = { clusters: ClusterMarker[]; points: SignalFeatureCollection };
+type Camera = { bounds: ViewBounds; zoom: number };
+
+const MAX_LATITUDE = 85;
+
+function paddedBounds(west: number, south: number, east: number, north: number): ViewBounds {
+  const width = east - west;
+  const height = north - south;
+  return {
+    west: west - width,
+    south: Math.max(south - height, -MAX_LATITUDE),
+    east: east + width,
+    north: Math.min(north + height, MAX_LATITUDE),
+  };
+}
 
 export function useSignalClusters(collection: SignalFeatureCollection, enabled: boolean): ClusterView {
   const { current: mapRef } = useMap();
   const index = useMemo(() => createSignalIndex(collection), [collection]);
-  const [view, setView] = useState<ClusterView | null>(null);
+  const [camera, setCamera] = useState<Camera | null>(null);
 
   useEffect(() => {
     const map = mapRef?.getMap();
-    if (!map || !enabled) {
-      setView(null);
-      return;
-    }
+    if (!map) return;
     const update = () => {
       const bounds = map.getBounds();
       if (!bounds) return;
-      setView(
-        viewClusters(
-          index,
-          { west: bounds.getWest(), south: bounds.getSouth(), east: bounds.getEast(), north: bounds.getNorth() },
-          map.getZoom(),
-        ),
-      );
+      setCamera({
+        bounds: paddedBounds(bounds.getWest(), bounds.getSouth(), bounds.getEast(), bounds.getNorth()),
+        zoom: map.getZoom(),
+      });
     };
-    if (map.loaded()) update();
-    else map.once("load", update);
+    update();
     map.on("moveend", update);
     return () => {
-      map.off("load", update);
       map.off("moveend", update);
     };
-  }, [mapRef, index, enabled]);
+  }, [mapRef]);
 
-  return enabled && view ? view : { clusters: [], points: collection };
+  const zoomLevel = camera ? Math.floor(camera.zoom) : null;
+  const points = useMemo(
+    () => (enabled && zoomLevel !== null ? worldPoints(index, zoomLevel) : collection),
+    [enabled, zoomLevel, index, collection],
+  );
+  const clusters = useMemo(
+    () => (enabled && camera ? viewClusters(index, camera.bounds, camera.zoom) : []),
+    [enabled, camera, index],
+  );
+
+  return { clusters, points };
 }

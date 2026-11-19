@@ -5,6 +5,7 @@ import {
   clusterSize,
   createSignalIndex,
   viewClusters,
+  worldPoints,
 } from "./clusters";
 import type { SignalFeature, SignalFeatureCollection } from "./to-features";
 
@@ -25,22 +26,27 @@ const WORLD = { west: -180, south: -85, east: 180, north: 85 };
 describe("viewClusters", () => {
   it("merges nearby signals into one cluster and leaves distant ones as points", () => {
     const index = createSignalIndex(collection([signal("a", 30, 15), signal("b", 30.01, 15.01), signal("c", -70, -10)]));
-    const { clusters, points } = viewClusters(index, WORLD, 3);
+    const clusters = viewClusters(index, WORLD, 3);
     expect(clusters).toHaveLength(1);
     expect(clusters[0]).toMatchObject({ count: 2, stacked: false });
-    expect(points.features.map((f) => f.properties.id)).toEqual(["c"]);
+    expect(worldPoints(index, 3).features.map((f) => f.properties.id)).toEqual(["c"]);
+  });
+
+  it("leaves out clusters outside the view", () => {
+    const index = createSignalIndex(collection([signal("a", 30, 15), signal("b", 30.01, 15.01)]));
+    expect(viewClusters(index, { west: -80, south: -20, east: -60, north: 0 }, 3)).toEqual([]);
   });
 
   it("repeats a cluster on every world copy in view, with a key per copy", () => {
     const index = createSignalIndex(collection([signal("a", 30, 15), signal("b", 30.01, 15.01)]));
-    const { clusters } = viewClusters(index, { west: -540, south: -85, east: 540, north: 85 }, 1);
+    const clusters = viewClusters(index, { west: -540, south: -85, east: 540, north: 85 }, 1);
     expect(clusters.map((c) => Math.round(c.coordinates[0])).sort((x, y) => x - y)).toEqual([-330, 30, 390]);
     expect(new Set(clusters.map((c) => c.key)).size).toBe(clusters.length);
   });
 
   it("marks a cluster of signals at the exact same point as stacked", () => {
     const index = createSignalIndex(collection([signal("a", 32.5, 15.6), signal("b", 32.5, 15.6)]));
-    const [cluster] = viewClusters(index, WORLD, 20).clusters;
+    const [cluster] = viewClusters(index, WORLD, 20);
     expect(cluster).toMatchObject({ count: 2, stacked: true });
     expect(cluster!.expansionZoom).toBeGreaterThan(CLUSTER_MAX_ZOOM);
   });
