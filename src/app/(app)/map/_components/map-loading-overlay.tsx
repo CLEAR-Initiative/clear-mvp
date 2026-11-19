@@ -123,19 +123,29 @@ export function MapLoadingOverlay({ dataView, error }: MapLoadingOverlayProps) {
   return <MapPreloader dataView={dataView} showMessages />;
 }
 
+/** Fills only its positioned parent: the map box, where the page has panels beside it (Overview). */
+const CONTAINED_LAYER: CSSProperties = {
+  position: "absolute",
+  inset: 0,
+  zIndex: 5,
+};
+
 interface MapErrorStateProps {
   message: string;
   onRetry?: () => void;
+  /** Cover the positioned parent instead of the whole viewport. */
+  contained?: boolean;
 }
 
-function MapErrorState({ message, onRetry }: MapErrorStateProps) {
+export function MapErrorState({ message, onRetry, contained = false }: MapErrorStateProps) {
   const isDark = useIsDark();
 
   return (
     <Box
       className="map-preloader-error-bg"
+      role="alert"
       style={{
-        ...PRELOADER_LAYER,
+        ...(contained ? CONTAINED_LAYER : PRELOADER_LAYER),
         backdropFilter: "blur(8px)",
         WebkitBackdropFilter: "blur(8px)",
         display: "flex",

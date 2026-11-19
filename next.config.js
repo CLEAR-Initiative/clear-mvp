@@ -2,6 +2,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import withPWA from "@ducanh2912/next-pwa";
 import createNextIntlPlugin from "next-intl/plugin";
+import { runtimeCaching } from "./src/lib/pwa-runtime-caching.js";
 
 const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 
@@ -85,6 +86,10 @@ export default withPWA({
     process.env.NODE_ENV === "development" || process.env.DISABLE_PWA === "1",
   workboxOptions: {
     disableDevLogs: true,
+
+    // next-pwa's defaults minus every route that handles other sites (Mapbox
+    // above all). See src/lib/pwa-runtime-caching.js for why.
+    runtimeCaching,
 
     // Memory trimming for the precache manifest. Each file workbox walks gets
     // a SHA-256 + revision held resident; trimming the file list trims peak
