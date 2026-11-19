@@ -25,7 +25,7 @@
     visibility 0s linear 200ms;
 }
 
-@media (min-width: 48em) {
+@media (min-width: 62em) {
   .panel {
     display: flex;
   }

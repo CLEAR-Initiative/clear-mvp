@@ -361,6 +361,11 @@ body[data-nav-overlay="true"] {
 }
 @media (min-width: 48em) {
   body[data-nav-overlay="true"] .map-v2-root {
+    --map-inset-left: var(--clear-nav-w, 240px);
+  }
+}
+@media (min-width: 62em) {
+  body[data-nav-overlay="true"] .map-v2-root {
     --map-inset-left: calc(var(--clear-nav-w, 240px) + var(--map-panel-w));
   }
   body[data-nav-overlay="true"] .map-v2-root[data-panel-collapsed="true"] {

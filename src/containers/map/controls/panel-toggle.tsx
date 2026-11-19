@@ -12,7 +12,7 @@ export function PanelToggle({ collapsed, onToggle }: { collapsed: boolean; onTog
 
   return (
     <UnstyledButton
-      visibleFrom="sm"
+      visibleFrom="md"
       onClick={onToggle}
       aria-controls={MAP_PANEL_ID}
       aria-expanded={!collapsed}
