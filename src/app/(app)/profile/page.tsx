@@ -40,6 +40,7 @@ import { ColorSchemeToggle } from "~/components/ui";
 import { api } from "~/trpc/react";
 import { authClient } from "~/lib/auth-client";
 import { defaultTimeZone, isLocale, localeLabels, locales } from "~/i18n/config";
+import { useTimeZoneOptions } from "~/i18n/use-time-zone-options";
 import { useTeam } from "~/providers/team-provider";
 import { useTeamCountry } from "~/hooks/use-team-country";
 import { COUNTRIES_BY_DIAL_LENGTH, COUNTRY_SELECT_DATA, getDialCode } from "~/lib/constants/countries";
@@ -540,6 +541,7 @@ function SettingsContent({ user }: { user: ProfileUser }) {
   const router = useRouter();
   const currentLocale = useLocale();
   const currentTimeZone = useTimeZone() ?? defaultTimeZone;
+  const timeZoneOptions = useTimeZoneOptions(currentTimeZone);
   const utils = api.useUtils();
   const [passwordModalOpen, setPasswordModalOpen] = useState(false);
 
@@ -843,10 +845,8 @@ function SettingsContent({ user }: { user: ProfileUser }) {
                   onChange={(v) => {
                     if (v) void applyLocalePrefs(currentLocale, v);
                   }}
-                  data={[
-                    { value: "Africa/Khartoum", label: t("edit.timezoneKhartoum") },
-                    { value: "UTC", label: t("edit.timezoneUtc") },
-                  ]}
+                  data={timeZoneOptions}
+                  searchable
                   allowDeselect={false}
                   styles={{ input: { borderColor: "var(--color-border)" } }}
                 />
@@ -885,10 +885,8 @@ function SettingsContent({ user }: { user: ProfileUser }) {
                   onChange={(v) => {
                     if (v) void applyLocalePrefs(currentLocale, v);
                   }}
-                  data={[
-                    { value: "Africa/Khartoum", label: t("edit.timezoneKhartoum") },
-                    { value: "UTC", label: t("edit.timezoneUtc") },
-                  ]}
+                  data={timeZoneOptions}
+                  searchable
                   allowDeselect={false}
                   styles={{ input: { borderColor: "var(--color-border)" } }}
                 />
