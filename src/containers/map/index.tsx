@@ -9,7 +9,7 @@ import { useResizeOnContainerChange } from "./hooks/use-resize-on-container-chan
 import { findLabelAnchorId } from "./label-anchor";
 import { findReliefAnchorId } from "./basemaps/relief-anchor";
 import { Topography } from "./basemaps/topography";
-import { MapControls, MapStartControls } from "./controls";
+import { MapControls } from "./controls";
 import { useBasemap } from "./hooks/use-basemap";
 import { LayerManager } from "./layer-manager";
 
@@ -56,28 +56,25 @@ export default function MapV2() {
   useResizeOnContainerChange(mapRef, loaded);
 
   return (
-    <>
-      <ReactMapGL
-        ref={mapRef}
-        mapboxAccessToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN}
-        mapStyle={BASEMAP_STYLES[basemap][isDark ? "dark" : "light"]}
-        // Mapbox's diffed setStyle never fires style.load, which the label anchor relies on.
-        styleDiffing={false}
-        projection={PROJECTION}
-        attributionControl={false}
-        minZoom={ZOOM_RANGE.min}
-        maxZoom={ZOOM_RANGE.max}
-        initialViewState={initialViewState}
-        onMoveEnd={onMoveEnd}
-        onLoad={onLoad}
-        style={{ width: "100%", height: "100%" }}
-      >
-        <AttributionControl position="bottom-right" compact />
-        {loaded && basemap === "topography" && <Topography beforeId={reliefAnchorId} />}
-        {loaded && <LayerManager labelAnchorId={labelAnchorId} />}
-        <MapControls />
-      </ReactMapGL>
-      <MapStartControls />
-    </>
+    <ReactMapGL
+      ref={mapRef}
+      mapboxAccessToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN}
+      mapStyle={BASEMAP_STYLES[basemap][isDark ? "dark" : "light"]}
+      // Mapbox's diffed setStyle never fires style.load, which the label anchor relies on.
+      styleDiffing={false}
+      projection={PROJECTION}
+      attributionControl={false}
+      minZoom={ZOOM_RANGE.min}
+      maxZoom={ZOOM_RANGE.max}
+      initialViewState={initialViewState}
+      onMoveEnd={onMoveEnd}
+      onLoad={onLoad}
+      style={{ width: "100%", height: "100%" }}
+    >
+      <AttributionControl position="bottom-right" compact />
+      {loaded && basemap === "topography" && <Topography beforeId={reliefAnchorId} />}
+      {loaded && <LayerManager labelAnchorId={labelAnchorId} />}
+      <MapControls />
+    </ReactMapGL>
   );
 }
