@@ -25,8 +25,9 @@ describe("deriveSettledNavSegment", () => {
 });
 
 describe("isMapNavOverlay", () => {
-  it("is on only while the settled route is /map", () => {
+  it("is on only while the settled route is /map or /map-v2", () => {
     expect(isMapNavOverlay("map")).toBe(true);
+    expect(isMapNavOverlay("map-v2")).toBe(true);
   });
 
   it("stays off while optimistically heading to /map from another route", () => {

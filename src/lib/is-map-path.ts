@@ -1,6 +1,8 @@
-/** True for `/map` and nested map routes (not `/mapbox`, etc.). */
+const MAP_ROUTES = ["/map", "/map-v2"];
+
+/** True for `/map`, `/map-v2` and their nested routes (not `/mapbox`, etc.). */
 export function isMapPath(pathname: string): boolean {
-  return pathname === "/map" || pathname.startsWith("/map/");
+  return MAP_ROUTES.some((route) => pathname === route || pathname.startsWith(`${route}/`));
 }
 
 /** Expanded desktop sidebar width — keep SSR `--clear-nav-w` in sync with NavSidebar. */

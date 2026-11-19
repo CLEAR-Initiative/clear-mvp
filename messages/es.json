@@ -4629,6 +4629,11 @@
       "zoomIn": "Acercar",
       "zoomOut": "Alejar",
       "askAi": "Preguntar a la IA"
+    },
+    "panel": {
+      "label": "Controles del mapa",
+      "collapse": "Ocultar controles del mapa",
+      "expand": "Mostrar controles del mapa"
     }
   }
 }

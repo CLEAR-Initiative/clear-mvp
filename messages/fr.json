@@ -4629,6 +4629,11 @@
       "zoomIn": "Zoom avant",
       "zoomOut": "Zoom arrière",
       "askAi": "Demander à l'IA"
+    },
+    "panel": {
+      "label": "Commandes de la carte",
+      "collapse": "Masquer les commandes de la carte",
+      "expand": "Afficher les commandes de la carte"
     }
   }
 }
