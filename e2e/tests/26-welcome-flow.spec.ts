@@ -36,6 +36,12 @@ test.describe("Invited-user welcome flow (case 26)", () => {
 
     await page.waitForURL("**/welcome/settings", { timeout: 30_000 });
     await expect(page.getByText("Quick settings")).toBeVisible({ timeout: 20_000 });
+    // The timezone list holds every IANA zone, not just Khartoum and UTC.
+    const timezone = page.getByRole("textbox", { name: "Timezone" });
+    await timezone.click();
+    await timezone.fill("Oslo");
+    await page.getByRole("option", { name: /Europe\/Oslo/ }).click();
+    await expect(timezone).toHaveValue(/Europe\/Oslo/);
     await page.getByRole("button", { name: "Continue to tour" }).click();
 
     await page.waitForURL("**/detection?**", { timeout: 30_000 });
