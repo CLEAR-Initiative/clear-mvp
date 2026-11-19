@@ -93,6 +93,7 @@ import {
   shouldElevatePointPin,
 } from "~/lib/map/pin-elevation";
 import { bridgeMetaToCtrlForPitch } from "~/lib/map/meta-pitch-bridge";
+import { setMapCursor } from "~/lib/map/map-cursor";
 // Mapbox GL JS comes from its CDN, not the bundle: bundling it crashed
 // webpack's JSON.parse optimisation.
 import { createMapboxMap, loadMapboxGL, mapLoadStage } from "~/lib/map/load-mapbox-gl";
@@ -2597,14 +2598,14 @@ export function CrisisMap({
       if (onMarker(e)) return;
       const iso = isoAt(e.point);
       const current = selectedPresenceIsoRef.current;
-      m.getCanvas().style.cursor = iso && iso !== current ? "pointer" : "";
+      setMapCursor(m, iso && iso !== current ? "pointer" : "");
       if (current) return;
       setHoverState(iso);
       onPresenceHoverRef.current?.(iso ? { kind: "country", iso2: iso, x: e.point.x, y: e.point.y } : null);
     };
     const onOut = () => {
       setHoverState(null);
-      m.getCanvas().style.cursor = "";
+      setMapCursor(m, "");
       if (!selectedPresenceIsoRef.current) onPresenceHoverRef.current?.(null);
     };
     const onClick = (e: MapboxGLAny) => {
@@ -2644,7 +2645,7 @@ export function CrisisMap({
         m.touchZoomRotate?.enableRotation();
         m.keyboard?.enableRotation?.();
       } catch { /* style already gone */ }
-      m.getCanvas().style.cursor = "";
+      setMapCursor(m, "");
     };
     // operatingCountriesKey stands in for the array; selection is applied by
     // the effect below without rebuilding the layers.
@@ -2809,17 +2810,7 @@ export function CrisisMap({
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let popup: any = null;
-    // map.remove() nulls the canvas. View details unmounts this map; a hover
-    // or cleanup that still writes cursor then throws and Next shows the
-    // full-page "client-side exception" instead of the event page.
-    const setCursor = (value: string) => {
-      try {
-        const canvas = m.getCanvas?.() as HTMLCanvasElement | undefined;
-        if (canvas) canvas.style.cursor = value;
-      } catch {
-        /* map already removed */
-      }
-    };
+    const setCursor = (value: string) => setMapCursor(m, value);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const onMove = (e: any) => {
       let feats: Array<{ properties?: Record<string, unknown> }> = [];
@@ -3274,7 +3265,7 @@ export function CrisisMap({
 
       m.on("mouseenter", UNCLUSTERED_LAYER, (e: MapboxGLAny) => {
         cancelPopupClose();
-        m.getCanvas().style.cursor = "pointer";
+        setMapCursor(m, "pointer");
         const coords = e.features?.[0]?.geometry?.coordinates as [number, number];
         const props = e.features?.[0]?.properties as Record<string, MapboxGLAny>;
         if (!coords || !props) return;
@@ -3304,7 +3295,7 @@ export function CrisisMap({
       });
 
       m.on("mouseleave", UNCLUSTERED_LAYER, () => {
-        m.getCanvas().style.cursor = "";
+        setMapCursor(m, "");
         schedulePopupClose();
       });
 
@@ -3327,11 +3318,11 @@ export function CrisisMap({
       });
 
       m.on("mouseenter", CLUSTER_LAYER, () => {
-        m.getCanvas().style.cursor = "pointer";
+        setMapCursor(m, "pointer");
       });
 
       m.on("mouseleave", CLUSTER_LAYER, () => {
-        m.getCanvas().style.cursor = "";
+        setMapCursor(m, "");
       });
     } catch (err) {
       console.error("[seismic-signals]", err);
@@ -3401,7 +3392,7 @@ export function CrisisMap({
       if (shakemapHoverBoundRef.current.has(layerId)) return;
       shakemapHoverBoundRef.current.add(layerId);
       m.on("mouseenter", layerId, (e: MapboxGLAny) => {
-        m.getCanvas().style.cursor = "pointer";
+        setMapCursor(m, "pointer");
         const coords = e.lngLat;
         const props = e.features?.[0]?.properties;
         if (!coords || !props) return;
@@ -3448,7 +3439,7 @@ export function CrisisMap({
         bandPopup.setLngLat(coords).setHTML(html).addTo(m);
       });
       m.on("mouseleave", layerId, () => {
-        m.getCanvas().style.cursor = "";
+        setMapCursor(m, "");
         bandPopup.remove();
       });
     };
@@ -4011,7 +4002,7 @@ export function CrisisMap({
     const m = map.current;
     if (!m || !loaded) return;
     try {
-      m.getCanvas().style.cursor = locationPickActive ? "crosshair" : "";
+      setMapCursor(m, locationPickActive ? "crosshair" : "");
     } catch { /* ignore */ }
     for (const mk of clusterDomMarkers.current.values()) {
       try {
