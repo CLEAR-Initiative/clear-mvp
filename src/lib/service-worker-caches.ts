@@ -12,20 +12,29 @@ import { SIGNED_OUT_CACHE, SIGNED_OUT_KEY } from "./signed-out-marker";
  * losing it would break the next offline start. The record is what lets the
  * worker refuse responses to requests that were still in flight at sign-out
  * (see `signedOutGuard` in ./pwa-runtime-caching.js), so it is written first.
+ *
+ * The two steps fail separately. Writing the record can fail when storage is
+ * full, and that is exactly when the caches hold the most: the deletion still
+ * runs. Without the record, only responses still in flight can come back.
  */
 const PRECACHE_PREFIX = "workbox-precache";
 
 export async function clearSignedInCaches(): Promise<void> {
   if (typeof caches === "undefined") return;
+
   try {
     const marker = await caches.open(SIGNED_OUT_CACHE);
     await marker.put(SIGNED_OUT_KEY, new Response(String(Date.now())));
+  } catch {
+    // Storage full or refused: still clear what is there, below.
+  }
 
+  try {
     const names = await caches.keys();
     await Promise.all(
       names
         .filter((name) => name !== SIGNED_OUT_CACHE && !name.startsWith(PRECACHE_PREFIX))
-        .map((name) => caches.delete(name)),
+        .map((name) => caches.delete(name).catch(() => false)),
     );
   } catch {
     // Storage refused (some private windows): there is nothing stored to clear.

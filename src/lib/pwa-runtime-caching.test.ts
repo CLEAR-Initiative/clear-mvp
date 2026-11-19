@@ -90,6 +90,13 @@ describe("sign-out guard on the service worker's caches", () => {
     expect(await signedOutGuard.cacheWillUpdate({ request, response: res, state } as never)).toBe(res);
   });
 
+  it.each([401, 404, 500, 503])("never caches a %i, so a failure cannot replace the offline copy", async (status) => {
+    setUp();
+    const state = await startRequest();
+    const failed = new Response("error", { status });
+    expect(await signedOutGuard.cacheWillUpdate({ request, response: failed, state } as never)).toBeNull();
+  });
+
   it("refuses a response whose request was still in flight at sign-out", async () => {
     setUp();
     const state = await startRequest();

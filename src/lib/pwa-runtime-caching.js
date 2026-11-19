@@ -28,7 +28,12 @@ export const CROSS_ORIGIN_CACHE_NAMES = Object.freeze([
  *
  * - `requestWillFetch` notes when the request started, in Workbox's
  *   per-request `state`.
- * - `cacheWillUpdate` refuses the write if a sign-out came after that.
+ * - `cacheWillUpdate` refuses the write if a sign-out came after that. It also
+ *   refuses anything but a 200: once a plugin defines `cacheWillUpdate`,
+ *   Workbox drops its own status check (NetworkFirst only adds
+ *   `cacheOkAndOpaquePlugin` when no plugin has one), and a 401 or 500 would
+ *   overwrite the good copy Observe needs offline. Opaque responses are left
+ *   out too: they come from other sites, which no route handles any more.
  * - `cacheDidUpdate` checks again after the write and removes the entry. That
  *   covers a sign-out landing between the check and the write.
  *
@@ -43,6 +48,7 @@ export const signedOutGuard = Object.freeze({
     return request;
   },
   cacheWillUpdate: async ({ response, state }) => {
+    if (!response || response.status !== 200) return null;
     const startedAt = state ? state.startedAt : undefined;
     if (typeof startedAt !== "number") return response;
     const marker = await caches.match("/__clear-signed-out-at", { cacheName: "clear-signed-out-at" });
