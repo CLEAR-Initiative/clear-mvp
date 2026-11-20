@@ -4594,9 +4594,12 @@
     "reference": "المرجع: {digest}"
   },
   "mapV2": {
+    "loading": "جارٍ تحميل الخريطة",
+    "loadingLayers": "جارٍ تحميل {layers}",
     "layers": {
       "signals": {
         "title": "الإشارات",
+        "inSentence": "الإشارات",
         "cluster": {
           "zoom": "{count, plural, two {إشارتان} few {# إشارات} many {# إشارة} other {# إشارة}}، تكبير",
           "stacked": "{count, plural, two {إشارتان} few {# إشارات} many {# إشارة} other {# إشارة}} في هذا الموقع"

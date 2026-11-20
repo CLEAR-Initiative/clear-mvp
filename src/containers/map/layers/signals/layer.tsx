@@ -26,9 +26,11 @@ export function SignalsLayer({ id, beforeId, opacity, visible, onStatusChange }:
   const pointIds = useMemo(() => new Set(points.features.map((feature) => feature.properties.id)), [points]);
   const hovered = useSignalTooltip(id, visible);
 
+  const loading = visible && (query.isPending || query.isPlaceholderData);
+
   useEffect(() => {
-    onStatusChange(query.isError);
-  }, [query.isError, onStatusChange]);
+    onStatusChange({ loading, error: query.isError });
+  }, [loading, query.isError, onStatusChange]);
 
   return (
     <>
