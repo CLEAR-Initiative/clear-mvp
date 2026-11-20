@@ -4596,7 +4596,11 @@
   "mapV2": {
     "layers": {
       "signals": {
-        "title": "Signaux"
+        "title": "Signaux",
+        "cluster": {
+          "zoom": "{count} signaux, zoomer",
+          "stacked": "{count} signaux à cet emplacement"
+        }
       }
     },
     "errors": {

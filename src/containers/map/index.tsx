@@ -44,6 +44,8 @@ export default function MapV2({ offset: offsetProp }: { offset?: Partial<MapOffs
     };
     updateAnchors();
     map.on("style.load", updateAnchors);
+    map.getMap().touchZoomRotate.disableRotation();
+    map.getMap().keyboard.disableRotation();
     setLoaded(true);
   }, []);
 
@@ -69,6 +71,7 @@ export default function MapV2({ offset: offsetProp }: { offset?: Partial<MapOffs
         attributionControl={false}
         minZoom={ZOOM_RANGE.min}
         maxZoom={ZOOM_RANGE.max}
+        dragRotate={false}
         initialViewState={{ ...initialViewState, padding: offset }}
         onMoveEnd={onMoveEnd}
         onLoad={onLoad}

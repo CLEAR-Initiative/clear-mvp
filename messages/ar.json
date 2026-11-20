@@ -4596,7 +4596,11 @@
   "mapV2": {
     "layers": {
       "signals": {
-        "title": "الإشارات"
+        "title": "الإشارات",
+        "cluster": {
+          "zoom": "{count, plural, two {إشارتان} few {# إشارات} many {# إشارة} other {# إشارة}}، تكبير",
+          "stacked": "{count, plural, two {إشارتان} few {# إشارات} many {# إشارة} other {# إشارة}} في هذا الموقع"
+        }
       }
     },
     "errors": {

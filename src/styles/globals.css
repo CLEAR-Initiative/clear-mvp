@@ -101,6 +101,7 @@
   --map-on-accent: #FFFFFF;
   --map-road-corridor: #976E49;
   --map-road-minor: #AEB1B7;
+  --map-cluster: #3A6FDC;
 }
 
 /* ============================================
@@ -168,6 +169,7 @@
   --map-on-accent: #FFFFFF;
   --map-road-corridor: #B0926D;
   --map-road-minor: #757575;
+  --map-cluster: #6B93E8;
 }
 
 /* Base styles */
@@ -651,6 +653,41 @@ nextjs-portal {
 }
 .map-v2-tooltip .mapboxgl-popup-tip {
   display: none;
+}
+
+.map-v2-cluster {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--map-cluster);
+  cursor: pointer;
+}
+.map-v2-cluster::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: max(100%, 24px);
+  height: max(100%, 24px);
+  transform: translate(-50%, -50%);
+}
+.map-v2-cluster[aria-disabled="true"] {
+  cursor: default;
+}
+.map-v2-cluster-count {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--color-bg-white);
+  color: var(--color-text-primary);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
 }
 
 /* LogIE Blockages hover popup — beat Mapbox’s default white chrome */

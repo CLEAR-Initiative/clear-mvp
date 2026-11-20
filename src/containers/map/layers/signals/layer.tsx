@@ -5,9 +5,11 @@ import { Layer, Source } from "react-map-gl/mapbox";
 import { api } from "~/trpc/react";
 import { useThemeColors } from "../../hooks/use-theme-color";
 import type { LayerProps } from "../types";
+import { SignalClusterMarker } from "./cluster-marker";
 import { SEVERITY_TOKENS, SURFACE_TOKENS } from "./severity-tokens";
 import { signalsToFeatures } from "./to-features";
 import { SignalTooltip } from "./tooltip";
+import { useSignalClusters } from "./use-signal-clusters";
 import { useSignalTooltip } from "./use-signal-tooltip";
 import { useSignalsWindow } from "./use-signals-window";
 
@@ -20,6 +22,8 @@ export function SignalsLayer({ id, beforeId, opacity, visible, onStatusChange }:
   const severity = useThemeColors(SEVERITY_TOKENS);
   const surface = useThemeColors(SURFACE_TOKENS);
   const data = useMemo(() => signalsToFeatures(query.data ?? []), [query.data]);
+  const { clusters, points } = useSignalClusters(data, visible);
+  const pointIds = useMemo(() => new Set(points.features.map((feature) => feature.properties.id)), [points]);
   const hovered = useSignalTooltip(id, visible);
 
   useEffect(() => {
@@ -28,7 +32,7 @@ export function SignalsLayer({ id, beforeId, opacity, visible, onStatusChange }:
 
   return (
     <>
-      <Source id={id} type="geojson" data={data}>
+      <Source id={id} type="geojson" data={points}>
         <Layer
           id={id}
           type="circle"
@@ -52,7 +56,9 @@ export function SignalsLayer({ id, beforeId, opacity, visible, onStatusChange }:
           }}
         />
       </Source>
-      {hovered && <SignalTooltip signal={hovered} />}
+      {visible &&
+        clusters.map((cluster) => <SignalClusterMarker key={cluster.key} cluster={cluster} opacity={opacity} />)}
+      {hovered && pointIds.has(hovered.id) && <SignalTooltip signal={hovered} />}
     </>
   );
 }
