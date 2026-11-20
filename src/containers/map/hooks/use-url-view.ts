@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type RefObject } from "react";
 import type { MapRef, ViewStateChangeEvent } from "react-map-gl/mapbox";
 import { WORLD_BOUNDS } from "../constants";
+import { OFFSET_TRANSITION_MS, type MapOffset } from "./use-map-offset";
 import { isSameView, useMapView, type LngLat, type MapView } from "./use-map-view";
 
 const FIT_WORLD_EVENT = { fitWorld: true };
@@ -33,6 +34,17 @@ export function useUrlView(mapRef: RefObject<MapRef | null>, loaded: boolean) {
     if (map && "bounds" in initialViewState) map.fitBounds(WORLD_BOUNDS, { duration: 0 }, FIT_WORLD_EVENT);
   }, [mapRef, initialViewState]);
 
+  const refitWorldToOffset = useCallback(
+    (offset: MapOffset) => {
+      const map = mapRef.current;
+      const world = worldViewRef.current;
+      if (!map || view || !world || !isSameView(currentView(map), world)) return false;
+      map.fitBounds(WORLD_BOUNDS, { padding: offset, duration: OFFSET_TRANSITION_MS, linear: true }, FIT_WORLD_EVENT);
+      return true;
+    },
+    [mapRef, view],
+  );
+
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !loaded) return;
@@ -44,5 +56,5 @@ export function useUrlView(mapRef: RefObject<MapRef | null>, loaded: boolean) {
     if (!isSameView(currentView(map), view)) map.flyTo(view);
   }, [mapRef, view, loaded]);
 
-  return { initialViewState, onMoveEnd, fitWorldOnLoad };
+  return { initialViewState, onMoveEnd, fitWorldOnLoad, refitWorldToOffset };
 }

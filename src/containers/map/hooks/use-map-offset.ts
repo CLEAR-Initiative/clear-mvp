@@ -3,7 +3,7 @@ import type { MapRef } from "react-map-gl/mapbox";
 
 export type MapOffset = { top: number; right: number; bottom: number; left: number };
 
-const OFFSET_TRANSITION_MS = 200;
+export const OFFSET_TRANSITION_MS = 200;
 const SIDES = ["top", "right", "bottom", "left"] as const;
 
 export function useMapOffset(offset: Partial<MapOffset> | undefined): MapOffset {
@@ -15,12 +15,18 @@ export function offsetCssVars(offset: MapOffset): CSSProperties {
   return Object.fromEntries(SIDES.map((side) => [`--map-offset-${side}`, `${offset[side]}px`])) as CSSProperties;
 }
 
-export function useEaseToOffset(mapRef: RefObject<MapRef | null>, offset: MapOffset, loaded: boolean) {
+export function useEaseToOffset(
+  mapRef: RefObject<MapRef | null>,
+  offset: MapOffset,
+  loaded: boolean,
+  refitToOffset?: (offset: MapOffset) => boolean,
+) {
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !loaded) return;
     const padding = map.getPadding();
     if (SIDES.every((side) => padding[side] === offset[side])) return;
+    if (refitToOffset?.(offset)) return;
     map.easeTo({ padding: offset, duration: OFFSET_TRANSITION_MS });
-  }, [mapRef, offset, loaded]);
+  }, [mapRef, offset, loaded, refitToOffset]);
 }

@@ -24,7 +24,7 @@ export default function MapV2({ offset: offsetProp }: { offset?: Partial<MapOffs
   const [labelAnchorId, setLabelAnchorId] = useState<string | undefined>();
   const [reliefAnchorId, setReliefAnchorId] = useState<string | undefined>();
   const [loaded, setLoaded] = useState(false);
-  const { initialViewState, onMoveEnd, fitWorldOnLoad } = useUrlView(mapRef, loaded);
+  const { initialViewState, onMoveEnd, fitWorldOnLoad, refitWorldToOffset } = useUrlView(mapRef, loaded);
 
   const onLoad = useCallback(() => {
     const map = mapRef.current;
@@ -42,7 +42,7 @@ export default function MapV2({ offset: offsetProp }: { offset?: Partial<MapOffs
     setLoaded(true);
   }, [fitWorldOnLoad]);
 
-  useEaseToOffset(mapRef, offset, loaded);
+  useEaseToOffset(mapRef, offset, loaded, refitWorldToOffset);
 
   return (
     <div className="map-v2-root" style={offsetCssVars(offset)}>
