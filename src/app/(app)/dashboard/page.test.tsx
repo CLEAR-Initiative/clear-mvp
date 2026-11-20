@@ -256,12 +256,16 @@ describe("Overview hydration", () => {
       </MantineProvider>
     );
 
+    // The server sees the flags loading and the world map at its default
+    // (off); the browser then loads it on before the page hydrates.
     flagsLoading = true;
+    worldMapFlag = false;
     const container = document.createElement("div");
     container.innerHTML = renderToString(tree);
     document.body.appendChild(container);
 
     flagsLoading = false;
+    worldMapFlag = true;
     mapProps.current = {};
     const recoverable = vi.fn();
     let root: ReturnType<typeof hydrateRoot> | undefined;
