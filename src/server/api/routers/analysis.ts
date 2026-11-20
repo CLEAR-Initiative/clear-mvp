@@ -159,6 +159,10 @@ const AUTOMATION_FIELDS = `
   createdAt
 `;
 
+/**
+ * Keep this query separate from myTeams. If clear-api denies the automation
+ * read, graphqlFetch rejects the whole response, including the membership list.
+ */
 const TEAM_AUTOMATIONS_QUERY = `
   query TeamAnalysisAutomations($teamId: String!) {
     analysisAutomations(teamId: $teamId) { ${AUTOMATION_FIELDS} }
@@ -235,12 +239,14 @@ interface AnalysisDocumentRow {
 
 type Caller = { user: { role: string } };
 
+/** Platform admins can access any team. For other callers, myTeams must include the requested team. */
 async function canAccessTeam(ctx: Caller, teamId: string, headers: Record<string, string>): Promise<boolean> {
   if (isPlatformAdmin(ctx.user.role)) return true;
   const data = await graphqlFetch<{ myTeams: { id: string }[] | null }>(MY_TEAMS_QUERY, {}, headers);
   return (data.myTeams ?? []).some((t) => t.id === teamId);
 }
 
+/** Call after checking that the caller belongs to the team or is a platform admin. */
 async function fetchTeamAutomations(
   teamId: string,
   headers: Record<string, string>,
@@ -275,7 +281,7 @@ async function requireTeamAutomations(
 
 /**
  * An automation write: the caller must belong to `teamId` and the automation
- * to that team. Platform admins skip both checks.
+ * to that team. Platform admins skip both checks and their GraphQL queries.
  */
 async function requireTeamAutomation(
   ctx: Caller,
