@@ -13,7 +13,7 @@ const setDefault = vi.fn();
 vi.mock("~/trpc/react", () => ({
   api: {
     teams: {
-      myTeams: { useQuery: () => ({ data: teams, isLoading: false, isError: false }) },
+      myTeams: { useQuery: () => ({ data: teams, isLoading: teams === undefined, isError: false }) },
       setDefaultTeam: { useMutation: () => ({ mutate: setDefault }) },
     },
   },
@@ -37,9 +37,26 @@ describe("useActiveTeam", () => {
   it("falls back to the first team when the stored one is not the user's", async () => {
     teams = [{ id: "a", name: "A" }];
     localStorage.setItem("clear-active-team-id", "from-another-env");
-    const { result } = renderHook(() => useActiveTeam());
-    await waitFor(() => expect(result.current.activeTeam?.id).toBe("a"));
+    const observedIds: (string | null)[] = [];
+    const { result } = renderHook(() => {
+      const { activeTeamId } = useActiveTeam();
+      observedIds.push(activeTeamId);
+      return activeTeamId;
+    });
+    await waitFor(() => expect(result.current).toBe("a"));
+    expect(observedIds).not.toContain("from-another-env");
     expect(localStorage.getItem("clear-active-team-id")).toBe("a");
+  });
+
+  it("exposes no stored team ID while memberships load or when the user has no teams", () => {
+    teams = undefined;
+    localStorage.setItem("clear-active-team-id", "removed-team");
+    const { result, rerender } = renderHook(() => useActiveTeam());
+    expect(result.current.activeTeamId).toBeNull();
+
+    teams = [];
+    rerender();
+    expect(result.current.activeTeamId).toBeNull();
   });
 
   it("picks the first team when nothing is stored", async () => {
