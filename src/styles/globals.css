@@ -643,6 +643,7 @@ nextjs-portal {
   pointer-events: none;
 }
 .map-v2-tooltip .mapboxgl-popup-content {
+  pointer-events: none;
   padding: 0 !important;
   background: transparent !important;
   box-shadow: none !important;

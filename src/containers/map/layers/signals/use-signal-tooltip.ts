@@ -36,9 +36,7 @@ export function useSignalTooltip(layerId: string, visible: boolean): HoveredSign
       if (pointerType !== "touch" || !map.getLayer(layerId)) return;
       show(toHoveredSignal(map.queryRenderedFeatures(event.point, { layers: [layerId] })[0]));
     };
-    const onMoveStart = () => {
-      if (pointerType === "touch") show(null);
-    };
+    const onMoveStart = () => show(null);
 
     container.addEventListener("pointerdown", onPointer, true);
     container.addEventListener("pointermove", onPointer, true);
