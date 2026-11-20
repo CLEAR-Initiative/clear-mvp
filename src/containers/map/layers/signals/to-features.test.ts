@@ -27,13 +27,15 @@ function signal(overrides: Partial<GqlSignal>): GqlSignal {
 const point = (lng: number, lat: number) => location({ type: "Point", coordinates: [lng, lat] });
 
 describe("signalsToFeatures", () => {
-  it("places a signal at its general location with its severity bucket", () => {
-    const { features } = signalsToFeatures([signal({ id: "a", severity: 5, generalLocation: point(10, 20) })]);
+  it("places a signal at its general location with its title and severity bucket", () => {
+    const { features } = signalsToFeatures([
+      signal({ id: "a", title: "Flood in Juba", severity: 5, generalLocation: point(10, 20) }),
+    ]);
     expect(features).toEqual([
       {
         type: "Feature",
         geometry: { type: "Point", coordinates: [10, 20] },
-        properties: { id: "a", severity: "critical" },
+        properties: { id: "a", title: "Flood in Juba", severity: "critical" },
       },
     ]);
   });

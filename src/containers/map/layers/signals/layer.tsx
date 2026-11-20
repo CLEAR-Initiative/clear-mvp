@@ -7,6 +7,8 @@ import { useThemeColors } from "../../hooks/use-theme-color";
 import type { LayerProps } from "../types";
 import { SEVERITY_TOKENS, SURFACE_TOKENS } from "./severity-tokens";
 import { signalsToFeatures } from "./to-features";
+import { SignalTooltip } from "./tooltip";
+import { useSignalTooltip } from "./use-signal-tooltip";
 import { useSignalsWindow } from "./use-signals-window";
 
 export function SignalsLayer({ id, beforeId, opacity, visible, onStatusChange }: LayerProps) {
@@ -18,35 +20,39 @@ export function SignalsLayer({ id, beforeId, opacity, visible, onStatusChange }:
   const severity = useThemeColors(SEVERITY_TOKENS);
   const surface = useThemeColors(SURFACE_TOKENS);
   const data = useMemo(() => signalsToFeatures(query.data ?? []), [query.data]);
+  const hovered = useSignalTooltip(id, visible);
 
   useEffect(() => {
     onStatusChange(query.isError);
   }, [query.isError, onStatusChange]);
 
   return (
-    <Source id={id} type="geojson" data={data}>
-      <Layer
-        id={id}
-        type="circle"
-        beforeId={beforeId}
-        layout={{ visibility: visible ? "visible" : "none" }}
-        paint={{
-          "circle-color": [
-            "match",
-            ["get", "severity"],
-            "critical", severity.critical,
-            "high", severity.high,
-            "medium", severity.medium,
-            "low", severity.low,
-            severity.unknown,
-          ],
-          "circle-radius": 5,
-          "circle-stroke-width": 1,
-          "circle-stroke-color": surface.stroke,
-          "circle-opacity": opacity,
-          "circle-stroke-opacity": opacity,
-        }}
-      />
-    </Source>
+    <>
+      <Source id={id} type="geojson" data={data}>
+        <Layer
+          id={id}
+          type="circle"
+          beforeId={beforeId}
+          layout={{ visibility: visible ? "visible" : "none" }}
+          paint={{
+            "circle-color": [
+              "match",
+              ["get", "severity"],
+              "critical", severity.critical,
+              "high", severity.high,
+              "medium", severity.medium,
+              "low", severity.low,
+              severity.unknown,
+            ],
+            "circle-radius": 5,
+            "circle-stroke-width": 1,
+            "circle-stroke-color": surface.stroke,
+            "circle-opacity": opacity,
+            "circle-stroke-opacity": opacity,
+          }}
+        />
+      </Source>
+      {hovered && <SignalTooltip signal={hovered} />}
+    </>
   );
 }

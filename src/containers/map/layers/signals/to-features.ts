@@ -5,7 +5,7 @@ export type SeverityBucket = ReturnType<typeof mapSeverity>;
 export type SignalFeature = {
   type: "Feature";
   geometry: { type: "Point"; coordinates: [number, number] };
-  properties: { id: string; severity: SeverityBucket };
+  properties: { id: string; title: string | null; severity: SeverityBucket };
 };
 
 export type SignalFeatureCollection = { type: "FeatureCollection"; features: SignalFeature[] };
@@ -28,7 +28,7 @@ export function signalsToFeatures(signals: GqlSignal[]): SignalFeatureCollection
     features.push({
       type: "Feature",
       geometry: { type: "Point", coordinates },
-      properties: { id: signal.id, severity: mapSeverity(signal.severity) },
+      properties: { id: signal.id, title: signal.title, severity: mapSeverity(signal.severity) },
     });
   }
   return { type: "FeatureCollection", features };

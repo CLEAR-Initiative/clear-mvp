@@ -468,6 +468,14 @@ The floating card that shows a map marker's summary and View details CTA. Dragga
 desktop; bottom sheet on mobile.
 _Avoid_: "popup", "window", "modal" (it is not modal — the map stays interactive).
 
+**Signal tooltip** (map v2):
+The small card that names a signal and its severity while the pointer rests on its point;
+a tap opens it on touch screens. Read-only: no close button, no View details. Where points
+overlap it shows the top one only. Not a **Marker detail panel** — a click on a signal does
+nothing on map v2 until that panel is designed.
+_Avoid_: "popup" (the old roadmap word); "disaster" for the signal it names. The Figma
+label says "Disaster name"; the app labels the value "Signal", because it is the signal's title.
+
 ### Country framing
 
 **Country scope**:
