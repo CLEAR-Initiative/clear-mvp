@@ -1,0 +1,55 @@
+.root {
+  position: relative;
+}
+
+.button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 2px;
+  background: var(--map-accent);
+  color: var(--map-on-accent);
+  box-shadow: var(--map-element-shadow);
+}
+
+.button[data-active="true"] {
+  box-shadow: 0 0 0 2px var(--map-accent-ring), var(--map-element-shadow);
+}
+
+.card {
+  position: absolute;
+  right: 42px;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 320px;
+  max-width: calc(100vw - 90px);
+  padding: 12px 16px 16px;
+  border-radius: 4px;
+  background: var(--color-bg-white);
+  box-shadow: var(--map-element-shadow);
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.title {
+  flex: 1;
+  margin: 0;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.5;
+  letter-spacing: 0.03px;
+  color: var(--color-text-primary);
+}
+
+.close {
+  display: flex;
+  color: var(--color-text-primary);
+}

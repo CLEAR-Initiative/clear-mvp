@@ -4600,6 +4600,7 @@
       "signals": {
         "title": "Señales",
         "inSentence": "señales",
+        "severity": "Severidad",
         "cluster": {
           "zoom": "{count} señales, acercar",
           "stacked": "{count} señales en esta ubicación"
@@ -4635,7 +4636,9 @@
     "controls": {
       "zoomIn": "Acercar",
       "zoomOut": "Alejar",
-      "askAi": "Preguntar a la IA"
+      "askAi": "Preguntar a la IA",
+      "legend": "Leyenda",
+      "closeLegend": "Cerrar la leyenda"
     },
     "panel": {
       "label": "Controles del mapa",

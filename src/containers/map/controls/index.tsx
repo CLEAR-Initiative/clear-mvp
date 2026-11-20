@@ -9,13 +9,13 @@ import { ZoomControl } from "./zoom";
 export function MapControls() {
   return (
     <>
-      <Stack gap={12} align="flex-start" className="map-v2-start-controls">
-        <Legend />
+      <div className="map-v2-top-controls">
         <AskAiButton />
-      </Stack>
+      </div>
       <Stack gap={9} align="flex-end" className="map-v2-end-controls">
         <BasemapControl />
         <ZoomControl />
+        <Legend />
       </Stack>
     </>
   );

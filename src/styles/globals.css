@@ -99,6 +99,7 @@
   --map-ai-on-gradient: #FFFFFF;
   --map-accent: #D1381D;
   --map-on-accent: #FFFFFF;
+  --map-accent-ring: #FB531F;
   --map-road-corridor: #976E49;
   --map-road-minor: #AEB1B7;
   --map-cluster: #3A6FDC;
@@ -167,6 +168,7 @@
   --map-ai-on-gradient: #FFFFFF;
   --map-accent: #D1381D;
   --map-on-accent: #FFFFFF;
+  --map-accent-ring: #FB531F;
   --map-road-corridor: #B0926D;
   --map-road-minor: #757575;
   --map-cluster: #6B93E8;
@@ -386,9 +388,6 @@ body[data-nav-overlay="true"] {
   body[data-nav-overlay="true"] .map-v2-layout[data-panel-collapsed="true"] {
     --map-inset-left: var(--clear-nav-w, 240px);
   }
-  .map-v2-layout .map-v2-start-controls {
-    bottom: 128px;
-  }
 }
 .map-v2-inset-probe {
   position: absolute;
@@ -399,19 +398,18 @@ body[data-nav-overlay="true"] {
   visibility: hidden;
   pointer-events: none;
 }
-.map-v2-start-controls,
+.map-v2-top-controls,
 .map-v2-end-controls {
   position: absolute;
-  bottom: 40px;
+  right: calc(var(--map-offset-right, 0px) + 24px);
   z-index: 1;
+  transition: right 200ms ease;
 }
-.map-v2-start-controls {
-  left: calc(var(--map-offset-left, 0px) + 24px);
-  transition: left 200ms ease;
+.map-v2-top-controls {
+  top: calc(var(--map-offset-top, 0px) + 24px);
 }
 .map-v2-end-controls {
-  right: calc(var(--map-offset-right, 0px) + 24px);
-  transition: right 200ms ease;
+  bottom: 40px;
 }
 .map-v2 .mapboxgl-ctrl-bottom-left {
   left: var(--map-offset-left, 0px);
