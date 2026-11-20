@@ -9,11 +9,11 @@ import { ZoomControl } from "./zoom";
 export function MapControls() {
   return (
     <>
-      <Stack gap={12} align="flex-start" style={{ position: "absolute", bottom: 40, left: 24, zIndex: 1 }}>
+      <Stack gap={12} align="flex-start" className="map-v2-start-controls">
         <Legend />
         <AskAiButton />
       </Stack>
-      <Stack gap={9} align="flex-end" style={{ position: "absolute", bottom: 40, right: 24, zIndex: 1 }}>
+      <Stack gap={9} align="flex-end" className="map-v2-end-controls">
         <BasemapControl />
         <ZoomControl />
       </Stack>

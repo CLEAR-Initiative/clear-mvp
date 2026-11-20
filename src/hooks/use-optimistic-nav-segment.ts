@@ -14,7 +14,7 @@ export function deriveSettledNavSegment(
 }
 
 /**
- * Frost overlay only while the settled route is `/map`.
+ * Frost overlay only while the settled route is `/map` or `/map-v2`.
  *
  * Do **not** key off click optimism toward Map — that turns the sidebar into
  * glass over the outgoing page (blurred Detection cards) before the Map
@@ -25,7 +25,7 @@ export function deriveSettledNavSegment(
  * elsewhere — dropping it early flex-resizes the Mapbox canvas (white flash).
  */
 export function isMapNavOverlay(activeSegment: string): boolean {
-  return activeSegment === "map";
+  return activeSegment === "map" || activeSegment === "map-v2";
 }
 
 /**

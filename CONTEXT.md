@@ -379,6 +379,18 @@ names, points of interest, water and natural features. Turning off both **Roads*
 Labels leaves a clean basemap.
 _Avoid_: treating road names as Labels.
 
+**Map panel**:
+The panel on `/map-v2` that sits next to the app nav and floats over the map, on screens
+992px or wider. Narrower screens have no Map panel. Its sections are not designed yet. A
+round toggle on the panel's right edge collapses it, and the choice is kept across reloads.
+The page, not the map, owns the Map panel: it tells the map which part of it is covered
+(an offset per side), and the map eases its camera padding, its controls and the Mapbox
+attribution to stay clear of that part. When the nav or the Map panel opens or collapses,
+the map keeps its centre and zoom: the camera shifts so the visible area stays centred,
+and the map does not resize.
+_Avoid_: "sidebar" (ambiguous with app navigation); confusing it with **Map settings**,
+which opens from the basemap control.
+
 **Point altitude**:
 The DEM elevation (metres) sampled at a map point while **Topography** is active
 (Mapbox `queryTerrainElevation` on the same terrain DEM). Shown in two places: a live
