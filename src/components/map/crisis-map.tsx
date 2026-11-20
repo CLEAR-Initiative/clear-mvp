@@ -23,6 +23,7 @@ import {
   PRESENCE_LABELS,
   PRESENCE_LINE,
   PRESENCE_LINE_COLOR,
+  PRESENCE_LINE_OPACITY,
   PRESENCE_PIN_IMAGE,
   PRESENCE_PIN_SIZE,
   PRESENCE_PINS,
@@ -35,7 +36,7 @@ import {
   nrcPinDataUrl,
   presenceFillOpacity,
   presenceLabelPaint,
-  presenceLineOpacity,
+  presenceLineVisibility,
 } from "~/components/map/nrc-presence";
 import { dedupeByProperty } from "~/lib/geo/dedupe-rendered-features";
 import { useIsDark } from "~/hooks/use-is-dark";
@@ -2456,10 +2457,11 @@ export function CrisisMap({
         source: PRESENCE_SOURCE,
         "source-layer": "country_boundaries",
         filter: ["all", SINGLE_WORLDVIEW, isoFilter] as never,
+        layout: { visibility: presenceLineVisibility(selected) },
         paint: {
           "line-color": PRESENCE_LINE_COLOR,
           "line-width": 0.6,
-          "line-opacity": presenceLineOpacity(selected) as never,
+          "line-opacity": PRESENCE_LINE_OPACITY as never,
         },
       },
       firstSymbolId,
@@ -2664,7 +2666,8 @@ export function CrisisMap({
 
     try {
       if (m.getLayer(PRESENCE_FILL)) m.setPaintProperty(PRESENCE_FILL, "fill-opacity", presenceFillOpacity(selected) as never);
-      if (m.getLayer(PRESENCE_LINE)) m.setPaintProperty(PRESENCE_LINE, "line-opacity", presenceLineOpacity(selected) as never);
+      // Hide, don't zero line-opacity: see PRESENCE_LINE_OPACITY.
+      if (m.getLayer(PRESENCE_LINE)) m.setLayoutProperty(PRESENCE_LINE, "visibility", presenceLineVisibility(selected));
       if (m.getLayer(PRESENCE_SELECTED_LINE)) {
         m.setFilter(PRESENCE_SELECTED_LINE, ["all", SINGLE_WORLDVIEW, ["==", ["get", "iso_3166_1"], selected ?? ""]] as never);
       }
