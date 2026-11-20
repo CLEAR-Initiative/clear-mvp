@@ -1,12 +1,6 @@
-type StyleLayer = { id: string; metadata?: unknown };
+import { featureComponent, type StyleLayer } from "./feature-component";
 
 const BASE_COMPONENT = "land-and-water";
-
-function featureComponent(layer: StyleLayer): string | undefined {
-  const metadata = layer.metadata as Record<string, unknown> | undefined;
-  const value = metadata?.["mapbox:featureComponent"];
-  return typeof value === "string" ? value : undefined;
-}
 
 export function findReliefAnchorId(layers: ReadonlyArray<StyleLayer> | undefined): string | undefined {
   return layers?.find((layer) => {

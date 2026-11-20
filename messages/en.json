@@ -4634,6 +4634,11 @@
       "label": "Map controls",
       "collapse": "Hide map controls",
       "expand": "Show map controls"
+    },
+    "mapSettings": {
+      "title": "Map settings",
+      "roads": "Roads",
+      "labels": "Labels"
     }
   }
 }

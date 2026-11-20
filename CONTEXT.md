@@ -367,17 +367,18 @@ boundary level. Settings apply on every basemap in the triad.
 _Avoid_: putting Map settings in the Layers panel; treating a setting as a basemap.
 
 **Roads** (overlay):
-The basemap's road network: road lines, road names and route shields, shown or hidden
-together on every basemap. On **Simple** and **Topography** it is drawn with the
-corridor-first emphasis (trunk corridors stand out from minor roads).
+The basemap's ground network: road lines, footpaths and steps, their names, and route
+shields, shown or hidden together on every basemap. Rail lines are not part of Roads. On
+**Simple** and **Topography** it is drawn with the corridor-first emphasis (trunk
+corridors stand out from minor roads).
 _Avoid_: confusing it with **Access** or **Blockages**; leaving road names visible when
 Roads is off.
 
 **Labels**:
 Every basemap text and icon that is not part of **Roads**: country, state and place
-names, points of interest, water and natural features. Turning off both **Roads** and
-Labels leaves a clean basemap.
-_Avoid_: treating road names as Labels.
+names, points of interest, stations and airports, water and natural features. Turning
+off both **Roads** and Labels leaves a clean basemap; rail lines, water and land stay.
+_Avoid_: treating road or path names as Labels; hiding rail lines with Labels.
 
 **Map panel**:
 The panel on `/map-v2` that sits next to the app nav and floats over the map, on screens

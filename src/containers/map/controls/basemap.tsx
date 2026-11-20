@@ -7,6 +7,7 @@ import { useTranslations } from "next-intl";
 import { useIsDark } from "~/hooks/use-is-dark";
 import { BASEMAP_IDS, type BasemapId } from "../constants";
 import { useBasemap } from "../hooks/use-basemap";
+import { MapSettingsPanel } from "./map-settings";
 
 const THUMBNAIL_SIZE = 32;
 
@@ -59,7 +60,7 @@ export function BasemapControl() {
           <Thumbnail variant={variantOf(basemap, isDark)} active={opened} />
         </UnstyledButton>
       </Popover.Target>
-      <Popover.Dropdown p={0} style={{ border: "none" }}>
+      <Popover.Dropdown p={0} style={{ border: "none", overflow: "hidden" }}>
         <Paper px="md" pt={12} pb="md" radius={4}>
           <Text size="sm" mb={12}>
             {t("title")}
@@ -86,6 +87,7 @@ export function BasemapControl() {
             </Stack>
           </Radio.Group>
         </Paper>
+        <MapSettingsPanel />
       </Popover.Dropdown>
     </Popover>
   );
