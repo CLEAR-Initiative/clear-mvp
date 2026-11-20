@@ -36,6 +36,7 @@ import {
 import { RightPanel } from "./_components/right-panel";
 import { WorldCountryPanel } from "./_components/world-country-panel";
 import { useIsDark } from "~/hooks/use-is-dark";
+import { useHydrated } from "~/hooks/use-hydrated";
 import { useFeatureEnabled, useFeatureFlags } from "~/components/feature-flags-provider";
 import {
   NRC_OPERATING_COUNTRIES,
@@ -113,7 +114,13 @@ export default function DashboardPage() {
   // Until the flags load, `worldMode` is only the default. Rendering either
   // layout then flashes the wrong one (and sizes the map for it), so the
   // map, the panel and their queries wait for the real value.
-  const flagsReady = !useFeatureFlags().isLoading;
+  // The flags are fetched in the browser, so the server always renders them
+  // as loading. They can land before this page hydrates (slow chunk load):
+  // hydrating with them ready rendered markup the server never sent and
+  // React threw #418. `useHydrated` keeps hydration on the server's value.
+  const hydrated = useHydrated();
+  const flagsLoading = useFeatureFlags().isLoading;
+  const flagsReady = hydrated && !flagsLoading;
   const countryMode = flagsReady && !worldMode;
   const [inspectedIso, setInspectedIso] = useState<string | null>(null);
   const [presenceHover, setPresenceHover] = useState<PresenceHover | null>(null);
