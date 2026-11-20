@@ -9,6 +9,7 @@ type ClusterView = { clusters: ClusterMarker[]; points: SignalFeatureCollection 
 type Camera = { bounds: ViewBounds; zoom: number };
 
 const MAX_LATITUDE = 85;
+const MOVE_UPDATE_MS = 150;
 
 function paddedBounds(west: number, south: number, east: number, north: number): ViewBounds {
   const width = east - west;
@@ -37,10 +38,28 @@ export function useSignalClusters(collection: SignalFeatureCollection, enabled: 
         zoom: map.getZoom(),
       });
     };
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const cancel = () => {
+      if (timer) clearTimeout(timer);
+      timer = null;
+    };
+    const onMove = () => {
+      timer ??= setTimeout(() => {
+        timer = null;
+        update();
+      }, MOVE_UPDATE_MS);
+    };
+    const onMoveEnd = () => {
+      cancel();
+      update();
+    };
     update();
-    map.on("moveend", update);
+    map.on("move", onMove);
+    map.on("moveend", onMoveEnd);
     return () => {
-      map.off("moveend", update);
+      cancel();
+      map.off("move", onMove);
+      map.off("moveend", onMoveEnd);
     };
   }, [mapRef]);
 

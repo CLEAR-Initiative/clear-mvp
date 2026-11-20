@@ -62,4 +62,24 @@ describe("useSignalClusters", () => {
 
     expect(result.current.points).toBe(before);
   });
+
+  it("shows clusters in a newly reached area while the pan is still moving", () => {
+    vi.useFakeTimers();
+    Object.assign(camera, { west: 20, south: 5, east: 40, north: 25, zoom: 3 });
+    const signals: SignalFeatureCollection = {
+      type: "FeatureCollection",
+      features: [signal("a", 100, 15), signal("b", 100.01, 15.01)],
+    };
+    const { result } = renderHook(() => useSignalClusters(signals, true));
+    expect(result.current.clusters).toEqual([]);
+
+    act(() => {
+      Object.assign(camera, { west: 90, east: 110 });
+      listeners.get("move")?.();
+      vi.advanceTimersByTime(150);
+    });
+
+    expect(result.current.clusters.map((c) => c.count)).toEqual([2]);
+    vi.useRealTimers();
+  });
 });
