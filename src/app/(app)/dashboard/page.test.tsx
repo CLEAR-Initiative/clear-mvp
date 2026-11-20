@@ -241,6 +241,49 @@ describe("Overview world map", () => {
   });
 });
 
+describe("Overview hydration", () => {
+  // The flags are fetched in the browser, so the server always renders the
+  // page with them still loading. On a slow load the response can land
+  // before the page's Suspense boundary hydrates; the page then hydrated
+  // with the flags ready, rendered the map the server never sent, and React
+  // threw #418 (GlitchTip clear-app issue 57).
+  it("hydrates the server markup even when the flags arrived first", async () => {
+    const { renderToString } = await import("react-dom/server");
+    const { hydrateRoot } = await import("react-dom/client");
+    const tree = (
+      <MantineProvider>
+        <DashboardPage />
+      </MantineProvider>
+    );
+
+    // The server sees the flags loading and the world map at its default
+    // (off); the browser then loads it on before the page hydrates.
+    flagsLoading = true;
+    worldMapFlag = false;
+    const container = document.createElement("div");
+    container.innerHTML = renderToString(tree);
+    document.body.appendChild(container);
+
+    flagsLoading = false;
+    worldMapFlag = true;
+    mapProps.current = {};
+    const recoverable = vi.fn();
+    let root: ReturnType<typeof hydrateRoot> | undefined;
+    try {
+      await act(async () => {
+        root = hydrateRoot(container, tree, { onRecoverableError: recoverable });
+      });
+
+      expect(recoverable).not.toHaveBeenCalled();
+      // After hydration the page catches up with the loaded flags.
+      expect(mapProps.current.operatingCountries?.length).toBeGreaterThan(30);
+    } finally {
+      act(() => root?.unmount());
+      container.remove();
+    }
+  });
+});
+
 describe("Overview map load failure", () => {
   it("says the map could not load instead of leaving a black canvas, and retries", () => {
     renderPage();
