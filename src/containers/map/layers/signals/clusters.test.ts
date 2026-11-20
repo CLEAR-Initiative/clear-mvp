@@ -37,11 +37,16 @@ describe("viewClusters", () => {
     expect(viewClusters(index, { west: -80, south: -20, east: -60, north: 0 }, 3)).toEqual([]);
   });
 
-  it("repeats a cluster on every world copy in view, with a key per copy", () => {
+  it("shows a cluster once when the view is wider than the world", () => {
     const index = createSignalIndex(collection([signal("a", 30, 15), signal("b", 30.01, 15.01)]));
     const clusters = viewClusters(index, { west: -540, south: -85, east: 540, north: 85 }, 1);
-    expect(clusters.map((c) => Math.round(c.coordinates[0])).sort((x, y) => x - y)).toEqual([-330, 30, 390]);
-    expect(new Set(clusters.map((c) => c.key)).size).toBe(clusters.length);
+    expect(clusters).toHaveLength(1);
+    expect(Math.round(clusters[0]!.coordinates[0])).toBe(30);
+  });
+
+  it("keeps a cluster across the date line in view", () => {
+    const index = createSignalIndex(collection([signal("a", -179, 0), signal("b", -178.99, 0.01)]));
+    expect(viewClusters(index, { west: 170, south: -10, east: 190, north: 10 }, 3)).toHaveLength(1);
   });
 
   it("marks a cluster of signals at the exact same point as stacked", () => {

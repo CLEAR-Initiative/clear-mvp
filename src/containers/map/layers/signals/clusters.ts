@@ -22,8 +22,9 @@ export function createSignalIndex(collection: SignalFeatureCollection): SignalIn
   return index;
 }
 
-function worldCopyOffset(lng: number): number {
-  return Math.floor((lng + 180) / 360);
+function inLngRange(lng: number, west: number, east: number): boolean {
+  if (east - west >= 360) return true;
+  return lng + Math.ceil((west - lng) / 360) * 360 <= east;
 }
 
 const WORLD_BBOX: [number, number, number, number] = [-180, -90, 180, 90];
@@ -37,29 +38,22 @@ export function worldPoints(index: SignalIndex, zoom: number): SignalFeatureColl
 
 export function viewClusters(index: SignalIndex, { west, south, east, north }: ViewBounds, zoom: number): ClusterMarker[] {
   const clusters: ClusterMarker[] = [];
-  const firstCopy = worldCopyOffset(west);
-  const lastCopy = worldCopyOffset(east);
 
   for (const feature of index.getClusters(WORLD_BBOX, zoom)) {
     const properties = feature.properties;
     if (!("cluster" in properties) || !properties.cluster) continue;
     const [lng, lat] = feature.geometry.coordinates as [number, number];
-    if (lat < south || lat > north) continue;
+    if (lat < south || lat > north || !inLngRange(lng, west, east)) continue;
     const clusterId = properties.cluster_id;
-    let expansionZoom: number | undefined;
-    for (let copy = firstCopy; copy <= lastCopy; copy++) {
-      const shifted = lng + 360 * copy;
-      if (shifted < west || shifted > east) continue;
-      expansionZoom ??= index.getClusterExpansionZoom(clusterId);
-      clusters.push({
-        key: `${clusterId}:${copy}`,
-        clusterId,
-        count: properties.point_count,
-        coordinates: [shifted, lat],
-        expansionZoom,
-        stacked: expansionZoom > CLUSTER_MAX_ZOOM,
-      });
-    }
+    const expansionZoom = index.getClusterExpansionZoom(clusterId);
+    clusters.push({
+      key: String(clusterId),
+      clusterId,
+      count: properties.point_count,
+      coordinates: [lng, lat],
+      expansionZoom,
+      stacked: expansionZoom > CLUSTER_MAX_ZOOM,
+    });
   }
 
   return clusters;
