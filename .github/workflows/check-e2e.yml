@@ -2,8 +2,14 @@ name: Check / E2E smoke
 
 # Runs the 15-spec Playwright smoke suite (e2e/tests) against the hermetic
 # docker-compose stack (Postgres+PostGIS+pgvector, Redis, clear-api, clear-mvp)
-# on every PR to dev. Both repos are BUILT FROM SOURCE in the job: clear-mvp from
-# the PR head, clear-api from its `dev` branch (public repo → no token needed).
+# on every PR to dev or prod. Both repos are BUILT FROM SOURCE in the job:
+# clear-mvp from the PR head, clear-api from the branch the change will meet
+# (public repo → no token needed):
+#   • PR into dev                      → clear-api `dev`
+#   • hotfix PR into prod (head ≠ dev) → clear-api `prod`
+#   • sync PR into prod (head = dev)   → clear-api `dev`. Its head SHA is dev's
+#     tip, so a failure against a prod API that has not synced yet would mark a
+#     healthy dev commit red. Skew on a sync is tracked separately (clear #1574).
 # The suite runs with retries: 2 (see playwright.config.ts CI branch).
 #
 # ── ESCAPE HATCH ────────────────────────────────────────────────────────────
@@ -17,7 +23,7 @@ name: Check / E2E smoke
 
 on:
   pull_request:
-    branches: [dev]
+    branches: [dev, prod]
 
 permissions:
   contents: read
@@ -37,13 +43,13 @@ jobs:
         with:
           path: clear-mvp
 
-      # clear-api is public, so no token is required. Its `dev` includes the seed
-      # fix that lets `bun run seed` create demo users on a fresh DB.
-      - name: Checkout clear-api (dev)
+      # clear-api is public, so no token is required. The ref follows the table
+      # in the header: `prod` for a hotfix PR into prod, `dev` otherwise.
+      - name: Checkout clear-api
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           repository: CLEAR-Initiative/clear-api
-          ref: dev
+          ref: ${{ (github.base_ref == 'prod' && github.head_ref != 'dev') && 'prod' || 'dev' }}
           path: clear-api
 
       - name: Set up Bun
