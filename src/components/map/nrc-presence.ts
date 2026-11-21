@@ -38,18 +38,27 @@ export function presenceFillOpacity(selectedIso: string | null): unknown {
   if (selectedIso) {
     return ["case", ["==", ["get", "iso_3166_1"], selectedIso], 0.26, 0.08];
   }
-  return ["case", ["boolean", ["feature-state", "hover"], false], 0.62, 0.42];
+  return ["case", HOVER, 0.62, 0.42];
 }
 
-/** Borders are invisible at world zoom and fade in towards the country scale. */
-export function presenceLineOpacity(selectedIso: string | null): unknown {
-  if (selectedIso) return 0;
-  const hover = ["boolean", ["feature-state", "hover"], false];
-  return [
-    "interpolate", ["linear"], ["zoom"],
-    2.8, ["case", hover, 0.6, 0],
-    4.5, ["case", hover, 0.9, 0.45],
-  ];
+const HOVER: unknown = ["boolean", ["feature-state", "hover"], false];
+
+/**
+ * Borders are invisible at world zoom and fade in towards the country scale.
+ * In the country state the layer is hidden with `visibility`, not with this
+ * value: swapping a zoom + feature-state expression for a constant while a
+ * feature-state update is pending crashes Mapbox ("this.expression.evaluate
+ * is not a function", GlitchTip prod #912).
+ */
+export const PRESENCE_LINE_OPACITY: unknown = [
+  "interpolate", ["linear"], ["zoom"],
+  2.8, ["case", HOVER, 0.6, 0],
+  4.5, ["case", HOVER, 0.9, 0.45],
+];
+
+/** Borders show in the world state only. */
+export function presenceLineVisibility(selectedIso: string | null): "visible" | "none" {
+  return selectedIso ? "none" : "visible";
 }
 
 export const PRESENCE_PIN_SIZE: unknown = [
