@@ -25,6 +25,7 @@ import { IconPlus, IconTrash, IconUserPlus } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
 import { isPlatformAdmin } from "~/lib/roles";
 import { canEditOrg } from "./can-edit-org";
+import { useHydrated } from "~/hooks/use-hydrated";
 
 type TeamRole = "team_admin" | "analyst" | "emergency_response_manager" | "team_member";
 
@@ -54,6 +55,9 @@ function OrgSettingsPageContent() {
   const urlOrgId = searchParams.get("id");
   const orgsQuery = api.teams.myOrganisations.useQuery();
   const authQuery = api.auth.me.useQuery();
+  // OnboardingGuard starts myOrganisations in the browser, so the server
+  // renders the loader. Keep it until hydration ends (#418).
+  const hydrated = useHydrated();
   const [selectedOrgId, setSelectedOrgId] = useState<string | null>(urlOrgId);
   const [createModalOpened, { open: openCreateModal, close: closeCreateModal }] = useDisclosure(false);
 
@@ -72,7 +76,7 @@ function OrgSettingsPageContent() {
   const userId = authQuery.data?.user?.id;
   const canCreateOrg = canCreateOrgFromRole(userRole);
 
-  if (orgsQuery.isLoading || authQuery.isLoading) {
+  if (!hydrated || orgsQuery.isLoading || authQuery.isLoading) {
     return (
       <Box p="xl" ta="center">
         <Loader size="sm" />

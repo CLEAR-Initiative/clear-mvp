@@ -7,6 +7,7 @@ import { PageHeader } from "~/components/ui/page-header";
 import { shortCountryName } from "~/lib/constants/country-config";
 import { ALL_COUNTRIES } from "~/lib/map-nav-context";
 import css from "./map-first.module.css";
+import { useHydrated } from "~/hooks/use-hydrated";
 
 export type HeaderTab = "alerts" | "events" | "signals" | "history";
 
@@ -35,9 +36,12 @@ export function CompactHeader({ title, tab, onTabChange, counts, updatedAt, onCr
   const tFilters = useTranslations("common.filters");
   const format = useFormatter();
   const now = useNow({ updateInterval: 30_000 });
+  // Country options come from the browser-only team scope; show the picker
+  // only after hydration so it matches the server markup (#418).
+  const hydrated = useHydrated();
   return (
     <PageHeader title={title} variant="compact">
-      {country && country.options.length > 1 && (
+      {hydrated && country && country.options.length > 1 && (
         <Select
           size="xs"
           w={160}

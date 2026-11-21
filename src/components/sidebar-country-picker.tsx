@@ -9,6 +9,7 @@ import { useWorkingCountry } from "~/providers/working-country-provider";
 import { isoForCountryName } from "~/lib/constants/countries";
 import { shortCountryName } from "~/lib/constants/country-config";
 import { colors, fontSizesPx, spacingPx } from "~/lib/tokens";
+import { useHydrated } from "~/hooks/use-hydrated";
 
 /**
  * Teams already started on their first country in this page session. Shared
@@ -31,6 +32,9 @@ export function resetDefaultedTeamsForTest() {
  */
 export function SidebarCountryPicker({ collapsed = false }: { collapsed?: boolean }) {
   const t = useTranslations("nav.country");
+  // The team scope is browser-only state: render nothing (like the server)
+  // until hydration ends, or a fast myTeams response throws #418.
+  const hydrated = useHydrated();
   const { activeTeamId } = useTeam();
   const { countries, countryId, countryName, showCountrySelector, scopeReady, setWorkingCountry } =
     useWorkingCountry();
@@ -45,7 +49,7 @@ export function SidebarCountryPicker({ collapsed = false }: { collapsed?: boolea
     if (!countryId && first) setWorkingCountry(first.id);
   }, [scopeReady, showCountrySelector, activeTeamId, countryId, countries, setWorkingCountry]);
 
-  if (!scopeReady || !showCountrySelector) return null;
+  if (!hydrated || !scopeReady || !showCountrySelector) return null;
 
   const label = collapsed
     ? (isoForCountryName(countryName) ?? "--")
