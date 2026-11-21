@@ -43,6 +43,7 @@ import { defaultTimeZone, isLocale, localeLabels, locales } from "~/i18n/config"
 import { useTimeZoneOptions } from "~/i18n/use-time-zone-options";
 import { useTeam } from "~/providers/team-provider";
 import { useTeamCountry } from "~/hooks/use-team-country";
+import { useHydrated } from "~/hooks/use-hydrated";
 import { COUNTRIES_BY_DIAL_LENGTH, COUNTRY_SELECT_DATA, getDialCode } from "~/lib/constants/countries";
 import { NotificationPreferencesSection } from "./_components/NotificationPreferencesSection";
 import { AlertSubscriptionsSection } from "./_components/AlertSubscriptionsSection";
@@ -307,8 +308,12 @@ function OrganisationRolesSection({ currentUserId }: { currentUserId: string }) 
   const t = useTranslations("profile.orgRoles");
   const { activeTeamId, switchTeam } = useTeam();
   const teamsQuery = api.teams.myTeams.useQuery();
+  // myTeams is fetched only in the browser, so the server renders the loader.
+  // Keep it until hydration ends: if the teams land first, rendering the
+  // table during hydration throws #418 (ticket #1565).
+  const hydrated = useHydrated();
 
-  if (teamsQuery.isLoading) return <Loader size="xs" />;
+  if (!hydrated || teamsQuery.isLoading) return <Loader size="xs" />;
 
   const teams = teamsQuery.data ?? [];
 

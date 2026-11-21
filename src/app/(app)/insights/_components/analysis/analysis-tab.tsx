@@ -14,6 +14,7 @@ import { AnalysisDetail, scopeKey, type AnalysisScopeRef } from "./analysis-deta
 import { AnalysisHome } from "./analysis-home";
 import { NewAnalysisModal } from "./new-analysis-modal";
 import { Notice } from "./notice";
+import { useHydrated } from "~/hooks/use-hydrated";
 
 /** What the page is showing. */
 type Opened = { kind: "country" } | { kind: "created"; created: CreatedAnalysis };
@@ -114,7 +115,10 @@ export function AnalysisTab() {
       ? countryParam
       : null;
   const country = pickCountry(options, countryFromUrl ?? picked, workingId);
-  const scopeLoading = teamLoading || (teamCountries.length === 0 && allCountries.isLoading);
+  // myTeams is fetched by the shell in the browser, so the server renders the
+  // loader. Keep it until hydration ends, or a fast response throws #418.
+  const hydrated = useHydrated();
+  const scopeLoading = !hydrated || teamLoading || (teamCountries.length === 0 && allCountries.isLoading);
 
   const scopes = api.analysis.scopes.useQuery(
     { teamId: activeTeamId ?? null, countries: country ? [{ id: country.id, name: country.name }] : [] },

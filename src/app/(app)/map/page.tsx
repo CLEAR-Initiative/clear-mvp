@@ -138,6 +138,7 @@ import {
 } from "~/lib/agent-deep-link";
 import { useAgentDeepLink } from "~/components/agent/use-agent-deep-link";
 import { readMapFiltersSession, writeMapFiltersSession } from "~/lib/map-filters-session";
+import { useHydrated } from "~/hooks/use-hydrated";
 
 const MAX_OPEN_PANELS = 4;
 
@@ -311,6 +312,9 @@ function MapPageContent() {
     showCountrySelector,
     scopeReady,
   } = useTeamCountry();
+  // The team scope is browser-only: render the country control as the server
+  // did until hydration ends, or a fast myTeams response throws #418.
+  const hydrated = useHydrated();
   
   /* ---- Core state (must precede queries that depend on it) ---- */
   const [dataView, setDataView] = useState<DataView>(() => {
@@ -2365,7 +2369,7 @@ function MapPageContent() {
         }}
       >
         <Group gap={12} style={{ pointerEvents: "auto" }} wrap="wrap">
-          {(showCountrySelector || teamCountries.length === 0 || !scopeReady) ? (
+          {(!hydrated || showCountrySelector || teamCountries.length === 0 || !scopeReady) ? (
             <Select
               size="xs"
               value={selectedCountry || null}
@@ -2541,7 +2545,7 @@ function MapPageContent() {
         onKeepPanelsOpenChange={setKeepPanelsOpen}
         filters={
           <Stack gap={10}>
-            {(showCountrySelector || teamCountries.length === 0 || !scopeReady) ? (
+            {(!hydrated || showCountrySelector || teamCountries.length === 0 || !scopeReady) ? (
               <Select
                 size="xs"
                 value={selectedCountry || null}
