@@ -57,6 +57,8 @@ Don't ask for credentials in issues or pull requests.
 
 - Branch off **`dev`** and open pull requests against `dev`. A merge to `dev` builds the image
   for the dev environment; a merge to `prod` does the same for production.
+- A pull request into `prod` (a sync from `dev`, or a hotfix) runs the same unit and end-to-end
+  checks as one into `dev`. A hotfix is tested against clear-api's `prod` branch.
 - Before you push, run what CI runs:
 
   ```bash

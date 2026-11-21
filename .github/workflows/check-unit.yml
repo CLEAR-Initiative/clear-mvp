@@ -1,6 +1,6 @@
 name: Check / Unit tests
 
-# Fast gate on every PR to dev: Vitest unit suite, TypeScript typecheck, and the
+# Fast gate on every PR to dev or prod: Vitest unit suite, TypeScript typecheck, and the
 # translation-catalog guard (scripts/check-messages.mjs), plus ESLint. Runs
 # alongside the heavier E2E smoke workflow; both are required status checks on dev.
 #
@@ -10,7 +10,7 @@ name: Check / Unit tests
 
 on:
   pull_request:
-    branches: [dev]
+    branches: [dev, prod]
 
 permissions:
   contents: read
