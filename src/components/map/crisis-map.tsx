@@ -39,6 +39,7 @@ import {
   presenceLineVisibility,
 } from "~/components/map/nrc-presence";
 import { dedupeByProperty } from "~/lib/geo/dedupe-rendered-features";
+import { setPaintPropertySafe } from "~/lib/map/safe-paint";
 import { useIsDark } from "~/hooks/use-is-dark";
 import { countryConfig, staticCountryBounds, WORLD_VIEW } from "~/lib/constants/country-config";
 import {
@@ -1361,10 +1362,10 @@ export function CrisisMap({
                 isoFilter,
               ] as never);
               m.setLayerZoomRange(layer.id, 0, 24);
-              m.setPaintProperty(layer.id, "line-color", overlayOnDark ? "#94A3B8" : "#475569");
-              m.setPaintProperty(layer.id, "line-width", 1.4);
-              m.setPaintProperty(layer.id, "line-opacity", 0.85);
-              m.setPaintProperty(layer.id, "line-dasharray", [3, 2]);
+              setPaintPropertySafe(m, layer.id, "line-color", overlayOnDark ? "#94A3B8" : "#475569");
+              setPaintPropertySafe(m, layer.id, "line-width", 1.4);
+              setPaintPropertySafe(m, layer.id, "line-opacity", 0.85);
+              setPaintPropertySafe(m, layer.id, "line-dasharray", [3, 2]);
               m.setLayoutProperty(layer.id, "visibility", "visible");
             } catch { /* ignore */ }
           }
@@ -1521,10 +1522,10 @@ export function CrisisMap({
               ["==", ["get", "iso_3166_1"], focusIso],
             ]);
             m.setLayerZoomRange(layer.id, 0, 24);
-            m.setPaintProperty(layer.id, "line-color", analysisLook ? (isDark ? "#3A2A22" : "#C4A494") : (overlayOnDark ? "#94A3B8" : "#475569"));
-            m.setPaintProperty(layer.id, "line-width", analysisLook ? 1 : 1.4);
-            m.setPaintProperty(layer.id, "line-opacity", 0.85);
-            m.setPaintProperty(layer.id, "line-dasharray", analysisLook ? [4, 4] : [3, 2]);
+            setPaintPropertySafe(m, layer.id, "line-color", analysisLook ? (isDark ? "#3A2A22" : "#C4A494") : (overlayOnDark ? "#94A3B8" : "#475569"));
+            setPaintPropertySafe(m, layer.id, "line-width", analysisLook ? 1 : 1.4);
+            setPaintPropertySafe(m, layer.id, "line-opacity", 0.85);
+            setPaintPropertySafe(m, layer.id, "line-dasharray", analysisLook ? [4, 4] : [3, 2]);
             m.setLayoutProperty(layer.id, "visibility", "visible");
           } catch { /* ignore */ }
         } else {
@@ -1546,10 +1547,10 @@ export function CrisisMap({
             6, 13,
             10, 15,
           ]);
-          m.setPaintProperty(layer.id, "text-color", isDark ? "#CBD5E1" : "#374151");
-          m.setPaintProperty(layer.id, "text-halo-color", isDark ? "rgba(15,23,42,0.85)" : "#FFFFFF");
-          m.setPaintProperty(layer.id, "text-halo-width", 1.5);
-          m.setPaintProperty(layer.id, "text-halo-blur", 0.5);
+          setPaintPropertySafe(m, layer.id, "text-color", isDark ? "#CBD5E1" : "#374151");
+          setPaintPropertySafe(m, layer.id, "text-halo-color", isDark ? "rgba(15,23,42,0.85)" : "#FFFFFF");
+          setPaintPropertySafe(m, layer.id, "text-halo-width", 1.5);
+          setPaintPropertySafe(m, layer.id, "text-halo-blur", 0.5);
           }
         } catch { /* ignore */ }
       }
@@ -1557,10 +1558,10 @@ export function CrisisMap({
       // Country labels - improve legibility with solid fill (no hollow outline effect).
       if (layer.type === "symbol" && id === "country-label") {
         try {
-          m.setPaintProperty(layer.id, "text-color", analysisLook ? (isDark ? "#6B717C" : "#737373") : (isDark ? "#E2E8F0" : "#1F2937"));
-          m.setPaintProperty(layer.id, "text-halo-color", isDark ? "rgba(15,23,42,0.9)" : "rgba(255,255,255,0.9)");
-          m.setPaintProperty(layer.id, "text-halo-width", 2);
-          m.setPaintProperty(layer.id, "text-halo-blur", 0.3);
+          setPaintPropertySafe(m, layer.id, "text-color", analysisLook ? (isDark ? "#6B717C" : "#737373") : (isDark ? "#E2E8F0" : "#1F2937"));
+          setPaintPropertySafe(m, layer.id, "text-halo-color", isDark ? "rgba(15,23,42,0.9)" : "rgba(255,255,255,0.9)");
+          setPaintPropertySafe(m, layer.id, "text-halo-width", 2);
+          setPaintPropertySafe(m, layer.id, "text-halo-blur", 0.3);
           if (analysisLook) {
             m.setLayoutProperty(layer.id, "text-transform", "uppercase");
             m.setLayoutProperty(layer.id, "text-letter-spacing", 0.14);
@@ -1607,10 +1608,10 @@ export function CrisisMap({
             10, 17,
           ]);
           // Labels: dark text on light basemap, light text on dark basemap.
-          m.setPaintProperty(layer.id, "text-color", isDark ? "#E2E8F0" : "#1F2937");
-          m.setPaintProperty(layer.id, "text-halo-color", isDark ? "rgba(15,23,42,0.85)" : "#FFFFFF");
-          m.setPaintProperty(layer.id, "text-halo-width", 1.5);
-          m.setPaintProperty(layer.id, "text-halo-blur", 0.5);
+          setPaintPropertySafe(m, layer.id, "text-color", isDark ? "#E2E8F0" : "#1F2937");
+          setPaintPropertySafe(m, layer.id, "text-halo-color", isDark ? "rgba(15,23,42,0.85)" : "#FFFFFF");
+          setPaintPropertySafe(m, layer.id, "text-halo-width", 1.5);
+          setPaintPropertySafe(m, layer.id, "text-halo-blur", 0.5);
           }
         } catch { /* ignore */ }
       }
@@ -1726,7 +1727,7 @@ export function CrisisMap({
     if (fitBoundsGeometry) {
       // Suppress country-wide highlight while a region is focused.
       try {
-        if (m.getLayer("focus-highlight-fill")) m.setPaintProperty("focus-highlight-fill", "fill-opacity", 0);
+        if (m.getLayer("focus-highlight-fill")) setPaintPropertySafe(m, "focus-highlight-fill", "fill-opacity", 0);
       } catch { /* ignore */ }
 
       const styleLayers = m.getStyle().layers as Array<{ id: string; type: string }>;
@@ -1746,7 +1747,7 @@ export function CrisisMap({
       // Restore country highlight when no region is selected.
       try {
         if (m.getLayer("focus-highlight-fill")) {
-          m.setPaintProperty("focus-highlight-fill", "fill-opacity", appearance === "analysis" ? 0.1 : (isDark ? 0.45 : 0.35));
+          setPaintPropertySafe(m, "focus-highlight-fill", "fill-opacity", appearance === "analysis" ? 0.1 : (isDark ? 0.45 : 0.35));
         }
       } catch { /* ignore */ }
     }
@@ -2021,7 +2022,7 @@ export function CrisisMap({
     const setHeatOpacity = (opacity: number) => {
       try {
         if (m.getLayer(HEAT_LAYER)) {
-          m.setPaintProperty(HEAT_LAYER, "heatmap-opacity", opacity);
+          setPaintPropertySafe(m, HEAT_LAYER, "heatmap-opacity", opacity);
         }
       } catch { /* ignore */ }
     };
@@ -2665,7 +2666,7 @@ export function CrisisMap({
     const country = selected ? operatingCountries?.find((c) => c.iso2.toUpperCase() === selected) : undefined;
 
     try {
-      if (m.getLayer(PRESENCE_FILL)) m.setPaintProperty(PRESENCE_FILL, "fill-opacity", presenceFillOpacity(selected) as never);
+      if (m.getLayer(PRESENCE_FILL)) setPaintPropertySafe(m, PRESENCE_FILL, "fill-opacity", presenceFillOpacity(selected));
       // Hide, don't zero line-opacity: see PRESENCE_LINE_OPACITY.
       if (m.getLayer(PRESENCE_LINE)) m.setLayoutProperty(PRESENCE_LINE, "visibility", presenceLineVisibility(selected));
       if (m.getLayer(PRESENCE_SELECTED_LINE)) {
@@ -2796,8 +2797,8 @@ export function CrisisMap({
       try {
         m.setLayoutProperty(layer.id, "visibility", visibility);
         if (boost && layer.type === "line") {
-          m.setPaintProperty(layer.id, "line-color", roadColor as never);
-          m.setPaintProperty(layer.id, "line-width", roadWidth as never);
+          setPaintPropertySafe(m, layer.id, "line-color", roadColor);
+          setPaintPropertySafe(m, layer.id, "line-width", roadWidth);
         }
       } catch { /* ignore */ }
     }
@@ -3629,7 +3630,7 @@ export function CrisisMap({
     try {
       if (m.getLayer("focus-highlight-fill")) {
         const hide = paintablePopulationBoundaries.length > 0 || !!fitBoundsGeometry;
-        m.setPaintProperty("focus-highlight-fill", "fill-opacity", hide ? 0 : 0.35);
+        setPaintPropertySafe(m, "focus-highlight-fill", "fill-opacity", hide ? 0 : 0.35);
       }
     } catch { /* ignore */ }
   }, [paintablePopulationBoundaries, fitBoundsGeometry, loaded]);
