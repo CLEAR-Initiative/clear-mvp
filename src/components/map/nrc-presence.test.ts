@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { NRC_LETTER_PATHS } from "~/components/ui/nrc-logo-mark";
-import { PRESENCE_SUDAN_OFFICES, nrcPinSvg, presenceFillOpacity, presenceLineOpacity } from "./nrc-presence";
+import {
+  PRESENCE_LINE_OPACITY,
+  PRESENCE_SUDAN_OFFICES,
+  nrcPinSvg,
+  presenceFillOpacity,
+  presenceLineVisibility,
+} from "./nrc-presence";
 
 describe("presence map styling", () => {
   it("fills NRC countries at 0.42, 0.62 on hover", () => {
@@ -11,11 +17,16 @@ describe("presence map styling", () => {
     expect(presenceFillOpacity("SD")).toEqual(["case", ["==", ["get", "iso_3166_1"], "SD"], 0.26, 0.08]);
   });
 
-  it("hides borders at world zoom and in the country state", () => {
-    const world = presenceLineOpacity(null) as unknown[];
-    expect(world.slice(0, 3)).toEqual(["interpolate", ["linear"], ["zoom"]]);
-    expect(world[3]).toBe(2.8);
-    expect(presenceLineOpacity("SD")).toBe(0);
+  it("fades borders in from zoom 2.8", () => {
+    const opacity = PRESENCE_LINE_OPACITY as unknown[];
+    expect(opacity.slice(0, 3)).toEqual(["interpolate", ["linear"], ["zoom"]]);
+    expect(opacity[3]).toBe(2.8);
+  });
+
+  it("hides borders in the country state with visibility, not opacity", () => {
+    // Swapping line-opacity to a constant crashes Mapbox (GlitchTip prod #912).
+    expect(presenceLineVisibility(null)).toBe("visible");
+    expect(presenceLineVisibility("SD")).toBe("none");
   });
 });
 
