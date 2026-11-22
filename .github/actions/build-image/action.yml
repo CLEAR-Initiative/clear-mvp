@@ -6,7 +6,7 @@ inputs:
     description: Target environment, used as image tag prefix and Sentry environment
     required: true
   version:
-    description: MAJOR.MINOR.PATCH version
+    description: MAJOR.MINOR.PATCH version, also the Sentry release (clear-mvp@VERSION)
     required: true
   registry:
     description: Container registry
@@ -76,6 +76,7 @@ runs:
           NEXT_PUBLIC_MAPBOX_TOKEN=${{ inputs.mapbox-token }}
           NEXT_PUBLIC_SENTRY_DSN=${{ inputs.sentry-dsn }}
           NEXT_PUBLIC_SENTRY_ENV=${{ inputs.environment }}
+          NEXT_PUBLIC_SENTRY_RELEASE=clear-mvp@${{ inputs.version }}
           NEXT_PUBLIC_SENTRY_CLIENT=${{ inputs.sentry-client }}
           NEXT_PUBLIC_UMAMI_HOST_URL=${{ inputs.umami-host-url }}
           NEXT_PUBLIC_UMAMI_WEBSITE_ID=${{ inputs.umami-website-id }}

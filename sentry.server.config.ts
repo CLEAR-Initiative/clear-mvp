@@ -6,6 +6,9 @@ import * as Sentry from "@sentry/nextjs";
 Sentry.init({
   dsn: process.env.SENTRY_DSN,
   environment: process.env.SENTRY_ENV ?? "development",
+  // Which deploy this is (clear-mvp@MAJOR.MINOR.PATCH), inlined at build time.
+  // GlitchTip then shows the release an error first appeared in.
+  release: process.env.NEXT_PUBLIC_SENTRY_RELEASE || undefined,
 
   // Sample rates — tune down in prod if event volume gets noisy.
   // 0.2 = 20% of transactions sent. Errors are always sent regardless.
