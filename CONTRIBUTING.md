@@ -80,6 +80,36 @@ Don't ask for credentials in issues or pull requests.
   GitHub Issues. You get access after registering. Small fixes are welcome as pull requests from
   anyone. For anything bigger, register first so we can talk it through.
 
+
+## Releasing to prod
+
+Two things reach prod users: a sync of `dev` into `prod`, and a feature flag that is turned on
+in prod. Both need a check by a person first. The 13 Nov 2026 sync shipped three bugs that dev
+had already reported, and eight prod hotfixes followed in six days.
+
+### Sync `dev` into `prod`
+
+- Sync at least once a week. Sync sooner when `dev` is 15 commits ahead of `prod`. A small sync
+  is easier to test and easier to debug.
+- Before you open the sync pull request:
+  1. Read the unresolved `clear-mvp` errors in dev GlitchTip.
+  2. For each error, fix it on `dev` or decide that it can ship.
+  3. Resolve the issues that are fixed.
+- After the sync deploys, watch prod GlitchTip for one hour.
+
+### Turn on a feature flag in prod
+
+A flag change is not a deploy, so no CI check runs. Do these steps first:
+
+1. Turn the flag on in dev.
+2. Open each page that the feature changes, with the browser console open.
+3. Use the feature: click, hover, go back, and reload.
+4. Fix every console error and every new error in dev GlitchTip for those pages.
+5. Check that prod runs every change the feature needs, in clear-mvp, clear-api and
+   clear-pipeline. A flag can depend on code that is on `dev` and not yet on `prod`.
+6. Turn the flag on in prod.
+7. Watch prod GlitchTip for one hour.
+
 ## Environment variables
 
 To add one:
