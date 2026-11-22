@@ -35,9 +35,12 @@ export const COMMENT_MARKER = "<!-- dev-errors-report -->";
  * message carries a variable part (React #418 was 15 issues in prod).
  */
 export function classKey(title) {
+  // A minified React error is identified by its code: #418 and #423 are
+  // different bugs, and the rest of the title is a URL with arguments.
+  const react = title.match(/Minified React error #(\d+)/);
+  if (react) return `Minified React error #${react[1]}`;
   return title
     .replace(/\s*\(In '.*$/s, "") // Safari appends the failing expression
-    .replace(/\?args\[\]=.*$/s, "") // React minified-error arguments
     .replace(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, "<uuid>")
     .replace(/\d+/g, "N")
     .replace(/[.…\s]+$/, "")

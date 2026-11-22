@@ -33,6 +33,12 @@ describe("classKey", () => {
     expect(classKey(html)).toBe(classKey(text));
   });
 
+  it("keeps different React error codes apart", () => {
+    const title = (code) => `Error: Minified React error #${code}; visit https://react.dev/errors/${code}?args[]=HTML&args[]= for the fu…`;
+    expect(classKey(title(418))).toBe("Minified React error #418");
+    expect(classKey(title(423))).not.toBe(classKey(title(418)));
+  });
+
   it("keeps different errors apart", () => {
     expect(classKey("TypeError: a is undefined")).not.toBe(classKey("TypeError: b is undefined"));
   });
