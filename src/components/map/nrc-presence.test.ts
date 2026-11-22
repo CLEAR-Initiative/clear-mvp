@@ -14,7 +14,14 @@ describe("presence map styling", () => {
   });
 
   it("emphasises the selected country and fades the others", () => {
-    expect(presenceFillOpacity("SD")).toEqual(["case", ["==", ["get", "iso_3166_1"], "SD"], 0.26, 0.08]);
+    const hover = ["boolean", ["feature-state", "hover"], false];
+    expect(presenceFillOpacity("SD")).toEqual(["case", ["==", ["get", "iso_3166_1"], "SD"], 0.26, hover, 0.08, 0.08]);
+  });
+
+  it("reads the hover state in both states, so a switch never drops it", () => {
+    // Tiles built for one state must still react to hover after the switch.
+    expect(JSON.stringify(presenceFillOpacity(null))).toContain("feature-state");
+    expect(JSON.stringify(presenceFillOpacity("SD"))).toContain("feature-state");
   });
 
   it("fades borders in from zoom 2.8", () => {
