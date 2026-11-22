@@ -1,0 +1,95 @@
+name: Check / Dev errors before prod
+
+# On every PR into `prod`, lists the unresolved errors that dev has reported
+# to GlitchTip since the last prod sync, as a PR comment.
+#
+# - A `dev` sync PR fails while errors are listed. Resolve each issue in dev
+#   GlitchTip, or add the `dev-errors-reviewed` label to say a person read the
+#   list.
+# - A hotfix PR (any other head branch) never fails; the list is information.
+#
+# Why: the bug classes that reached prod with the 13 Nov 2026 sync were all in
+# dev GlitchTip from 10 Nov, and nobody looked before promoting.
+#
+# Needs the repo secret GLITCHTIP_DEV_TOKEN: a read token for the dev
+# GlitchTip (org `clear`). Without it a sync PR fails with "could not check".
+
+on:
+  pull_request:
+    branches: [prod]
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+
+permissions:
+  contents: read
+  pull-requests: write # the report comment
+
+concurrency:
+  group: dev-errors-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  dev-errors:
+    name: Dev errors reviewed
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
+
+      - name: Find the last prod sync
+        id: since
+        run: |
+          # The newest dev commit that prod already has is where the last sync
+          # was cut. Errors seen on dev after it are the ones to read.
+          git fetch --quiet origin dev prod
+          base=$(git merge-base origin/dev origin/prod)
+          echo "since=$(git show -s --format=%cI "$base")" >> "$GITHUB_OUTPUT"
+
+      - name: Report dev errors
+        id: report
+        env:
+          GLITCHTIP_TOKEN: ${{ secrets.GLITCHTIP_DEV_TOKEN }}
+          SINCE: ${{ steps.since.outputs.since }}
+          MODE: ${{ github.head_ref == 'dev' && 'sync' || 'report' }}
+          REVIEWED: ${{ contains(github.event.pull_request.labels.*.name, 'dev-errors-reviewed') }}
+        run: |
+          set +e
+          node scripts/dev-errors-report.mjs > report.md
+          code=$?
+          set -e
+          cat report.md >> "$GITHUB_STEP_SUMMARY"
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+
+      - name: Comment on the PR
+        if: steps.report.outputs.code != '2'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          # One comment, updated in place.
+          id=$(gh api "repos/$GITHUB_REPOSITORY/issues/$PR/comments" --paginate \
+            --jq '[.[] | select(.body | startswith("<!-- dev-errors-report -->"))][0].id // empty')
+          if [ -n "$id" ]; then
+            gh api -X PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$id" -F body=@report.md > /dev/null
+          else
+            gh pr comment "$PR" --repo "$GITHUB_REPOSITORY" --body-file report.md
+          fi
+
+      - name: Result
+        env:
+          CODE: ${{ steps.report.outputs.code }}
+          MODE: ${{ github.head_ref == 'dev' && 'sync' || 'report' }}
+        run: |
+          if [ "$CODE" = "1" ]; then
+            echo "::error::Dev has unresolved errors since the last prod sync. Read the PR comment."
+            exit 1
+          fi
+          if [ "$CODE" = "2" ]; then
+            if [ "$MODE" = "sync" ]; then
+              echo "::error::Could not read dev GlitchTip. Is the GLITCHTIP_DEV_TOKEN secret set?"
+              exit 1
+            fi
+            echo "::warning::Could not read dev GlitchTip; skipped on this hotfix PR."
+          fi
