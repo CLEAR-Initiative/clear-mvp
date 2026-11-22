@@ -105,8 +105,10 @@ A flag change is not a deploy, so no CI check runs. Do these steps first:
 2. Open each page that the feature changes, with the browser console open.
 3. Use the feature: click, hover, go back, and reload.
 4. Fix every console error and every new error in dev GlitchTip for those pages.
-5. Turn the flag on in prod.
-6. Watch prod GlitchTip for one hour.
+5. Check that prod runs every change the feature needs, in clear-mvp, clear-api and
+   clear-pipeline. A flag can depend on code that is on `dev` and not yet on `prod`.
+6. Turn the flag on in prod.
+7. Watch prod GlitchTip for one hour.
 
 ## Environment variables
 
