@@ -62,8 +62,9 @@ ENV NEXT_PUBLIC_UMAMI_HOST_URL=${NEXT_PUBLIC_UMAMI_HOST_URL}
 ARG NEXT_PUBLIC_UMAMI_WEBSITE_ID=""
 ENV NEXT_PUBLIC_UMAMI_WEBSITE_ID=${NEXT_PUBLIC_UMAMI_WEBSITE_ID}
 
-# Hermetic Playwright stack only (docker-compose.e2e.yml sets it to 1). No
-# code reads it today. The e2e image keeps NEXT_PUBLIC_SENTRY_ENV at its
+# Hermetic Playwright stack only (docker-compose.e2e.yml sets it to 1).
+# src/lib/e2e/e2e-hooks.ts reads it: the map is exposed to specs, and an
+# unsafe paint change fails the running test. The e2e image keeps NEXT_PUBLIC_SENTRY_ENV at its
 # default, so it is not a dev deploy (src/lib/deploy-env.ts) and dev-only tools
 # such as `/observe?noTeam=1` stay off; spec 12 mocks auth.me instead.
 ARG NEXT_PUBLIC_E2E=""

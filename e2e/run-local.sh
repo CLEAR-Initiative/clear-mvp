@@ -43,9 +43,11 @@ echo "── ensuring Playwright Chromium is installed ──"
 bunx playwright install chromium >/dev/null
 
 if [[ -z "${NEXT_PUBLIC_MAPBOX_TOKEN:-}" ]]; then
-  echo "── note: NEXT_PUBLIC_MAPBOX_TOKEN unset — map canvas will show the token banner; layer controls still work ──"
+  echo "── note: NEXT_PUBLIC_MAPBOX_TOKEN unset — map canvas will show the token banner; layer controls still work; the real-map spec (case 29) is skipped ──"
 else
-  echo "── Mapbox token loaded from env for web image build ──"
+  echo "── Mapbox token loaded from env for web image build; the real-map spec (case 29) will run ──"
+  # Case 29 drives the real map canvas, so it runs only when the image has a token.
+  export E2E_REAL_MAP=1
 fi
 
 echo "── building + starting db, redis, api, web (first run builds images) ──"

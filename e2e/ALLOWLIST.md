@@ -3,7 +3,7 @@
 Scaffold, not a full inventory. One line per primary control this suite does not click, and one reason. Deferred catalog rows stay on the epic.
 
 - Detection — "+ Connect Source": external. It is the hook for an outside feed, and this stack does not connect one.
-- Map — Mapbox canvas and pins: WebGL-pixel-only. There is no map token, so this suite never asserts canvas pixels. Filter-bar position on reload is `e2e/tests/23-regression-catalog.spec.ts`.
+- Map — Mapbox canvas and pins on `/map`: WebGL-pixel-only. This suite never asserts canvas pixels. Filter-bar position on reload is `e2e/tests/23-regression-catalog.spec.ts`. The Overview presence map is driven on a real canvas in `e2e/tests/29-presence-map.spec.ts`, which runs only when the stack has a Mapbox token (`E2E_REAL_MAP=1`).
 - Map — Satellite and Topography: WebGL-pixel-only. The change is the canvas imagery. Boundaries and Population stay in `e2e/tests/09-map-layers.spec.ts`.
 - Insights — evidence Download: external. The control opens the source file in a new tab.
 - Crisis — "Delete crisis": destructive.
