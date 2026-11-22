@@ -39,6 +39,7 @@ import {
   presenceLineVisibility,
 } from "~/components/map/nrc-presence";
 import { dedupeByProperty } from "~/lib/geo/dedupe-rendered-features";
+import { exposeMapForE2E } from "~/lib/e2e/e2e-hooks";
 import { reportMapError } from "~/lib/map/report-map-error";
 import { setPaintPropertySafe } from "~/lib/map/safe-paint";
 import { useIsDark } from "~/hooks/use-is-dark";
@@ -927,6 +928,7 @@ export function CrisisMap({
         preserveDrawingBuffer,
         attributionControl: false,
       });
+      exposeMapForE2E(map.current);
 
       // Only surface pre-load failures. Mapbox fires `error` for routine
       // tile 404s after the style is up — those must not replace the map.
@@ -1022,6 +1024,7 @@ export function CrisisMap({
       }
       map.current?.remove();
       map.current = null;
+      exposeMapForE2E(null);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
