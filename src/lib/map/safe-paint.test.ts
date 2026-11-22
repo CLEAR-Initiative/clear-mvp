@@ -1,5 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+const failE2ETest = vi.fn();
+vi.mock("~/lib/e2e/e2e-hooks", () => ({ failE2ETest: (...args: unknown[]) => failE2ETest(...args) }));
+
 const reportHandledError = vi.fn();
 vi.mock("~/lib/report-handled-error", () => ({
   reportHandledError: (...args: unknown[]) => reportHandledError(...args),
@@ -70,6 +73,7 @@ describe("setPaintPropertySafe", () => {
 
   beforeEach(() => {
     reportHandledError.mockClear();
+    failE2ETest.mockClear();
     consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
   });
 
@@ -96,6 +100,14 @@ describe("setPaintPropertySafe", () => {
       expect.any(UnsafePaintChangeError),
       expect.objectContaining({ feature: "map", stage: "paint-guard" }),
     );
+  });
+
+  it("hands an unsafe change to the E2E hook, and a safe one never", () => {
+    vi.stubEnv("NODE_ENV", "production");
+    setPaintPropertySafe(fakeMap(0.35), "line", "line-opacity", 0);
+    expect(failE2ETest).not.toHaveBeenCalled();
+    setPaintPropertySafe(fakeMap(HOVER_FILL), "line", "line-opacity", 0);
+    expect(failE2ETest).toHaveBeenCalledWith(expect.any(UnsafePaintChangeError));
   });
 
   it("in production: reports and still sets the value", () => {

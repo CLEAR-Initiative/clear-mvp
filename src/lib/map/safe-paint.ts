@@ -1,3 +1,4 @@
+import { failE2ETest } from "~/lib/e2e/e2e-hooks";
 import { reportHandledError } from "~/lib/report-handled-error";
 
 /**
@@ -64,6 +65,9 @@ export function setPaintPropertySafe(map: PaintMap, layerId: string, name: strin
     // the throw. Report first so the failure is never silent.
     console.error(error.message);
     reportHandledError(error, { feature: "map", stage: "paint-guard", extra: { layerId, name } });
+    // The E2E image is a production build, so nothing throws below. Fail the
+    // running Playwright test instead of leaving this to a timing race.
+    failE2ETest(error);
     if (process.env.NODE_ENV !== "production") throw error;
   }
   // The one direct call the lint rule allows.
