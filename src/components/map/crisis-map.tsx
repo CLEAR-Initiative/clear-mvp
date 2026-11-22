@@ -39,6 +39,7 @@ import {
   presenceLineVisibility,
 } from "~/components/map/nrc-presence";
 import { dedupeByProperty } from "~/lib/geo/dedupe-rendered-features";
+import { reportMapError } from "~/lib/map/report-map-error";
 import { setPaintPropertySafe } from "~/lib/map/safe-paint";
 import { useIsDark } from "~/hooks/use-is-dark";
 import { countryConfig, staticCountryBounds, WORLD_VIEW } from "~/lib/constants/country-config";
@@ -480,8 +481,8 @@ function shakemapMmiStyle(value: number): { color: string; width: number; opacit
 
 function removeShakeMapPaint(m: { getLayer: (id: string) => unknown; removeLayer: (id: string) => void; getSource: (id: string) => unknown; removeSource: (id: string) => void }, ids: Set<string>) {
   for (const id of ids) {
-    try { if (m.getLayer(id)) m.removeLayer(id); } catch { /* ignore */ }
-    try { if (m.getSource(id)) m.removeSource(id); } catch { /* ignore */ }
+    try { if (m.getLayer(id)) m.removeLayer(id); } catch (mapErr) { reportMapError(m, mapErr, "removeLayer"); }
+    try { if (m.getSource(id)) m.removeSource(id); } catch (mapErr) { reportMapError(m, mapErr, "removeSource"); }
   }
   ids.clear();
 }
@@ -1016,8 +1017,8 @@ export function CrisisMap({
       if (mapApiRef) mapApiRef.current = null;
       try {
         (map.current as MapboxGLAny)?.__clearMetaPitchBridge?.();
-      } catch {
-        /* ignore */
+      } catch (mapErr) {
+        reportMapError(map.current, mapErr, "clearMetaPitchBridge");
       }
       map.current?.remove();
       map.current = null;
@@ -1067,8 +1068,8 @@ export function CrisisMap({
         try {
           syncTopographyTerrain(m, "simple", { isDark });
           syncTopographyPitch(m, "simple");
-        } catch {
-          /* ignore */
+        } catch (mapErr) {
+          reportMapError(m, mapErr, "syncTopographyTerrain");
         }
       };
     }
@@ -1082,8 +1083,8 @@ export function CrisisMap({
         zoomRaf = 0;
         try {
           updateTopographyTerrainExaggeration(m);
-        } catch {
-          /* ignore */
+        } catch (mapErr) {
+          reportMapError(m, mapErr, "updateTopographyTerrainExaggeration");
         }
       });
     };
@@ -1096,8 +1097,8 @@ export function CrisisMap({
       try {
         syncTopographyTerrain(m, "simple", { isDark });
         syncTopographyPitch(m, "simple");
-      } catch {
-        /* ignore */
+      } catch (mapErr) {
+        reportMapError(m, mapErr, "syncTopographyTerrain");
       }
     };
   }, [loaded, baseMapType, isDark]);
@@ -1110,7 +1111,7 @@ export function CrisisMap({
       ensureGlobeProjection(map.current);
       return;
     }
-    try { map.current.setProjection?.(projection); } catch { /* ignore */ }
+    try { map.current.setProjection?.(projection); } catch (mapErr) { reportMapError(map.current, mapErr, "setProjection"); }
   }, [loaded, projection]);
 
   // Pitch-linked pin stems on every basemap — flat ≤45°, full by ~70°.
@@ -1137,8 +1138,8 @@ export function CrisisMap({
         try {
           const el = (mk as MapboxGLAny).getElement?.() as HTMLElement | undefined;
           if (el?.dataset.elevatedPin) applyPinElevation(el, factor);
-        } catch {
-          /* ignore */
+        } catch (mapErr) {
+          reportMapError(map.current, mapErr, "applyPinElevation");
         }
       }
     };
@@ -1272,13 +1273,13 @@ export function CrisisMap({
 
     const cleanup = () => {
       for (const id of ["focus-mask-fill", "focus-highlight-fill", "focus-border-line"]) {
-        try { if (m.getLayer(id)) m.removeLayer(id); } catch { /* ignore */ }
+        try { if (m.getLayer(id)) m.removeLayer(id); } catch (mapErr) { reportMapError(m, mapErr, "removeLayer"); }
       }
-      try { if (m.getSource(COUNTRY_SOURCE)) m.removeSource(COUNTRY_SOURCE); } catch { /* ignore */ }
-      try { if (m.getSource(FOCUS_GEOJSON_SOURCE)) m.removeSource(FOCUS_GEOJSON_SOURCE); } catch { /* ignore */ }
+      try { if (m.getSource(COUNTRY_SOURCE)) m.removeSource(COUNTRY_SOURCE); } catch (mapErr) { reportMapError(m, mapErr, "removeSource"); }
+      try { if (m.getSource(FOCUS_GEOJSON_SOURCE)) m.removeSource(FOCUS_GEOJSON_SOURCE); } catch (mapErr) { reportMapError(m, mapErr, "removeSource"); }
       // Reset any Mapbox built-in admin-1 layers we mutated back to hidden.
       for (const id of admin1LayerIds.current) {
-        try { m.setLayoutProperty(id, "visibility", "none"); } catch { /* ignore */ }
+        try { m.setLayoutProperty(id, "visibility", "none"); } catch (mapErr) { reportMapError(m, mapErr, "setLayoutProperty"); }
       }
       admin1LayerIds.current = [];
     };
@@ -1367,7 +1368,7 @@ export function CrisisMap({
               setPaintPropertySafe(m, layer.id, "line-opacity", 0.85);
               setPaintPropertySafe(m, layer.id, "line-dasharray", [3, 2]);
               m.setLayoutProperty(layer.id, "visibility", "visible");
-            } catch { /* ignore */ }
+            } catch (mapErr) { reportMapError(m, mapErr, "setFilter"); }
           }
         }
       }
@@ -1527,9 +1528,9 @@ export function CrisisMap({
             setPaintPropertySafe(m, layer.id, "line-opacity", 0.85);
             setPaintPropertySafe(m, layer.id, "line-dasharray", analysisLook ? [4, 4] : [3, 2]);
             m.setLayoutProperty(layer.id, "visibility", "visible");
-          } catch { /* ignore */ }
+          } catch (mapErr) { reportMapError(m, mapErr, "setFilter"); }
         } else {
-          try { m.setLayoutProperty(layer.id, "visibility", "none"); } catch { /* ignore */ }
+          try { m.setLayoutProperty(layer.id, "visibility", "none"); } catch (mapErr) { reportMapError(m, mapErr, "setLayoutProperty"); }
         }
       }
 
@@ -1552,7 +1553,7 @@ export function CrisisMap({
           setPaintPropertySafe(m, layer.id, "text-halo-width", 1.5);
           setPaintPropertySafe(m, layer.id, "text-halo-blur", 0.5);
           }
-        } catch { /* ignore */ }
+        } catch (mapErr) { reportMapError(m, mapErr, "setLayoutProperty"); }
       }
 
       // Country labels - improve legibility with solid fill (no hollow outline effect).
@@ -1567,7 +1568,7 @@ export function CrisisMap({
             m.setLayoutProperty(layer.id, "text-letter-spacing", 0.14);
             m.setLayoutProperty(layer.id, "text-size", 10);
           }
-        } catch { /* ignore */ }
+        } catch (mapErr) { reportMapError(m, mapErr, "setPaintProperty"); }
       }
 
       // Settlement labels - restrict to focus country only, and relax
@@ -1613,7 +1614,7 @@ export function CrisisMap({
           setPaintPropertySafe(m, layer.id, "text-halo-width", 1.5);
           setPaintPropertySafe(m, layer.id, "text-halo-blur", 0.5);
           }
-        } catch { /* ignore */ }
+        } catch (mapErr) { reportMapError(m, mapErr, "setLayoutProperty"); }
       }
     }
 
@@ -1672,7 +1673,7 @@ export function CrisisMap({
         : { ...basePadding, right: basePadding.right + inset }
       : basePadding;
 
-    try { map.current.stop(); } catch { /* ignore */ }
+    try { map.current.stop(); } catch (mapErr) { reportMapError(map.current, mapErr, "stop"); }
     map.current.fitBounds(
       [[bounds[0], bounds[1]], [bounds[2], bounds[3]]],
       fitBoundsCameraOptions({
@@ -1717,9 +1718,9 @@ export function CrisisMap({
 
     const cleanup = () => {
       for (const id of [REGION_FILL, REGION_LINE]) {
-        try { if (m.getLayer(id)) m.removeLayer(id); } catch { /* ignore */ }
+        try { if (m.getLayer(id)) m.removeLayer(id); } catch (mapErr) { reportMapError(m, mapErr, "removeLayer"); }
       }
-      try { if (m.getSource(REGION_SOURCE)) m.removeSource(REGION_SOURCE); } catch { /* ignore */ }
+      try { if (m.getSource(REGION_SOURCE)) m.removeSource(REGION_SOURCE); } catch (mapErr) { reportMapError(m, mapErr, "removeSource"); }
     };
 
     cleanup();
@@ -1728,7 +1729,7 @@ export function CrisisMap({
       // Suppress country-wide highlight while a region is focused.
       try {
         if (m.getLayer("focus-highlight-fill")) setPaintPropertySafe(m, "focus-highlight-fill", "fill-opacity", 0);
-      } catch { /* ignore */ }
+      } catch (mapErr) { reportMapError(m, mapErr, "setPaintProperty"); }
 
       const styleLayers = m.getStyle().layers as Array<{ id: string; type: string }>;
       const beforeId = styleLayers.find((l) => l.type === "symbol")?.id;
@@ -1742,14 +1743,14 @@ export function CrisisMap({
           paint: { "fill-color": regionAccent ?? (isDark ? "#1D4ED8" : "#1E40AF"), "fill-opacity": regionAccent ? 0.1 : 0.25 } }, beforeId);
         m.addLayer({ id: REGION_LINE, type: "line", source: REGION_SOURCE,
           paint: { "line-color": regionAccent ?? (isDark ? "#60A5FA" : "#1D4ED8"), "line-width": regionAccent ? 1.8 : 2, "line-opacity": 1 } }, beforeId);
-      } catch { /* ignore */ }
+      } catch (mapErr) { reportMapError(m, mapErr, "addSource"); }
     } else {
       // Restore country highlight when no region is selected.
       try {
         if (m.getLayer("focus-highlight-fill")) {
           setPaintPropertySafe(m, "focus-highlight-fill", "fill-opacity", appearance === "analysis" ? 0.1 : (isDark ? 0.45 : 0.35));
         }
-      } catch { /* ignore */ }
+      } catch (mapErr) { reportMapError(m, mapErr, "setPaintProperty"); }
     }
 
     return cleanup;
@@ -1778,8 +1779,8 @@ export function CrisisMap({
         const c = m.getCenter();
         prevCenter.current = [c.lng, c.lat];
         prevZoom.current = m.getZoom();
-      } catch {
-        /* ignore */
+      } catch (mapErr) {
+        reportMapError(m, mapErr, "getCenter");
       }
       if (!userCameraOverrideRef.current) {
         userCameraOverrideRef.current = true;
@@ -1839,15 +1840,15 @@ export function CrisisMap({
           prevPadding.current = flyPaddingBottom;
           return;
         }
-      } catch {
-        /* ignore */
+      } catch (mapErr) {
+        reportMapError(map.current, mapErr, "getCenter");
       }
     }
     prevCenter.current = center;
     prevZoom.current = zoom;
     prevPadding.current = flyPaddingBottom;
     // Cancel any in-flight country fitBounds so a deep-link marker zoom wins.
-    try { map.current.stop(); } catch { /* ignore */ }
+    try { map.current.stop(); } catch (mapErr) { reportMapError(map.current, mapErr, "stop"); }
     const { pitch, bearing } = flyToOrientation({
       currentPitch: map.current.getPitch?.() ?? 0,
       currentBearing: map.current.getBearing?.() ?? 0,
@@ -1880,7 +1881,7 @@ export function CrisisMap({
     // every frame during zoom caused empty flashes between heatmap ↔ donuts.
     const clearDomMarkers = (sweepOrphans = false) => {
       for (const mk of clusterDomMarkers.current.values()) {
-        try { mk.remove(); } catch { /* ignore */ }
+        try { mk.remove(); } catch (mapErr) { reportMapError(map.current, mapErr, "remove"); }
       }
       clusterDomMarkers.current.clear();
       displayLngLatRef.current = new Map();
@@ -1889,15 +1890,15 @@ export function CrisisMap({
         m.getContainer()
           .querySelectorAll(".mapboxgl-marker")
           .forEach((el: Element) => el.remove());
-      } catch { /* ignore */ }
+      } catch (mapErr) { reportMapError(m, mapErr, "remove"); }
     };
 
     const removeLayers = () => {
       for (const id of [HEAT_LAYER, CLUSTER_GHOST, POINT_GHOST]) {
-        try { if (m.getLayer(id)) m.removeLayer(id); } catch { /* ignore */ }
+        try { if (m.getLayer(id)) m.removeLayer(id); } catch (mapErr) { reportMapError(m, mapErr, "removeLayer"); }
       }
       for (const id of [HEAT_SOURCE, SOURCE]) {
-        try { if (m.getSource(id)) m.removeSource(id); } catch { /* ignore */ }
+        try { if (m.getSource(id)) m.removeSource(id); } catch (mapErr) { reportMapError(m, mapErr, "removeSource"); }
       }
     };
 
@@ -2024,7 +2025,7 @@ export function CrisisMap({
         if (m.getLayer(HEAT_LAYER)) {
           setPaintPropertySafe(m, HEAT_LAYER, "heatmap-opacity", opacity);
         }
-      } catch { /* ignore */ }
+      } catch (mapErr) { reportMapError(m, mapErr, "setPaintProperty"); }
     };
 
     const setDomMarkerOpacity = (opacity: number) => {
@@ -2032,7 +2033,7 @@ export function CrisisMap({
         try {
           const el = (mk as MapboxGLAny).getElement?.() as HTMLElement | undefined;
           if (el) el.style.opacity = String(opacity);
-        } catch { /* ignore */ }
+        } catch (mapErr) { reportMapError(map.current, mapErr, "markerOpacity"); }
       }
     };
 
@@ -2357,8 +2358,8 @@ export function CrisisMap({
       for (const mk of nrcOfficeMarkersRef.current) {
         try {
           mk.remove();
-        } catch {
-          /* ignore */
+        } catch (mapErr) {
+          reportMapError(map.current, mapErr, "remove");
         }
       }
       nrcOfficeMarkersRef.current = [];
@@ -2553,7 +2554,7 @@ export function CrisisMap({
       if (next === labelState) return;
       labelState = next;
       const filter = next === "all" ? (baseLabelFilter ?? null) : next === "none" ? noLabels : nonNrcLabels;
-      try { m.setFilter(LABELS, filter as never); } catch { /* ignore */ }
+      try { m.setFilter(LABELS, filter as never); } catch (mapErr) { reportMapError(m, mapErr, "setFilter"); }
     };
     presenceSyncLabelsRef.current = syncLabels;
     syncLabels();
@@ -2583,9 +2584,9 @@ export function CrisisMap({
     const setHoverState = (iso: string | null) => {
       if (hoveredIso === iso) return;
       const target = (id: string) => ({ source: PRESENCE_SOURCE, sourceLayer: "country_boundaries", id });
-      try { if (hoveredIso) m.setFeatureState(target(hoveredIso), { hover: false }); } catch { /* ignore */ }
+      try { if (hoveredIso) m.setFeatureState(target(hoveredIso), { hover: false }); } catch (mapErr) { reportMapError(m, mapErr, "setFeatureState"); }
       hoveredIso = iso;
-      try { if (iso) m.setFeatureState(target(iso), { hover: true }); } catch { /* ignore */ }
+      try { if (iso) m.setFeatureState(target(iso), { hover: true }); } catch (mapErr) { reportMapError(m, mapErr, "setFeatureState"); }
     };
     const isoAt = (point: unknown): string | null => {
       const layers = [PRESENCE_PINS, PRESENCE_FILL].filter(
@@ -2635,7 +2636,7 @@ export function CrisisMap({
         m.off("click", onClick);
         m.off("zoomend", syncLabels);
         m.off("resize", onResize);
-      } catch { /* ignore */ }
+      } catch (mapErr) { reportMapError(m, mapErr, "off"); }
       try {
         if (hasLabels && labelState !== "all") m.setFilter(LABELS, (baseLabelFilter ?? null) as never);
         for (const id of [PRESENCE_LABELS, PRESENCE_PINS, PRESENCE_SELECTED_LINE, PRESENCE_LINE, PRESENCE_FILL]) {
@@ -2647,7 +2648,7 @@ export function CrisisMap({
         m.dragRotate?.enable();
         m.touchZoomRotate?.enableRotation();
         m.keyboard?.enableRotation?.();
-      } catch { /* style already gone */ }
+      } catch (mapErr) { /* style already gone */ reportMapError(m, mapErr, "setFilter"); }
       setMapCursor(m, "");
     };
     // operatingCountriesKey stands in for the array; selection is applied by
@@ -2675,7 +2676,7 @@ export function CrisisMap({
       for (const id of [PRESENCE_PINS, PRESENCE_LABELS]) {
         if (m.getLayer(id)) m.setLayoutProperty(id, "visibility", selected ? "none" : "visible");
       }
-    } catch { /* style reloading */ }
+    } catch (mapErr) { /* style reloading */ reportMapError(m, mapErr, "setPaintProperty"); }
     presenceSyncLabelsRef.current?.();
 
     // Zoom buttons move out from under the country panel.
@@ -2743,7 +2744,7 @@ export function CrisisMap({
     }
     return () => {
       for (const mk of markers) {
-        try { mk.remove(); } catch { /* ignore */ }
+        try { mk.remove(); } catch (mapErr) { reportMapError(map.current, mapErr, "remove"); }
       }
       onPresenceHoverRef.current?.(null);
     };
@@ -2800,7 +2801,7 @@ export function CrisisMap({
           setPaintPropertySafe(m, layer.id, "line-color", roadColor);
           setPaintPropertySafe(m, layer.id, "line-width", roadWidth);
         }
-      } catch { /* ignore */ }
+      } catch (mapErr) { reportMapError(m, mapErr, "setLayoutProperty"); }
     }
   }, [loaded, showRoads, isDark, baseMapType]);
 
@@ -2924,8 +2925,9 @@ export function CrisisMap({
         try {
           m.off("mousemove", id, onMove);
           m.off("mouseleave", id, onLeave);
-        } catch {
+        } catch (mapErr) {
           /* layer never mounted */
+          reportMapError(m, mapErr, "off");
         }
       }
       popup?.remove();
@@ -3059,8 +3061,9 @@ export function CrisisMap({
           m.on("mousemove", id, onMove);
           m.on("mouseleave", id, onLeave);
         }
-      } catch {
+      } catch (mapErr) {
         /* style may be mid-swap */
+        reportMapError(m, mapErr, "on");
       }
     })();
 
@@ -3075,8 +3078,9 @@ export function CrisisMap({
       try {
         m.off("zoomstart", onZoomStart);
         m.off("zoomend", onZoomEnd);
-      } catch {
+      } catch (mapErr) {
         /* map already removed */
+        reportMapError(m, mapErr, "off");
       }
       cleanup();
     };
@@ -3092,10 +3096,10 @@ export function CrisisMap({
     const UNCLUSTERED_LAYER = "seismic-unclustered";
 
     const cleanup = () => {
-      try { if (m.getLayer(CLUSTER_COUNT_LAYER)) m.removeLayer(CLUSTER_COUNT_LAYER); } catch { /* ignore */ }
-      try { if (m.getLayer(CLUSTER_LAYER)) m.removeLayer(CLUSTER_LAYER); } catch { /* ignore */ }
-      try { if (m.getLayer(UNCLUSTERED_LAYER)) m.removeLayer(UNCLUSTERED_LAYER); } catch { /* ignore */ }
-      try { if (m.getSource(SOURCE)) m.removeSource(SOURCE); } catch { /* ignore */ }
+      try { if (m.getLayer(CLUSTER_COUNT_LAYER)) m.removeLayer(CLUSTER_COUNT_LAYER); } catch (mapErr) { reportMapError(m, mapErr, "removeLayer"); }
+      try { if (m.getLayer(CLUSTER_LAYER)) m.removeLayer(CLUSTER_LAYER); } catch (mapErr) { reportMapError(m, mapErr, "removeLayer"); }
+      try { if (m.getLayer(UNCLUSTERED_LAYER)) m.removeLayer(UNCLUSTERED_LAYER); } catch (mapErr) { reportMapError(m, mapErr, "removeLayer"); }
+      try { if (m.getSource(SOURCE)) m.removeSource(SOURCE); } catch (mapErr) { reportMapError(m, mapErr, "removeSource"); }
       removeShakeMapPaint(m, shakemapPaintIdsRef.current);
       shakemapHoverBoundRef.current.clear();
     };
@@ -3513,8 +3517,8 @@ export function CrisisMap({
       }
       for (const id of [...shakemapPaintIdsRef.current]) {
         if (nextIds.has(id)) continue;
-        try { if (m.getLayer(id)) m.removeLayer(id); } catch { /* ignore */ }
-        try { if (m.getSource(id)) m.removeSource(id); } catch { /* ignore */ }
+        try { if (m.getLayer(id)) m.removeLayer(id); } catch (mapErr) { reportMapError(m, mapErr, "removeLayer"); }
+        try { if (m.getSource(id)) m.removeSource(id); } catch (mapErr) { reportMapError(m, mapErr, "removeSource"); }
         shakemapHoverBoundRef.current.delete(id);
       }
       shakemapPaintIdsRef.current = nextIds;
@@ -3561,9 +3565,9 @@ export function CrisisMap({
     const LINE_LAYER = "population-line";
 
     const cleanup = () => {
-      try { if (m.getLayer(LINE_LAYER)) m.removeLayer(LINE_LAYER); } catch { /* ignore */ }
-      try { if (m.getLayer(FILL_LAYER)) m.removeLayer(FILL_LAYER); } catch { /* ignore */ }
-      try { if (m.getSource(SOURCE)) m.removeSource(SOURCE); } catch { /* ignore */ }
+      try { if (m.getLayer(LINE_LAYER)) m.removeLayer(LINE_LAYER); } catch (mapErr) { reportMapError(m, mapErr, "removeLayer"); }
+      try { if (m.getLayer(FILL_LAYER)) m.removeLayer(FILL_LAYER); } catch (mapErr) { reportMapError(m, mapErr, "removeLayer"); }
+      try { if (m.getSource(SOURCE)) m.removeSource(SOURCE); } catch (mapErr) { reportMapError(m, mapErr, "removeSource"); }
     };
 
     cleanup();
@@ -3618,7 +3622,7 @@ export function CrisisMap({
           "line-opacity": 0.75,
         },
       }, beforeId);
-    } catch { /* ignore */ }
+    } catch (mapErr) { reportMapError(m, mapErr, "addSource"); }
 
     return cleanup;
   }, [isDark, paintablePopulationBoundaries, loaded]);
@@ -3632,7 +3636,7 @@ export function CrisisMap({
         const hide = paintablePopulationBoundaries.length > 0 || !!fitBoundsGeometry;
         setPaintPropertySafe(m, "focus-highlight-fill", "fill-opacity", hide ? 0 : 0.35);
       }
-    } catch { /* ignore */ }
+    } catch (mapErr) { reportMapError(m, mapErr, "setPaintProperty"); }
   }, [paintablePopulationBoundaries, fitBoundsGeometry, loaded]);
 
   // ── Admin boundary polygons (A1 / A2 from backend) ─────────────────────
@@ -3642,8 +3646,8 @@ export function CrisisMap({
     const ADMIN_SOURCE = "admin-boundaries";
 
     const cleanup = () => {
-      try { if (m.getLayer("admin-boundaries-line")) m.removeLayer("admin-boundaries-line"); } catch { /* ignore */ }
-      try { if (m.getSource(ADMIN_SOURCE)) m.removeSource(ADMIN_SOURCE); } catch { /* ignore */ }
+      try { if (m.getLayer("admin-boundaries-line")) m.removeLayer("admin-boundaries-line"); } catch (mapErr) { reportMapError(m, mapErr, "removeLayer"); }
+      try { if (m.getSource(ADMIN_SOURCE)) m.removeSource(ADMIN_SOURCE); } catch (mapErr) { reportMapError(m, mapErr, "removeSource"); }
     };
 
     cleanup();
@@ -3675,7 +3679,7 @@ export function CrisisMap({
       });
       m.addLayer({ id: "admin-boundaries-line", type: "line", source: ADMIN_SOURCE,
         paint: { "line-color": lineColor, "line-width": lineWidth, "line-opacity": lineOpacity } }, beforeId);
-    } catch { /* ignore */ }
+    } catch (mapErr) { reportMapError(m, mapErr, "addSource"); }
 
     return cleanup;
   }, [paintableAdminBoundaries, adminBoundaryLevel, loaded, showBoundaries, isDark, baseMapType]);
@@ -3691,10 +3695,10 @@ export function CrisisMap({
     // Cleanup previous.
     for (const layerId of regionLayerIds.current) {
       for (const suffix of ["", "-outline-glow", "-outline", "-heat"]) {
-        try { if (m.getLayer(`${layerId}${suffix}`)) m.removeLayer(`${layerId}${suffix}`); } catch { /* ignore */ }
+        try { if (m.getLayer(`${layerId}${suffix}`)) m.removeLayer(`${layerId}${suffix}`); } catch (mapErr) { reportMapError(m, mapErr, "removeLayer"); }
       }
-      try { if (m.getSource(layerId)) m.removeSource(layerId); } catch { /* ignore */ }
-      try { if (m.getSource(`${layerId}-heat`)) m.removeSource(`${layerId}-heat`); } catch { /* ignore */ }
+      try { if (m.getSource(layerId)) m.removeSource(layerId); } catch (mapErr) { reportMapError(m, mapErr, "removeSource"); }
+      try { if (m.getSource(`${layerId}-heat`)) m.removeSource(`${layerId}-heat`); } catch (mapErr) { reportMapError(m, mapErr, "removeSource"); }
     }
     regionLayerIds.current = [];
     for (const rm of regionMarkerRefs.current) rm.remove();
@@ -3796,14 +3800,14 @@ export function CrisisMap({
       if (!map.current) return;
       for (const layerId of regionLayerIds.current) {
         for (const suffix of ["", "-outline-glow", "-outline", "-heat"]) {
-          try { if (map.current.getLayer(`${layerId}${suffix}`)) map.current.removeLayer(`${layerId}${suffix}`); } catch { /* ignore */ }
+          try { if (map.current.getLayer(`${layerId}${suffix}`)) map.current.removeLayer(`${layerId}${suffix}`); } catch (mapErr) { reportMapError(map.current, mapErr, "removeLayer"); }
         }
-        try { if (map.current.getSource(layerId)) map.current.removeSource(layerId); } catch { /* ignore */ }
-        try { if (map.current.getSource(`${layerId}-heat`)) map.current.removeSource(`${layerId}-heat`); } catch { /* ignore */ }
+        try { if (map.current.getSource(layerId)) map.current.removeSource(layerId); } catch (mapErr) { reportMapError(map.current, mapErr, "removeSource"); }
+        try { if (map.current.getSource(`${layerId}-heat`)) map.current.removeSource(`${layerId}-heat`); } catch (mapErr) { reportMapError(map.current, mapErr, "removeSource"); }
       }
       regionLayerIds.current = [];
       for (const rm of regionMarkerRefs.current) {
-        try { rm.remove(); } catch { /* ignore */ }
+        try { rm.remove(); } catch (mapErr) { reportMapError(map.current, mapErr, "remove"); }
       }
       regionMarkerRefs.current = [];
     };
@@ -3842,8 +3846,8 @@ export function CrisisMap({
         try {
           map.current?.resize();
           onMapMoveRef.current?.();
-        } catch {
-          /* ignore */
+        } catch (mapErr) {
+          reportMapError(map.current, mapErr, "resize");
         }
       }, 220);
     });
@@ -3932,8 +3936,8 @@ export function CrisisMap({
             pitch: camera.pitch,
             bearing: camera.bearing,
           });
-        } catch {
-          /* ignore */
+        } catch (mapErr) {
+          reportMapError(m, mapErr, "jumpTo");
         }
       },
       flyTo: (args) => {
@@ -3969,8 +3973,8 @@ export function CrisisMap({
             pitch,
             bearing,
           });
-        } catch {
-          /* ignore */
+        } catch (mapErr) {
+          reportMapError(m, mapErr, "fitBounds");
         }
       },
       zoomBy: (delta: number) => {
@@ -3978,8 +3982,8 @@ export function CrisisMap({
         if (!m || !Number.isFinite(delta) || delta === 0) return;
         try {
           m.easeTo({ zoom: m.getZoom() + delta, duration: 200 });
-        } catch {
-          /* ignore */
+        } catch (mapErr) {
+          reportMapError(m, mapErr, "easeTo");
         }
       },
     };
@@ -3998,7 +4002,7 @@ export function CrisisMap({
     };
     m.on("click", onClick);
     return () => {
-      try { m.off("click", onClick); } catch { /* ignore */ }
+      try { m.off("click", onClick); } catch (mapErr) { reportMapError(m, mapErr, "off"); }
     };
   }, [loaded]);
 
@@ -4007,12 +4011,12 @@ export function CrisisMap({
     if (!m || !loaded) return;
     try {
       setMapCursor(m, locationPickActive ? "crosshair" : "");
-    } catch { /* ignore */ }
+    } catch (mapErr) { reportMapError(m, mapErr, "setMapCursor"); }
     for (const mk of clusterDomMarkers.current.values()) {
       try {
         const el = (mk as MapboxGLAny).getElement?.() as HTMLElement | undefined;
         if (el) el.style.pointerEvents = locationPickActive ? "none" : "auto";
-      } catch { /* ignore */ }
+      } catch (mapErr) { reportMapError(map.current, mapErr, "markerPointerEvents"); }
     }
   }, [locationPickActive, loaded, markers]);
 
