@@ -45,6 +45,12 @@ ENV NEXT_PUBLIC_SENTRY_DSN=${NEXT_PUBLIC_SENTRY_DSN}
 ARG NEXT_PUBLIC_SENTRY_ENV="development"
 ENV NEXT_PUBLIC_SENTRY_ENV=${NEXT_PUBLIC_SENTRY_ENV}
 
+# The release every error event is tagged with (clear-mvp@MAJOR.MINOR.PATCH),
+# so GlitchTip shows which deploy an error first appeared in. Next.js inlines
+# it into the browser, server and edge bundles. Empty = events carry no release.
+ARG NEXT_PUBLIC_SENTRY_RELEASE=""
+ENV NEXT_PUBLIC_SENTRY_RELEASE=${NEXT_PUBLIC_SENTRY_RELEASE}
+
 # Browser reporting stays off unless this is "on". The public DSN can be set
 # and still be rejected by ingest; runtime env cannot change the client bundle.
 ARG NEXT_PUBLIC_SENTRY_CLIENT=""

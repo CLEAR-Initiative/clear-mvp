@@ -12,6 +12,9 @@ import * as Sentry from "@sentry/nextjs";
 Sentry.init({
   dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
   environment: process.env.NEXT_PUBLIC_SENTRY_ENV ?? "development",
+  // Which deploy this is (clear-mvp@MAJOR.MINOR.PATCH), inlined at build time.
+  // GlitchTip then shows the release an error first appeared in.
+  release: process.env.NEXT_PUBLIC_SENTRY_RELEASE || undefined,
   tracesSampleRate: 0.2,
 
   // Send envelopes through our own origin (src/app/api/monitoring/route.ts).
