@@ -4657,6 +4657,24 @@
       "signal": "Signal",
       "severity": "Gravité",
       "untitled": "Signal sans titre"
+    },
+    "timeline": {
+      "label": "Période",
+      "presets": {
+        "24h": "24 h",
+        "7d": "7 j",
+        "30d": "30 j",
+        "90d": "90 j"
+      },
+      "last24h": "Dernières 24 heures",
+      "lastDays": "{count} derniers jours",
+      "count": "{total, plural, one {<b>#</b> signal} other {<b>#</b> signaux}}",
+      "countPending": "<b>—</b> signaux",
+      "today": "Aujourd'hui",
+      "show": "Afficher la frise",
+      "hide": "Masquer la frise",
+      "startHandle": "Date de début",
+      "endHandle": "Date de fin"
     }
   }
 }

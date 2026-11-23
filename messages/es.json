@@ -4657,6 +4657,24 @@
       "signal": "Señal",
       "severity": "Severidad",
       "untitled": "Señal sin título"
+    },
+    "timeline": {
+      "label": "Periodo",
+      "presets": {
+        "24h": "24 h",
+        "7d": "7 d",
+        "30d": "30 d",
+        "90d": "90 d"
+      },
+      "last24h": "Últimas 24 horas",
+      "lastDays": "Últimos {count} días",
+      "count": "{total, plural, one {<b>#</b> señal} other {<b>#</b> señales}}",
+      "countPending": "<b>—</b> señales",
+      "today": "Hoy",
+      "show": "Mostrar línea de tiempo",
+      "hide": "Ocultar línea de tiempo",
+      "startHandle": "Fecha de inicio",
+      "endHandle": "Fecha de fin"
     }
   }
 }

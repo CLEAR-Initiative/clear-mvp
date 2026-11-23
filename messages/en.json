@@ -4657,6 +4657,24 @@
       "signal": "Signal",
       "severity": "Severity",
       "untitled": "Untitled signal"
+    },
+    "timeline": {
+      "label": "Timeframe",
+      "presets": {
+        "24h": "24h",
+        "7d": "7d",
+        "30d": "30d",
+        "90d": "90d"
+      },
+      "last24h": "Last 24 hours",
+      "lastDays": "Last {count} days",
+      "count": "{total, plural, one {<b>#</b> signal} other {<b>#</b> signals}}",
+      "countPending": "<b>—</b> signals",
+      "today": "Today",
+      "show": "Show timeline",
+      "hide": "Hide timeline",
+      "startHandle": "Start date",
+      "endHandle": "End date"
     }
   }
 }

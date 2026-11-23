@@ -106,6 +106,13 @@
   --map-slider: #3F59E0;
   --map-slider-track: #F0F2FD;
   --map-slider-label: var(--color-text-muted);
+  --map-timeline-bg: #F0F2F9;
+  --map-timeline-bar-in: #D1381D;
+  --map-timeline-bar-out: #FEDDD2;
+  --map-timeline-handle: #010811;
+  --map-timeline-on-handle: #FFFFFF;
+  --map-timeline-preset-active: #D1381D;
+  --map-timeline-on-preset-active: #FFFFFF;
 }
 
 /* ============================================
@@ -178,6 +185,13 @@
   --map-slider: #6B93E8;
   --map-slider-track: #2D2D2D;
   --map-slider-label: var(--color-text-secondary);
+  --map-timeline-bg: #1F2023;
+  --map-timeline-bar-in: #E4573D;
+  --map-timeline-bar-out: #4A2721;
+  --map-timeline-handle: #F5F5F5;
+  --map-timeline-on-handle: #111111;
+  --map-timeline-preset-active: #D1381D;
+  --map-timeline-on-preset-active: #FFFFFF;
 }
 
 /* Base styles */
