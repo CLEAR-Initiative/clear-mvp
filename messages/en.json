@@ -4646,7 +4646,51 @@
     "panel": {
       "label": "Map controls",
       "collapse": "Hide map controls",
-      "expand": "Show map controls"
+      "expand": "Show map controls",
+      "back": {
+        "layers": "Back to layers",
+        "signals": "Back to all signals"
+      },
+      "stack": {
+        "titlePending": "Signals in the selected location",
+        "title": "{count, plural, one {# signal} other {# signals}} in the selected location",
+        "intro": {
+          "lastDays": "Published in the last {days, plural, one {day} other {# days}} at {location}.",
+          "lastDaysNoLocation": "Published in the last {days, plural, one {day} other {# days}}.",
+          "range": "Published between {from} and {to} at {location}.",
+          "rangeNoLocation": "Published between {from} and {to}."
+        },
+        "severityCount": {
+          "critical": "{count} Critical",
+          "high": "{count} High",
+          "medium": "{count} Medium",
+          "low": "{count} Low",
+          "unknown": "{count} Unknown"
+        },
+        "columns": {
+          "signal": "Signal",
+          "severity": "Severity"
+        },
+        "loading": "Loading the signals",
+        "error": "The signals could not be loaded. Try again later.",
+        "empty": "No signals at this location in this period."
+      },
+      "detail": {
+        "loading": "Loading the signal",
+        "error": "The signal could not be loaded. Try again later.",
+        "notFound": "This signal could not be found.",
+        "noSummary": "This signal has no summary.",
+        "comingSoon": "Coming soon",
+        "sections": {
+          "summary": "Summary",
+          "impact": "Impact",
+          "areaContext": "Area context",
+          "signals": "Signals",
+          "relatedEvents": "Related events",
+          "systemData": "System data",
+          "takeAction": "Take an action"
+        }
+      }
     },
     "mapSettings": {
       "title": "Map settings",

@@ -4646,7 +4646,51 @@
     "panel": {
       "label": "عناصر التحكم في الخريطة",
       "collapse": "إخفاء عناصر التحكم في الخريطة",
-      "expand": "إظهار عناصر التحكم في الخريطة"
+      "expand": "إظهار عناصر التحكم في الخريطة",
+      "back": {
+        "layers": "العودة إلى الطبقات",
+        "signals": "العودة إلى كل الإشارات"
+      },
+      "stack": {
+        "titlePending": "الإشارات في الموقع المحدد",
+        "title": "{count, plural, zero {لا إشارات} one {إشارة واحدة} two {إشارتان} few {# إشارات} many {# إشارة} other {# إشارة}} في الموقع المحدد",
+        "intro": {
+          "lastDays": "نُشرت {days, plural, one {خلال اليوم الأخير} two {خلال اليومين الأخيرين} few {خلال آخر # أيام} other {خلال آخر # يومًا}} في {location}.",
+          "lastDaysNoLocation": "نُشرت {days, plural, one {خلال اليوم الأخير} two {خلال اليومين الأخيرين} few {خلال آخر # أيام} other {خلال آخر # يومًا}}.",
+          "range": "نُشرت بين {from} و{to} في {location}.",
+          "rangeNoLocation": "نُشرت بين {from} و{to}."
+        },
+        "severityCount": {
+          "critical": "{count} حرجة",
+          "high": "{count} عالية",
+          "medium": "{count} متوسطة",
+          "low": "{count} منخفضة",
+          "unknown": "{count} غير معروفة"
+        },
+        "columns": {
+          "signal": "إشارة",
+          "severity": "الخطورة"
+        },
+        "loading": "جارٍ تحميل الإشارات",
+        "error": "تعذّر تحميل الإشارات. حاول مرة أخرى لاحقًا.",
+        "empty": "لا توجد إشارات في هذا الموقع خلال هذه الفترة."
+      },
+      "detail": {
+        "loading": "جارٍ تحميل الإشارة",
+        "error": "تعذّر تحميل الإشارة. حاول مرة أخرى لاحقًا.",
+        "notFound": "تعذّر العثور على هذه الإشارة.",
+        "noSummary": "لا يوجد ملخص لهذه الإشارة.",
+        "comingSoon": "قريبًا",
+        "sections": {
+          "summary": "الملخص",
+          "impact": "الأثر",
+          "areaContext": "سياق المنطقة",
+          "signals": "الإشارات",
+          "relatedEvents": "الأحداث ذات الصلة",
+          "systemData": "بيانات النظام",
+          "takeAction": "اتخاذ إجراء"
+        }
+      }
     },
     "mapSettings": {
       "title": "إعدادات الخريطة",

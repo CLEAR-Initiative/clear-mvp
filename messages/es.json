@@ -4646,7 +4646,51 @@
     "panel": {
       "label": "Controles del mapa",
       "collapse": "Ocultar controles del mapa",
-      "expand": "Mostrar controles del mapa"
+      "expand": "Mostrar controles del mapa",
+      "back": {
+        "layers": "Volver a las capas",
+        "signals": "Volver a todas las señales"
+      },
+      "stack": {
+        "titlePending": "Señales en la ubicación seleccionada",
+        "title": "{count, plural, one {# señal} other {# señales}} en la ubicación seleccionada",
+        "intro": {
+          "lastDays": "Publicadas {days, plural, one {el último día} other {en los últimos # días}} en {location}.",
+          "lastDaysNoLocation": "Publicadas {days, plural, one {el último día} other {en los últimos # días}}.",
+          "range": "Publicadas entre el {from} y el {to} en {location}.",
+          "rangeNoLocation": "Publicadas entre el {from} y el {to}."
+        },
+        "severityCount": {
+          "critical": "{count} Crítica",
+          "high": "{count} Alta",
+          "medium": "{count} Media",
+          "low": "{count} Baja",
+          "unknown": "{count} Desconocida"
+        },
+        "columns": {
+          "signal": "Señal",
+          "severity": "Severidad"
+        },
+        "loading": "Cargando las señales",
+        "error": "No se pudieron cargar las señales. Inténtalo más tarde.",
+        "empty": "No hay señales en esta ubicación en este periodo."
+      },
+      "detail": {
+        "loading": "Cargando la señal",
+        "error": "No se pudo cargar la señal. Inténtalo más tarde.",
+        "notFound": "No se encontró esta señal.",
+        "noSummary": "Esta señal no tiene resumen.",
+        "comingSoon": "Próximamente",
+        "sections": {
+          "summary": "Resumen",
+          "impact": "Impacto",
+          "areaContext": "Contexto de la zona",
+          "signals": "Señales",
+          "relatedEvents": "Eventos relacionados",
+          "systemData": "Datos del sistema",
+          "takeAction": "Actuar"
+        }
+      }
     },
     "mapSettings": {
       "title": "Ajustes del mapa",
