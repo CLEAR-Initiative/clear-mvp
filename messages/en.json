@@ -4600,6 +4600,7 @@
       "signals": {
         "title": "Signals",
         "inSentence": "signals",
+        "severity": "Severity",
         "cluster": {
           "zoom": "{count} signals, zoom in",
           "stacked": "{count} signals at this location"
@@ -4635,7 +4636,9 @@
     "controls": {
       "zoomIn": "Zoom in",
       "zoomOut": "Zoom out",
-      "askAi": "Ask AI"
+      "askAi": "Ask AI",
+      "legend": "Legend",
+      "removeLayer": "Remove {layer}"
     },
     "panel": {
       "label": "Map controls",

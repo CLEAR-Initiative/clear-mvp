@@ -4600,6 +4600,7 @@
       "signals": {
         "title": "Signaux",
         "inSentence": "signaux",
+        "severity": "Gravité",
         "cluster": {
           "zoom": "{count} signaux, zoomer",
           "stacked": "{count} signaux à cet emplacement"
@@ -4635,7 +4636,9 @@
     "controls": {
       "zoomIn": "Zoom avant",
       "zoomOut": "Zoom arrière",
-      "askAi": "Demander à l'IA"
+      "askAi": "Demander à l'IA",
+      "legend": "Légende",
+      "removeLayer": "Retirer {layer}"
     },
     "panel": {
       "label": "Commandes de la carte",

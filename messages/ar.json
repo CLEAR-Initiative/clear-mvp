@@ -4600,6 +4600,7 @@
       "signals": {
         "title": "الإشارات",
         "inSentence": "الإشارات",
+        "severity": "الخطورة",
         "cluster": {
           "zoom": "{count, plural, two {إشارتان} few {# إشارات} many {# إشارة} other {# إشارة}}، تكبير",
           "stacked": "{count, plural, two {إشارتان} few {# إشارات} many {# إشارة} other {# إشارة}} في هذا الموقع"
@@ -4635,7 +4636,9 @@
     "controls": {
       "zoomIn": "تكبير",
       "zoomOut": "تصغير",
-      "askAi": "اسأل الذكاء الاصطناعي"
+      "askAi": "اسأل الذكاء الاصطناعي",
+      "legend": "مفتاح الخريطة",
+      "removeLayer": "إزالة {layer}"
     },
     "panel": {
       "label": "عناصر التحكم في الخريطة",

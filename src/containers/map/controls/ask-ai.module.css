@@ -1,27 +1,15 @@
 .button {
   display: flex;
   align-items: center;
-  gap: 8px;
+  justify-content: center;
+  width: 32px;
   height: 32px;
-  padding: 0 16px;
   border: 2px solid transparent;
-  border-radius: 33px;
+  border-radius: 4px;
   background:
     linear-gradient(var(--color-bg-white), var(--color-bg-white)) padding-box,
     linear-gradient(90deg, var(--map-ai-start), var(--map-ai-end)) border-box;
   box-shadow: var(--map-element-shadow);
-}
-
-.label {
-  font-size: 12px;
-  font-weight: 600;
-  line-height: 20px;
-  letter-spacing: -0.12px;
-  white-space: nowrap;
-  background: linear-gradient(90deg, var(--map-ai-start) 45.7%, var(--map-ai-end) 215.7%);
-  background-clip: text;
-  -webkit-background-clip: text;
-  color: transparent;
 }
 
 .icon {
@@ -30,13 +18,7 @@
 
 .button:hover,
 .button:focus-visible {
-  background: linear-gradient(90deg, var(--map-ai-start), var(--map-ai-end)) border-box;
-}
-
-.button:hover .label,
-.button:focus-visible .label {
-  background: none;
-  color: var(--map-ai-on-gradient);
+  background: linear-gradient(270deg, var(--map-ai-end), var(--map-ai-start)) border-box;
 }
 
 .button:hover .iconStroke,

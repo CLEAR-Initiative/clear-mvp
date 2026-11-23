@@ -1,6 +1,6 @@
 "use client";
 
-import { UnstyledButton } from "@mantine/core";
+import { Tooltip, UnstyledButton } from "@mantine/core";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useId } from "react";
@@ -16,16 +16,18 @@ export function AskAiButton() {
   if (!available) return null;
 
   return (
-    <UnstyledButton
-      className={classes.button}
-      onClick={() => {
-        trackAgentOpened("drawer", pathname);
-        setOpen(true);
-      }}
-    >
-      <span className={classes.label}>{t("askAi")}</span>
-      <SparklesIcon />
-    </UnstyledButton>
+    <Tooltip label={t("askAi")} position="left" events={{ hover: true, focus: true, touch: false }}>
+      <UnstyledButton
+        aria-label={t("askAi")}
+        className={classes.button}
+        onClick={() => {
+          trackAgentOpened("drawer", pathname);
+          setOpen(true);
+        }}
+      >
+        <SparklesIcon />
+      </UnstyledButton>
+    </Tooltip>
   );
 }
 
