@@ -407,6 +407,25 @@ and the map does not resize.
 _Avoid_: "sidebar" (ambiguous with app navigation); confusing it with **Map settings**,
 which opens from the basemap control.
 
+**Timeframe**:
+The date range that scopes the **Detections** shown on the map (today, **Signals**). It is
+either a **preset** (the last 24 hours, 7 days, 30 days or 90 days) or a **custom range**
+set with the handles on the **Timeline**. A timeframe that ends today is counted back from
+now, so it moves with time; a preset is one of these. A custom range that ends before today
+is fixed dates, and a shared link shows the same dates to everyone. The default is the last
+30 days. There is no "all time" timeframe yet.
+_Avoid_: "window" (taken by **Brief window** and the Situation Analysis window); "date
+filter".
+
+**Timeline**:
+The bar at the bottom of the map that shows how many **Signals** there are for each day of the
+last 90 days, and where the user sets the **Timeframe**. Its count includes **Signals** that
+have no location, so it can be higher than the number of dots on the map. Open on wide
+screens; on narrow screens only its collapsed summary shows, and the Timeframe cannot be
+changed there.
+_Avoid_: "timeline playback" (not designed); confusing it with a **Detection**'s own
+history.
+
 **Point altitude**:
 The DEM elevation (metres) sampled at a map point while **Topography** is active
 (Mapbox `queryTerrainElevation` on the same terrain DEM). Shown in two places: a live

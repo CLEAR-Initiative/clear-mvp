@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
 import ReactMapGL, { AttributionControl, type MapRef, type ViewStateChangeEvent } from "react-map-gl/mapbox";
 import { useIsDark } from "~/hooks/use-is-dark";
 import { BASEMAP_STYLES, PROJECTION, ZOOM_RANGE } from "./constants";
@@ -15,12 +15,28 @@ import { useBasemap } from "./hooks/use-basemap";
 import { LayerManager } from "./layer-manager";
 import { useLoadingLayerIds } from "./hooks/use-loading-layer-ids";
 import { MapLoader } from "./loader";
+import { Timeline } from "./timeline";
+import { TimeframeQueryProvider } from "./hooks/use-timeframe";
 
 import "mapbox-gl/dist/mapbox-gl.css";
 
-export default function MapV2({ offset: offsetProp }: { offset?: Partial<MapOffset> }) {
+type MapV2Props = {
+  offset?: Partial<MapOffset>;
+  timelineInsetStart?: number;
+};
+
+export default function MapV2({ offset: offsetProp, timelineInsetStart = 0 }: MapV2Props) {
   const isDark = useIsDark();
-  const offset = useMapOffset(offsetProp);
+  const [timeline, setTimeline] = useState({ height: 0, open: false });
+  const onTimelineHeightChange = useCallback(
+    (height: number, open: boolean) =>
+      setTimeline((prev) => (prev.height === height && prev.open === open ? prev : { height, open })),
+    [],
+  );
+  const offset = useMapOffset({
+    ...offsetProp,
+    bottom: (offsetProp?.bottom ?? 0) + (timeline.open ? timeline.height : 0),
+  });
   const mapRef = useRef<MapRef>(null);
   const { center, zoom, setView } = useMapView();
   const [initialViewState] = useState(() => ({ longitude: center[0], latitude: center[1], zoom }));
@@ -63,30 +79,42 @@ export default function MapV2({ offset: offsetProp }: { offset?: Partial<MapOffs
   useEaseToOffset(mapRef, offset, loaded);
 
   return (
-    <div className="map-v2-root" style={offsetCssVars(offset)}>
-      <ReactMapGL
-        ref={mapRef}
-        mapboxAccessToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN}
-        mapStyle={BASEMAP_STYLES[basemap][isDark ? "dark" : "light"]}
-        // Mapbox's diffed setStyle never fires style.load, which the label anchor relies on.
-        styleDiffing={false}
-        projection={PROJECTION}
-        attributionControl={false}
-        minZoom={ZOOM_RANGE.min}
-        maxZoom={ZOOM_RANGE.max}
-        dragRotate={false}
-        initialViewState={{ ...initialViewState, padding: offset }}
-        onMoveEnd={onMoveEnd}
-        onLoad={onLoad}
-        style={{ width: "100%", height: "100%" }}
+    <TimeframeQueryProvider>
+      <div
+        className="map-v2-root"
+        style={
+          {
+            ...offsetCssVars(offset),
+            "--map-timeline-h": `${timeline.height}px`,
+            "--map-timeline-inset-start": `${timelineInsetStart}px`,
+          } as CSSProperties
+        }
       >
-        <AttributionControl position="bottom-right" compact />
-        {loaded && basemap === "topography" && <Topography beforeId={reliefAnchorId} />}
-        {loaded && <MapSettingsLayers basemap={basemap} />}
-        {loaded && <LayerManager labelAnchorId={labelAnchorId} onLoadingChange={onLoadingChange} />}
-        <MapControls />
-      </ReactMapGL>
-      <MapLoader mapLoading={!loaded || loadingLayerIds === null} loadingLayerIds={loadingLayerIds ?? []} />
-    </div>
+        <ReactMapGL
+          ref={mapRef}
+          mapboxAccessToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN}
+          mapStyle={BASEMAP_STYLES[basemap][isDark ? "dark" : "light"]}
+          // Mapbox's diffed setStyle never fires style.load, which the label anchor relies on.
+          styleDiffing={false}
+          projection={PROJECTION}
+          attributionControl={false}
+          minZoom={ZOOM_RANGE.min}
+          maxZoom={ZOOM_RANGE.max}
+          dragRotate={false}
+          initialViewState={{ ...initialViewState, padding: offset }}
+          onMoveEnd={onMoveEnd}
+          onLoad={onLoad}
+          style={{ width: "100%", height: "100%" }}
+        >
+          <AttributionControl position="bottom-right" compact />
+          {loaded && basemap === "topography" && <Topography beforeId={reliefAnchorId} />}
+          {loaded && <MapSettingsLayers basemap={basemap} />}
+          {loaded && <LayerManager labelAnchorId={labelAnchorId} onLoadingChange={onLoadingChange} />}
+          <MapControls />
+        </ReactMapGL>
+        <Timeline onHeightChange={onTimelineHeightChange} />
+        <MapLoader mapLoading={!loaded || loadingLayerIds === null} loadingLayerIds={loadingLayerIds ?? []} />
+      </div>
+    </TimeframeQueryProvider>
   );
 }

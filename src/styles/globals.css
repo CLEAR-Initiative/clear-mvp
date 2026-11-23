@@ -423,13 +423,15 @@ body[data-nav-overlay="true"] {
   position: absolute;
   right: calc(var(--map-offset-right, 0px) + 24px);
   z-index: 1;
-  transition: right 200ms ease;
+  transition:
+    right 200ms ease,
+    bottom 200ms ease;
 }
 .map-v2-top-controls {
   top: calc(var(--map-offset-top, 0px) + 24px);
 }
 .map-v2-end-controls {
-  bottom: 40px;
+  bottom: max(40px, calc(var(--map-timeline-h, 0px) + 24px));
 }
 .map-v2 .mapboxgl-ctrl-bottom-left {
   left: var(--map-offset-left, 0px);
