@@ -41,7 +41,16 @@ function OpacityControl({ opacity, onChange }: { opacity: number; onChange: (opa
     <Popover opened={opened} onChange={setOpened} position="top" offset={6} withArrow arrowSize={8} shadow="sm" radius={8} classNames={{ arrow: classes.opacityArrow }}>
       <Popover.Target>
         <Tooltip label={t("opacity")} position="top" disabled={opened}>
-          <UnstyledButton aria-label={t("opacity")} className={classes.icon} onClick={() => setOpened((value) => !value)}>
+          <UnstyledButton
+            aria-label={t("opacity")}
+            className={classes.icon}
+            onClick={() => setOpened((value) => !value)}
+            onKeyDown={(event) => {
+              if (!opened || event.key !== "Escape") return;
+              event.stopPropagation();
+              setOpened(false);
+            }}
+          >
             <OpacityIcon />
           </UnstyledButton>
         </Tooltip>

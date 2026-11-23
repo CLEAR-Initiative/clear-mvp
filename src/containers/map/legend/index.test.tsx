@@ -41,4 +41,23 @@ describe("Legend", () => {
     const layers = JSON.parse(onUrlUpdate.mock.calls.at(-1)?.[0].searchParams.get("layers") ?? "null");
     expect(layers).toEqual([{ id: "signals", visibility: true, opacity: 1 }]);
   });
+
+  it("closes only the opacity popover on Escape from its button", async () => {
+    render(
+      <MantineProvider>
+        <NuqsTestingAdapter searchParams={{ layers: JSON.stringify([{ id: "signals", visibility: true, opacity: 1 }]) }}>
+          <Legend />
+        </NuqsTestingAdapter>
+      </MantineProvider>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "controls.legend" }));
+    const opacityButton = screen.getByRole("button", { name: "opacity" });
+    fireEvent.click(opacityButton);
+    expect(await screen.findByRole("slider")).toBeInTheDocument();
+
+    fireEvent.keyDown(opacityButton, { key: "Escape" });
+    await waitFor(() => expect(screen.queryByRole("slider")).not.toBeInTheDocument());
+    expect(screen.getByText("signals legend")).toBeInTheDocument();
+  });
 });
