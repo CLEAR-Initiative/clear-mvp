@@ -143,6 +143,30 @@ function backToWorld(page: Page) {
   return page.getByRole("button", { name: "Back to world" }).first();
 }
 
+/** What tells one Mapbox style from another: its name and sprite sheet. */
+async function styleId(page: Page): Promise<string> {
+  return page.evaluate(() => {
+    const style = (window.__clearE2EMap as any).getStyle();
+    return `${style?.name ?? ""}|${JSON.stringify(style?.sprite ?? "")}`;
+  });
+}
+
+/** Count the styles that finish loading from now on. Returns the current style's id. */
+async function watchStyleLoads(page: Page): Promise<string> {
+  await page.evaluate(() => {
+    const w = window as any;
+    w.__clearE2EStyleLoads = 0;
+    w.__clearE2EMap.on("style.load", () => {
+      w.__clearE2EStyleLoads += 1;
+    });
+  });
+  return styleId(page);
+}
+
+async function styleLoads(page: Page): Promise<number> {
+  return page.evaluate(() => (window as any).__clearE2EStyleLoads as number);
+}
+
 async function mapZoom(page: Page): Promise<number> {
   return page.evaluate(() => (window.__clearE2EMap as any).getZoom() as number);
 }
@@ -217,8 +241,13 @@ test.describe("Presence map on a real canvas (case 29)", () => {
 
     // The app follows the system theme. A new theme loads a new map style,
     // which drops every layer: the mode is removed and added again.
+    const lightStyle = await watchStyleLoads(page);
     await page.emulateMedia({ colorScheme: "dark" });
     await expect(page.locator("html")).toHaveAttribute("data-mantine-color-scheme", "dark");
+    // Prove the theme reached Mapbox: a new style finished loading, and it is
+    // a different style. Without this the checks below pass on the old map.
+    await expect.poll(() => styleLoads(page), { message: "Mapbox loaded a new style", timeout: 30_000 }).toBeGreaterThan(0);
+    expect(await styleId(page), "the dark style differs from the light one").not.toBe(lightStyle);
     await waitForMapAtRest(page);
     await settle(page);
 
