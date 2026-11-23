@@ -103,6 +103,9 @@
   --map-road-corridor: #976E49;
   --map-road-minor: #AEB1B7;
   --map-cluster: #3A6FDC;
+  --map-slider: #3F59E0;
+  --map-slider-track: #F0F2FD;
+  --map-slider-label: var(--color-text-muted);
 }
 
 /* ============================================
@@ -172,6 +175,9 @@
   --map-road-corridor: #B0926D;
   --map-road-minor: #757575;
   --map-cluster: #6B93E8;
+  --map-slider: #6B93E8;
+  --map-slider-track: #2D2D2D;
+  --map-slider-label: var(--color-text-secondary);
 }
 
 /* Base styles */

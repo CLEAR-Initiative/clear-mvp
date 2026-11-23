@@ -6,19 +6,19 @@ import { IconStack2, IconX } from "@tabler/icons-react";
 import { useTranslations } from "next-intl";
 import { useActiveLayers } from "../hooks/use-active-layers";
 import { LAYERS, type LayerId } from "../layers/registry";
+import { LayerControls } from "./layer-controls";
 import classes from "./legend.module.css";
 
 const OPEN_BY_DEFAULT_QUERY = "(min-width: 48em)";
 
 export function Legend() {
   const t = useTranslations("mapV2");
-  const [activeLayers, setActiveLayers] = useActiveLayers();
-  const visibleLayers = activeLayers.filter((layer) => layer.visibility);
+  const [activeLayers, { setLayers, updateLayer }] = useActiveLayers();
   const [opened, setOpened] = useState(() => window.matchMedia(OPEN_BY_DEFAULT_QUERY).matches);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const cardId = useId();
 
-  if (visibleLayers.length === 0) return null;
+  if (activeLayers.length === 0) return null;
 
   const close = () => {
     setOpened(false);
@@ -26,7 +26,7 @@ export function Legend() {
   };
 
   const removeLayer = (id: LayerId) => {
-    void setActiveLayers((layers) => layers.filter((layer) => layer.id !== id));
+    void setLayers((layers) => layers.filter((layer) => layer.id !== id));
     buttonRef.current?.focus();
   };
 
@@ -41,16 +41,19 @@ export function Legend() {
             if (event.key === "Escape") close();
           }}
         >
-          {visibleLayers.map(({ id }) => {
+          {activeLayers.map((layer) => {
+            const { id } = layer;
             const { Legend: LayerLegend } = LAYERS[id];
             const title = t(`layers.${id}.title`);
             return (
               <Fragment key={id}>
                 <div className={classes.header}>
                   <h2 className={classes.title}>{title}</h2>
+                  <LayerControls layer={layer} onChange={(patch) => updateLayer(id, patch)} />
+                  <span className={classes.divider} aria-hidden />
                   <UnstyledButton
                     aria-label={t("controls.removeLayer", { layer: title })}
-                    className={classes.remove}
+                    className={classes.icon}
                     onClick={() => removeLayer(id)}
                   >
                     <IconX size={16} />

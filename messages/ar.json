@@ -4638,7 +4638,10 @@
       "zoomOut": "تصغير",
       "askAi": "اسأل الذكاء الاصطناعي",
       "legend": "مفتاح الخريطة",
-      "removeLayer": "إزالة {layer}"
+      "removeLayer": "إزالة {layer}",
+      "hideLayer": "إخفاء الطبقة",
+      "showLayer": "إظهار الطبقة",
+      "opacity": "الشفافية"
     },
     "panel": {
       "label": "عناصر التحكم في الخريطة",

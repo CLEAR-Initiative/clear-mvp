@@ -4638,7 +4638,10 @@
       "zoomOut": "Zoom arrière",
       "askAi": "Demander à l'IA",
       "legend": "Légende",
-      "removeLayer": "Retirer {layer}"
+      "removeLayer": "Retirer {layer}",
+      "hideLayer": "Masquer la couche",
+      "showLayer": "Afficher la couche",
+      "opacity": "Opacité"
     },
     "panel": {
       "label": "Commandes de la carte",

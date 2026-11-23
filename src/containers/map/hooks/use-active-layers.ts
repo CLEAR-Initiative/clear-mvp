@@ -1,4 +1,5 @@
 import { createParser, useQueryState } from "nuqs";
+import { useCallback } from "react";
 import { z } from "zod";
 import { isLayerId, type LayerId } from "../layers/registry";
 
@@ -35,5 +36,13 @@ const layersParser = createParser({ parse: parseLayers, serialize: (layers: Acti
   .withDefault(DEFAULT_LAYERS);
 
 export function useActiveLayers() {
-  return useQueryState("layers", layersParser);
+  const [layers, setLayers] = useQueryState("layers", layersParser);
+
+  const updateLayer = useCallback(
+    (id: LayerId, patch: Partial<Omit<ActiveLayer, "id">>) =>
+      setLayers((current) => current.map((layer) => (layer.id === id ? { ...layer, ...patch } : layer))),
+    [setLayers],
+  );
+
+  return [layers, { setLayers, updateLayer }] as const;
 }
