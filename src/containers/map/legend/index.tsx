@@ -5,14 +5,14 @@ import { UnstyledButton } from "@mantine/core";
 import { IconStack2, IconX } from "@tabler/icons-react";
 import { useTranslations } from "next-intl";
 import { useActiveLayers } from "../hooks/use-active-layers";
-import { LAYERS } from "../layers/registry";
+import { LAYERS, type LayerId } from "../layers/registry";
 import classes from "./legend.module.css";
 
 const OPEN_BY_DEFAULT_QUERY = "(min-width: 48em)";
 
 export function Legend() {
   const t = useTranslations("mapV2");
-  const [activeLayers] = useActiveLayers();
+  const [activeLayers, setActiveLayers] = useActiveLayers();
   const visibleLayers = activeLayers.filter((layer) => layer.visibility);
   const [opened, setOpened] = useState(() => window.matchMedia(OPEN_BY_DEFAULT_QUERY).matches);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -22,6 +22,11 @@ export function Legend() {
 
   const close = () => {
     setOpened(false);
+    buttonRef.current?.focus();
+  };
+
+  const removeLayer = (id: LayerId) => {
+    void setActiveLayers((layers) => layers.filter((layer) => layer.id !== id));
     buttonRef.current?.focus();
   };
 
@@ -36,17 +41,20 @@ export function Legend() {
             if (event.key === "Escape") close();
           }}
         >
-          {visibleLayers.map(({ id }, index) => {
+          {visibleLayers.map(({ id }) => {
             const { Legend: LayerLegend } = LAYERS[id];
+            const title = t(`layers.${id}.title`);
             return (
               <Fragment key={id}>
                 <div className={classes.header}>
-                  <h2 className={classes.title}>{t(`layers.${id}.title`)}</h2>
-                  {index === 0 && (
-                    <UnstyledButton aria-label={t("controls.closeLegend")} className={classes.close} onClick={close}>
-                      <IconX size={16} />
-                    </UnstyledButton>
-                  )}
+                  <h2 className={classes.title}>{title}</h2>
+                  <UnstyledButton
+                    aria-label={t("controls.removeLayer", { layer: title })}
+                    className={classes.remove}
+                    onClick={() => removeLayer(id)}
+                  >
+                    <IconX size={16} />
+                  </UnstyledButton>
                 </div>
                 <LayerLegend />
               </Fragment>

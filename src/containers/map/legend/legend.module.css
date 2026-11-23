@@ -49,7 +49,7 @@
   color: var(--color-text-primary);
 }
 
-.close {
+.remove {
   display: flex;
   color: var(--color-text-primary);
 }

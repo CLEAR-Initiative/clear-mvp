@@ -4638,7 +4638,7 @@
       "zoomOut": "Zoom arrière",
       "askAi": "Demander à l'IA",
       "legend": "Légende",
-      "closeLegend": "Fermer la légende"
+      "removeLayer": "Retirer {layer}"
     },
     "panel": {
       "label": "Commandes de la carte",

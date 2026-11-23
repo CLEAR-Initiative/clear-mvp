@@ -4638,7 +4638,7 @@
       "zoomOut": "Alejar",
       "askAi": "Preguntar a la IA",
       "legend": "Leyenda",
-      "closeLegend": "Cerrar la leyenda"
+      "removeLayer": "Quitar {layer}"
     },
     "panel": {
       "label": "Controles del mapa",

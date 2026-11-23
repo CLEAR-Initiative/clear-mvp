@@ -4638,7 +4638,7 @@
       "zoomOut": "Zoom out",
       "askAi": "Ask AI",
       "legend": "Legend",
-      "closeLegend": "Close legend"
+      "removeLayer": "Remove {layer}"
     },
     "panel": {
       "label": "Map controls",
