@@ -58,6 +58,16 @@ function renderTimeline(
   );
 }
 
+// jsdom has no PointerEvent, so fireEvent.pointerDown would drop clientX and button.
+class TestPointerEvent extends MouseEvent {
+  pointerId: number;
+  constructor(type: string, init: PointerEventInit = {}) {
+    super(type, init);
+    this.pointerId = init.pointerId ?? 0;
+  }
+}
+window.PointerEvent ??= TestPointerEvent as unknown as typeof PointerEvent;
+
 const realMatchMedia = window.matchMedia;
 
 beforeEach(() => {
@@ -109,6 +119,24 @@ describe("Timeline", () => {
     renderTimeline(vi.fn(), vi.fn(), { time: "2026-11-01..2026-11-02" });
 
     expect(screen.getByText("count:7")).toBeTruthy();
+  });
+
+  it("keeps the range when a handle's knob is pressed and released without a drag", () => {
+    vi.useFakeTimers({ now: new Date("2026-11-23T10:00:00Z") });
+    const onUrlUpdate = vi.fn<(event: UrlUpdateEvent) => void>();
+    renderTimeline(onUrlUpdate, vi.fn(), { time: "2026-11-01..2026-11-10" });
+
+    const end = screen.getByRole("slider", { name: "endHandle" });
+    const bars = end.parentElement!;
+    bars.getBoundingClientRect = () => ({ left: 0, right: 900, width: 900 }) as DOMRect;
+    Object.assign(bars, { setPointerCapture: vi.fn(), hasPointerCapture: () => true, releasePointerCapture: vi.fn() });
+
+    // Bars are 10px wide; the end handle sits on the right edge of 10 Nov, x = 770.
+    fireEvent.pointerDown(end, { button: 0, clientX: 774, pointerId: 1 });
+    fireEvent.pointerUp(end, { button: 0, clientX: 774, pointerId: 1 });
+    act(() => vi.advanceTimersByTime(1000));
+
+    expect(onUrlUpdate).not.toHaveBeenCalled();
   });
 
   it("debounces keyboard commits", () => {

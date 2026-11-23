@@ -23,17 +23,25 @@ const pct = (index: number) => `${(index / TIMELINE_DAYS) * 100}%`;
 export function Bars({ counts, range, draft, longDay, onDraft, onDragEnd, onKeyStep }: BarsProps) {
   const t = useTranslations("mapV2.timeline");
   const barsRef = useRef<HTMLDivElement>(null);
-  const dragRef = useRef<{ range: BarRange; handle: Handle } | null>(null);
+  const dragRef = useRef<{ range: BarRange; handle: Handle; fromHandle: boolean } | null>(null);
   const shown = draft ?? range;
   const heights = barHeights(counts, 0.03);
 
-  const indexAt = (clientX: number) => {
+  const positionAt = (clientX: number) => {
     const el = barsRef.current;
     if (!el) return null;
     const rect = el.getBoundingClientRect();
     const rtl = getComputedStyle(el).direction === "rtl";
     const x = rtl ? rect.right - clientX : clientX - rect.left;
-    return Math.floor((x / rect.width) * TIMELINE_DAYS);
+    return (x / rect.width) * TIMELINE_DAYS;
+  };
+
+  const indexAt = (clientX: number, drag: { handle: Handle; fromHandle: boolean } | null) => {
+    const position = positionAt(clientX);
+    if (position == null) return null;
+    if (!drag?.fromHandle) return Math.floor(position);
+    const edge = Math.round(position);
+    return drag.handle === "start" ? edge : edge - 1;
   };
 
   const finish = (apply: boolean) => {
@@ -45,23 +53,29 @@ export function Bars({ counts, range, draft, longDay, onDraft, onDragEnd, onKeyS
   const onPointerDown = (event: PointerEvent<HTMLDivElement>) => {
     // A right or ctrl click opens the context menu, which swallows the release.
     if (event.button !== 0) return;
-    const index = indexAt(event.clientX);
+    const pressedHandle = (event.target as Element).closest<HTMLElement>("[data-handle]");
+    if (pressedHandle) {
+      event.currentTarget.setPointerCapture(event.pointerId);
+      dragRef.current = { range: shown, handle: pressedHandle.dataset.handle as Handle, fromHandle: true };
+      return;
+    }
+    const index = indexAt(event.clientX, null);
     if (index == null) return;
     const handle = nearestHandle(shown, index);
     event.currentTarget.setPointerCapture(event.pointerId);
     const next = moveHandle(shown, handle, index);
-    dragRef.current = { range: next, handle };
+    dragRef.current = { range: next, handle, fromHandle: false };
     onDraft(next);
   };
 
   const onPointerMove = (event: PointerEvent<HTMLDivElement>) => {
     const drag = dragRef.current;
     if (!drag) return;
-    const index = indexAt(event.clientX);
+    const index = indexAt(event.clientX, drag);
     if (index == null) return;
     const next = moveHandle(drag.range, drag.handle, index);
     if (next[0] === drag.range[0] && next[1] === drag.range[1]) return;
-    dragRef.current = { range: next, handle: drag.handle };
+    dragRef.current = { ...drag, range: next };
     onDraft(next);
   };
 
@@ -78,6 +92,7 @@ export function Bars({ counts, range, draft, longDay, onDraft, onDragEnd, onKeyS
     return {
       role: "slider",
       tabIndex: 0,
+      "data-handle": handle,
       "aria-label": t(handle === "start" ? "startHandle" : "endHandle"),
       "aria-valuemin": 0,
       "aria-valuemax": TIMELINE_DAYS - 1,
