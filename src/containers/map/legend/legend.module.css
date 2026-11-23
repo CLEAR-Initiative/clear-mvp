@@ -36,7 +36,7 @@
 .header {
   display: flex;
   align-items: flex-start;
-  gap: 8px;
+  gap: 4px;
 }
 
 .title {
@@ -49,7 +49,63 @@
   color: var(--color-text-primary);
 }
 
-.remove {
+.icon {
   display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 2px;
   color: var(--color-text-primary);
+}
+
+.icon:hover {
+  background: var(--color-bg-muted);
+}
+
+.divider {
+  align-self: center;
+  width: 1px;
+  height: 16px;
+  background: var(--color-border);
+}
+
+.opacityDropdown {
+  padding: 8px 16px;
+  border: none;
+  background: var(--color-bg-white);
+}
+
+.opacityArrow {
+  border: none;
+}
+
+.opacity {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 150px;
+  font-size: 10px;
+  line-height: 16px;
+  color: var(--map-slider-label);
+}
+
+.sliderTrack::before {
+  background: var(--map-slider-track);
+  box-shadow: inset 0 0 1px rgb(0 0 0 / 10%);
+}
+
+.sliderBar {
+  background: var(--map-slider);
+}
+
+.sliderThumb {
+  border: 1px solid var(--map-slider);
+  background: var(--color-bg-white);
+}
+
+.sliderEnds {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 4px;
 }

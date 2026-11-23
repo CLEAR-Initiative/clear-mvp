@@ -4638,7 +4638,10 @@
       "zoomOut": "Zoom out",
       "askAi": "Ask AI",
       "legend": "Legend",
-      "removeLayer": "Remove {layer}"
+      "removeLayer": "Remove {layer}",
+      "hideLayer": "Hide layer",
+      "showLayer": "Show layer",
+      "opacity": "Opacity"
     },
     "panel": {
       "label": "Map controls",

@@ -14,6 +14,7 @@ import { useSignalTooltip } from "./use-signal-tooltip";
 import { useSignalsWindow } from "./use-signals-window";
 
 export function SignalsLayer({ id, beforeId, opacity, visible, onStatusChange }: LayerProps) {
+  const shown = visible && opacity > 0;
   const range = useSignalsWindow();
   const query = api.signals.forMap.useQuery(
     { ...range, includeDummy: true },
@@ -22,11 +23,11 @@ export function SignalsLayer({ id, beforeId, opacity, visible, onStatusChange }:
   const severity = useThemeColors(SEVERITY_TOKENS);
   const surface = useThemeColors(SURFACE_TOKENS);
   const data = useMemo(() => signalsToFeatures(query.data ?? []), [query.data]);
-  const { clusters, points } = useSignalClusters(data, visible);
+  const { clusters, points } = useSignalClusters(data, shown);
   const pointIds = useMemo(() => new Set(points.features.map((feature) => feature.properties.id)), [points]);
-  const hovered = useSignalTooltip(id, visible);
+  const hovered = useSignalTooltip(id, shown);
 
-  const loading = visible && (query.isPending || query.isPlaceholderData);
+  const loading = shown && (query.isPending || query.isPlaceholderData);
 
   useEffect(() => {
     onStatusChange({ loading, error: query.isError });
@@ -39,7 +40,7 @@ export function SignalsLayer({ id, beforeId, opacity, visible, onStatusChange }:
           id={id}
           type="circle"
           beforeId={beforeId}
-          layout={{ visibility: visible ? "visible" : "none" }}
+          layout={{ visibility: shown ? "visible" : "none" }}
           paint={{
             "circle-color": [
               "match",
@@ -58,7 +59,7 @@ export function SignalsLayer({ id, beforeId, opacity, visible, onStatusChange }:
           }}
         />
       </Source>
-      {visible &&
+      {shown &&
         clusters.map((cluster) => <SignalClusterMarker key={cluster.key} cluster={cluster} opacity={opacity} />)}
       {hovered && pointIds.has(hovered.id) && <SignalTooltip signal={hovered} />}
     </>
