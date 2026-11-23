@@ -16,7 +16,7 @@ export function AskAiButton() {
   if (!available) return null;
 
   return (
-    <Tooltip label={t("askAi")} position="left">
+    <Tooltip label={t("askAi")} position="left" events={{ hover: true, focus: true, touch: false }}>
       <UnstyledButton
         aria-label={t("askAi")}
         className={classes.button}
