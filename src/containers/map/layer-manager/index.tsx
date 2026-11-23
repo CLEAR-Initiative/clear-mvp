@@ -1,28 +1,34 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Alert } from "@mantine/core";
 import { IconAlertTriangle } from "@tabler/icons-react";
 import { useTranslations } from "next-intl";
 import { Layer } from "react-map-gl/mapbox";
 import { useActiveLayers, type ActiveLayer } from "../hooks/use-active-layers";
+import type { LayerId } from "../layers/registry";
+import type { LayerStatus } from "../layers/types";
 import { LayerManagerItem } from "./item";
+import { loadingLayerIds } from "./loading";
 import { markerId, slotBeforeIds } from "./order";
 
-type LayerManagerProps = { labelAnchorId: string | undefined };
+type LayerManagerProps = {
+  labelAnchorId: string | undefined;
+  onLoadingChange: (layerIds: LayerId[]) => void;
+};
 
-export function LayerManager({ labelAnchorId }: LayerManagerProps) {
+type LayerStatuses = Readonly<Partial<Record<ActiveLayer["id"], LayerStatus>>>;
+
+export function LayerManager({ labelAnchorId, onLoadingChange }: LayerManagerProps) {
   const t = useTranslations("mapV2.errors.layerUnavailable");
   const [activeLayers] = useActiveLayers();
-  const [layersWithErrors, setLayersWithErrors] = useState<ReadonlySet<ActiveLayer["id"]>>(new Set());
+  const [statuses, setStatuses] = useState<LayerStatuses>({});
 
-  const handleStatusChange = useCallback((id: ActiveLayer["id"], hasError: boolean) => {
-    setLayersWithErrors((prev) => {
-      if (prev.has(id) === hasError) return prev;
-      const next = new Set(prev);
-      if (hasError) next.add(id);
-      else next.delete(id);
-      return next;
+  const handleStatusChange = useCallback((id: ActiveLayer["id"], status: LayerStatus) => {
+    setStatuses((prev) => {
+      const current = prev[id];
+      if (current?.loading === status.loading && current.error === status.error) return prev;
+      return { ...prev, [id]: status };
     });
   }, []);
 
@@ -31,7 +37,12 @@ export function LayerManager({ labelAnchorId }: LayerManagerProps) {
     [activeLayers, labelAnchorId],
   );
 
-  const hasActiveError =activeLayers.some((layer) => layersWithErrors.has(layer.id));
+  const hasActiveError = activeLayers.some((layer) => statuses[layer.id]?.error);
+  const loading = useMemo(() => loadingLayerIds(activeLayers, statuses), [activeLayers, statuses]);
+
+  useEffect(() => {
+    onLoadingChange(loading);
+  }, [loading, onLoadingChange]);
 
   return (
     <>

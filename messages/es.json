@@ -4594,9 +4594,12 @@
     "reference": "Referencia: {digest}"
   },
   "mapV2": {
+    "loading": "Cargando el mapa",
+    "loadingLayers": "Cargando {layers}",
     "layers": {
       "signals": {
         "title": "Señales",
+        "inSentence": "señales",
         "cluster": {
           "zoom": "{count} señales, acercar",
           "stacked": "{count} señales en esta ubicación"

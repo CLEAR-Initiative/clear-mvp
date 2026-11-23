@@ -13,6 +13,8 @@ import { MapSettingsLayers } from "./basemaps/map-settings-layers";
 import { MapControls } from "./controls";
 import { useBasemap } from "./hooks/use-basemap";
 import { LayerManager } from "./layer-manager";
+import { useLoadingLayerIds } from "./hooks/use-loading-layer-ids";
+import { MapLoader } from "./loader";
 
 import "mapbox-gl/dist/mapbox-gl.css";
 
@@ -26,6 +28,7 @@ export default function MapV2({ offset: offsetProp }: { offset?: Partial<MapOffs
   const [labelAnchorId, setLabelAnchorId] = useState<string | undefined>();
   const [reliefAnchorId, setReliefAnchorId] = useState<string | undefined>();
   const [loaded, setLoaded] = useState(false);
+  const [loadingLayerIds, onLoadingChange] = useLoadingLayerIds();
 
   const onMoveEnd = useCallback(
     ({ viewState }: ViewStateChangeEvent) => {
@@ -80,9 +83,10 @@ export default function MapV2({ offset: offsetProp }: { offset?: Partial<MapOffs
         <AttributionControl position="bottom-right" compact />
         {loaded && basemap === "topography" && <Topography beforeId={reliefAnchorId} />}
         {loaded && <MapSettingsLayers basemap={basemap} />}
-        {loaded && <LayerManager labelAnchorId={labelAnchorId} />}
+        {loaded && <LayerManager labelAnchorId={labelAnchorId} onLoadingChange={onLoadingChange} />}
         <MapControls />
       </ReactMapGL>
+      <MapLoader mapLoading={!loaded || loadingLayerIds === null} loadingLayerIds={loadingLayerIds ?? []} />
     </div>
   );
 }
