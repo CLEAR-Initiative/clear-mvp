@@ -103,6 +103,7 @@
   --map-road-corridor: #976E49;
   --map-road-minor: #AEB1B7;
   --map-cluster: #3A6FDC;
+  --map-selection: #3A6FDC;
   --map-slider: #3F59E0;
   --map-slider-track: #F0F2FD;
   --map-slider-label: var(--color-text-muted);
@@ -175,6 +176,7 @@
   --map-road-corridor: #B0926D;
   --map-road-minor: #757575;
   --map-cluster: #6B93E8;
+  --map-selection: #6B93E8;
   --map-slider: #6B93E8;
   --map-slider-track: #2D2D2D;
   --map-slider-label: var(--color-text-secondary);
@@ -705,8 +707,35 @@ nextjs-portal {
   height: max(100%, 24px);
   transform: translate(-50%, -50%);
 }
-.map-v2-cluster[aria-disabled="true"] {
-  cursor: default;
+.map-v2-cluster[data-selected="true"] {
+  box-shadow: 0 0 0 2px var(--color-bg-white);
+}
+/* The selection ring blinks: it holds, fades out, then comes back. */
+.map-v2-cluster[data-selected="true"]::after {
+  content: "";
+  position: absolute;
+  inset: -8px;
+  border: 6px solid var(--map-selection);
+  border-radius: 50%;
+  pointer-events: none;
+  animation: map-v2-selection-blink 1.5s ease-out infinite;
+}
+@keyframes map-v2-selection-blink {
+  0%,
+  33% {
+    opacity: 1;
+  }
+  67% {
+    opacity: 0.05;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .map-v2-cluster[data-selected="true"]::after {
+    animation: none;
+  }
 }
 .map-v2-cluster-count {
   display: flex;
@@ -718,6 +747,22 @@ nextjs-portal {
   font-size: 10px;
   font-weight: 700;
   line-height: 1;
+}
+
+.map-v2-selection-indicator {
+  position: absolute;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 60px;
+  height: 60px;
+  border: 6px solid var(--map-selection);
+  border-radius: 50%;
+  background: var(--color-bg-white);
+  color: var(--color-text-primary);
+  box-shadow: var(--map-element-shadow);
+  transform: translate(-50%, -50%);
 }
 
 /* LogIE Blockages hover popup — beat Mapbox’s default white chrome */

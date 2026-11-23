@@ -19,11 +19,17 @@ function pointOf(location: GqlLocation | null): [number, number] | null {
     : null;
 }
 
+type SignalLocations = Pick<GqlSignal, "generalLocation" | "originLocation" | "destinationLocation">;
+
+/** Where a signal is drawn: its general location, else its origin, else its destination, if it is a point. */
+export function signalPoint(signal: SignalLocations): [number, number] | null {
+  return pointOf(signal.generalLocation) ?? pointOf(signal.originLocation) ?? pointOf(signal.destinationLocation);
+}
+
 export function signalsToFeatures(signals: GqlSignal[]): SignalFeatureCollection {
   const features: SignalFeature[] = [];
   for (const signal of signals) {
-    const coordinates =
-      pointOf(signal.generalLocation) ?? pointOf(signal.originLocation) ?? pointOf(signal.destinationLocation);
+    const coordinates = signalPoint(signal);
     if (!coordinates) continue;
     features.push({
       type: "Feature",

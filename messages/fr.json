@@ -4646,7 +4646,51 @@
     "panel": {
       "label": "Commandes de la carte",
       "collapse": "Masquer les commandes de la carte",
-      "expand": "Afficher les commandes de la carte"
+      "expand": "Afficher les commandes de la carte",
+      "back": {
+        "layers": "Retour aux couches",
+        "signals": "Retour à tous les signaux"
+      },
+      "stack": {
+        "titlePending": "Signaux à l’emplacement sélectionné",
+        "title": "{count, plural, one {# signal} other {# signaux}} à l’emplacement sélectionné",
+        "intro": {
+          "lastDays": "Publiés {days, plural, one {le dernier jour} other {ces # derniers jours}} à {location}.",
+          "lastDaysNoLocation": "Publiés {days, plural, one {le dernier jour} other {ces # derniers jours}}.",
+          "range": "Publiés entre le {from} et le {to} à {location}.",
+          "rangeNoLocation": "Publiés entre le {from} et le {to}."
+        },
+        "severityCount": {
+          "critical": "{count} Critique",
+          "high": "{count} Élevée",
+          "medium": "{count} Moyenne",
+          "low": "{count} Faible",
+          "unknown": "{count} Inconnue"
+        },
+        "columns": {
+          "signal": "Signal",
+          "severity": "Gravité"
+        },
+        "loading": "Chargement des signaux",
+        "error": "Impossible de charger les signaux. Réessayez plus tard.",
+        "empty": "Aucun signal à cet emplacement sur cette période."
+      },
+      "detail": {
+        "loading": "Chargement du signal",
+        "error": "Impossible de charger le signal. Réessayez plus tard.",
+        "notFound": "Ce signal est introuvable.",
+        "noSummary": "Ce signal n’a pas de résumé.",
+        "comingSoon": "Bientôt disponible",
+        "sections": {
+          "summary": "Résumé",
+          "impact": "Impact",
+          "areaContext": "Contexte de la zone",
+          "signals": "Signaux",
+          "relatedEvents": "Événements liés",
+          "systemData": "Données système",
+          "takeAction": "Agir"
+        }
+      }
     },
     "mapSettings": {
       "title": "Paramètres de la carte",
@@ -4657,6 +4701,9 @@
       "signal": "Signal",
       "severity": "Gravité",
       "untitled": "Signal sans titre"
+    },
+    "selection": {
+      "showOnMap": "Afficher la sélection sur la carte"
     }
   }
 }
