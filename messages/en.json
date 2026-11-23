@@ -4657,6 +4657,9 @@
       "signal": "Signal",
       "severity": "Severity",
       "untitled": "Untitled signal"
+    },
+    "selection": {
+      "showOnMap": "Show the selection on the map"
     }
   }
 }

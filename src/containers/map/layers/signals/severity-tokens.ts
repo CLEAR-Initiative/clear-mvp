@@ -11,3 +11,5 @@ export const SEVERITY_TOKENS: Record<SeverityBucket, string> = {
 };
 
 export const SURFACE_TOKENS = { stroke: "--color-bg-primary" } as const;
+
+export const SELECTION_TOKENS = { ring: "--map-selection" } as const;

@@ -4657,6 +4657,9 @@
       "signal": "Signal",
       "severity": "Gravité",
       "untitled": "Signal sans titre"
+    },
+    "selection": {
+      "showOnMap": "Afficher la sélection sur la carte"
     }
   }
 }

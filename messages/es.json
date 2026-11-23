@@ -4657,6 +4657,9 @@
       "signal": "Señal",
       "severity": "Severidad",
       "untitled": "Señal sin título"
+    },
+    "selection": {
+      "showOnMap": "Mostrar la selección en el mapa"
     }
   }
 }
