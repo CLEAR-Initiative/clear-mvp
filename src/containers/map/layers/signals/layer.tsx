@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo } from "react";
 import { Layer, Source } from "react-map-gl/mapbox";
-import { api } from "~/trpc/react";
+import { useSignalsForMap } from "../../hooks/use-signals-for-map";
 import { useThemeColors } from "../../hooks/use-theme-color";
 import type { LayerProps } from "../types";
 import { SignalClusterMarker } from "./cluster-marker";
@@ -11,15 +11,10 @@ import { signalsToFeatures } from "./to-features";
 import { SignalTooltip } from "./tooltip";
 import { useSignalClusters } from "./use-signal-clusters";
 import { useSignalTooltip } from "./use-signal-tooltip";
-import { useSignalsWindow } from "./use-signals-window";
 
 export function SignalsLayer({ id, beforeId, opacity, visible, onStatusChange }: LayerProps) {
   const shown = visible && opacity > 0;
-  const range = useSignalsWindow();
-  const query = api.signals.forMap.useQuery(
-    { ...range, includeDummy: true },
-    { placeholderData: (prev) => prev },
-  );
+  const query = useSignalsForMap();
   const severity = useThemeColors(SEVERITY_TOKENS);
   const surface = useThemeColors(SURFACE_TOKENS);
   const data = useMemo(() => signalsToFeatures(query.data ?? []), [query.data]);
