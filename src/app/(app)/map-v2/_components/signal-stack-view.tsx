@@ -6,12 +6,12 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { SeverityTag } from "~/containers/map/layers/signals/severity-tag";
 import { SEVERITY_TOKENS } from "~/containers/map/layers/signals/severity-tokens";
 import { signalsAtPoint } from "~/containers/map/layers/signals/stack";
-import { useSignalsWindow } from "~/containers/map/layers/signals/use-signals-window";
+import { useSignalsForMap } from "~/containers/map/hooks/use-signals-for-map";
+import { useTimeframeQuery } from "~/containers/map/hooks/use-timeframe";
 import type { LngLatPoint } from "~/containers/map/selection";
 import { useLocations } from "~/hooks/use-locations";
 import { reportHandledError } from "~/lib/report-handled-error";
 import { mapSeverity } from "~/lib/types/graphql";
-import { api } from "~/trpc/react";
 import { BackLink } from "./back-link";
 import { PanelLoader } from "./panel-loader";
 import classes from "./panel-views.module.css";
@@ -91,9 +91,8 @@ export function SignalStackView({ point, onOpenSignal, onBack }: SignalStackView
   const tSignal = useTranslations("mapV2.signalTooltip");
   const format = useFormatter();
   const now = useNow();
-  // The same range and query as the map's signals layer, so it reads from the same cache.
-  const range = useSignalsWindow();
-  const query = api.signals.forMap.useQuery({ ...range, includeDummy: true }, { placeholderData: (prev) => prev });
+  const range = useTimeframeQuery();
+  const query = useSignalsForMap();
   const { locationById } = useLocations();
 
   const signals = useMemo(() => sortStackSignals(signalsAtPoint(query.data ?? [], point)), [query.data, point]);

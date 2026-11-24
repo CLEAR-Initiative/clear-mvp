@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo } from "react";
 import { Layer, Source } from "react-map-gl/mapbox";
-import { api } from "~/trpc/react";
+import { useSignalsForMap } from "../../hooks/use-signals-for-map";
 import { useThemeColors } from "../../hooks/use-theme-color";
 import { useMapInteractions } from "../../interactions";
 import { SelectionIndicator } from "../../selection-indicator";
@@ -17,18 +17,13 @@ import { useSelectableSignals } from "./use-selectable-signals";
 import { useSelectionBlink } from "./use-selection-blink";
 import { useSignalClusters } from "./use-signal-clusters";
 import { useSignalTooltip } from "./use-signal-tooltip";
-import { useSignalsWindow } from "./use-signals-window";
 
 const POINT_RADIUS = 5;
 
 export function SignalsLayer({ id, beforeId, opacity, visible, onStatusChange }: LayerProps) {
   const shown = visible && opacity > 0;
-  const range = useSignalsWindow();
   const { selection, select } = useMapInteractions();
-  const query = api.signals.forMap.useQuery(
-    { ...range, includeDummy: true },
-    { placeholderData: (prev) => prev },
-  );
+  const query = useSignalsForMap();
   const severity = useThemeColors(SEVERITY_TOKENS);
   const surface = useThemeColors(SURFACE_TOKENS);
   const selectionColors = useThemeColors(SELECTION_TOKENS);

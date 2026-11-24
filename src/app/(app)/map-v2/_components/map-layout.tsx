@@ -1,7 +1,9 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useRef, useState, type CSSProperties } from "react";
 import { MapV2 } from "~/containers/map/lazy";
+import { Timeline } from "~/containers/map/timeline";
+import { TimeframeQueryProvider } from "~/containers/map/hooks/use-timeframe";
 import type { MapSelectTarget } from "~/containers/map/selection";
 import { setMapPanelCollapsedCookie } from "~/lib/map-panel-collapsed-cookie";
 import { MapPanel } from "./map-panel";
@@ -13,6 +15,8 @@ import { usePanelSelection } from "./use-panel-selection";
 /** The Map panel only exists from this width up (see map-panel.module.css). */
 const PANEL_MEDIA_QUERY = "(min-width: 62em)";
 
+const PANEL_TOGGLE_CLEARANCE = 48;
+
 export function MapLayout({ initialPanelCollapsed }: { initialPanelCollapsed: boolean }) {
   const [panelCollapsed, setPanelCollapsed] = useState(initialPanelCollapsed);
   const setCollapsed = useCallback((collapsed: boolean) => {
@@ -22,6 +26,12 @@ export function MapLayout({ initialPanelCollapsed }: { initialPanelCollapsed: bo
   const togglePanel = useCallback(() => setCollapsed(!panelCollapsed), [panelCollapsed, setCollapsed]);
   const insetProbeRef = useRef<HTMLDivElement>(null);
   const insetLeft = useInsetLeft(insetProbeRef);
+  const [timeline, setTimeline] = useState({ height: 0, open: false });
+  const onTimelineHeightChange = useCallback(
+    (height: number, open: boolean) =>
+      setTimeline((prev) => (prev.height === height && prev.open === open ? prev : { height, open })),
+    [],
+  );
   const selection = usePanelSelection();
   const { selectSignal, selectStack, clear } = selection;
 
@@ -59,22 +69,30 @@ export function MapLayout({ initialPanelCollapsed }: { initialPanelCollapsed: bo
   }
 
   return (
-    <div className="map-v2-layout" data-panel-collapsed={panelCollapsed ? "true" : undefined}>
-      <div ref={insetProbeRef} className="map-v2-inset-probe" aria-hidden />
-      <MapPanel
-        collapsed={panelCollapsed}
-        onToggle={togglePanel}
-        contentKey={`${selection.stackKey ?? ""}|${selection.signalId ?? ""}`}
+    <TimeframeQueryProvider>
+      <div
+        className="map-v2-layout"
+        data-panel-collapsed={panelCollapsed ? "true" : undefined}
+        style={{ "--map-timeline-h": `${timeline.height}px` } as CSSProperties}
       >
-        {panelContent}
-      </MapPanel>
-      {insetLeft != null && (
-        <MapV2
-          offset={{ left: insetLeft }}
-          selection={selection.mapSelection}
-          onSelect={onSelect}
-        />
-      )}
-    </div>
+        <div ref={insetProbeRef} className="map-v2-inset-probe" aria-hidden />
+        <MapPanel
+          collapsed={panelCollapsed}
+          onToggle={togglePanel}
+          contentKey={`${selection.stackKey ?? ""}|${selection.signalId ?? ""}`}
+        >
+          {panelContent}
+        </MapPanel>
+        {insetLeft != null && (
+          <MapV2
+            offset={{ left: insetLeft, bottom: timeline.open ? timeline.height : 0 }}
+            selection={selection.mapSelection}
+            onSelect={onSelect}
+          >
+            <Timeline onHeightChange={onTimelineHeightChange} insetStart={panelCollapsed ? PANEL_TOGGLE_CLEARANCE : 0} />
+          </MapV2>
+        )}
+      </div>
+    </TimeframeQueryProvider>
   );
 }
