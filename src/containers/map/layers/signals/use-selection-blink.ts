@@ -29,8 +29,11 @@ export function useSelectionBlink(layerId: string, opacity: number, active: bool
   useEffect(() => {
     const map = mapRef?.getMap();
     if (!map || !active || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    // Leaving the page removes the map before this effect is cleaned up; a removed map has no style,
+    // and touching its layers throws.
+    let removed = false;
     const setOpacity = (value: number) => {
-      if (map.getLayer(layerId)) map.setPaintProperty(layerId, "circle-stroke-opacity", value);
+      if (!removed && map.getLayer(layerId)) map.setPaintProperty(layerId, "circle-stroke-opacity", value);
     };
     const start = performance.now();
     let frame = 0;
@@ -38,9 +41,15 @@ export function useSelectionBlink(layerId: string, opacity: number, active: bool
       setOpacity(opacity * blinkOpacity(now - start));
       frame = requestAnimationFrame(tick);
     };
+    const onRemove = () => {
+      removed = true;
+      cancelAnimationFrame(frame);
+    };
+    map.once("remove", onRemove);
     frame = requestAnimationFrame(tick);
     return () => {
       cancelAnimationFrame(frame);
+      map.off("remove", onRemove);
       setOpacity(opacity);
     };
   }, [mapRef, layerId, opacity, active]);
