@@ -4690,7 +4690,8 @@
           "systemData": "Données système",
           "takeAction": "Agir"
         }
-      }
+      },
+      "showOnMap": "Afficher sur la carte"
     },
     "mapSettings": {
       "title": "Paramètres de la carte",
@@ -4719,9 +4720,6 @@
       "hide": "Masquer la frise",
       "startHandle": "Date de début",
       "endHandle": "Date de fin"
-    },
-    "selection": {
-      "showOnMap": "Afficher la sélection sur la carte"
     }
   }
 }

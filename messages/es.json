@@ -4690,7 +4690,8 @@
           "systemData": "Datos del sistema",
           "takeAction": "Actuar"
         }
-      }
+      },
+      "showOnMap": "Mostrar en el mapa"
     },
     "mapSettings": {
       "title": "Ajustes del mapa",
@@ -4719,9 +4720,6 @@
       "hide": "Ocultar línea de tiempo",
       "startHandle": "Fecha de inicio",
       "endHandle": "Fecha de fin"
-    },
-    "selection": {
-      "showOnMap": "Mostrar la selección en el mapa"
     }
   }
 }

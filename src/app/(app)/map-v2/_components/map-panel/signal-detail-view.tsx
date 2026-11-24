@@ -4,7 +4,10 @@ import { Badge, Group, Stack, Text, Title } from "@mantine/core";
 import { IconCalendar, IconClock, IconDatabase, IconMapPin } from "@tabler/icons-react";
 import { useFormatter, useNow, useTranslations } from "next-intl";
 import { useEffect, useMemo } from "react";
+import { useSignalsForMap } from "~/containers/map/hooks/use-signals-for-map";
 import { SeverityTag } from "~/containers/map/layers/signals/severity-tag";
+import { signalPoint } from "~/containers/map/layers/signals/to-features";
+import type { LngLatPoint } from "~/containers/map/selection";
 import { getDisasterPills } from "~/lib/disaster-types";
 import { resolveLocationName } from "~/lib/location";
 import { signalLocationOf } from "~/lib/location-challenge";
@@ -13,6 +16,7 @@ import { reportHandledError } from "~/lib/report-handled-error";
 import { mapSeverity, type GqlSignalDetail } from "~/lib/types/graphql";
 import { api } from "~/trpc/react";
 import { BackLink, type PanelBack } from "./back-link";
+import { PanelNav } from "./panel-nav";
 import { PanelLoader } from "./panel-loader";
 import classes from "./panel-views.module.css";
 
@@ -46,7 +50,7 @@ function Section({ id, title, children }: { id: string; title: string; children:
   );
 }
 
-function SignalDetail({ signal, back }: { signal: GqlSignalDetail; back: PanelBack }) {
+function SignalDetail({ signal, back, point }: { signal: GqlSignalDetail; back: PanelBack; point: LngLatPoint | null }) {
   const t = useTranslations("mapV2.panel.detail");
   const tSignal = useTranslations("mapV2.signalTooltip");
   const format = useFormatter();
@@ -60,7 +64,7 @@ function SignalDetail({ signal, back }: { signal: GqlSignalDetail; back: PanelBa
       <Stack component="header" gap={16} className={classes.detailHeader}>
         <div>
           <Stack gap={24}>
-            <BackLink {...back} />
+            <PanelNav back={back} point={point} />
             <Title
               id="map-panel-signal-title"
               order={2}
@@ -125,12 +129,18 @@ function SignalDetail({ signal, back }: { signal: GqlSignalDetail; back: PanelBa
 export function SignalDetailView({ signalId, back }: SignalDetailViewProps) {
   const t = useTranslations("mapV2.panel.detail");
   const query = api.signals.get.useQuery({ id: signalId });
+  // Where the map draws the signal, from the map's own data: absent when it is outside the timeframe.
+  const mapSignals = useSignalsForMap();
+  const point = useMemo(() => {
+    const signal = mapSignals.data?.find((candidate) => candidate.id === signalId);
+    return signal ? signalPoint(signal) : null;
+  }, [mapSignals.data, signalId]);
 
   useEffect(() => {
     if (query.error) reportHandledError(query.error, { feature: "map-v2", stage: "signal-detail" });
   }, [query.error]);
 
-  if (query.data) return <SignalDetail signal={query.data} back={back} />;
+  if (query.data) return <SignalDetail signal={query.data} back={back} point={point} />;
 
   let status: React.ReactNode;
   if (query.isPending) {

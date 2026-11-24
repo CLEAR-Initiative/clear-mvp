@@ -520,8 +520,8 @@ in pages with no **Map panel**. On `/map-v2` the selection lives in the URL (`?s
 `?stack=<lng>,<lat>`, both for a signal opened from a stack's list) and replaces the history
 entry, so browser Back leaves the page. It is the same on every screen width, even where no
 panel shows it yet. The map rings the selected point, or the cluster that holds it at the
-current zoom, and while the selection is out of view an arrow on the edge of the visible map
-points at it; clicking the arrow flies back to it. Selecting never moves the camera.
+current zoom, with a blink. Selecting never moves the camera; **Show on map**, next to the
+panel's back link, centres the map on the selection at the current zoom.
 _Avoid_: "active marker"; letting the map read or write the selection URL itself.
 
 **Signal list** (map v2):

@@ -5,7 +5,6 @@ import { Layer, Source } from "react-map-gl/mapbox";
 import { useSignalsForMap } from "../../hooks/use-signals-for-map";
 import { useThemeColors } from "../../hooks/use-theme-color";
 import { useMapInteractions } from "../../interactions";
-import { SelectionIndicator } from "../../selection-indicator";
 import type { LayerProps } from "../types";
 import { SignalClusterMarker } from "./cluster-marker";
 import { clusterLeafIds, type ClusterMarker } from "./clusters";
@@ -102,7 +101,6 @@ export function SignalsLayer({ id, beforeId, opacity, visible, onStatusChange }:
             onSelectStack={onSelectStack}
           />
         ))}
-      {shown && highlight.coordinates && <SelectionIndicator coordinates={highlight.coordinates} />}
       {hovered && pointIds.has(hovered.id) && <SignalTooltip signal={hovered} />}
     </>
   );

@@ -33,7 +33,7 @@ describe("selectionHighlight", () => {
   it("rings a signal drawn as its own point", () => {
     const highlight = selectionHighlight({ ...at(3), selection: { type: "signal", id: "d" } });
 
-    expect(highlight).toEqual({ pointId: "d", clusterKey: null, coordinates: [-70, -10] });
+    expect(highlight).toEqual({ pointId: "d", clusterKey: null });
   });
 
   it("rings the cluster that holds a selected signal at a low zoom", () => {
@@ -50,7 +50,7 @@ describe("selectionHighlight", () => {
     const highlight = selectionHighlight({ ...view, selection: { type: "signal-stack", coordinates: [30, 15] } });
 
     expect(stack).toBeDefined();
-    expect(highlight).toEqual({ pointId: null, clusterKey: stack?.key, coordinates: [30, 15] });
+    expect(highlight).toEqual({ pointId: null, clusterKey: stack?.key });
   });
 
   it("finds a stack from a URL point rounded to 5 decimals", () => {
@@ -66,8 +66,10 @@ describe("selectionHighlight", () => {
     expect(selectionHighlight({ ...at(3), selection: { type: "signal", id: "gone" } })).toEqual({
       pointId: null,
       clusterKey: null,
-      coordinates: null,
     });
-    expect(selectionHighlight({ ...at(3), selection: { type: "signal-stack", coordinates: [0, 0] } }).coordinates).toBeNull();
+    expect(selectionHighlight({ ...at(3), selection: { type: "signal-stack", coordinates: [0, 0] } })).toEqual({
+      pointId: null,
+      clusterKey: null,
+    });
   });
 });

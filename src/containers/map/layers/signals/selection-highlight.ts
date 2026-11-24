@@ -1,4 +1,4 @@
-import type { LngLatPoint, MapSelection } from "../../selection";
+import type { MapSelection } from "../../selection";
 import { clusterLeafIds, isSamePoint, type ClusterMarker, type SignalIndex } from "./clusters";
 import type { SignalFeatureCollection } from "./to-features";
 
@@ -7,11 +7,9 @@ export type SelectionHighlight = {
   pointId: string | null;
   /** The cluster that holds the selection at the current zoom. */
   clusterKey: string | null;
-  /** Where the selection is, for the off-screen indicator. */
-  coordinates: LngLatPoint | null;
 };
 
-const NONE: SelectionHighlight = { pointId: null, clusterKey: null, coordinates: null };
+const NONE: SelectionHighlight = { pointId: null, clusterKey: null };
 
 type Input = {
   selection: MapSelection | null;
@@ -33,21 +31,18 @@ export function selectionHighlight({ selection, data, pointIds, clusters, index 
   if (!selection) return NONE;
 
   if (selection.type === "signal") {
-    const feature = data.features.find((f) => f.properties.id === selection.id);
-    if (!feature) return NONE;
-    const coordinates = feature.geometry.coordinates;
-    if (pointIds.has(selection.id)) return { pointId: selection.id, clusterKey: null, coordinates };
-    return { pointId: null, clusterKey: clusterHolding(new Set([selection.id]), clusters, index), coordinates };
+    if (!data.features.some((f) => f.properties.id === selection.id)) return NONE;
+    if (pointIds.has(selection.id)) return { pointId: selection.id, clusterKey: null };
+    return { pointId: null, clusterKey: clusterHolding(new Set([selection.id]), clusters, index) };
   }
 
   const ids = data.features
     .filter((f) => isSamePoint(f.geometry.coordinates, selection.coordinates))
     .map((f) => f.properties.id);
   if (ids.length === 0) return NONE;
-  const coordinates = selection.coordinates;
-  const stacked = clusters.find((c) => c.stacked && isSamePoint(c.coordinates, coordinates));
-  if (stacked) return { pointId: null, clusterKey: stacked.key, coordinates };
+  const stacked = clusters.find((c) => c.stacked && isSamePoint(c.coordinates, selection.coordinates));
+  if (stacked) return { pointId: null, clusterKey: stacked.key };
   const visible = ids.find((id) => pointIds.has(id));
-  if (visible) return { pointId: visible, clusterKey: null, coordinates };
-  return { pointId: null, clusterKey: clusterHolding(new Set(ids), clusters, index), coordinates };
+  if (visible) return { pointId: visible, clusterKey: null };
+  return { pointId: null, clusterKey: clusterHolding(new Set(ids), clusters, index) };
 }
