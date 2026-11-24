@@ -7,8 +7,8 @@ import { TimeframeQueryProvider } from "~/containers/map/hooks/use-timeframe";
 import type { MapSelectTarget } from "~/containers/map/selection";
 import { setMapPanelCollapsedCookie } from "~/lib/map-panel-collapsed-cookie";
 import { MapPanel } from "./map-panel";
-import { SignalDetailView } from "./signal-detail-view";
-import { SignalStackView } from "./signal-stack-view";
+import { SignalDetailView } from "./map-panel/signal-detail-view";
+import { SignalStackView } from "./map-panel/signal-stack-view";
 import { useInsetLeft } from "./use-inset-left";
 import { usePanelSelection } from "./use-panel-selection";
 
