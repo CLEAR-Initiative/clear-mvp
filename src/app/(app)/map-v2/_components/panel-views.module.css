@@ -1,0 +1,86 @@
+.back {
+  align-self: flex-start;
+}
+
+.back:hover .backLabel,
+.back:focus-visible .backLabel {
+  text-decoration: underline;
+}
+
+/* Signal list */
+
+.ramp {
+  display: flex;
+  height: 16px;
+  overflow: hidden;
+  border-radius: 2px;
+}
+
+.ramp > span {
+  flex-basis: 0;
+}
+
+/* Labels are placed in code (ramp-labels.ts) under their segments. */
+.rampLabels {
+  position: relative;
+  height: 16px;
+}
+
+.rampLabel {
+  position: absolute;
+  top: 0;
+  white-space: nowrap;
+}
+
+.rows {
+  list-style: none;
+}
+
+.row {
+  width: 100%;
+}
+
+.rowTitle {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.row:hover .rowTitle,
+.row:focus-visible .rowTitle {
+  text-decoration: underline;
+}
+
+.rowTag {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+}
+
+/* Signal detail */
+
+.detailHeader {
+  padding: 24px 24px 10px;
+  background: var(--color-accent-light);
+}
+
+.category {
+  border-color: var(--map-accent);
+  color: var(--map-accent);
+}
+
+.meta {
+  row-gap: 4px;
+  column-gap: 10px;
+}
+
+.section {
+  border-bottom: 1px solid var(--color-border);
+}
+
+.section:last-child {
+  border-bottom: 0;
+}
+
+.summary {
+  white-space: pre-line;
+}

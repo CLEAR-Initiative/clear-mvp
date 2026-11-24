@@ -143,6 +143,34 @@ function backToWorld(page: Page) {
   return page.getByRole("button", { name: "Back to world" }).first();
 }
 
+/** What tells one Mapbox style from another: its name and sprite sheet. */
+async function styleId(page: Page): Promise<string> {
+  return page.evaluate(() => {
+    const style = (window.__clearE2EMap as any).getStyle();
+    return `${style?.name ?? ""}|${JSON.stringify(style?.sprite ?? "")}`;
+  });
+}
+
+/** Count the styles that finish loading from now on. Returns the current style's id. */
+async function watchStyleLoads(page: Page): Promise<string> {
+  await page.evaluate(() => {
+    const w = window as any;
+    w.__clearE2EStyleLoads = 0;
+    w.__clearE2EMap.on("style.load", () => {
+      w.__clearE2EStyleLoads += 1;
+    });
+  });
+  return styleId(page);
+}
+
+async function styleLoads(page: Page): Promise<number> {
+  return page.evaluate(() => (window as any).__clearE2EStyleLoads as number);
+}
+
+async function mapZoom(page: Page): Promise<number> {
+  return page.evaluate(() => (window.__clearE2EMap as any).getZoom() as number);
+}
+
 async function hover(page: Page, at: CountryHit): Promise<void> {
   // Two moves: Mapbox needs a real mousemove on the canvas, not only a jump.
   await page.mouse.move(at.x - 6, at.y - 6);
@@ -193,5 +221,50 @@ test.describe("Presence map on a real canvas (case 29)", () => {
       await settle(page);
     }
     // The crash guard fails this test if any step threw in the page.
+  });
+
+  test("a theme switch in the country state rebuilds the map and keeps the selection", async ({ page }) => {
+    test.setTimeout(120_000);
+    await turnOnWorldMap(page);
+    await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
+    await expect(page.getByText("NRC presence")).toBeVisible({ timeout: 30_000 });
+    await waitForMapAtRest(page);
+
+    const [country] = await countriesOnScreen(page);
+    expect(country, "an NRC country on screen").toBeTruthy();
+    await page.mouse.click(country!.x, country!.y);
+    await expect(backToWorld(page)).toBeVisible();
+    await waitForMapAtRest(page);
+    const markers = page.locator(".mapboxgl-marker");
+    await expect(markers.first()).toBeVisible();
+    const before = { markers: await markers.count(), zoom: await mapZoom(page) };
+
+    // The app follows the system theme. A new theme loads a new map style,
+    // which drops every layer: the mode is removed and added again.
+    const lightStyle = await watchStyleLoads(page);
+    await page.emulateMedia({ colorScheme: "dark" });
+    await expect(page.locator("html")).toHaveAttribute("data-mantine-color-scheme", "dark");
+    // Prove the theme reached Mapbox: a new style finished loading, and it is
+    // a different style. Without this the checks below pass on the old map.
+    await expect.poll(() => styleLoads(page), { message: "Mapbox loaded a new style", timeout: 30_000 }).toBeGreaterThan(0);
+    expect(await styleId(page), "the dark style differs from the light one").not.toBe(lightStyle);
+    await waitForMapAtRest(page);
+    await settle(page);
+
+    // Same country, same office markers, and the camera did not move.
+    await expect(backToWorld(page)).toBeVisible();
+    await expect.poll(() => lineVisibility(page)).toBe("none");
+    await expect(markers).toHaveCount(before.markers);
+    expect(Math.abs((await mapZoom(page)) - before.zoom)).toBeLessThan(0.01);
+
+    // The rebuilt mode still works: back to the world view, and hover.
+    await backToWorld(page).click();
+    await expect(page.getByText("NRC presence")).toBeVisible();
+    await expect.poll(() => lineVisibility(page)).toBe("visible");
+    await waitForMapAtRest(page);
+    const [again] = await countriesOnScreen(page);
+    await hover(page, again!);
+    await expect.poll(() => hoverState(page, again!.iso), { message: `hover on ${again!.iso} after the rebuild` }).toBe(true);
+    await settle(page);
   });
 });

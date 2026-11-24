@@ -29,10 +29,12 @@ type TimeframeQuery = { from: string; to?: string };
 const TimeframeQueryContext = createContext<TimeframeQuery | null>(null);
 
 export function TimeframeQueryProvider({ children }: { children: ReactNode }) {
+  const outer = useContext(TimeframeQueryContext);
   const [timeframe] = useTimeframe();
   const key = serializeTimeframe(timeframe);
   // eslint-disable-next-line react-hooks/exhaustive-deps -- recompute the rolling start only when ?time changes
   const query = useMemo(() => timeframeQuery(timeframe, new Date()), [key]);
+  if (outer) return children;
   return <TimeframeQueryContext.Provider value={query}>{children}</TimeframeQueryContext.Provider>;
 }
 

@@ -16,15 +16,22 @@ import { LayerManager } from "./layer-manager";
 import { useLoadingLayerIds } from "./hooks/use-loading-layer-ids";
 import { MapLoader } from "./loader";
 import { TimeframeQueryProvider } from "./hooks/use-timeframe";
+import { MapInteractionsProvider } from "./interactions";
+import type { MapSelection, MapSelectTarget } from "./selection";
 
 import "mapbox-gl/dist/mapbox-gl.css";
 
-type MapV2Props = {
+export type MapV2Props = {
+  /** The part of the map covered by surrounding UI, per side, in pixels. */
   offset?: Partial<MapOffset>;
+  /** What the embedding page has selected, highlighted on the map. */
+  selection?: MapSelection | null;
+  /** A click picked a target, or `null` for a click on empty map. */
+  onSelect?: (target: MapSelectTarget | null) => void;
   children?: ReactNode;
 };
 
-export default function MapV2({ offset: offsetProp, children }: MapV2Props) {
+export default function MapV2({ offset: offsetProp, selection = null, onSelect, children }: MapV2Props) {
   const isDark = useIsDark();
   const offset = useMapOffset(offsetProp);
   const mapRef = useRef<MapRef>(null);
@@ -90,7 +97,11 @@ export default function MapV2({ offset: offsetProp, children }: MapV2Props) {
           <AttributionControl position="bottom-right" compact />
           {loaded && basemap === "topography" && <Topography beforeId={reliefAnchorId} />}
           {loaded && <MapSettingsLayers basemap={basemap} />}
-          {loaded && <LayerManager labelAnchorId={labelAnchorId} onLoadingChange={onLoadingChange} />}
+          {loaded && (
+            <MapInteractionsProvider selection={selection} onSelect={onSelect}>
+              <LayerManager labelAnchorId={labelAnchorId} onLoadingChange={onLoadingChange} />
+            </MapInteractionsProvider>
+          )}
           <MapControls />
         </ReactMapGL>
         {children}

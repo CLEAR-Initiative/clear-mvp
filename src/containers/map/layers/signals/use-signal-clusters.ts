@@ -2,10 +2,17 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useMap } from "react-map-gl/mapbox";
-import { createSignalIndex, viewClusters, worldPoints, type ClusterMarker, type ViewBounds } from "./clusters";
+import {
+  createSignalIndex,
+  viewClusters,
+  worldPoints,
+  type ClusterMarker,
+  type SignalIndex,
+  type ViewBounds,
+} from "./clusters";
 import type { SignalFeatureCollection } from "./to-features";
 
-type ClusterView = { clusters: ClusterMarker[]; points: SignalFeatureCollection };
+type ClusterView = { clusters: ClusterMarker[]; points: SignalFeatureCollection; index: SignalIndex };
 type Camera = { bounds: ViewBounds; zoom: number };
 
 const MAX_LATITUDE = 85;
@@ -73,5 +80,5 @@ export function useSignalClusters(collection: SignalFeatureCollection, enabled: 
     [enabled, camera, index],
   );
 
-  return { clusters, points };
+  return { clusters, points, index };
 }

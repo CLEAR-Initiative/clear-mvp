@@ -334,14 +334,14 @@ _Avoid_: white overlays; page-level content fade-in; opacity-0 entry animations 
 A group of **Signals** that sit close together on the map at the current zoom, drawn as
 one numbered circle. In the **Global** view it is a plain blue circle. The design shows a
 donut with the severity mix once a country is chosen; that is not built yet. Clicking it
-zooms in until it splits.
+zooms in until it splits, except for **Stacked signals**, which it selects.
 _Avoid_: "event" or "crisis" for a cluster (a cluster is a map grouping, not a
 **Detection**); "donut" for the Global blue circle.
 
 **Stacked signals**:
 **Signals** that share exactly the same point, often a country or city centre. Zooming
-never splits them, so they stay a **Signal cluster** at every zoom and cannot be opened
-from the map until the panel lists a selected cluster's signals.
+never splits them, so they stay a **Signal cluster** at every zoom. Clicking that cluster
+selects the stack: the **Map panel** lists its signals (the **Signal list**).
 _Avoid_: spiderfying stacks on map v2; "duplicates" (stacked signals are distinct
 signals at one place).
 
@@ -397,8 +397,10 @@ _Avoid_: treating road or path names as Labels; hiding rail lines with Labels.
 
 **Map panel**:
 The panel on `/map-v2` that sits next to the app nav and floats over the map, on screens
-992px or wider. Narrower screens have no Map panel. Its sections are not designed yet. A
-round toggle on the panel's right edge collapses it, and the choice is kept across reloads.
+992px or wider. Narrower screens have no Map panel. It shows the **Signal list** or the
+**Signal detail** of the **Map selection**, and nothing else yet. A selection opens it when it
+is collapsed. A round toggle on the panel's right edge collapses it, and the choice is kept
+across reloads.
 The page, not the map, owns the Map panel: it tells the map which part of it is covered
 (an offset per side), and the map eases its camera padding, its controls and the Mapbox
 attribution to stay clear of that part. When the nav or the Map panel opens or collapses,
@@ -505,10 +507,35 @@ _Avoid_: "popup", "window", "modal" (it is not modal — the map stays interacti
 **Signal tooltip** (map v2):
 The small card that names a signal and its severity while the pointer rests on its point;
 a tap opens it on touch screens. Read-only: no close button, no View details. Where points
-overlap it shows the top one only. Not a **Marker detail panel** — a click on a signal does
-nothing on map v2 until that panel is designed.
+overlap it shows the top one only. Not a **Marker detail panel**: on map v2 a click on a
+signal selects it and the **Map panel** shows its **Signal detail**.
 _Avoid_: "popup" (the old roadmap word); "disaster" for the signal it names. The Figma
 label says "Disaster name"; the app labels the value "Signal", because it is the signal's title.
+
+**Map selection** (map v2):
+What a click on the map picked: a **Signal**, a stack of **Stacked signals**, or nothing (a
+click on empty map). The map only reports the click and draws what it is told is selected;
+the page that embeds the map decides what a selection means, because the same map will sit
+in pages with no **Map panel**. On `/map-v2` the selection lives in the URL (`?signal=<id>`,
+`?stack=<lng>,<lat>`, both for a signal opened from a stack's list) and replaces the history
+entry, so browser Back leaves the page. It is the same on every screen width, even where no
+panel shows it yet. The map rings the selected point, or the cluster that holds it at the
+current zoom, and while the selection is out of view an arrow on the edge of the visible map
+points at it; clicking the arrow flies back to it. Selecting never moves the camera.
+_Avoid_: "active marker"; letting the map read or write the selection URL itself.
+
+**Signal list** (map v2):
+The **Map panel** view of a selected stack: how many signals, when and where they were
+published (the period is the range the signals layer shows, worded "in the last N days"
+when it ends today), their severity mix, and the signals most severe first. Clicking a
+signal opens its **Signal detail**, whose back link returns to the list.
+_Avoid_: "alerts" for these rows (the Figma copy says alerts; they are **Signals**).
+
+**Signal detail** (map v2):
+The **Map panel** view of one selected **Signal**: title, severity, disaster type, place,
+dates, source and summary. The other sections of the design (impact, area context, signals,
+related events, system data, take an action) show "Coming soon" until they have data.
+_Avoid_: calling the summary "AI generated" (it is the signal's own description).
 
 ### Country framing
 

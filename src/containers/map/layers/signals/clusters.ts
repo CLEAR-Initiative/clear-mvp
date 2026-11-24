@@ -59,6 +59,10 @@ export function viewClusters(index: SignalIndex, { west, south, east, north }: V
   return clusters;
 }
 
+export function clusterLeafIds(index: SignalIndex, clusterId: number): string[] {
+  return index.getLeaves(clusterId, Infinity).map((leaf) => leaf.properties.id);
+}
+
 export function clusterSize(count: number): { outer: number; inner: number } {
   if (count < 10) return { outer: 23, inner: 15 };
   if (count < 25) return { outer: 31, inner: 17 };

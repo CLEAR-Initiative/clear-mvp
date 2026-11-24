@@ -106,6 +106,10 @@ jobs:
       # (local `bun run e2e` never passes it, so it doesn't affect local runs).
       - name: Bring up stack (build both repos) + seed
         working-directory: clear-mvp
+        env:
+          # Public Mapbox token for the web image, so case 29 can draw the real
+          # map. Repo secret; empty on forks, and case 29 is then skipped.
+          NEXT_PUBLIC_MAPBOX_TOKEN: ${{ secrets.E2E_MAPBOX_TOKEN }}
         run: |
           docker compose -f docker-compose.e2e.yml -f docker-compose.e2e.ci.yml up -d --build --wait db redis api web || \
             (docker compose -f docker-compose.e2e.yml logs --no-color --tail=200; exit 1)
@@ -119,6 +123,9 @@ jobs:
 
       - name: Run Playwright smoke suite
         working-directory: clear-mvp
+        env:
+          # Case 29 (the real map canvas) runs only when the image has a token.
+          E2E_REAL_MAP: ${{ secrets.E2E_MAPBOX_TOKEN != '' && '1' || '' }}
         run: bunx playwright test
 
       - name: Upload Playwright report + traces

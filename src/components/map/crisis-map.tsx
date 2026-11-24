@@ -13,31 +13,14 @@ import { useLocale, useTranslations } from "next-intl";
 import { api } from "~/trpc/react";
 import { geometryBounds, isPaintableBoundaryGeometry } from "~/lib/geo/country-mask";
 import {
-  PRESENCE_COUNTRY_MAX_ZOOM,
-  PRESENCE_FILL,
-  PRESENCE_FILL_COLOR,
-  PRESENCE_FLY_MS,
-  PRESENCE_FOOTPRINT,
-  PRESENCE_FOOTPRINT_PADDING,
-  PRESENCE_LABEL_MIN_ZOOM,
-  PRESENCE_LABELS,
-  PRESENCE_LINE,
-  PRESENCE_LINE_COLOR,
-  PRESENCE_LINE_OPACITY,
-  PRESENCE_PIN_IMAGE,
-  PRESENCE_PIN_SIZE,
-  PRESENCE_PINS,
-  PRESENCE_POINTS,
-  PRESENCE_SELECTED_LINE,
-  PRESENCE_SOURCE,
-  PRESENCE_SUDAN_OFFICES,
-  SINGLE_WORLDVIEW,
-  loadNrcPinImage,
-  nrcPinDataUrl,
-  presenceFillOpacity,
-  presenceLabelPaint,
-  presenceLineVisibility,
-} from "~/components/map/nrc-presence";
+  addPresenceMap,
+  createPresenceMemory,
+  type PresenceCountry,
+  type PresenceHover,
+  type PresenceMapMode,
+  type PresenceMemory,
+  type PresenceState,
+} from "~/components/map/presence-map-mode";
 import { dedupeByProperty } from "~/lib/geo/dedupe-rendered-features";
 import { exposeMapForE2E } from "~/lib/e2e/e2e-hooks";
 import { reportMapError } from "~/lib/map/report-map-error";
@@ -211,16 +194,7 @@ export interface AdminBoundary {
   population?: string | null;
 }
 
-/** Hover over an office marker in the presence map's country state. */
-export type PresenceOfficeHover =
-  | { kind: "office"; officeId: string }
-  | { kind: "countryOffice"; iso2: string };
-
-/** Presence map hover, positioned in map container pixels. */
-export type PresenceHover = { x: number; y: number } & (
-  | { kind: "country"; iso2: string }
-  | PresenceOfficeHover
-);
+export type { PresenceHover, PresenceOfficeHover } from "./presence-map-mode";
 
 interface CrisisMapProps {
   markers?: MapMarker[];
@@ -336,13 +310,7 @@ interface CrisisMapProps {
    * pinned. Clicking a fill or pin calls `onCountrySelect` with the ISO
    * 3166-1 alpha-2 code. Omit (or pass []) for no layer.
    */
-  operatingCountries?: readonly {
-    iso2: string;
-    name: string;
-    pinLngLat: [number, number];
-    /** [west, south, east, north], framed when the country is selected. */
-    bbox: readonly [number, number, number, number];
-  }[];
+  operatingCountries?: readonly PresenceCountry[];
   onCountrySelect?: (iso2: string) => void;
   /** The selected operating country (country state), or null for the world state. */
   selectedOperatingIso?: string | null;
@@ -2404,355 +2372,66 @@ export function CrisisMap({
   // ── Overview presence map (design handoff "NRC presence map", option A) ─
   // NRC countries filled orange with one logo pin each (a symbol layer, so
   // pins shrink with zoom and stay aligned), a zoom floor at the NRC
-  // footprint, and a country state with office markers. Values live in
+  // footprint, and a country state with office markers. The mode lives in
+  // ./presence-map-mode, which owns its layers, handlers and markers; this
+  // component only adds, updates and removes it. Values live in
   // ~/components/map/nrc-presence.
   const operatingCountriesKey = (operatingCountries ?? [])
     .map((c) => `${c.iso2}:${c.pinLngLat.join(",")}`)
     .join("|");
   const selectedPresenceIso = operatingCountries?.length ? (selectedOperatingIso?.toUpperCase() ?? null) : null;
-  const selectedPresenceIsoRef = useRef(selectedPresenceIso);
-  selectedPresenceIsoRef.current = selectedPresenceIso;
   const onPresenceHoverRef = useRef(onPresenceHover);
   useEffect(() => { onPresenceHoverRef.current = onPresenceHover; }, [onPresenceHover]);
-  const presenceWorldViewRef = useRef<{ center: [number, number]; zoom: number } | null>(null);
-  const presenceFloorSetRef = useRef(false);
-  const presenceSyncLabelsRef = useRef<(() => void) | null>(null);
-  const [presenceVersion, setPresenceVersion] = useState(0);
+  const presenceState: PresenceState = {
+    selectedIso: selectedPresenceIso,
+    insetRight: countryFitInsetRight,
+    insetBottom: countryFitInsetBottom,
+  };
+  const presenceStateRef = useRef(presenceState);
+  presenceStateRef.current = presenceState;
+  // The world view and the last camera move. They outlive a layer rebuild.
+  const presenceMemoryRef = useRef<PresenceMemory | null>(null);
+  const presenceModeRef = useRef<PresenceMapMode | null>(null);
 
-  // Layers, hover, click and the zoom floor. Rebuilt when the style reloads
-  // (theme or basemap change); the camera and selection survive that.
+  // Add and remove. The mode is rebuilt when the style reloads (theme or
+  // basemap change); the camera and selection survive that in the memory.
   useEffect(() => {
     const m = map.current;
-    if (!m || !loaded) return;
+    const mb = mbRef.current;
+    if (!m || !mb || !loaded) return;
     const countries = operatingCountries ?? [];
     if (countries.length === 0) {
-      presenceFloorSetRef.current = false;
+      // Left the presence map: the next visit jumps to the world view again.
+      if (presenceMemoryRef.current) presenceMemoryRef.current.floorSet = false;
       return;
     }
-    let cancelled = false;
-    const isos = countries.map((c) => c.iso2.toUpperCase());
-    const isoFilter: unknown = ["in", ["get", "iso_3166_1"], ["literal", isos]];
-    const selected = selectedPresenceIsoRef.current;
-    const styleLayers = m.getStyle().layers as Array<{ id: string; type: string }>;
-    const firstSymbolId = styleLayers.find((l) => l.type === "symbol")?.id;
-
-    m.addSource(PRESENCE_SOURCE, {
-      type: "vector",
-      url: "mapbox://mapbox.country-boundaries-v1",
-      promoteId: { country_boundaries: "iso_3166_1" },
-    });
-    m.addLayer(
+    const memory = (presenceMemoryRef.current ??= createPresenceMemory());
+    const mode = addPresenceMap(
+      m,
+      mb,
       {
-        id: PRESENCE_FILL,
-        type: "fill",
-        source: PRESENCE_SOURCE,
-        "source-layer": "country_boundaries",
-        filter: ["all", SINGLE_WORLDVIEW, isoFilter] as never,
-        paint: {
-          "fill-color": PRESENCE_FILL_COLOR,
-          "fill-opacity": presenceFillOpacity(selected) as never,
-        },
+        countries,
+        state: presenceStateRef.current,
+        isDark: () => isDarkRef.current,
+        onHover: (hover) => onPresenceHoverRef.current?.(hover),
+        onSelect: (iso2) => onCountrySelectRef.current?.(iso2),
       },
-      firstSymbolId,
+      memory,
     );
-    m.addLayer(
-      {
-        id: PRESENCE_LINE,
-        type: "line",
-        source: PRESENCE_SOURCE,
-        "source-layer": "country_boundaries",
-        filter: ["all", SINGLE_WORLDVIEW, isoFilter] as never,
-        layout: { visibility: presenceLineVisibility(selected) },
-        paint: {
-          "line-color": PRESENCE_LINE_COLOR,
-          "line-width": 0.6,
-          "line-opacity": PRESENCE_LINE_OPACITY as never,
-        },
-      },
-      firstSymbolId,
-    );
-    m.addLayer(
-      {
-        id: PRESENCE_SELECTED_LINE,
-        type: "line",
-        source: PRESENCE_SOURCE,
-        "source-layer": "country_boundaries",
-        filter: ["all", SINGLE_WORLDVIEW, ["==", ["get", "iso_3166_1"], selected ?? ""]] as never,
-        paint: {
-          "line-color": PRESENCE_LINE_COLOR,
-          "line-width": ["interpolate", ["linear"], ["zoom"], 3, 1, 7, 1.6] as never,
-          "line-opacity": 0.9,
-        },
-      },
-      firstSymbolId,
-    );
-    m.addSource(PRESENCE_POINTS, {
-      type: "geojson",
-      data: {
-        type: "FeatureCollection",
-        features: countries.map((c) => ({
-          type: "Feature",
-          properties: { iso_3166_1: c.iso2.toUpperCase(), country: c.name },
-          geometry: { type: "Point", coordinates: c.pinLngLat },
-        })),
-      },
-    });
-    const worldLayerVisibility = selected ? "none" : "visible";
-    const addPointLayers = () => {
-      if (cancelled || !m.getSource(PRESENCE_POINTS) || m.getLayer(PRESENCE_PINS)) return;
-      m.addLayer({
-        id: PRESENCE_PINS,
-        type: "symbol",
-        source: PRESENCE_POINTS,
-        layout: {
-          visibility: worldLayerVisibility,
-          "icon-image": PRESENCE_PIN_IMAGE,
-          "icon-anchor": "bottom",
-          "icon-size": PRESENCE_PIN_SIZE as never,
-          "icon-allow-overlap": true,
-          "icon-ignore-placement": true,
-          "symbol-z-order": "viewport-y",
-        },
-      });
-      m.addLayer({
-        id: PRESENCE_LABELS,
-        type: "symbol",
-        source: PRESENCE_POINTS,
-        minzoom: PRESENCE_LABEL_MIN_ZOOM,
-        layout: {
-          visibility: worldLayerVisibility,
-          "text-field": ["get", "country"],
-          "text-font": ["DIN Offc Pro Medium", "Arial Unicode MS Bold"],
-          "text-size": 11,
-          "text-anchor": "left",
-          "text-offset": [1, -0.1],
-          "text-optional": true,
-        },
-        paint: presenceLabelPaint(isDarkRef.current),
-      });
-      setPresenceVersion((v) => v + 1);
-    };
-    loadNrcPinImage()
-      .then((img) => {
-        if (cancelled || !m.getStyle()) return;
-        if (!m.hasImage(PRESENCE_PIN_IMAGE)) m.addImage(PRESENCE_PIN_IMAGE, img, { pixelRatio: 2 });
-        addPointLayers();
-      })
-      .catch(() => {
-        // Without the artwork the pins can't draw; fills, labels and clicks still work.
-        addPointLayers();
-      });
-
-    // Basemap country names: none at world zoom, then only non-NRC countries
-    // (the pin labels name the NRC ones); in a country, all of them.
-    const LABELS = "country-label";
-    const hasLabels = !!m.getLayer(LABELS);
-    const baseLabelFilter: unknown = hasLabels ? m.getFilter(LABELS) : undefined;
-    const noLabels: unknown = ["==", ["get", "iso_3166_1"], "__none__"];
-    const nonNrcLabels: unknown = ["all", ...(baseLabelFilter ? [baseLabelFilter] : []), ["!", isoFilter]];
-    let labelState = "";
-    const syncLabels = () => {
-      if (!hasLabels) return;
-      const next = selectedPresenceIsoRef.current ? "all" : m.getZoom() < 3 ? "none" : "nonNrc";
-      if (next === labelState) return;
-      labelState = next;
-      const filter = next === "all" ? (baseLabelFilter ?? null) : next === "none" ? noLabels : nonNrcLabels;
-      try { m.setFilter(LABELS, filter as never); } catch (mapErr) { reportMapError(m, mapErr, "setFilter"); }
-    };
-    presenceSyncLabelsRef.current = syncLabels;
-    syncLabels();
-
-    // Zoom floor: never further out than the whole NRC footprint.
-    const fitFloor = (jump: boolean) => {
-      const cam = m.cameraForBounds(PRESENCE_FOOTPRINT, { padding: PRESENCE_FOOTPRINT_PADDING });
-      if (!cam) return;
-      const c = cam.center as { lng: number; lat: number } | [number, number];
-      const center: [number, number] = Array.isArray(c) ? c : [c.lng, c.lat];
-      // No extra floor: a phone-width map needs a zoom below 1 to fit.
-      const zoom = Math.max(0, cam.zoom ?? 0);
-      presenceWorldViewRef.current = { center, zoom };
-      m.setMinZoom(zoom);
-      if (jump) m.jumpTo({ center, zoom });
-    };
-    fitFloor(!presenceFloorSetRef.current && !selected);
-    presenceFloorSetRef.current = true;
-    const onResize = () => fitFloor(false);
-    const renderWorldCopies = m.getRenderWorldCopies?.() ?? true;
-    m.setRenderWorldCopies?.(false);
-    m.dragRotate?.disable();
-    m.touchZoomRotate?.disableRotation();
-    m.keyboard?.disableRotation?.();
-
-    let hoveredIso: string | null = null;
-    const setHoverState = (iso: string | null) => {
-      if (hoveredIso === iso) return;
-      const target = (id: string) => ({ source: PRESENCE_SOURCE, sourceLayer: "country_boundaries", id });
-      try { if (hoveredIso) m.setFeatureState(target(hoveredIso), { hover: false }); } catch (mapErr) { reportMapError(m, mapErr, "setFeatureState"); }
-      hoveredIso = iso;
-      try { if (iso) m.setFeatureState(target(iso), { hover: true }); } catch (mapErr) { reportMapError(m, mapErr, "setFeatureState"); }
-    };
-    const isoAt = (point: unknown): string | null => {
-      const layers = [PRESENCE_PINS, PRESENCE_FILL].filter(
-        (l) => m.getLayer(l) && m.getLayoutProperty(l, "visibility") !== "none",
-      );
-      const iso: unknown = m.queryRenderedFeatures(point, { layers })[0]?.properties?.iso_3166_1;
-      return typeof iso === "string" && iso ? iso : null;
-    };
-    // Office markers are DOM nodes inside the map; they handle their own events.
-    const onMarker = (e: MapboxGLAny) =>
-      !!(e.originalEvent?.target as HTMLElement | null)?.closest?.(".mapboxgl-marker");
-    const onMove = (e: MapboxGLAny) => {
-      if (onMarker(e)) return;
-      const iso = isoAt(e.point);
-      const current = selectedPresenceIsoRef.current;
-      setMapCursor(m, iso && iso !== current ? "pointer" : "");
-      if (current) return;
-      setHoverState(iso);
-      onPresenceHoverRef.current?.(iso ? { kind: "country", iso2: iso, x: e.point.x, y: e.point.y } : null);
-    };
-    const onOut = () => {
-      setHoverState(null);
-      setMapCursor(m, "");
-      if (!selectedPresenceIsoRef.current) onPresenceHoverRef.current?.(null);
-    };
-    const onClick = (e: MapboxGLAny) => {
-      if (onMarker(e)) return;
-      const iso = isoAt(e.point);
-      if (iso && iso !== selectedPresenceIsoRef.current) {
-        setHoverState(null);
-        onPresenceHoverRef.current?.(null);
-        onCountrySelectRef.current?.(iso);
-      }
-    };
-    m.on("mousemove", onMove);
-    m.on("mouseout", onOut);
-    m.on("click", onClick);
-    m.on("zoomend", syncLabels);
-    m.on("resize", onResize);
-
+    presenceModeRef.current = mode;
     return () => {
-      cancelled = true;
-      presenceSyncLabelsRef.current = null;
-      try {
-        m.off("mousemove", onMove);
-        m.off("mouseout", onOut);
-        m.off("click", onClick);
-        m.off("zoomend", syncLabels);
-        m.off("resize", onResize);
-      } catch (mapErr) { reportMapError(m, mapErr, "off"); }
-      try {
-        if (hasLabels && labelState !== "all") m.setFilter(LABELS, (baseLabelFilter ?? null) as never);
-        for (const id of [PRESENCE_LABELS, PRESENCE_PINS, PRESENCE_SELECTED_LINE, PRESENCE_LINE, PRESENCE_FILL]) {
-          if (m.getLayer(id)) m.removeLayer(id);
-        }
-        for (const id of [PRESENCE_POINTS, PRESENCE_SOURCE]) if (m.getSource(id)) m.removeSource(id);
-        m.setMinZoom(0);
-        m.setRenderWorldCopies?.(renderWorldCopies);
-        m.dragRotate?.enable();
-        m.touchZoomRotate?.enableRotation();
-        m.keyboard?.enableRotation?.();
-      } catch (mapErr) { /* style already gone */ reportMapError(m, mapErr, "setFilter"); }
-      setMapCursor(m, "");
+      mode.remove();
+      if (presenceModeRef.current === mode) presenceModeRef.current = null;
     };
     // operatingCountriesKey stands in for the array; selection is applied by
     // the effect below without rebuilding the layers.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loaded, operatingCountriesKey, isDark, baseMapType]);
 
-  // Selection: world state vs country state, camera, and office markers.
-  const presencePrevSelectedRef = useRef<string | null>(null);
-  const presencePrevInsetRef = useRef("");
+  // Update: world state vs country state, camera, and office markers.
   useEffect(() => {
-    const m = map.current;
-    const mb = mbRef.current;
-    if (!m || !mb || !loaded || presenceVersion === 0) return;
-    const selected = selectedPresenceIso;
-    const country = selected ? operatingCountries?.find((c) => c.iso2.toUpperCase() === selected) : undefined;
-
-    try {
-      if (m.getLayer(PRESENCE_FILL)) setPaintPropertySafe(m, PRESENCE_FILL, "fill-opacity", presenceFillOpacity(selected));
-      // Hide, don't zero line-opacity: see PRESENCE_LINE_OPACITY.
-      if (m.getLayer(PRESENCE_LINE)) m.setLayoutProperty(PRESENCE_LINE, "visibility", presenceLineVisibility(selected));
-      if (m.getLayer(PRESENCE_SELECTED_LINE)) {
-        m.setFilter(PRESENCE_SELECTED_LINE, ["all", SINGLE_WORLDVIEW, ["==", ["get", "iso_3166_1"], selected ?? ""]] as never);
-      }
-      for (const id of [PRESENCE_PINS, PRESENCE_LABELS]) {
-        if (m.getLayer(id)) m.setLayoutProperty(id, "visibility", selected ? "none" : "visible");
-      }
-    } catch (mapErr) { /* style reloading */ reportMapError(m, mapErr, "setPaintProperty"); }
-    presenceSyncLabelsRef.current?.();
-
-    // Zoom buttons move out from under the country panel.
-    const inset = countryFitInsetRightRef.current;
-    const controls = m.getContainer().querySelector(".mapboxgl-ctrl-bottom-right") as HTMLElement | null;
-    if (controls) {
-      controls.style.transition = "right 300ms ease";
-      controls.style.right = selected ? `${inset}px` : "0px";
-    }
-
-    // Camera only on a real selection change or a panel size change, not on
-    // a theme rebuild.
-    const previous = presencePrevSelectedRef.current;
-    presencePrevSelectedRef.current = selected;
-    const insetKey = `${inset}:${countryFitInsetBottom}`;
-    const insetChanged = presencePrevInsetRef.current !== insetKey;
-    presencePrevInsetRef.current = insetKey;
-    if (selected !== previous || (country && insetChanged)) {
-      if (country) {
-        const [w, s, e, n] = country.bbox;
-        m.fitBounds([[w, s], [e, n]], {
-          padding: { top: 70, bottom: countryFitInsetBottom + 50, left: 50, right: inset + 50 },
-          maxZoom: PRESENCE_COUNTRY_MAX_ZOOM,
-          duration: PRESENCE_FLY_MS,
-        });
-      } else if (previous && presenceWorldViewRef.current) {
-        m.flyTo({ ...presenceWorldViewRef.current, duration: PRESENCE_FLY_MS });
-      }
-    }
-
-    // Office markers: the country office as the NRC pin, other offices as
-    // the existing diamonds. Only Sudan has office data so far.
-    const markers: MapboxGLAny[] = [];
-    if (country) {
-      const hover = (el: HTMLElement, lngLat: [number, number], payload: PresenceOfficeHover) => {
-        el.addEventListener("mouseenter", () => {
-          const p = m.project(lngLat);
-          onPresenceHoverRef.current?.({ ...payload, x: p.x, y: p.y });
-        });
-        el.addEventListener("mouseleave", () => onPresenceHoverRef.current?.(null));
-      };
-      const pin = (lngLat: [number, number], payload: PresenceOfficeHover) => {
-        const el = document.createElement("div");
-        el.style.cssText = "width:34px;height:44px;cursor:default";
-        el.innerHTML = `<img src="${nrcPinDataUrl()}" width="34" height="44" alt="" style="display:block" />`;
-        hover(el, lngLat, payload);
-        markers.push(new mb.Marker({ element: el, anchor: "bottom" }).setLngLat(lngLat).addTo(m));
-      };
-      if (selected === "SD") {
-        for (const office of PRESENCE_SUDAN_OFFICES) {
-          const lngLat: [number, number] = [office.longitude, office.latitude];
-          const payload: PresenceOfficeHover = { kind: "office", officeId: office.id };
-          if (office.officeType === "country_office") {
-            pin(lngLat, payload);
-            continue;
-          }
-          const el = buildNrcOfficeMarkerElement(office, isDarkRef.current);
-          el.style.cursor = "default";
-          hover(el, lngLat, payload);
-          markers.push(new mb.Marker({ element: el }).setLngLat(lngLat).addTo(m));
-        }
-      } else {
-        pin(country.pinLngLat, { kind: "countryOffice", iso2: selected! });
-      }
-    }
-    return () => {
-      for (const mk of markers) {
-        try { mk.remove(); } catch (mapErr) { reportMapError(map.current, mapErr, "remove"); }
-      }
-      onPresenceHoverRef.current?.(null);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loaded, presenceVersion, selectedPresenceIso, countryFitInsetRight, countryFitInsetBottom]);
+    presenceModeRef.current?.update(presenceStateRef.current);
+  }, [loaded, selectedPresenceIso, countryFitInsetRight, countryFitInsetBottom]);
 
   // Leaving the presence map puts the zoom buttons back.
   useEffect(() => {
