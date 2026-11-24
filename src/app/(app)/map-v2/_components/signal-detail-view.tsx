@@ -8,6 +8,7 @@ import { SeverityTag } from "~/containers/map/layers/signals/severity-tag";
 import { getDisasterPills } from "~/lib/disaster-types";
 import { resolveLocationName } from "~/lib/location";
 import { signalLocationOf } from "~/lib/location-challenge";
+import { BidiTitle } from "~/components/ui/bidi-title";
 import { reportHandledError } from "~/lib/report-handled-error";
 import { mapSeverity, type GqlSignalDetail } from "~/lib/types/graphql";
 import { api } from "~/trpc/react";
@@ -70,7 +71,7 @@ function SignalDetail({ signal, back }: { signal: GqlSignalDetail; back: PanelBa
               py={12}
               c={TEXT_PRIMARY}
             >
-              {signal.title ?? tSignal("untitled")}
+              <BidiTitle>{signal.title ?? tSignal("untitled")}</BidiTitle>
             </Title>
           </Stack>
           <Group gap={10} py={4} align="flex-start">

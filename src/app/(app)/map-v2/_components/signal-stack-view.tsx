@@ -10,6 +10,7 @@ import { useSignalsForMap } from "~/containers/map/hooks/use-signals-for-map";
 import { useTimeframeQuery } from "~/containers/map/hooks/use-timeframe";
 import type { LngLatPoint } from "~/containers/map/selection";
 import { useLocations } from "~/hooks/use-locations";
+import { BidiTitle } from "~/components/ui/bidi-title";
 import { reportHandledError } from "~/lib/report-handled-error";
 import { mapSeverity } from "~/lib/types/graphql";
 import { BackLink } from "./back-link";
@@ -165,7 +166,7 @@ export function SignalStackView({ point, onOpenSignal, onBack }: SignalStackView
                       c={TEXT_PRIMARY}
                       className={classes.rowTitle}
                     >
-                      {signal.title ?? tSignal("untitled")}
+                      <BidiTitle>{signal.title ?? tSignal("untitled")}</BidiTitle>
                     </Text>
                     <Box component="span" h={ROW_LINE_PX} mt={BADGE_NUDGE} className={classes.rowTag}>
                       <SeverityTag severity={mapSeverity(signal.severity)} />
