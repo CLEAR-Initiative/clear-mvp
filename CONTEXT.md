@@ -345,6 +345,13 @@ selects the stack: the **Map panel** lists its signals (the **Signal list**).
 _Avoid_: spiderfying stacks on map v2; "duplicates" (stacked signals are distinct
 signals at one place).
 
+**Density display**:
+How the signals layer shows where **Signals** gather: **Clusters** (numbered **Signal
+clusters**) or **Heatmap** (a colour field weighted by severity). The user picks one in the
+legend. In Heatmap, the heat gives way to single signals once the map reaches country zoom.
+_Avoid_: "aggregation mode" (the old map's code name, picked by zoom, not by the user);
+"alerts density".
+
 **Basemap triad**:
 Exactly one basemap is active: **Simple**, **Topography**, or **Satellite**. Not a
 Satellite checkbox stacked on Simple.
