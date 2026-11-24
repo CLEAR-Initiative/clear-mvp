@@ -24,6 +24,7 @@ export function LayerManagerItem({ layer, beforeId, onStatusChange }: LayerManag
       beforeId={beforeId}
       opacity={layer.opacity}
       visible={layer.visibility}
+      settings={layer.settings}
       onStatusChange={handleStatusChange}
     />
   );

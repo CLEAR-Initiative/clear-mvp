@@ -3,12 +3,15 @@ import { useCallback } from "react";
 import { z } from "zod";
 import { isLayerId, type LayerId } from "../layers/registry";
 
-export type ActiveLayer = { id: LayerId; visibility: boolean; opacity: number };
+export type LayerSettings = Record<string, unknown>;
+
+export type ActiveLayer = { id: LayerId; visibility: boolean; opacity: number; settings?: LayerSettings };
 
 const activeLayerSchema = z.object({
   id: z.string(),
   visibility: z.boolean(),
   opacity: z.number().min(0).max(1),
+  settings: z.record(z.string(), z.unknown()).optional(),
 });
 
 export const DEFAULT_LAYERS: ActiveLayer[] = [{ id: "signals", visibility: true, opacity: 1 }];

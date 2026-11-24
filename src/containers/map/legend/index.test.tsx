@@ -8,8 +8,8 @@ vi.mock("next-intl", () => ({
   useFormatter: () => ({ number: String }),
 }));
 
-vi.mock("../layers/registry", () => ({
-  LAYERS: { signals: { Legend: () => <p>signals legend</p> } },
+vi.mock("../layers/registry", async () => ({
+  LAYERS: { signals: { Legend: (await import("../layers/signals/legend")).SignalsLegend } },
   isLayerId: (id: string) => id === "signals",
 }));
 
@@ -34,7 +34,7 @@ describe("Legend", () => {
     );
 
     fireEvent.click(screen.getByRole("button", { name: "controls.legend" }));
-    expect(screen.getByText("signals legend")).toBeInTheDocument();
+    expect(screen.getByText("mapV2.layers.signals.severity")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "showLayer" }));
     await waitFor(() => expect(onUrlUpdate).toHaveBeenCalled());
@@ -58,6 +58,33 @@ describe("Legend", () => {
 
     fireEvent.keyDown(opacityButton, { key: "Escape" });
     await waitFor(() => expect(screen.queryByRole("slider")).not.toBeInTheDocument());
-    expect(screen.getByText("signals legend")).toBeInTheDocument();
+    expect(screen.getByText("mapV2.layers.signals.severity")).toBeInTheDocument();
+  });
+
+  it("switches the density display in ?layers and writes nothing for the default", async () => {
+    const onUrlUpdate = vi.fn<(event: UrlUpdateEvent) => void>();
+    const lastLayers = () => JSON.parse(onUrlUpdate.mock.calls.at(-1)?.[0].searchParams.get("layers") ?? "null");
+    render(
+      <MantineProvider>
+        <NuqsTestingAdapter
+          searchParams={{ layers: JSON.stringify([{ id: "signals", visibility: true, opacity: 1 }]) }}
+          onUrlUpdate={onUrlUpdate}
+        >
+          <Legend />
+        </NuqsTestingAdapter>
+      </MantineProvider>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "controls.legend" }));
+    expect(screen.getByText("mapV2.layers.signals.fewerSignals")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("radio", { name: "mapV2.layers.signals.heatmap" }));
+    await waitFor(() =>
+      expect(lastLayers()).toEqual([{ id: "signals", visibility: true, opacity: 1, settings: { density: "heatmap" } }]),
+    );
+    expect(screen.getByText("mapV2.layers.signals.high")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("radio", { name: "mapV2.layers.signals.clusters" }));
+    await waitFor(() => expect(lastLayers()).toStrictEqual([{ id: "signals", visibility: true, opacity: 1 }]));
   });
 });

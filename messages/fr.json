@@ -4604,7 +4604,16 @@
         "cluster": {
           "zoom": "{count} signaux, zoomer",
           "stacked": "{count} signaux à cet emplacement"
-        }
+        },
+        "density": "Densité",
+        "showing": "Affichage :",
+        "densityDisplay": "Affichage de la densité",
+        "clusters": "Groupes",
+        "heatmap": "Carte de chaleur",
+        "fewerSignals": "Moins de signaux",
+        "moreSignals": "Plus de signaux",
+        "low": "Faible",
+        "high": "Élevée"
       }
     },
     "errors": {

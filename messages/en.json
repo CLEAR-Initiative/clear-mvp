@@ -4604,7 +4604,16 @@
         "cluster": {
           "zoom": "{count} signals, zoom in",
           "stacked": "{count} signals at this location"
-        }
+        },
+        "density": "Density",
+        "showing": "Showing:",
+        "densityDisplay": "Density display",
+        "clusters": "Clusters",
+        "heatmap": "Heatmap",
+        "fewerSignals": "Fewer signals",
+        "moreSignals": "More signals",
+        "low": "Low",
+        "high": "High"
       }
     },
     "errors": {

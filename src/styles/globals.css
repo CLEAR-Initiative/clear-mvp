@@ -114,6 +114,9 @@
   --map-timeline-on-handle: #FFFFFF;
   --map-timeline-preset-active: #D1381D;
   --map-timeline-on-preset-active: #FFFFFF;
+  --map-heatmap-low: #E0D493;
+  --map-heatmap-high: #A1000D;
+  --map-toggle-off: #E9E9E9;
 }
 
 /* ============================================
@@ -194,6 +197,9 @@
   --map-timeline-on-handle: #111111;
   --map-timeline-preset-active: #D1381D;
   --map-timeline-on-preset-active: #FFFFFF;
+  --map-heatmap-low: #E0D493;
+  --map-heatmap-high: #D11A23;
+  --map-toggle-off: #2D2D2D;
 }
 
 /* Base styles */
