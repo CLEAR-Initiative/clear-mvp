@@ -22,6 +22,20 @@ describe("layers param", () => {
     expect(parseLayers(JSON.stringify([{ id: "signals", visibility: true, opacity: 2 }]))).toEqual([]);
   });
 
+  it("keeps a layer's settings and adds none to an entry without them", () => {
+    const value = JSON.stringify([{ id: "signals", visibility: true, opacity: 1, settings: { density: "heatmap" } }]);
+    expect(parseLayers(value)).toStrictEqual([
+      { id: "signals", visibility: true, opacity: 1, settings: { density: "heatmap" } },
+    ]);
+    expect(parseLayers(JSON.stringify([{ id: "signals", visibility: true, opacity: 1 }]))).toStrictEqual([
+      { id: "signals", visibility: true, opacity: 1 },
+    ]);
+  });
+
+  it("drops an item whose settings are not an object", () => {
+    expect(parseLayers(JSON.stringify([{ id: "signals", visibility: true, opacity: 1, settings: "x" }]))).toEqual([]);
+  });
+
   it.each(["not json", "{}", "null"])("returns null for %j so the default applies", (value) => {
     expect(parseLayers(value)).toBeNull();
   });

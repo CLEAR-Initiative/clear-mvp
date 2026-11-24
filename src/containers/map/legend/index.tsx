@@ -59,7 +59,7 @@ export function Legend() {
                     <IconX size={16} />
                   </UnstyledButton>
                 </div>
-                <LayerLegend />
+                <LayerLegend settings={layer.settings} onSettingsChange={(settings) => updateLayer(id, { settings })} />
               </Fragment>
             );
           })}
