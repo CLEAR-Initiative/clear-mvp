@@ -84,6 +84,18 @@
   box-shadow: none;
 }
 
+.scales {
+  display: grid;
+}
+
+.scales > * {
+  grid-area: 1 / 1;
+}
+
+.scales > [aria-hidden="true"] {
+  visibility: hidden;
+}
+
 .scale {
   display: flex;
   align-items: center;

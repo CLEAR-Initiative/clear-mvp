@@ -45,8 +45,8 @@ export function SignalsLegend({ settings, onSettingsChange }: LegendProps) {
             }}
           />
         </div>
-        {density === "clusters" ? (
-          <div className={classes.scale}>
+        <div className={classes.scales}>
+          <div className={classes.scale} aria-hidden={density !== "clusters"}>
             <span>{t("mapV2.layers.signals.fewerSignals")}</span>
             {DENSITY_DONUT_SIZES.map((size) => (
               <span key={size} className={classes.donut} style={{ width: size, height: size }}>
@@ -55,15 +55,14 @@ export function SignalsLegend({ settings, onSettingsChange }: LegendProps) {
             ))}
             <span>{t("mapV2.layers.signals.moreSignals")}</span>
           </div>
-        ) : (
-          <div>
+          <div aria-hidden={density !== "heatmap"}>
             <div className={classes.heat} />
             <div className={classes.ends}>
               <span>{t("mapV2.layers.signals.low")}</span>
               <span>{t("mapV2.layers.signals.high")}</span>
             </div>
           </div>
-        )}
+        </div>
       </div>
       <h3 className={classes.heading}>{t("mapV2.layers.signals.severity")}</h3>
       <div>
