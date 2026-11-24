@@ -4,14 +4,15 @@ import type { MapMouseEvent } from "mapbox-gl";
 import { useEffect, useState } from "react";
 import { useMap } from "react-map-gl/mapbox";
 import { toHoveredSignal, type HoveredSignal } from "./hovered-signal";
+import type { DensityDisplay } from "./settings";
 
-export function useSignalTooltip(layerId: string, visible: boolean): HoveredSignal | null {
+export function useSignalTooltip(layerId: string, visible: boolean, density: DensityDisplay): HoveredSignal | null {
   const { current: mapRef } = useMap();
   const [signal, setSignal] = useState<HoveredSignal | null>(null);
 
   useEffect(() => {
-    if (!visible) setSignal(null);
-  }, [visible]);
+    setSignal(null);
+  }, [visible, density]);
 
   useEffect(() => {
     const map = mapRef?.getMap();

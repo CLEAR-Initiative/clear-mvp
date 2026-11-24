@@ -37,7 +37,7 @@ describe("useSignalClusters", () => {
       type: "FeatureCollection",
       features: [signal("a", 30, 15), signal("b", 30.01, 15.01)],
     };
-    const { result, rerender } = renderHook(({ collection }) => useSignalClusters(collection, true), {
+    const { result, rerender } = renderHook(({ collection }) => useSignalClusters(collection, "clusters"), {
       initialProps: { collection: empty },
     });
 
@@ -52,7 +52,7 @@ describe("useSignalClusters", () => {
       type: "FeatureCollection",
       features: [signal("a", 30, 15), signal("b", 30.01, 15.01), signal("c", -70, -10)],
     };
-    const { result } = renderHook(() => useSignalClusters(signals, true));
+    const { result } = renderHook(() => useSignalClusters(signals, "clusters"));
     const before = result.current.points;
 
     act(() => {
@@ -70,7 +70,7 @@ describe("useSignalClusters", () => {
       type: "FeatureCollection",
       features: [signal("a", 100, 15), signal("b", 100.01, 15.01)],
     };
-    const { result } = renderHook(() => useSignalClusters(signals, true));
+    const { result } = renderHook(() => useSignalClusters(signals, "clusters"));
     expect(result.current.clusters).toEqual([]);
 
     act(() => {
@@ -81,5 +81,25 @@ describe("useSignalClusters", () => {
 
     expect(result.current.clusters.map((c) => c.count)).toEqual([2]);
     vi.useRealTimers();
+  });
+
+  it("in stacked grouping, marks only signals at the same location, and only once points are drawn", () => {
+    Object.assign(camera, { west: 20, south: 5, east: 40, north: 25, zoom: 4 });
+    const signals: SignalFeatureCollection = {
+      type: "FeatureCollection",
+      features: [signal("a", 30, 15), signal("b", 30, 15), signal("c", 30.01, 15.01)],
+    };
+    const { result } = renderHook(() => useSignalClusters(signals, "stacked"));
+    expect(result.current.clusters).toEqual([]);
+
+    act(() => {
+      camera.zoom = 6;
+      listeners.get("moveend")?.();
+    });
+
+    expect(result.current.clusters.map((c) => ({ count: c.count, stacked: c.stacked }))).toEqual([
+      { count: 2, stacked: true },
+    ]);
+    expect(result.current.points.features.map((f) => f.properties.id)).toEqual(["c"]);
   });
 });

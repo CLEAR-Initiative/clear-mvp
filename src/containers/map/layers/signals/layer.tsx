@@ -9,8 +9,10 @@ import { SelectionIndicator } from "../../selection-indicator";
 import type { LayerProps } from "../types";
 import { SignalClusterMarker } from "./cluster-marker";
 import { clusterLeafIds, type ClusterMarker } from "./clusters";
+import { FADE_END, HEAT_POINTS_MIN_ZOOM, heatOpacity, pointOpacity } from "./density-fade";
 import { selectionHighlight } from "./selection-highlight";
-import { SELECTION_TOKENS, SEVERITY_TOKENS, SURFACE_TOKENS } from "./severity-tokens";
+import { parseSignalsSettings } from "./settings";
+import { HEATMAP_TOKENS, SELECTION_TOKENS, SEVERITY_TOKENS, SURFACE_TOKENS } from "./severity-tokens";
 import { signalsToFeatures } from "./to-features";
 import { SignalTooltip } from "./tooltip";
 import { useSelectableSignals } from "./use-selectable-signals";
@@ -20,17 +22,20 @@ import { useSignalTooltip } from "./use-signal-tooltip";
 
 const POINT_RADIUS = 5;
 
-export function SignalsLayer({ id, beforeId, opacity, visible, onStatusChange }: LayerProps) {
+export function SignalsLayer({ id, beforeId, opacity, visible, settings, onStatusChange }: LayerProps) {
   const shown = visible && opacity > 0;
+  const { density } = parseSignalsSettings(settings);
+  const heat = density === "heatmap";
   const { selection, select } = useMapInteractions();
   const query = useSignalsForMap();
   const severity = useThemeColors(SEVERITY_TOKENS);
   const surface = useThemeColors(SURFACE_TOKENS);
   const selectionColors = useThemeColors(SELECTION_TOKENS);
+  const heatColors = useThemeColors(HEATMAP_TOKENS);
   const data = useMemo(() => signalsToFeatures(query.data ?? []), [query.data]);
-  const { clusters, points, index } = useSignalClusters(data, shown);
+  const { clusters, points, index } = useSignalClusters(data, !shown ? "none" : heat ? "stacked" : "clusters");
   const pointIds = useMemo(() => new Set(points.features.map((feature) => feature.properties.id)), [points]);
-  const hovered = useSignalTooltip(id, shown);
+  const hovered = useSignalTooltip(id, shown, density);
   useSelectableSignals(id);
 
   const highlight = useMemo(
@@ -54,11 +59,35 @@ export function SignalsLayer({ id, beforeId, opacity, visible, onStatusChange }:
 
   return (
     <>
+      <Source id={`${id}-heat`} type="geojson" data={data}>
+        <Layer
+          id={`${id}-heat`}
+          type="heatmap"
+          beforeId={beforeId}
+          maxzoom={FADE_END}
+          layout={{ visibility: shown && heat ? "visible" : "none" }}
+          paint={{
+            "heatmap-weight": ["match", ["get", "severity"], "critical", 1, "high", 0.85, 0.65],
+            "heatmap-color": [
+              "interpolate",
+              ["linear"],
+              ["heatmap-density"],
+              0, "rgba(0,0,0,0)",
+              0.15, heatColors.low,
+              1, heatColors.high,
+            ],
+            "heatmap-intensity": ["interpolate", ["linear"], ["zoom"], 0, 0.7, 5, 1.35],
+            "heatmap-radius": ["interpolate", ["linear"], ["zoom"], 0, 12, 5, 28],
+            "heatmap-opacity": heatOpacity(opacity),
+          }}
+        />
+      </Source>
       <Source id={id} type="geojson" data={points}>
         <Layer
           id={id}
           type="circle"
           beforeId={beforeId}
+          minzoom={heat ? HEAT_POINTS_MIN_ZOOM : 0}
           layout={{ visibility: shown ? "visible" : "none" }}
           paint={{
             "circle-color": [
@@ -73,14 +102,15 @@ export function SignalsLayer({ id, beforeId, opacity, visible, onStatusChange }:
             "circle-radius": POINT_RADIUS,
             "circle-stroke-width": 1,
             "circle-stroke-color": surface.stroke,
-            "circle-opacity": opacity,
-            "circle-stroke-opacity": opacity,
+            "circle-opacity": heat ? pointOpacity(opacity) : opacity,
+            "circle-stroke-opacity": heat ? pointOpacity(opacity) : opacity,
           }}
         />
         <Layer
           id={`${id}-selected`}
           type="circle"
           beforeId={beforeId}
+          minzoom={heat ? HEAT_POINTS_MIN_ZOOM : 0}
           filter={["==", ["get", "id"], highlight.pointId ?? ""]}
           layout={{ visibility: shown && highlight.pointId ? "visible" : "none" }}
           paint={{
