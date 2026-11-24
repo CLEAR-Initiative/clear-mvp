@@ -2,6 +2,20 @@ import Supercluster from "supercluster";
 import type { SignalFeature, SignalFeatureCollection } from "./to-features";
 
 export const CLUSTER_MAX_ZOOM = 22;
+const CLUSTER_RADIUS_PX = 60;
+const CLUSTER_EXTENT = 512;
+
+/**
+ * Signals Supercluster still groups at the deepest zoom form a stack. They lie within its cluster radius at
+ * that zoom: `radius / (extent * 2^zoom)` of the world's width, ~0.00001° (~1.1 m). A stack's point is rounded
+ * to 5 decimals in the URL (±0.000005°), so membership allows for both and stays below the gap between two
+ * stacks that show as separate clusters.
+ */
+const STACK_TOLERANCE_DEG = (360 * CLUSTER_RADIUS_PX) / (CLUSTER_EXTENT * 2 ** CLUSTER_MAX_ZOOM) + 0.000005;
+
+export function isSamePoint(a: [number, number], b: [number, number]): boolean {
+  return Math.abs(a[0] - b[0]) <= STACK_TOLERANCE_DEG && Math.abs(a[1] - b[1]) <= STACK_TOLERANCE_DEG;
+}
 
 export type SignalIndex = Supercluster<SignalFeature["properties"]>;
 
@@ -17,7 +31,11 @@ export type ClusterMarker = {
 };
 
 export function createSignalIndex(collection: SignalFeatureCollection): SignalIndex {
-  const index: SignalIndex = new Supercluster({ radius: 60, maxZoom: CLUSTER_MAX_ZOOM });
+  const index: SignalIndex = new Supercluster({
+    radius: CLUSTER_RADIUS_PX,
+    extent: CLUSTER_EXTENT,
+    maxZoom: CLUSTER_MAX_ZOOM,
+  });
   index.load(collection.features);
   return index;
 }

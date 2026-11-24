@@ -1,5 +1,6 @@
 import type { GqlSignal } from "~/lib/types/graphql";
-import { isSamePoint, type LngLatPoint } from "../../selection";
+import type { LngLatPoint } from "../../selection";
+import { isSamePoint } from "./clusters";
 import { signalPoint } from "./to-features";
 
 type SignalLocations = Pick<GqlSignal, "generalLocation" | "originLocation" | "destinationLocation">;

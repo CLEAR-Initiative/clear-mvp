@@ -1,5 +1,5 @@
-import { isSamePoint, type LngLatPoint, type MapSelection } from "../../selection";
-import { clusterLeafIds, type ClusterMarker, type SignalIndex } from "./clusters";
+import type { LngLatPoint, MapSelection } from "../../selection";
+import { clusterLeafIds, isSamePoint, type ClusterMarker, type SignalIndex } from "./clusters";
 import type { SignalFeatureCollection } from "./to-features";
 
 export type SelectionHighlight = {
