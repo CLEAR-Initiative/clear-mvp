@@ -717,7 +717,7 @@ nextjs-portal {
   padding: 0;
   border: 0;
   border-radius: 50%;
-  background: var(--map-cluster);
+  background: transparent;
   cursor: pointer;
 }
 .map-v2-cluster::before {
@@ -731,6 +731,15 @@ nextjs-portal {
 }
 .map-v2-cluster[data-selected="true"] {
   box-shadow: 0 0 0 2px var(--color-bg-white);
+}
+.map-v2-cluster-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  mask: radial-gradient(closest-side, transparent calc(100% - var(--ring-band)), #000 calc(100% - var(--ring-band)));
+}
+.map-v2-cluster-ring + .map-v2-cluster-count {
+  position: relative;
 }
 /* The selection ring blinks: it holds, fades out, then comes back. */
 .map-v2-cluster[data-selected="true"]::after {

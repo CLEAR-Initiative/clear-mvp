@@ -19,6 +19,7 @@ const cluster = (stacked: boolean): ClusterMarker => ({
   coordinates: [30, 15],
   expansionZoom: stacked ? 23 : 8,
   stacked,
+  severity: { critical: 1, high: 2, medium: 0, low: 0, unknown: 0 },
 });
 
 afterEach(() => {
@@ -53,5 +54,11 @@ describe("SignalClusterMarker", () => {
     const button = screen.getByRole("button", { name: "stacked" });
     expect(button).toHaveAttribute("aria-pressed", "true");
     expect(button).toHaveAttribute("data-selected", "true");
+  });
+
+  it("draws the cluster as a severity donut", () => {
+    render(<SignalClusterMarker cluster={cluster(false)} opacity={1} selected={false} onSelectStack={vi.fn()} />);
+    const ring = screen.getByRole("button", { name: "zoom" }).querySelector<HTMLElement>(".map-v2-cluster-ring");
+    expect(ring?.style.background).toContain("conic-gradient");
   });
 });
