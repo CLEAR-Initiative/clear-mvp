@@ -2,12 +2,33 @@
 
 import { SegmentedControl } from "@mantine/core";
 import { useTranslations } from "next-intl";
+import { useEffect, useState } from "react";
+import { useMap } from "react-map-gl/mapbox";
 import type { LegendProps } from "../types";
+import { HEAT_POINTS_MIN_ZOOM } from "./density-fade";
 import { DENSITY_DISPLAYS, parseSignalsSettings, signalsSettingsFor, type DensityDisplay } from "./settings";
 import { SEVERITY_BUCKETS, SEVERITY_TOKENS } from "./severity-tokens";
 import classes from "./legend.module.css";
 
 const DENSITY_DOT_SIZES = Array.from({ length: 15 }, (_, i) => i + 3);
+
+function useZoomedIn(minZoom: number): boolean {
+  const { current: mapRef } = useMap();
+  const [zoomedIn, setZoomedIn] = useState(() => (mapRef?.getZoom() ?? 0) >= minZoom);
+
+  useEffect(() => {
+    const map = mapRef?.getMap();
+    if (!map) return;
+    const update = () => setZoomedIn(map.getZoom() >= minZoom);
+    update();
+    map.on("zoom", update);
+    return () => {
+      map.off("zoom", update);
+    };
+  }, [mapRef, minZoom]);
+
+  return zoomedIn;
+}
 
 function isDensityDisplay(value: string): value is DensityDisplay {
   return (DENSITY_DISPLAYS as readonly string[]).includes(value);
@@ -16,6 +37,8 @@ function isDensityDisplay(value: string): value is DensityDisplay {
 export function SignalsLegend({ settings, onSettingsChange }: LegendProps) {
   const t = useTranslations();
   const { density } = parseSignalsSettings(settings);
+  const zoomedIn = useZoomedIn(HEAT_POINTS_MIN_ZOOM);
+  const showsClusters = density === "clusters" || zoomedIn;
 
   return (
     <div className={classes.root}>
@@ -39,7 +62,7 @@ export function SignalsLegend({ settings, onSettingsChange }: LegendProps) {
             }}
           />
         </div>
-        {density === "clusters" ? (
+        {showsClusters ? (
           <div>
             <div className={classes.dots}>
               {DENSITY_DOT_SIZES.map((size) => (

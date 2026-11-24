@@ -8,6 +8,13 @@ vi.mock("next-intl", () => ({
   useFormatter: () => ({ number: String }),
 }));
 
+const mapState = vi.hoisted(() => ({ zoom: 3 }));
+
+vi.mock("react-map-gl/mapbox", () => {
+  const map = { getZoom: () => mapState.zoom, on: vi.fn(), off: vi.fn() };
+  return { useMap: () => ({ current: { getZoom: map.getZoom, getMap: () => map } }) };
+});
+
 vi.mock("../layers/registry", async () => ({
   LAYERS: { signals: { Legend: (await import("../layers/signals/legend")).SignalsLegend } },
   isLayerId: (id: string) => id === "signals",
@@ -17,6 +24,7 @@ const { Legend } = await import("./index");
 
 afterEach(() => {
   cleanup();
+  mapState.zoom = 3;
 });
 
 describe("Legend", () => {
@@ -86,5 +94,25 @@ describe("Legend", () => {
 
     fireEvent.click(screen.getByRole("radio", { name: "mapV2.layers.signals.clusters" }));
     await waitFor(() => expect(lastLayers()).toStrictEqual([{ id: "signals", visibility: true, opacity: 1 }]));
+  });
+
+  it("shows the cluster scale in Heatmap once the map is zoomed in to the clusters", () => {
+    mapState.zoom = 6;
+    render(
+      <MantineProvider>
+        <NuqsTestingAdapter
+          searchParams={{
+            layers: JSON.stringify([{ id: "signals", visibility: true, opacity: 1, settings: { density: "heatmap" } }]),
+          }}
+        >
+          <Legend />
+        </NuqsTestingAdapter>
+      </MantineProvider>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "controls.legend" }));
+    expect(screen.getByRole("radio", { name: "mapV2.layers.signals.heatmap" })).toBeChecked();
+    expect(screen.getByText("mapV2.layers.signals.fewerSignals")).toBeInTheDocument();
+    expect(screen.queryByText("mapV2.layers.signals.high")).not.toBeInTheDocument();
   });
 });
