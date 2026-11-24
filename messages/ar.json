@@ -4604,7 +4604,16 @@
         "cluster": {
           "zoom": "{count, plural, two {إشارتان} few {# إشارات} many {# إشارة} other {# إشارة}}، تكبير",
           "stacked": "{count, plural, two {إشارتان} few {# إشارات} many {# إشارة} other {# إشارة}} في هذا الموقع"
-        }
+        },
+        "density": "الكثافة",
+        "showing": "العرض:",
+        "densityDisplay": "طريقة عرض الكثافة",
+        "clusters": "مجموعات",
+        "heatmap": "خريطة حرارية",
+        "fewerSignals": "إشارات أقل",
+        "moreSignals": "إشارات أكثر",
+        "low": "منخفضة",
+        "high": "مرتفعة"
       }
     },
     "errors": {
