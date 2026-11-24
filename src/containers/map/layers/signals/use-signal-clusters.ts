@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMap } from "react-map-gl/mapbox";
 import {
-  CLUSTER_MAX_ZOOM,
   createSignalIndex,
   viewClusters,
   worldPoints,
@@ -11,12 +10,10 @@ import {
   type SignalIndex,
   type ViewBounds,
 } from "./clusters";
-import { HEAT_POINTS_MIN_ZOOM } from "./density-fade";
 import type { SignalFeatureCollection } from "./to-features";
 
 type ClusterView = { clusters: ClusterMarker[]; points: SignalFeatureCollection; index: SignalIndex };
 type Camera = { bounds: ViewBounds; zoom: number };
-export type SignalGrouping = "none" | "clusters" | "stacked";
 
 const MAX_LATITUDE = 85;
 const MOVE_UPDATE_MS = 150;
@@ -32,7 +29,11 @@ function paddedBounds(west: number, south: number, east: number, north: number):
   };
 }
 
-export function useSignalClusters(collection: SignalFeatureCollection, grouping: SignalGrouping): ClusterView {
+export function useSignalClusters(
+  collection: SignalFeatureCollection,
+  enabled: boolean,
+  clustersMinZoom = 0,
+): ClusterView {
   const { current: mapRef } = useMap();
   const index = useMemo(() => createSignalIndex(collection), [collection]);
   const [camera, setCamera] = useState<Camera | null>(null);
@@ -74,15 +75,14 @@ export function useSignalClusters(collection: SignalFeatureCollection, grouping:
   }, [mapRef]);
 
   const zoomLevel = camera ? Math.floor(camera.zoom) : null;
-  const points = useMemo(() => {
-    if (grouping === "stacked") return worldPoints(index, CLUSTER_MAX_ZOOM);
-    return grouping === "clusters" && zoomLevel !== null ? worldPoints(index, zoomLevel) : collection;
-  }, [grouping, zoomLevel, index, collection]);
-  const clusters = useMemo(() => {
-    if (!camera || grouping === "none") return [];
-    if (grouping === "clusters") return viewClusters(index, camera.bounds, camera.zoom);
-    return camera.zoom >= HEAT_POINTS_MIN_ZOOM ? viewClusters(index, camera.bounds, CLUSTER_MAX_ZOOM) : [];
-  }, [grouping, camera, index]);
+  const points = useMemo(
+    () => (enabled && zoomLevel !== null ? worldPoints(index, zoomLevel) : collection),
+    [enabled, zoomLevel, index, collection],
+  );
+  const clusters = useMemo(
+    () => (enabled && camera && camera.zoom >= clustersMinZoom ? viewClusters(index, camera.bounds, camera.zoom) : []),
+    [enabled, camera, index, clustersMinZoom],
+  );
 
   return { clusters, points, index };
 }

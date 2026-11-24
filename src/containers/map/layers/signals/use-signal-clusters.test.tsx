@@ -37,7 +37,7 @@ describe("useSignalClusters", () => {
       type: "FeatureCollection",
       features: [signal("a", 30, 15), signal("b", 30.01, 15.01)],
     };
-    const { result, rerender } = renderHook(({ collection }) => useSignalClusters(collection, "clusters"), {
+    const { result, rerender } = renderHook(({ collection }) => useSignalClusters(collection, true), {
       initialProps: { collection: empty },
     });
 
@@ -52,7 +52,7 @@ describe("useSignalClusters", () => {
       type: "FeatureCollection",
       features: [signal("a", 30, 15), signal("b", 30.01, 15.01), signal("c", -70, -10)],
     };
-    const { result } = renderHook(() => useSignalClusters(signals, "clusters"));
+    const { result } = renderHook(() => useSignalClusters(signals, true));
     const before = result.current.points;
 
     act(() => {
@@ -70,7 +70,7 @@ describe("useSignalClusters", () => {
       type: "FeatureCollection",
       features: [signal("a", 100, 15), signal("b", 100.01, 15.01)],
     };
-    const { result } = renderHook(() => useSignalClusters(signals, "clusters"));
+    const { result } = renderHook(() => useSignalClusters(signals, true));
     expect(result.current.clusters).toEqual([]);
 
     act(() => {
@@ -83,23 +83,23 @@ describe("useSignalClusters", () => {
     vi.useRealTimers();
   });
 
-  it("in stacked grouping, marks only signals at the same location, and only once points are drawn", () => {
+  it("from the minimum zoom, groups signals the same way as without one", () => {
     Object.assign(camera, { west: 20, south: 5, east: 40, north: 25, zoom: 4 });
     const signals: SignalFeatureCollection = {
       type: "FeatureCollection",
       features: [signal("a", 30, 15), signal("b", 30, 15), signal("c", 30.01, 15.01)],
     };
-    const { result } = renderHook(() => useSignalClusters(signals, "stacked"));
-    expect(result.current.clusters).toEqual([]);
+    const fromZoom5 = renderHook(() => useSignalClusters(signals, true, 5));
+    expect(fromZoom5.result.current.clusters).toEqual([]);
 
     act(() => {
       camera.zoom = 6;
       listeners.get("moveend")?.();
     });
 
-    expect(result.current.clusters.map((c) => ({ count: c.count, stacked: c.stacked }))).toEqual([
-      { count: 2, stacked: true },
-    ]);
-    expect(result.current.points.features.map((f) => f.properties.id)).toEqual(["c"]);
+    const always = renderHook(() => useSignalClusters(signals, true));
+    expect(fromZoom5.result.current.clusters.map((c) => c.count)).toEqual([3]);
+    expect(fromZoom5.result.current.clusters).toEqual(always.result.current.clusters);
+    expect(fromZoom5.result.current.points).toEqual(always.result.current.points);
   });
 });

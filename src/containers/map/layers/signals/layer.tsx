@@ -33,7 +33,7 @@ export function SignalsLayer({ id, beforeId, opacity, visible, settings, onStatu
   const selectionColors = useThemeColors(SELECTION_TOKENS);
   const heatColors = useThemeColors(HEATMAP_TOKENS);
   const data = useMemo(() => signalsToFeatures(query.data ?? []), [query.data]);
-  const { clusters, points, index } = useSignalClusters(data, !shown ? "none" : heat ? "stacked" : "clusters");
+  const { clusters, points, index } = useSignalClusters(data, shown, heat ? HEAT_POINTS_MIN_ZOOM : 0);
   const pointIds = useMemo(() => new Set(points.features.map((feature) => feature.properties.id)), [points]);
   const hovered = useSignalTooltip(id, shown, density);
   useSelectableSignals(id);
