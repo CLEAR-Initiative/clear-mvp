@@ -3,11 +3,17 @@
 import { SegmentedControl } from "@mantine/core";
 import { useTranslations } from "next-intl";
 import type { LegendProps } from "../types";
+import { donutBand, donutGradient, type SeverityCounts } from "./donut";
 import { DENSITY_DISPLAYS, parseSignalsSettings, signalsSettingsFor, type DensityDisplay } from "./settings";
 import { SEVERITY_BUCKETS, SEVERITY_TOKENS } from "./severity-tokens";
 import classes from "./legend.module.css";
 
-const DENSITY_DOT_SIZES = Array.from({ length: 15 }, (_, i) => i + 3);
+const DENSITY_DONUT_SIZES = [20, 22, 24, 26, 28];
+const SAMPLE_MIX: SeverityCounts = { critical: 1, high: 3, medium: 2, low: 1, unknown: 1 };
+
+function donutRingStyle(size: number): React.CSSProperties {
+  return { background: donutGradient(SAMPLE_MIX), "--ring-band": `${donutBand(size)}px` } as React.CSSProperties;
+}
 
 function isDensityDisplay(value: string): value is DensityDisplay {
   return (DENSITY_DISPLAYS as readonly string[]).includes(value);
@@ -40,16 +46,14 @@ export function SignalsLegend({ settings, onSettingsChange }: LegendProps) {
           />
         </div>
         {density === "clusters" ? (
-          <div>
-            <div className={classes.dots}>
-              {DENSITY_DOT_SIZES.map((size) => (
-                <span key={size} className={classes.dot} style={{ width: size, height: size }} />
-              ))}
-            </div>
-            <div className={classes.ends}>
-              <span>{t("mapV2.layers.signals.fewerSignals")}</span>
-              <span>{t("mapV2.layers.signals.moreSignals")}</span>
-            </div>
+          <div className={classes.scale}>
+            <span>{t("mapV2.layers.signals.fewerSignals")}</span>
+            {DENSITY_DONUT_SIZES.map((size) => (
+              <span key={size} className={classes.donut} style={{ width: size, height: size }}>
+                <span className="map-v2-cluster-ring" style={donutRingStyle(size)} />
+              </span>
+            ))}
+            <span>{t("mapV2.layers.signals.moreSignals")}</span>
           </div>
         ) : (
           <div>

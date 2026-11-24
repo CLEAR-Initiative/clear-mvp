@@ -84,18 +84,28 @@
   box-shadow: none;
 }
 
-.dots {
+.scale {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  height: 17px;
+  gap: 7px;
   margin-top: 4px;
+  font-size: 10px;
+  line-height: 16px;
+  color: var(--color-text-secondary);
 }
 
-.dot {
+.scale > span:first-child,
+.scale > span:last-child {
+  flex: 1;
+}
+
+.scale > span:last-child {
+  text-align: end;
+}
+
+.donut {
+  position: relative;
   flex-shrink: 0;
-  border-radius: 50%;
-  background: var(--map-cluster);
 }
 
 .heat {
