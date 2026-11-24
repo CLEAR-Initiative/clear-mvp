@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { UnstyledButton } from "@mantine/core";
 import { useMediaQuery } from "@mantine/hooks";
 import { IconChevronDown, IconChevronUp } from "@tabler/icons-react";
@@ -28,7 +28,12 @@ const OPEN_QUERY = "(min-width: 62em)";
 
 const bold = (chunks: ReactNode) => <b>{chunks}</b>;
 
-export function Timeline({ onHeightChange }: { onHeightChange: (px: number, open: boolean) => void }) {
+type TimelineProps = {
+  onHeightChange: (px: number, open: boolean) => void;
+  insetStart?: number;
+};
+
+export function Timeline({ onHeightChange, insetStart = 0 }: TimelineProps) {
   const t = useTranslations("mapV2.timeline");
   const locale = useLocale();
   const wide = useMediaQuery(OPEN_QUERY, undefined, { getInitialValueInEffect: false }) ?? false;
@@ -82,6 +87,7 @@ export function Timeline({ onHeightChange }: { onHeightChange: (px: number, open
     ? (mapSignals.data?.length ?? 0)
     : counts.slice(shown[0], shown[1] + 1).reduce((sum, count) => sum + count, 0);
   const countStatus = fromMap ? mapStatus : status;
+  const insetStyle = { "--map-timeline-inset-start": `${insetStart}px` } as CSSProperties;
   const count =
     countStatus === "ready" ? t.rich("count", { total, b: bold }) : t.rich("countPending", { b: bold });
 
@@ -132,7 +138,7 @@ export function Timeline({ onHeightChange }: { onHeightChange: (px: number, open
   const activePreset = draft ? null : presetOf(timeframe);
 
   return (
-    <section ref={rootRef} aria-label={t("label")} className={classes.root}>
+    <section ref={rootRef} aria-label={t("label")} className={classes.root} style={insetStyle}>
       <div className={classes.top}>
         <div className={classes.presets}>
           {PRESETS.map((preset) => (
