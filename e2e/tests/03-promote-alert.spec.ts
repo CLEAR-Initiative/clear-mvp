@@ -16,14 +16,19 @@ test.describe("Promote event to alert (case 3)", () => {
     await gotoEventByTitle(page, SEEDED_EVENTS.displacement);
 
     const turnIntoAlert = page.getByRole("button", { name: "Turn into Alert" });
-    const alertState = page.getByRole("button", { name: "Alert", exact: true });
+    const alertStatus = page.getByTestId("event-alert-status");
 
     if (await turnIntoAlert.isVisible().catch(() => false)) {
       await turnIntoAlert.click();
       await page.getByRole("button", { name: "Confirm" }).click();
     }
 
-    // After promotion the action collapses to a disabled "Alert" button.
-    await expect(alertState).toBeVisible();
+    // After promotion the Actions panel says the event is an alert, with its
+    // status, and the header carries the alert chip.
+    await expect(alertStatus).toBeVisible();
+    await expect(alertStatus).toContainText("Raised as an alert");
+    await expect(alertStatus).toContainText("Published");
+    await expect(page.getByTestId("event-alert-chip")).toContainText(/Alert · Published/i);
+    await expect(turnIntoAlert).toHaveCount(0);
   });
 });
