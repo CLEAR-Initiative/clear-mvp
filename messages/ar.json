@@ -1775,8 +1775,8 @@
         "alerts": "{count, plural, one {تنبيه} other {تنبيهات}}",
         "signals": "{count, plural, one {إشارة} other {إشارات}}"
       },
-      "count": "<b>{total}</b> {noun} · {scope} · {date}",
-      "countNarrowed": "<b>{shown}</b> من {total} {noun} · {scope} · {date}",
+      "count": "<b>{total}</b> {noun} · {scope}",
+      "countNarrowed": "<b>{shown}</b> من {total} {noun} · {scope}",
       "newCount": "{count} جديد",
       "empty": {
         "events": "لا توجد أحداث مطابقة",
@@ -1802,6 +1802,13 @@
         "90d": "90 يومًا"
       },
       "timelineSummary": "{range} · <b>{total}</b> {noun}",
+      "date": {
+        "change": "تغيير الفترة الزمنية",
+        "custom": "فترة مخصصة",
+        "from": "من",
+        "to": "إلى",
+        "apply": "تطبيق"
+      },
       "today": "اليوم",
       "hideList": "إخفاء القائمة",
       "showList": "إظهار القائمة",

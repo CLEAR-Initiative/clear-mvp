@@ -377,6 +377,21 @@ export function dateOfKey(key: string): string | null {
   return n >= 1 && n <= 90 ? dateForDays(n) : null;
 }
 
+/**
+ * A from-to of UTC days in words: "3 Aug – 14 Sept", one day as "3 Aug". The
+ * year shows when either end is outside the current one ("3 Aug 2025 – 14 Sept 2025").
+ */
+export function formatDayRange(fromIso: string, toIso: string, locale: string, now: Date): string {
+  const from = new Date(fromIso);
+  const to = new Date(toIso);
+  const thisYear = now.getUTCFullYear();
+  const withYear = from.getUTCFullYear() !== thisYear || to.getUTCFullYear() !== thisYear;
+  const f = new Intl.DateTimeFormat(locale, { day: "numeric", month: "short", year: withYear ? "numeric" : undefined, timeZone: "UTC" });
+  const a = f.format(from);
+  const b = f.format(to);
+  return a === b ? a : `${a} – ${b}`;
+}
+
 // ─── Filters and matching ───────────────────────────────────────────────────
 
 export type Dim = "region" | "sev" | "types" | "sources";

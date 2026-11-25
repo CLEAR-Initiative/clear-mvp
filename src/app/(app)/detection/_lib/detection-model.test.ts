@@ -5,6 +5,7 @@ import {
   barHeights,
   dateKeyOf,
   dateOfKey,
+  formatDayRange,
   barIndexOf,
   moveHandle,
   nearestHandle,
@@ -182,6 +183,13 @@ describe("timeline range", () => {
       from: "2026-08-13T00:00:00.000Z",
       to: "2026-08-15T23:59:59.999Z",
     });
+  });
+
+  it("words a custom range, with the year when it leaves the current one", () => {
+    const now = new Date("2026-11-25T12:00:00Z");
+    expect(formatDayRange("2026-08-03T00:00:00.000Z", "2026-09-14T23:59:59.999Z", "en-GB", now)).toBe("3 Aug – 14 Sept");
+    expect(formatDayRange("2026-08-03T00:00:00.000Z", "2026-08-03T23:59:59.999Z", "en-GB", now)).toBe("3 Aug");
+    expect(formatDayRange("2025-12-20T00:00:00.000Z", "2026-01-05T23:59:59.999Z", "en-GB", now)).toBe("20 Dec 2025 – 5 Jan 2026");
   });
 });
 
