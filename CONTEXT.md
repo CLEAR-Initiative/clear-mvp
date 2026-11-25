@@ -515,8 +515,10 @@ stacking bottom sheets on mobile.
 The floating card that shows a map marker's summary and View details CTA. Draggable on
 desktop; bottom sheet on mobile.
 On the desktop Detection map, selecting a feed row or a pin opens a single compact
-preview and keeps the feed and current map view in place. The preview opens in the
-bottom-right corner when there is room, or beside its pin on a narrower map. Selecting
+preview and keeps the feed open. Selecting an offscreen point from the feed or with the
+preview's previous and next arrows briefly frames both locations, then centers the new point
+at the original zoom. Selecting a visible point leaves the camera in place. The preview opens
+in the bottom-right corner when there is room, or beside its pin on a narrower map. Selecting
 another item keeps the card in place and connects it to the newly selected visible pin.
 The address bar keeps the Detection view and filters. View details links to the record's full page.
 _Avoid_: "popup", "window", "modal" (it is not modal — the map stays interactive).

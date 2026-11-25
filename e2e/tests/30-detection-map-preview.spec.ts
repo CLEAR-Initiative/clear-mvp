@@ -8,6 +8,33 @@ import { test, expect } from "../support/test";
 const flood = "Flood warnings along the Nile in Khartoum";
 const bridge = "Bridge damage reported in Omdurman";
 
+// The seeded signals have no severity. Give this page classified signals
+// so the default feed includes them, preserving their real IDs and points.
+async function openSeededSignals(page: Page, titles: string[]) {
+  await page.route("**/api/trpc/**", async route => {
+    const names = new URL(route.request().url()).pathname.split("/api/trpc/")[1]?.split(",") ?? [];
+    const index = names.indexOf("signals.signalsPage");
+    if (index < 0) return route.fallback();
+    const response = await route.fetch();
+    const body = await response.json();
+    const result = Array.isArray(body) ? body[index] : body;
+    // Keep the two real neighbours under test, independent of other seeded
+    // or newly created signals and their ordering in the shared database.
+    const data = result.result.data.json;
+    data.items = data.items.filter((signal: { title: string }) => titles.includes(signal.title));
+    data.totalCount = data.items.length;
+    data.hasMore = false;
+    for (const signal of data.items) signal.severity ??= 3;
+    await route.fulfill({ response, json: body });
+  });
+  await page.goto("/detection?tab=signals", { waitUntil: "domcontentloaded" });
+  await expect(eventRows(page).filter({ hasText: flood })).toBeVisible();
+  await page.waitForFunction(() => {
+    const map = window.__clearE2EMap as MapboxMap | undefined;
+    return map?.getSource("crisis-markers") && !map.isMoving();
+  });
+}
+
 async function dragPreview(page: Page, preview: Locator) {
   const card = (await preview.boundingBox())!;
   const area = (await preview.locator("..").boundingBox())!;
@@ -44,6 +71,62 @@ test.use({
 
 test.beforeAll(async ({ playwright }) => {
   await enableFeatureFlags(playwright, ["agent"]);
+});
+
+test("selecting an offscreen signal from the feed or preview arrows frames both locations and restores the zoom", async ({ page }) => {
+  test.skip(process.env.E2E_REAL_MAP !== "1", "requires the real Mapbox canvas in the E2E image");
+  const nyala = "IDP camp overcrowding reported in Nyala";
+  await openSeededSignals(page, [nyala, flood]);
+  const locations: Record<string, [number, number]> = { [nyala]: [24.88, 12.05], [flood]: [32.56, 15.59] };
+  const zoom = 11;
+  await page.evaluate(({ origin, zoom }) => {
+    (window.__clearE2EMap as MapboxMap).jumpTo({ center: origin, zoom });
+  }, { origin: locations[nyala]!, zoom });
+  const oldRow = eventRows(page).filter({ hasText: nyala });
+  await oldRow.click();
+  await expect(oldRow).toHaveAttribute("aria-pressed", "true");
+
+  const preview = page.getByTestId("detection-marker-preview");
+  async function follow(from: string, to: string, control: Locator) {
+    const target = locations[to]!;
+    // Observe real animation frames before clicking. Polling from Playwright can
+    // miss the intermediate view when a busy runner draws only a few frames.
+    const flight = await page.evaluateHandle(({ origin, target }) => {
+      const map = window.__clearE2EMap as MapboxMap;
+      const seen = { startedOffscreen: !map.getBounds()!.contains(target), framedBoth: false, starts: 0, ends: 0 };
+      map.on("movestart", () => { seen.starts++; });
+      map.on("moveend", () => { seen.ends++; });
+      const sample = () => {
+        const bounds = map.getBounds()!;
+        if (bounds.contains(origin) && bounds.contains(target)) {
+          seen.framedBoth = true;
+          map.off("move", sample);
+        }
+      };
+      map.on("move", sample);
+      return seen;
+    }, { origin: locations[from]!, target });
+    expect(await flight.evaluate(seen => seen.startedOffscreen)).toBe(true);
+    await control.click();
+    await expect(preview).toContainText(to);
+    await expect.poll(() => flight.evaluate(seen => seen.framedBoth), {
+      message: "the flight shows the previous and selected locations together",
+    }).toBe(true);
+    await expect.poll(() => page.evaluate(() => {
+      const map = window.__clearE2EMap as MapboxMap;
+      if (map.isMoving()) return null;
+      return [...map.getCenter().toArray(), map.getZoom()];
+    })).toEqual([expect.closeTo(target[0], 4), expect.closeTo(target[1], 4), expect.closeTo(zoom, 4)]);
+    expect(await flight.evaluate(({ starts, ends }) => [starts, ends])).toEqual([1, 1]);
+    await expectConnector(page.locator(".mapboxgl-map").getByRole("button", { name: to, exact: true }));
+  }
+
+  await follow(nyala, flood, eventRows(page).filter({ hasText: flood }));
+  const previous = preview.getByRole("button", { name: "Previous signal" });
+  const next = preview.getByRole("button", { name: "Next signal" });
+  const [outbound, inbound] = await previous.isEnabled() ? [previous, next] : [next, previous];
+  await follow(flood, nyala, outbound);
+  await follow(nyala, flood, inbound);
 });
 
 for (const width of [790, 820]) {
@@ -144,26 +227,9 @@ for (const [width, height] of [[1024, 768], [1366, 768], [1440, 900]] as const) 
     test("a dragged signal preview stays put and its connector follows the selected pin", async ({ page }) => {
       test.skip(process.env.E2E_REAL_MAP !== "1", "requires the real Mapbox canvas in the E2E image");
       test.setTimeout(100_000);
-      // The seeded signals have no severity. Give this page classified signals
-      // so the default feed includes them, preserving their real IDs and points.
-      await page.route("**/api/trpc/**", async route => {
-        const names = new URL(route.request().url()).pathname.split("/api/trpc/")[1]?.split(",") ?? [];
-        const index = names.indexOf("signals.signalsPage");
-        if (index < 0) return route.fallback();
-        const response = await route.fetch();
-        const body = await response.json();
-        const result = Array.isArray(body) ? body[index] : body;
-        for (const signal of result.result.data.json.items) signal.severity ??= 3;
-        await route.fulfill({ response, json: body });
-      });
-      await page.goto("/detection?tab=signals", { waitUntil: "domcontentloaded" });
+      await openSeededSignals(page, [flood, bridge]);
       const floodRow = eventRows(page).filter({ hasText: flood });
       const bridgeRow = eventRows(page).filter({ hasText: bridge });
-      await expect(floodRow).toBeVisible();
-      await page.waitForFunction(() => {
-        const map = window.__clearE2EMap as MapboxMap | undefined;
-        return map?.getSource("crisis-markers") && !map.isMoving();
-      });
       // Start close enough to work with individual pins, at a repeatable camera.
       await page.evaluate(() => {
         (window.__clearE2EMap as MapboxMap).jumpTo({ center: [32.52, 15.615], zoom: 9.5 });

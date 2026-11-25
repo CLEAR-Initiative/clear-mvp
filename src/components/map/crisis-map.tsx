@@ -86,6 +86,7 @@ import { setMapCursor } from "~/lib/map/map-cursor";
 import { createMapboxMap, loadMapboxGL, mapLoadStage } from "~/lib/map/load-mapbox-gl";
 import { reportHandledError } from "~/lib/report-handled-error";
 import { flyToOrientation, countryFitPadding, fitBoundsCameraOptions } from "~/lib/map/marker-detail-camera";
+import { createMarkerReveal } from "~/lib/map/marker-reveal";
 import {
   framedCountryAfterFocusChange,
   shouldSkipCountryFit,
@@ -169,6 +170,8 @@ export interface CrisisMapApi {
   samplePointAltitude: (lng: number, lat: number) => PointAltitudeResult;
   /** Current camera including pitch/bearing. */
   getViewCamera: () => MapViewCameraSnapshot | null;
+  /** Follow an offscreen feed selection at the user's current zoom. */
+  markerReveal: ReturnType<typeof createMarkerReveal>;
   /** Instant restore (no fly) for map ↔ detail round-trips. */
   restoreViewCamera: (camera: MapViewCameraSnapshot) => void;
   /** Programmatic fly for place search — does not fight React center/zoom props. */
@@ -3665,11 +3668,13 @@ export function CrisisMap({
   // Expose project helpers for overlays (spaghetti connectors on /map).
   useEffect(() => {
     if (!mapApiRef) return;
-    if (!loaded) {
+    if (!loaded || !map.current) {
       mapApiRef.current = null;
       return;
     }
+    const markerReveal = createMarkerReveal(map.current);
     mapApiRef.current = {
+      markerReveal,
       projectMarker: (id, lng, lat) => {
         const m = map.current;
         if (!m) return null;
@@ -3768,6 +3773,7 @@ export function CrisisMap({
       },
     };
     return () => {
+      markerReveal.cancel();
       mapApiRef.current = null;
     };
   }, [loaded, mapApiRef]);

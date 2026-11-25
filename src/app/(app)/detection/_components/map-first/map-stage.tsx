@@ -23,6 +23,7 @@ const CrisisMap = dynamic(() => import("~/components/map/crisis-map").then((m) =
 });
 
 interface MapStageProps {
+  mapApiRef: MutableRefObject<CrisisMapApi | null>;
   markers: MapMarker[];
   hoveredMarkerId: number | null;
   selectedMarkerId: number | null;
@@ -60,10 +61,9 @@ export function MapStage(props: MapStageProps) {
   const {
     markers, selectedMarkerId, hoveredMarkerId, onMarkerClick, onMarkerHover, preview, center, zoom, fitBoundsGeometry, adminBoundaries, adminBoundaryLevel,
     scopeCountryIsos, mapboxAdmin1Isos, boundaryLevel, onBoundaryLevelChange, focusCountryPCode, focusCountryName,
-    focusCountryGeometry, listHidden, onToggleList, placeLabels, onPickPlace, onDistrictZoom, children,
+    focusCountryGeometry, listHidden, onToggleList, placeLabels, onPickPlace, onDistrictZoom, children, mapApiRef,
   } = props;
   const t = useTranslations("detection.mapFirst");
-  const apiRef = useRef<CrisisMapApi | null>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const selectedElement = useRef<{ id: number | null; el?: HTMLElement | null }>({ id: null });
   const [markerAnchor, setMarkerAnchor] = useState<{ id: number | null; point?: MarkerScreenPoint | null }>({ id: null });
@@ -101,17 +101,17 @@ export function MapStage(props: MapStageProps) {
     labelsRef.current?.layout();
     if (selectedElement.current.el) updateAnchor();
     if (zoomedIn.current) return;
-    const zoom = apiRef.current?.getViewCamera()?.zoom;
+    const zoom = mapApiRef.current?.getViewCamera()?.zoom;
     if (zoom != null && zoom >= DISTRICT_ZOOM) {
       zoomedIn.current = true;
       onDistrictZoomRef.current();
     }
-  }, [updateAnchor]);
+  }, [mapApiRef, updateAnchor]);
 
   return (
     <div ref={stageRef} className={css.map}>
       <MapLayer
-        mapApiRef={apiRef}
+        mapApiRef={mapApiRef}
         onMapMove={onMapMove}
         connector={connector}
         hideStateLabels={placeLabels.some((l) => l.level === 1)}
@@ -135,7 +135,7 @@ export function MapStage(props: MapStageProps) {
         focusCountryGeometry={focusCountryGeometry}
       />
 
-      <PlaceLabels ref={labelsRef} labels={placeLabels} apiRef={apiRef} onPick={onPickPlace} />
+      <PlaceLabels ref={labelsRef} labels={placeLabels} apiRef={mapApiRef} onPick={onPickPlace} />
 
       <button
         type="button"
@@ -154,7 +154,6 @@ export function MapStage(props: MapStageProps) {
 }
 
 type MapLayerProps = Omit<MapStageProps, "listHidden" | "onToggleList" | "children" | "placeLabels" | "onPickPlace" | "onDistrictZoom" | "preview"> & {
-  mapApiRef: MutableRefObject<CrisisMapApi | null>;
   onMapMove: () => void;
   hideStateLabels: boolean;
   onSelectedElement: (id: number | null, el: HTMLElement | null | undefined) => void;
