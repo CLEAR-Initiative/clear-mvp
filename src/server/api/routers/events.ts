@@ -166,7 +166,7 @@ const EVENT_DETAIL_FIELDS = `
   originLocation { ${EVENT_DETAIL_LOCATION_FIELDS} }
   destinationLocation { ${EVENT_DETAIL_LOCATION_FIELDS} }
   signals { ${DETAIL_SIGNAL_FIELDS} }
-  alerts { id status }
+  alerts { id status createdAt }
 `;
 
 const EVENT_GET_QUERY = `
