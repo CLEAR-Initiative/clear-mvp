@@ -3,18 +3,22 @@
 //
 // Routes to the right Sentry init based on runtime so server/edge are both
 // covered with one entry point.
+//
+// This file must stay in src/. Next.js looks for the hook next to the app
+// directory (src/app), so a copy at the repo root is ignored without a warning:
+// the server then starts with no Sentry and no startup checks.
 
 export async function register() {
   if (process.env.NEXT_RUNTIME === "nodejs") {
-    await import("./sentry.server.config");
+    await import("../sentry.server.config");
     // Refuse to start with a CLEAR Agent model that can't run as configured:
     // unpriced (the daily Agent budget would silently stop counting), or the
     // scripted test model in production.
-    const { assertClearAgentModelConfigured } = await import("./src/server/agent/pricing");
+    const { assertClearAgentModelConfigured } = await import("./server/agent/pricing");
     assertClearAgentModelConfigured();
   }
   if (process.env.NEXT_RUNTIME === "edge") {
-    await import("./sentry.edge.config");
+    await import("../sentry.edge.config");
   }
 }
 

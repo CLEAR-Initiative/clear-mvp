@@ -1,5 +1,5 @@
 // Sentry init for the Edge runtime (middleware.ts, edge API routes).
-// Loaded by instrumentation.ts when NEXT_RUNTIME === "edge".
+// Loaded by src/instrumentation.ts when NEXT_RUNTIME === "edge".
 // Even if you don't currently use edge runtime, this prevents a startup
 // warning when Next.js auto-loads the instrumentation hook.
 

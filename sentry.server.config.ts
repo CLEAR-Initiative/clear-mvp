@@ -1,5 +1,5 @@
 // Sentry init for Node.js runtime (API routes, server components, RSC).
-// Loaded by instrumentation.ts when NEXT_RUNTIME === "nodejs".
+// Loaded by src/instrumentation.ts when NEXT_RUNTIME === "nodejs".
 
 import * as Sentry from "@sentry/nextjs";
 
