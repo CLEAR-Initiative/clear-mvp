@@ -10,7 +10,8 @@ export type SignalFeature = {
 
 export type SignalFeatureCollection = { type: "FeatureCollection"; features: SignalFeature[] };
 
-function pointOf(location: GqlLocation | null): [number, number] | null {
+/** A location's coordinates when its geometry is a valid point. */
+export function locationPoint(location: GqlLocation | null | undefined): [number, number] | null {
   const geometry = location?.geometry;
   if (geometry?.type !== "Point" || !Array.isArray(geometry.coordinates)) return null;
   const [lng, lat] = geometry.coordinates as unknown[];
@@ -23,7 +24,11 @@ type SignalLocations = Pick<GqlSignal, "generalLocation" | "originLocation" | "d
 
 /** Where a signal is drawn: its general location, else its origin, else its destination, if it is a point. */
 export function signalPoint(signal: SignalLocations): [number, number] | null {
-  return pointOf(signal.generalLocation) ?? pointOf(signal.originLocation) ?? pointOf(signal.destinationLocation);
+  return (
+    locationPoint(signal.generalLocation) ??
+    locationPoint(signal.originLocation) ??
+    locationPoint(signal.destinationLocation)
+  );
 }
 
 export function signalsToFeatures(signals: GqlSignal[]): SignalFeatureCollection {

@@ -31,14 +31,14 @@ function at(zoom: number) {
 
 describe("selectionHighlight", () => {
   it("rings a signal drawn as its own point", () => {
-    const highlight = selectionHighlight({ ...at(3), selection: { type: "signal", id: "d" } });
+    const highlight = selectionHighlight({ ...at(3), selection: { type: "detection", kind: "signal", id: "d" } });
 
     expect(highlight).toEqual({ pointId: "d", clusterKey: null });
   });
 
   it("rings the cluster that holds a selected signal at a low zoom", () => {
     const view = at(3);
-    const highlight = selectionHighlight({ ...view, selection: { type: "signal", id: "c" } });
+    const highlight = selectionHighlight({ ...view, selection: { type: "detection", kind: "signal", id: "c" } });
 
     expect(highlight.pointId).toBeNull();
     expect(highlight.clusterKey).toBe(view.clusters[0]?.key);
@@ -47,7 +47,7 @@ describe("selectionHighlight", () => {
   it("rings the stacked cluster at the deepest zoom", () => {
     const view = at(22);
     const stack = view.clusters.find((c) => c.stacked);
-    const highlight = selectionHighlight({ ...view, selection: { type: "signal-stack", coordinates: [30, 15] } });
+    const highlight = selectionHighlight({ ...view, selection: { type: "stack", kind: "signal", coordinates: [30, 15] } });
 
     expect(stack).toBeDefined();
     expect(highlight).toEqual({ pointId: null, clusterKey: stack?.key });
@@ -56,18 +56,27 @@ describe("selectionHighlight", () => {
   it("finds a stack from a URL point rounded to 5 decimals", () => {
     const highlight = selectionHighlight({
       ...at(22),
-      selection: { type: "signal-stack", coordinates: [30.000004, 14.999996] },
+      selection: { type: "stack", kind: "signal", coordinates: [30.000004, 14.999996] },
     });
 
     expect(highlight.clusterKey).not.toBeNull();
   });
 
+  it("rings nothing for an event or alert, even with a signal's id", () => {
+    const none = { pointId: null, clusterKey: null };
+
+    expect(selectionHighlight({ ...at(3), selection: { type: "detection", kind: "event", id: "d" } })).toEqual(none);
+    expect(selectionHighlight({ ...at(22), selection: { type: "stack", kind: "alert", coordinates: [30, 15] } })).toEqual(
+      none,
+    );
+  });
+
   it("shows nothing for a selection that is not in the data", () => {
-    expect(selectionHighlight({ ...at(3), selection: { type: "signal", id: "gone" } })).toEqual({
+    expect(selectionHighlight({ ...at(3), selection: { type: "detection", kind: "signal", id: "gone" } })).toEqual({
       pointId: null,
       clusterKey: null,
     });
-    expect(selectionHighlight({ ...at(3), selection: { type: "signal-stack", coordinates: [0, 0] } })).toEqual({
+    expect(selectionHighlight({ ...at(3), selection: { type: "stack", kind: "signal", coordinates: [0, 0] } })).toEqual({
       pointId: null,
       clusterKey: null,
     });

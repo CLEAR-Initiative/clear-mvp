@@ -28,9 +28,10 @@ function clusterHolding(ids: ReadonlySet<string>, clusters: ClusterMarker[], ind
 
 /** Where to draw the selection ring: on the signal's own point, or on the cluster that holds it. */
 export function selectionHighlight({ selection, data, pointIds, clusters, index }: Input): SelectionHighlight {
-  if (!selection) return NONE;
+  // This layer draws signals: an event or alert selection has nothing to ring here.
+  if (selection?.kind !== "signal") return NONE;
 
-  if (selection.type === "signal") {
+  if (selection.type === "detection") {
     if (!data.features.some((f) => f.properties.id === selection.id)) return NONE;
     if (pointIds.has(selection.id)) return { pointId: selection.id, clusterKey: null };
     return { pointId: null, clusterKey: clusterHolding(new Set([selection.id]), clusters, index) };

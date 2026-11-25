@@ -3,9 +3,17 @@
 import { Group, Text, UnstyledButton } from "@mantine/core";
 import { IconArrowLeft } from "@tabler/icons-react";
 import { useTranslations } from "next-intl";
+import type { DetectionKind } from "~/containers/map/selection";
 import classes from "./panel-views.module.css";
 
-export type PanelBack = { to: "layers" | "signals"; onBack: () => void };
+export type PanelBack = { to: "layers" | "signals" | "events" | "alerts"; onBack: () => void };
+
+const LIST_OF: Record<DetectionKind, PanelBack["to"]> = { signal: "signals", event: "events", alert: "alerts" };
+
+/** Where a detail opened from a stack's list goes back to: the list of that kind. */
+export function backToList(kind: DetectionKind): PanelBack["to"] {
+  return LIST_OF[kind];
+}
 
 export function BackLink({ to, onBack }: PanelBack) {
   const t = useTranslations("mapV2.panel.back");

@@ -4658,16 +4658,52 @@
       "expand": "Show map controls",
       "back": {
         "layers": "Back to layers",
-        "signals": "Back to all signals"
+        "signals": "Back to all signals",
+        "events": "Back to all events",
+        "alerts": "Back to all alerts"
       },
       "stack": {
-        "titlePending": "Signals in the selected location",
-        "title": "{count, plural, one {# signal} other {# signals}} in the selected location",
-        "intro": {
-          "lastDays": "Published in the last {days, plural, one {day} other {# days}} at {location}.",
-          "lastDaysNoLocation": "Published in the last {days, plural, one {day} other {# days}}.",
-          "range": "Published between {from} and {to} at {location}.",
-          "rangeNoLocation": "Published between {from} and {to}."
+        "signal": {
+          "titlePending": "Signals in the selected location",
+          "title": "{count, plural, one {# signal} other {# signals}} in the selected location",
+          "intro": {
+            "lastDays": "Published in the last {days, plural, one {day} other {# days}} at {location}.",
+            "lastDaysNoLocation": "Published in the last {days, plural, one {day} other {# days}}.",
+            "range": "Published between {from} and {to} at {location}.",
+            "rangeNoLocation": "Published between {from} and {to}."
+          },
+          "column": "Signal",
+          "loading": "Loading the signals",
+          "error": "The signals could not be loaded. Try again later.",
+          "empty": "No signals at this location in this period."
+        },
+        "event": {
+          "titlePending": "Events in the selected location",
+          "title": "{count, plural, one {# event} other {# events}} in the selected location",
+          "intro": {
+            "lastDays": "Detected in the last {days, plural, one {day} other {# days}} at {location}.",
+            "lastDaysNoLocation": "Detected in the last {days, plural, one {day} other {# days}}.",
+            "range": "Detected between {from} and {to} at {location}.",
+            "rangeNoLocation": "Detected between {from} and {to}."
+          },
+          "column": "Event",
+          "loading": "Loading the events",
+          "error": "The events could not be loaded. Try again later.",
+          "empty": "No events at this location in this period."
+        },
+        "alert": {
+          "titlePending": "Alerts in the selected location",
+          "title": "{count, plural, one {# alert} other {# alerts}} in the selected location",
+          "intro": {
+            "lastDays": "Detected in the last {days, plural, one {day} other {# days}} at {location}.",
+            "lastDaysNoLocation": "Detected in the last {days, plural, one {day} other {# days}}.",
+            "range": "Detected between {from} and {to} at {location}.",
+            "rangeNoLocation": "Detected between {from} and {to}."
+          },
+          "column": "Alert",
+          "loading": "Loading the alerts",
+          "error": "The alerts could not be loaded. Try again later.",
+          "empty": "No alerts at this location in this period."
         },
         "severityCount": {
           "critical": "{count} Critical",
@@ -4676,20 +4712,32 @@
           "low": "{count} Low",
           "unknown": "{count} Unknown"
         },
-        "columns": {
-          "signal": "Signal",
-          "severity": "Severity"
-        },
-        "loading": "Loading the signals",
-        "error": "The signals could not be loaded. Try again later.",
-        "empty": "No signals at this location in this period."
+        "severityColumn": "Severity"
       },
       "detail": {
-        "loading": "Loading the signal",
-        "error": "The signal could not be loaded. Try again later.",
-        "notFound": "This signal could not be found.",
-        "noSummary": "This signal has no summary.",
-        "comingSoon": "Coming soon",
+        "signal": {
+          "loading": "Loading the signal",
+          "error": "The signal could not be loaded. Try again later.",
+          "notFound": "This signal could not be found.",
+          "noSummary": "This signal has no summary."
+        },
+        "event": {
+          "loading": "Loading the event",
+          "error": "The event could not be loaded. Try again later.",
+          "notFound": "This event could not be found.",
+          "noSummary": "This event has no summary."
+        },
+        "alert": {
+          "loading": "Loading the alert",
+          "error": "The alert could not be loaded. Try again later.",
+          "notFound": "This alert could not be found."
+        },
+        "untitledEvent": "Untitled event",
+        "relatedEventCount": "{count, plural, one {# related event} other {# related events}}",
+        "loadingRelated": "Loading the related events",
+        "signalsHint": "Other signals in the same events",
+        "expand": "Show {section}",
+        "collapse": "Hide {section}",
         "sections": {
           "summary": "Summary",
           "impact": "Impact",

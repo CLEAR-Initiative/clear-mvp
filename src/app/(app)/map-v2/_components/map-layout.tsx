@@ -6,9 +6,13 @@ import { Timeline } from "~/containers/map/timeline";
 import { TimeframeQueryProvider } from "~/containers/map/hooks/use-timeframe";
 import type { MapSelectTarget } from "~/containers/map/selection";
 import { setMapPanelCollapsedCookie } from "~/lib/map-panel-collapsed-cookie";
+import type { DetectionKind } from "~/containers/map/selection";
 import { MapPanel } from "./map-panel";
+import { AlertDetailView } from "./map-panel/alert-detail-view";
+import { backToList, type PanelBack } from "./map-panel/back-link";
+import { EventDetailView } from "./map-panel/event-detail-view";
 import { SignalDetailView } from "./map-panel/signal-detail-view";
-import { SignalStackView } from "./map-panel/signal-stack-view";
+import { StackView } from "./map-panel/stack-view";
 import { useInsetLeft } from "./use-inset-left";
 import { usePanelSelection } from "./use-panel-selection";
 
@@ -16,6 +20,12 @@ import { usePanelSelection } from "./use-panel-selection";
 const PANEL_MEDIA_QUERY = "(min-width: 62em)";
 
 const PANEL_TOGGLE_CLEARANCE = 48;
+
+function DetailView({ kind, id, back }: { kind: DetectionKind; id: string; back: PanelBack }) {
+  if (kind === "event") return <EventDetailView eventId={id} back={back} />;
+  if (kind === "alert") return <AlertDetailView alertId={id} back={back} />;
+  return <SignalDetailView signalId={id} back={back} />;
+}
 
 export function MapLayout({ initialPanelCollapsed }: { initialPanelCollapsed: boolean }) {
   const [panelCollapsed, setPanelCollapsed] = useState(initialPanelCollapsed);
@@ -33,7 +43,7 @@ export function MapLayout({ initialPanelCollapsed }: { initialPanelCollapsed: bo
     [],
   );
   const selection = usePanelSelection();
-  const { selectSignal, selectStack, clear } = selection;
+  const { selectDetail, selectStack, clear } = selection;
 
   const onSelect = useCallback(
     (target: MapSelectTarget | null) => {
@@ -41,28 +51,33 @@ export function MapLayout({ initialPanelCollapsed }: { initialPanelCollapsed: bo
         clear();
         return;
       }
-      if (target.type === "signal") selectSignal(target.id);
-      else selectStack(target.coordinates);
+      if (target.type === "detection") selectDetail(target.kind, target.id);
+      else selectStack(target.kind, target.coordinates);
       if (panelCollapsed && window.matchMedia(PANEL_MEDIA_QUERY).matches) setCollapsed(false);
     },
-    [clear, selectSignal, selectStack, panelCollapsed, setCollapsed],
+    [clear, selectDetail, selectStack, panelCollapsed, setCollapsed],
   );
 
+  const { kind } = selection;
   let panelContent: React.ReactNode = null;
-  if (selection.signalId) {
+  if (kind && selection.detailId) {
     panelContent = (
-      <SignalDetailView
-        key={selection.signalId}
-        signalId={selection.signalId}
-        back={selection.stack ? { to: "signals", onBack: selection.closeSignal } : { to: "layers", onBack: clear }}
+      <DetailView
+        key={`${kind}:${selection.detailId}`}
+        kind={kind}
+        id={selection.detailId}
+        back={
+          selection.stack ? { to: backToList(kind), onBack: selection.closeDetail } : { to: "layers", onBack: clear }
+        }
       />
     );
-  } else if (selection.stack) {
+  } else if (kind && selection.stack) {
     panelContent = (
-      <SignalStackView
-        key={selection.stackKey}
+      <StackView
+        key={`${kind}:${selection.stackKey}`}
+        kind={kind}
         point={selection.stack}
-        onOpenSignal={selection.openStackSignal}
+        onOpen={selection.openStackDetail}
         onBack={clear}
       />
     );
@@ -79,7 +94,7 @@ export function MapLayout({ initialPanelCollapsed }: { initialPanelCollapsed: bo
         <MapPanel
           collapsed={panelCollapsed}
           onToggle={togglePanel}
-          contentKey={`${selection.stackKey ?? ""}|${selection.signalId ?? ""}`}
+          contentKey={`${kind ?? ""}|${selection.stackKey ?? ""}|${selection.detailId ?? ""}`}
         >
           {panelContent}
         </MapPanel>

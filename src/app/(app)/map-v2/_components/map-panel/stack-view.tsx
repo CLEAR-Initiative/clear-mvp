@@ -5,10 +5,9 @@ import { useFormatter, useNow, useTranslations } from "next-intl";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { SeverityTag } from "~/containers/map/layers/signals/severity-tag";
 import { SEVERITY_TOKENS } from "~/containers/map/layers/signals/severity-tokens";
-import { signalsAtPoint } from "~/containers/map/layers/signals/stack";
-import { useSignalsForMap } from "~/containers/map/hooks/use-signals-for-map";
+import { useDetectionsForMap } from "~/containers/map/hooks/use-detections-for-map";
 import { useTimeframeQuery } from "~/containers/map/hooks/use-timeframe";
-import type { LngLatPoint } from "~/containers/map/selection";
+import type { DetectionKind, LngLatPoint } from "~/containers/map/selection";
 import { useLocations } from "~/hooks/use-locations";
 import { BidiTitle } from "~/components/ui/bidi-title";
 import { reportHandledError } from "~/lib/report-handled-error";
@@ -17,7 +16,14 @@ import { PanelNav } from "./panel-nav";
 import { PanelLoader } from "./panel-loader";
 import classes from "./panel-views.module.css";
 import { placeRampLabels } from "./ramp-labels";
-import { commonLocationName, severityCounts, sortStackSignals, stackPeriod, type SeverityCount } from "./signal-stack";
+import {
+  commonLocationName,
+  detectionsAtPoint,
+  severityCounts,
+  sortStackItems,
+  stackPeriod,
+  type SeverityCount,
+} from "./detection-stack";
 
 const TEXT_PRIMARY = "var(--color-text-primary)";
 const TEXT_SECONDARY = "var(--color-text-secondary)";
@@ -26,9 +32,10 @@ const ROW_LINE_PX = 15;
 /** Centred on the line box the badge looks high, as most of the title is lowercase; this lowers it to the text. */
 const BADGE_NUDGE = "1.5px";
 
-type SignalStackViewProps = {
+type StackViewProps = {
+  kind: DetectionKind;
   point: LngLatPoint;
-  onOpenSignal: (id: string) => void;
+  onOpen: (id: string) => void;
   onBack: () => void;
 };
 
@@ -87,23 +94,27 @@ function SeverityMix({ counts }: { counts: SeverityCount[] }) {
   );
 }
 
-export function SignalStackView({ point, onOpenSignal, onBack }: SignalStackViewProps) {
+/** The list of what a selected stack holds: signals, events or alerts, as the map shows. */
+export function StackView({ kind, point, onOpen, onBack }: StackViewProps) {
   const t = useTranslations("mapV2.panel.stack");
+  const tKind = useTranslations(`mapV2.panel.stack.${kind}`);
+  const tDetail = useTranslations("mapV2.panel.detail");
   const tSignal = useTranslations("mapV2.signalTooltip");
   const format = useFormatter();
   const now = useNow();
   const range = useTimeframeQuery();
-  const query = useSignalsForMap();
+  const query = useDetectionsForMap(kind);
   const { locationById } = useLocations();
 
-  const signals = useMemo(() => sortStackSignals(signalsAtPoint(query.data ?? [], point)), [query.data, point]);
-  const counts = useMemo(() => severityCounts(signals), [signals]);
-  const location = useMemo(() => commonLocationName(signals, locationById), [signals, locationById]);
+  const items = useMemo(() => sortStackItems(detectionsAtPoint(query.data ?? [], point)), [query.data, point]);
+  const counts = useMemo(() => severityCounts(items), [items]);
+  const location = useMemo(() => commonLocationName(items, locationById), [items, locationById]);
   const period = stackPeriod(range, now);
+  const untitled = kind === "signal" ? tSignal("untitled") : tDetail("untitledEvent");
 
   useEffect(() => {
-    if (query.error) reportHandledError(query.error, { feature: "map-v2", stage: "signal-stack" });
-  }, [query.error]);
+    if (query.error) reportHandledError(query.error, { feature: "map-v2", stage: `${kind}-stack` });
+  }, [query.error, kind]);
 
   const dates =
     period.kind === "range"
@@ -115,25 +126,25 @@ export function SignalStackView({ point, onOpenSignal, onBack }: SignalStackView
   let intro: string;
   if (period.kind === "lastDays") {
     intro = location
-      ? t("intro.lastDays", { days: period.days, location })
-      : t("intro.lastDaysNoLocation", { days: period.days });
+      ? tKind("intro.lastDays", { days: period.days, location })
+      : tKind("intro.lastDaysNoLocation", { days: period.days });
   } else {
-    intro = location ? t("intro.range", { ...dates, location }) : t("intro.rangeNoLocation", { ...dates });
+    intro = location ? tKind("intro.range", { ...dates, location }) : tKind("intro.rangeNoLocation", { ...dates });
   }
 
   let body: React.ReactNode;
   if (query.isPending) {
-    body = <PanelLoader label={t("loading")} />;
+    body = <PanelLoader label={tKind("loading")} />;
   } else if (query.isError) {
     body = (
       <Text fz={14} c={TEXT_SECONDARY}>
-        {t("error")}
+        {tKind("error")}
       </Text>
     );
-  } else if (signals.length === 0) {
+  } else if (items.length === 0) {
     body = (
       <Text fz={14} c={TEXT_SECONDARY}>
-        {t("empty")}
+        {tKind("empty")}
       </Text>
     );
   } else {
@@ -146,16 +157,16 @@ export function SignalStackView({ point, onOpenSignal, onBack }: SignalStackView
         <Stack gap={8} py={8}>
           <Group justify="space-between" aria-hidden>
             <Text component="span" fz={12} tt="uppercase" opacity={0.8} c={TEXT_PRIMARY}>
-              {t("columns.signal")}
+              {tKind("column")}
             </Text>
             <Text component="span" fz={12} tt="uppercase" opacity={0.8} c={TEXT_PRIMARY}>
-              {t("columns.severity")}
+              {t("severityColumn")}
             </Text>
           </Group>
           <Stack component="ul" gap={4} m={0} p={0} className={classes.rows}>
-            {signals.map((signal) => (
-              <li key={signal.id}>
-                <UnstyledButton className={classes.row} onClick={() => onOpenSignal(signal.id)}>
+            {items.map((item) => (
+              <li key={item.id}>
+                <UnstyledButton className={classes.row} onClick={() => onOpen(item.id)}>
                   <Group gap={24} align="flex-start" wrap="nowrap" py={2}>
                     <Text
                       component="span"
@@ -166,10 +177,10 @@ export function SignalStackView({ point, onOpenSignal, onBack }: SignalStackView
                       c={TEXT_PRIMARY}
                       className={classes.rowTitle}
                     >
-                      <BidiTitle>{signal.title ?? tSignal("untitled")}</BidiTitle>
+                      <BidiTitle>{item.title ?? untitled}</BidiTitle>
                     </Text>
                     <Box component="span" h={ROW_LINE_PX} mt={BADGE_NUDGE} className={classes.rowTag}>
-                      <SeverityTag severity={mapSeverity(signal.severity)} />
+                      <SeverityTag severity={mapSeverity(item.severity)} />
                     </Box>
                   </Group>
                 </UnstyledButton>
@@ -186,7 +197,7 @@ export function SignalStackView({ point, onOpenSignal, onBack }: SignalStackView
       <Stack gap={24}>
         <PanelNav back={{ to: "layers", onBack }} point={point} />
         <Title id="map-panel-stack-title" order={2} fz={20} fw={700} lh={1.2} lts={-0.2} py={12} c={TEXT_PRIMARY}>
-          {query.isPending ? t("titlePending") : t("title", { count: signals.length })}
+          {query.isPending ? tKind("titlePending") : tKind("title", { count: items.length })}
         </Title>
       </Stack>
       {body}

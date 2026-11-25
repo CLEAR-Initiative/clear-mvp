@@ -346,7 +346,7 @@ _Avoid_: "chart" or "pie" for it; a donut that leaves out signals with no severi
 **Stacked signals**:
 **Signals** that share exactly the same point, often a country or city centre. Zooming
 never splits them, so they stay a **Signal cluster** at every zoom. Clicking that cluster
-selects the stack: the **Map panel** lists its signals (the **Signal list**).
+selects the stack: the **Map panel** lists its signals (the **Stack list**).
 _Avoid_: spiderfying stacks on map v2; "duplicates" (stacked signals are distinct
 signals at one place).
 
@@ -409,8 +409,9 @@ _Avoid_: treating road or path names as Labels; hiding rail lines with Labels.
 
 **Map panel**:
 The panel on `/map-v2` that sits next to the app nav and floats over the map, on screens
-992px or wider. Narrower screens have no Map panel. It shows the **Signal list** or the
-**Signal detail** of the **Map selection**, and nothing else yet. A selection opens it when it
+992px or wider. Narrower screens have no Map panel. It shows the **Stack list** or the
+detail (**Signal detail**, **Event detail**) of the **Map selection**, and nothing else yet.
+A selection opens it when it
 is collapsed. A round toggle on the panel's right edge collapses it, and the choice is kept
 across reloads.
 The page, not the map, owns the Map panel: it tells the map which part of it is covered
@@ -524,30 +525,56 @@ signal selects it and the **Map panel** shows its **Signal detail**.
 _Avoid_: "popup" (the old roadmap word); "disaster" for the signal it names. The Figma
 label says "Disaster name"; the app labels the value "Signal", because it is the signal's title.
 
-**Map selection** (map v2):
-What a click on the map picked: a **Signal**, a stack of **Stacked signals**, or nothing (a
-click on empty map). The map only reports the click and draws what it is told is selected;
-the page that embeds the map decides what a selection means, because the same map will sit
-in pages with no **Map panel**. On `/map-v2` the selection lives in the URL (`?signal=<id>`,
-`?stack=<lng>,<lat>`, both for a signal opened from a stack's list) and replaces the history
-entry, so browser Back leaves the page. It is the same on every screen width, even where no
-panel shows it yet. The map rings the selected point, or the cluster that holds it at the
-current zoom, with a blink. Selecting never moves the camera; **Show on map**, next to the
-panel's back link, centres the map on the selection at the current zoom.
-_Avoid_: "active marker"; letting the map read or write the selection URL itself.
+**Detection kind** (map v2):
+Whether a **Detection** on the map is a **Signal**, an **Event** or an **Alert**. Each kind
+gets its own layer, and a filter will show one of them at a time, or none (signals will
+eventually be dropped). A click reports the kind of the layer it hit, and the **Map selection**
+keeps it, so the **Map panel** knows what the id means. Until the events and alerts layers
+exist, only signals can be clicked; the panel opens events and alerts from the URL.
+_Avoid_: reading the kind from the layers shown (none may be, and the selection outlives them).
 
-**Signal list** (map v2):
-The **Map panel** view of a selected stack: how many signals, when and where they were
-published (the period is the range the signals layer shows, worded "in the last N days"
-when it ends today), their severity mix, and the signals most severe first. Clicking a
-signal opens its **Signal detail**, whose back link returns to the list.
-_Avoid_: "alerts" for these rows (the Figma copy says alerts; they are **Signals**).
+**Map selection** (map v2):
+What a click on the map picked: a **Detection**, a stack of them (**Stacked signals**), or
+nothing (a click on empty map), with its **Detection kind**. The map only reports the click and
+draws what it is told is selected; the page that embeds the map decides what a selection
+means, because the same map will sit in pages with no **Map panel**. On `/map-v2` the
+selection lives in the URL, prefixed with its kind (`?detail=event:<id>`,
+`?stack=signal:<lng>,<lat>`, both for a detection opened from a stack's list; a stack of
+another kind than the detail is ignored) and replaces the history entry, so browser Back
+leaves the page. It is the same on every screen width, even where no panel shows it yet.
+Hiding its layer keeps it: the panel still shows it, and the map draws no ring. The map rings
+the selected point, or the cluster that holds it at the current zoom, with a blink, in the
+layer of its kind. Selecting never moves the camera; **Show on map**, next to the panel's back
+link, centres the map on the selection at the current zoom.
+_Avoid_: "active marker"; letting the map read or write the selection URL itself; `?signal=`
+(one param per kind); an id without its kind.
+
+**Stack list** (map v2):
+The **Map panel** view of a selected stack, all of one **Detection kind**: how many signals,
+events or alerts, when and where they were published (signals) or detected (events and
+alerts; the period is the range the map shows, worded "in the last N days" when it ends
+today), their severity mix, and the items most severe first. Clicking one opens its detail,
+whose back link returns to the list.
+_Avoid_: "Signal list" now that it lists events and alerts too; "alerts" for signal rows (the
+Figma copy says alerts).
 
 **Signal detail** (map v2):
-The **Map panel** view of one selected **Signal**: title, severity, disaster type, place,
-dates, source and summary. The other sections of the design (impact, area context, signals,
-related events, system data, take an action) show "Coming soon" until they have data.
-_Avoid_: calling the summary "AI generated" (it is the signal's own description).
+The **Map panel** view of one selected **Signal**, with what the signal page offers: title,
+severity, disaster type, place, dates, source and summary; then, folded, the other signals of
+its events, the events it belongs to and its system data; then its discussion.
+_Avoid_: calling the summary "AI generated" (it is the signal's own description); Impact or
+Area context on a signal (they belong to events).
+
+**Event detail** (map v2):
+The **Map panel** view of one selected **Event**, or of an **Alert** (which reads as its
+event, as alerts open the event page elsewhere). It offers what the event page does: title,
+severity, disaster types, place, dates and counts; summary; Impact (people affected and
+displaced); Area context (people in the area and IDP per capita, from the most local area
+with figures); then, folded, its signals, its related events and its system data; then Take
+an action, which is the event's discussion and Turn into alert (admins and team analysts, as
+on the page; an alert shows that it already is one). Signals and related events link to their
+own pages.
+_Avoid_: new actions the event page does not have; a separate alert view.
 
 ### Country framing
 

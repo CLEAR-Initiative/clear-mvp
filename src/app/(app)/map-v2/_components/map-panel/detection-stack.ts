@@ -1,41 +1,43 @@
+import type { MapDetection } from "~/containers/map/hooks/use-detections-for-map";
+import { isSamePoint } from "~/containers/map/layers/signals/clusters";
 import { SEVERITY_BUCKETS } from "~/containers/map/layers/signals/severity-tokens";
 import type { SeverityBucket } from "~/containers/map/layers/signals/to-features";
+import type { LngLatPoint } from "~/containers/map/selection";
 import { resolveLocationName } from "~/lib/location";
-import { signalLocationOf } from "~/lib/location-challenge";
-import { mapSeverity, type GqlSignal } from "~/lib/types/graphql";
+import { mapSeverity } from "~/lib/types/graphql";
 
-type StackSignal = Pick<
-  GqlSignal,
-  "id" | "severity" | "publishedAt" | "generalLocation" | "originLocation" | "destinationLocation"
->;
+type StackItem = Pick<MapDetection, "id" | "severity" | "date" | "location">;
 
-const bucketRank = (signal: StackSignal) => SEVERITY_BUCKETS.indexOf(mapSeverity(signal.severity));
+/** The detections drawn at `point`: the members of a stack. */
+export function detectionsAtPoint<T extends Pick<MapDetection, "point">>(items: T[], point: LngLatPoint): T[] {
+  return items.filter((item) => item.point !== null && isSamePoint(item.point, point));
+}
+
+const bucketRank = (item: StackItem) => SEVERITY_BUCKETS.indexOf(mapSeverity(item.severity));
 
 /** Most severe first (unknown last), then newest first. */
-export function sortStackSignals<T extends StackSignal>(signals: T[]): T[] {
-  return [...signals].sort(
-    (a, b) => bucketRank(a) - bucketRank(b) || Date.parse(b.publishedAt) - Date.parse(a.publishedAt),
-  );
+export function sortStackItems<T extends StackItem>(items: T[]): T[] {
+  return [...items].sort((a, b) => bucketRank(a) - bucketRank(b) || Date.parse(b.date) - Date.parse(a.date));
 }
 
 export type SeverityCount = { bucket: SeverityBucket; count: number };
 
-/** How many signals fall in each severity bucket, in bucket order, without empty buckets. */
-export function severityCounts(signals: StackSignal[]): SeverityCount[] {
+/** How many items fall in each severity bucket, in bucket order, without empty buckets. */
+export function severityCounts(items: StackItem[]): SeverityCount[] {
   return SEVERITY_BUCKETS.map((bucket) => ({
     bucket,
-    count: signals.filter((signal) => mapSeverity(signal.severity) === bucket).length,
+    count: items.filter((item) => mapSeverity(item.severity) === bucket).length,
   })).filter(({ count }) => count > 0);
 }
 
-/** The place name most of the signals share; ties go to the first signal's. */
+/** The place name most of the items share; ties go to the first item's. */
 export function commonLocationName(
-  signals: StackSignal[],
+  items: StackItem[],
   locationById: Map<string, { name: string; level: number }>,
 ): string | null {
   const counts = new Map<string, number>();
-  for (const signal of signals) {
-    const name = resolveLocationName(signalLocationOf(signal), { locationById });
+  for (const item of items) {
+    const name = resolveLocationName(item.location, { locationById });
     if (name) counts.set(name, (counts.get(name) ?? 0) + 1);
   }
   let best: string | null = null;
@@ -45,8 +47,8 @@ export function commonLocationName(
   return best;
 }
 
-/** The range the signals were fetched for. `to` left out means "up to now". ISO strings. */
-export type SignalsRange = { from: string; to?: string };
+/** The range the items were fetched for. `to` left out means "up to now". ISO strings. */
+export type StackRange = { from: string; to?: string };
 
 export type StackPeriod = { kind: "lastDays"; days: number } | { kind: "range"; from: Date; to: Date };
 
@@ -60,7 +62,7 @@ function startOfDay(date: Date): Date {
  * The period the range covers, worded relative to today when it is a run of whole days that ends
  * today ("the last 30 days"), and as dates otherwise.
  */
-export function stackPeriod(range: SignalsRange, now: Date): StackPeriod {
+export function stackPeriod(range: StackRange, now: Date): StackPeriod {
   const from = new Date(range.from);
   const to = range.to ? new Date(range.to) : now;
   const today = startOfDay(now);

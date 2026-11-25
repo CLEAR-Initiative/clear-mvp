@@ -114,8 +114,11 @@ const EVENT_RELATED_PAGE_QUERY = `
     eventsPage(input: $input) {
       items {
         id
+        title
         types
+        severity
         validFrom
+        lastSignalCreatedAt
         generalLocation { id level ancestors { id level } }
         originLocation { id level ancestors { id level } }
         destinationLocation { id level ancestors { id level } }

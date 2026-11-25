@@ -4658,16 +4658,52 @@
       "expand": "Afficher les commandes de la carte",
       "back": {
         "layers": "Retour aux couches",
-        "signals": "Retour à tous les signaux"
+        "signals": "Retour à tous les signaux",
+        "events": "Retour à tous les événements",
+        "alerts": "Retour à toutes les alertes"
       },
       "stack": {
-        "titlePending": "Signaux à l’emplacement sélectionné",
-        "title": "{count, plural, one {# signal} other {# signaux}} à l’emplacement sélectionné",
-        "intro": {
-          "lastDays": "Publiés {days, plural, one {le dernier jour} other {ces # derniers jours}} à {location}.",
-          "lastDaysNoLocation": "Publiés {days, plural, one {le dernier jour} other {ces # derniers jours}}.",
-          "range": "Publiés entre le {from} et le {to} à {location}.",
-          "rangeNoLocation": "Publiés entre le {from} et le {to}."
+        "signal": {
+          "titlePending": "Signaux à l’emplacement sélectionné",
+          "title": "{count, plural, one {# signal} other {# signaux}} à l’emplacement sélectionné",
+          "intro": {
+            "lastDays": "Publiés {days, plural, one {le dernier jour} other {ces # derniers jours}} à {location}.",
+            "lastDaysNoLocation": "Publiés {days, plural, one {le dernier jour} other {ces # derniers jours}}.",
+            "range": "Publiés entre le {from} et le {to} à {location}.",
+            "rangeNoLocation": "Publiés entre le {from} et le {to}."
+          },
+          "column": "Signal",
+          "loading": "Chargement des signaux",
+          "error": "Impossible de charger les signaux. Réessayez plus tard.",
+          "empty": "Aucun signal à cet emplacement sur cette période."
+        },
+        "event": {
+          "titlePending": "Événements à l’emplacement sélectionné",
+          "title": "{count, plural, one {# événement} other {# événements}} à l’emplacement sélectionné",
+          "intro": {
+            "lastDays": "Détectés {days, plural, one {le dernier jour} other {ces # derniers jours}} à {location}.",
+            "lastDaysNoLocation": "Détectés {days, plural, one {le dernier jour} other {ces # derniers jours}}.",
+            "range": "Détectés entre le {from} et le {to} à {location}.",
+            "rangeNoLocation": "Détectés entre le {from} et le {to}."
+          },
+          "column": "Événement",
+          "loading": "Chargement des événements",
+          "error": "Impossible de charger les événements. Réessayez plus tard.",
+          "empty": "Aucun événement à cet emplacement sur cette période."
+        },
+        "alert": {
+          "titlePending": "Alertes à l’emplacement sélectionné",
+          "title": "{count, plural, one {# alerte} other {# alertes}} à l’emplacement sélectionné",
+          "intro": {
+            "lastDays": "Détectées {days, plural, one {le dernier jour} other {ces # derniers jours}} à {location}.",
+            "lastDaysNoLocation": "Détectées {days, plural, one {le dernier jour} other {ces # derniers jours}}.",
+            "range": "Détectées entre le {from} et le {to} à {location}.",
+            "rangeNoLocation": "Détectées entre le {from} et le {to}."
+          },
+          "column": "Alerte",
+          "loading": "Chargement des alertes",
+          "error": "Impossible de charger les alertes. Réessayez plus tard.",
+          "empty": "Aucune alerte à cet emplacement sur cette période."
         },
         "severityCount": {
           "critical": "{count} Critique",
@@ -4676,20 +4712,32 @@
           "low": "{count} Faible",
           "unknown": "{count} Inconnue"
         },
-        "columns": {
-          "signal": "Signal",
-          "severity": "Gravité"
-        },
-        "loading": "Chargement des signaux",
-        "error": "Impossible de charger les signaux. Réessayez plus tard.",
-        "empty": "Aucun signal à cet emplacement sur cette période."
+        "severityColumn": "Gravité"
       },
       "detail": {
-        "loading": "Chargement du signal",
-        "error": "Impossible de charger le signal. Réessayez plus tard.",
-        "notFound": "Ce signal est introuvable.",
-        "noSummary": "Ce signal n’a pas de résumé.",
-        "comingSoon": "Bientôt disponible",
+        "signal": {
+          "loading": "Chargement du signal",
+          "error": "Impossible de charger le signal. Réessayez plus tard.",
+          "notFound": "Ce signal est introuvable.",
+          "noSummary": "Ce signal n’a pas de résumé."
+        },
+        "event": {
+          "loading": "Chargement de l’événement",
+          "error": "Impossible de charger l’événement. Réessayez plus tard.",
+          "notFound": "Cet événement est introuvable.",
+          "noSummary": "Cet événement n’a pas de résumé."
+        },
+        "alert": {
+          "loading": "Chargement de l’alerte",
+          "error": "Impossible de charger l’alerte. Réessayez plus tard.",
+          "notFound": "Cette alerte est introuvable."
+        },
+        "untitledEvent": "Événement sans titre",
+        "relatedEventCount": "{count, plural, one {# événement lié} other {# événements liés}}",
+        "loadingRelated": "Chargement des événements liés",
+        "signalsHint": "Autres signaux des mêmes événements",
+        "expand": "Afficher {section}",
+        "collapse": "Masquer {section}",
         "sections": {
           "summary": "Résumé",
           "impact": "Impact",

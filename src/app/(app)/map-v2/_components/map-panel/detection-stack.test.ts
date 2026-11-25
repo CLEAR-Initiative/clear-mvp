@@ -1,23 +1,36 @@
 import { describe, expect, it } from "vitest";
 import type { GqlLocation } from "~/lib/types/graphql";
-import { commonLocationName, severityCounts, sortStackSignals, stackPeriod } from "./signal-stack";
+import { commonLocationName, detectionsAtPoint, severityCounts, sortStackItems, stackPeriod } from "./detection-stack";
 
 function location(id: string, name: string, level: number, ancestorIds: string[] = []): GqlLocation {
   return { id, name, level, ancestorIds, geometry: { type: "Point", coordinates: [30, 15] } } as GqlLocation;
 }
 
-function signal(id: string, severity: number | null, publishedAt: string, generalLocation: GqlLocation | null = null) {
-  return { id, severity, publishedAt, generalLocation, originLocation: null, destinationLocation: null };
+function item(id: string, severity: number | null, date: string, location: GqlLocation | null = null) {
+  return { id, severity, date, location };
 }
 
-describe("sortStackSignals", () => {
+describe("detectionsAtPoint", () => {
+  it("keeps the items drawn at the point, matched to the URL's 5 decimals", () => {
+    const items = [
+      { id: "here", point: [30, 15] as [number, number] },
+      { id: "rounded", point: [30.000004, 14.999996] as [number, number] },
+      { id: "near", point: [30.01, 15] as [number, number] },
+      { id: "nowhere", point: null },
+    ];
+
+    expect(detectionsAtPoint(items, [30, 15]).map((i) => i.id)).toEqual(["here", "rounded"]);
+  });
+});
+
+describe("sortStackItems", () => {
   it("puts the most severe first, unknown last, and the newest first within a severity", () => {
-    const sorted = sortStackSignals([
-      signal("unknown", null, "2026-11-20T00:00:00Z"),
-      signal("high-old", 4, "2026-11-01T00:00:00Z"),
-      signal("low", 1, "2026-11-22T00:00:00Z"),
-      signal("high-new", 4, "2026-11-10T00:00:00Z"),
-      signal("critical", 5, "2026-10-01T00:00:00Z"),
+    const sorted = sortStackItems([
+      item("unknown", null, "2026-11-20T00:00:00Z"),
+      item("high-old", 4, "2026-11-01T00:00:00Z"),
+      item("low", 1, "2026-11-22T00:00:00Z"),
+      item("high-new", 4, "2026-11-10T00:00:00Z"),
+      item("critical", 5, "2026-10-01T00:00:00Z"),
     ]);
 
     expect(sorted.map((s) => s.id)).toEqual(["critical", "high-new", "high-old", "low", "unknown"]);
@@ -27,10 +40,10 @@ describe("sortStackSignals", () => {
 describe("severityCounts", () => {
   it("counts each severity in order and leaves out empty ones", () => {
     const counts = severityCounts([
-      signal("a", 4, "2026-11-01T00:00:00Z"),
-      signal("b", 5, "2026-11-01T00:00:00Z"),
-      signal("c", 4, "2026-11-01T00:00:00Z"),
-      signal("d", null, "2026-11-01T00:00:00Z"),
+      item("a", 4, "2026-11-01T00:00:00Z"),
+      item("b", 5, "2026-11-01T00:00:00Z"),
+      item("c", 4, "2026-11-01T00:00:00Z"),
+      item("d", null, "2026-11-01T00:00:00Z"),
     ]);
 
     expect(counts).toEqual([
@@ -47,12 +60,12 @@ describe("commonLocationName", () => {
     ["kd", { name: "Kadugli", level: 2 }],
   ]);
 
-  it("names the place most of the signals share, through their district when the point is unnamed", () => {
+  it("names the place most of the items share, through their district when the point is unnamed", () => {
     const name = commonLocationName(
       [
-        signal("a", 4, "2026-11-01T00:00:00Z", location("p1", "Drone strike near Kadugli", 4, ["sd", "kd"])),
-        signal("b", 4, "2026-11-01T00:00:00Z", location("p2", "Shelling", 4, ["sd", "kd"])),
-        signal("c", 4, "2026-11-01T00:00:00Z", location("sd", "Sudan", 0)),
+        item("a", 4, "2026-11-01T00:00:00Z", location("p1", "Drone strike near Kadugli", 4, ["sd", "kd"])),
+        item("b", 4, "2026-11-01T00:00:00Z", location("p2", "Shelling", 4, ["sd", "kd"])),
+        item("c", 4, "2026-11-01T00:00:00Z", location("sd", "Sudan", 0)),
       ],
       locationById,
     );
@@ -60,8 +73,8 @@ describe("commonLocationName", () => {
     expect(name).toBe("Kadugli");
   });
 
-  it("is null when no signal has a place name", () => {
-    expect(commonLocationName([signal("a", 4, "2026-11-01T00:00:00Z")], locationById)).toBeNull();
+  it("is null when no item has a place name", () => {
+    expect(commonLocationName([item("a", 4, "2026-11-01T00:00:00Z")], locationById)).toBeNull();
   });
 });
 
