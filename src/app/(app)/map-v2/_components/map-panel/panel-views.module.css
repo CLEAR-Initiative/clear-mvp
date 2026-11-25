@@ -139,7 +139,7 @@
   transition: transform 150ms ease;
 }
 
-:global([dir="rtl"]) .chevron {
+:global([dir="rtl"]) .chevron:not([data-open]) {
   transform: rotate(90deg);
 }
 
