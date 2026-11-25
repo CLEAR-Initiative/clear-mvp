@@ -240,8 +240,8 @@ export interface GqlEvent {
    */
   representativePoint?: GqlLocation | null;
   signals: GqlSignal[];
-  /** Non-empty = this event has been flagged as an alert */
-  alerts: Array<{ id: string; status: string }>;
+  /** Non-empty = this event has been flagged as an alert. `createdAt` is only on the detail query. */
+  alerts: Array<{ id: string; status: string; createdAt?: string | null }>;
 }
 
 /* ─── Tasks, proposed signals and computed ImpactPriors (clear-api ADR-0010) ─── */
@@ -399,6 +399,8 @@ export interface GqlAlert {
   id: string;
   event: GqlEvent;
   status: "draft" | "published" | "archived";
+  /** When the alert was raised. Not every query selects it. */
+  createdAt?: string;
   /** Same first-signal location as `event.representativePoint` (clear-api convenience). */
   representativePoint?: GqlLocation | null;
 }

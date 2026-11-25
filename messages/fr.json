@@ -1915,6 +1915,15 @@
       "turnIntoAlert": "Transformer en alerte",
       "noPermission": "Seuls les administrateurs et les analystes d'équipe peuvent émettre des alertes"
     },
+    "alertState": {
+      "chip": "Alerte · {status}",
+      "raised": "Levé en alerte",
+      "status": {
+        "published": "Publiée",
+        "draft": "Brouillon",
+        "archived": "Archivée"
+      }
+    },
     "systemData": {
       "title": "Données système",
       "eventId": "ID de l'événement",
