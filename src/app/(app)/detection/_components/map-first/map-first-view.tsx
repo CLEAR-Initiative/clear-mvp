@@ -2,12 +2,11 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { useRouter } from "next/navigation";
-import { EventDetailDrawer } from "~/components/event-detail";
 import type { MapMarker } from "~/components/map/crisis-map";
 import type { BoundaryLevel } from "~/app/(app)/map/_components/map-settings-popover";
 import { DetectionFeedListSkeleton } from "~/components/ui/detection-page-skeleton";
 import { useDetailKeyboardNav } from "~/hooks/use-detail-keyboard-nav";
+import { useTrackEventOpened } from "~/lib/analytics/use-once-per-view";
 import { getListNavigation } from "~/lib/detail-list-nav";
 import { api } from "~/trpc/react";
 import type { GqlAlert, GqlEvent, GqlSignal } from "~/lib/types/graphql";
@@ -156,14 +155,12 @@ export function MapFirstView(props: MapFirstViewProps) {
   const tDet = useTranslations("detection");
   const tMap = useTranslations("map");
   const locale = useLocale();
-  const router = useRouter();
   const feedTab: FeedTab = tab === "alerts" || tab === "signals" || tab === "history" ? tab : "events";
 
   // ── UI state ──────────────────────────────────────────────────────────────
   // The query bar's text: free text searches the rows, "key:" opens a value list.
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [previewEventId, setPreviewEventId] = useState<string | null>(null);
   const [hoverId, setHoverId] = useState<string | null>(null);
   const [listOpen, setListOpen] = useState(true);
   const [timelineOpen, setTimelineOpen] = useState(false);
@@ -445,40 +442,35 @@ export function MapFirstView(props: MapFirstViewProps) {
         : t("lastDays", { count: windowDays });
   const nounKey = feedTab === "alerts" ? "alerts" : feedTab === "signals" ? "signals" : "events";
 
-  // ── Selection, hover and drawer ───────────────────────────────────────────
+  // ── Selection, hover and preview ──────────────────────────────────────────
   const itemIds = useMemo(() => items.map((it) => it.id), [items]);
+  const selectedItem = items.find((it) => it.id === selectedId);
+  useTrackEventOpened(selectedItem?.eventId ?? null, "detection");
   useEffect(() => {
-    if (selectedId && !itemIds.includes(selectedId)) setSelectedId(null);
-  }, [itemIds, selectedId]);
+    if (feedTab === "history" || !selectedItem) setSelectedId(null);
+  }, [selectedItem, feedTab]);
 
-  const previewIds = useMemo(() => items.map((it) => it.eventId).filter((v): v is string => !!v), [items]);
   const previewNav = useMemo(
-    () => (previewEventId != null ? getListNavigation(previewIds, previewEventId) : null),
-    [previewIds, previewEventId],
+    () => (selectedId != null ? getListNavigation(itemIds, selectedId) : null),
+    [itemIds, selectedId],
   );
+  const selectAndRevealRow = useCallback((id: string) => {
+    setSelectedId(id);
+    feedRef.current?.scrollToRow(id);
+  }, []);
   const goPrev = useCallback(() => {
-    if (previewNav?.prevId) setPreviewEventId(previewNav.prevId);
-  }, [previewNav?.prevId]);
+    if (previewNav?.prevId) selectAndRevealRow(previewNav.prevId);
+  }, [previewNav?.prevId, selectAndRevealRow]);
   const goNext = useCallback(() => {
-    if (previewNav?.nextId) setPreviewEventId(previewNav.nextId);
-  }, [previewNav?.nextId]);
+    if (previewNav?.nextId) selectAndRevealRow(previewNav.nextId);
+  }, [previewNav?.nextId, selectAndRevealRow]);
   useDetailKeyboardNav({
-    enabled: previewEventId != null,
+    enabled: selectedItem != null,
     hasPrev: previewNav?.hasPrev ?? false,
     hasNext: previewNav?.hasNext ?? false,
     onPrev: goPrev,
     onNext: goNext,
   });
-
-  const onSelectRow = useCallback(
-    (it: FeedItem) => {
-      setSelectedId(it.id);
-      // Events and alerts open in the side peek; a signal has none, so it opens its page.
-      if (it.eventId) setPreviewEventId(it.eventId);
-      else router.push(it.href);
-    },
-    [router],
-  );
 
   // Row hover highlights its pin; pin hover highlights its row.
   const hoveredItem = hoverId ? items.find((it) => it.id === hoverId) : null;
@@ -492,6 +484,13 @@ export function MapFirstView(props: MapFirstViewProps) {
     },
     [itemByKey],
   );
+  const selectedMarker = selectedItem
+    ? visibleMarkers.find((m) => m.eventId === (selectedItem.eventId ?? selectedItem.id))
+    : undefined;
+  const onMarkerClick = useCallback((marker: DetectionMarker) => {
+    const item = marker.eventId && itemByKey.get(marker.eventId);
+    if (item) selectAndRevealRow(item.id);
+  }, [itemByKey, selectAndRevealRow]);
 
   // ── Fresh rows after "n new" ──────────────────────────────────────────────
   const beforeRefresh = useRef<Set<string> | null>(null);
@@ -558,6 +557,8 @@ export function MapFirstView(props: MapFirstViewProps) {
       } else if (e.key === "t" || e.key === "T") {
         e.preventDefault();
         setTimeline(!timelineOpen);
+      } else if (e.key === "Escape" && !e.defaultPrevented) {
+        setSelectedId(null);
       }
     };
     window.addEventListener("keydown", onKey);
@@ -682,7 +683,8 @@ export function MapFirstView(props: MapFirstViewProps) {
           newCount={feed.newCount}
           onRefresh={onRefresh}
           selectedId={selectedId}
-          onSelect={onSelectRow}
+          hoveredId={hoverId}
+          onSelect={(item) => setSelectedId(item.id)}
           onHover={setHoverId}
           loading={feed.loading}
           isFetchingMore={feed.isFetchingMore}
@@ -715,6 +717,17 @@ export function MapFirstView(props: MapFirstViewProps) {
           markers={visibleMarkers}
           hoveredMarkerId={hoveredMarkerId}
           onMarkerHover={onMarkerHover}
+          onMarkerClick={onMarkerClick}
+          selectedMarkerId={selectedMarker?.id ?? null}
+          preview={selectedItem && {
+            item: selectedItem,
+            hasMarker: selectedMarker != null,
+            timelineOpen,
+            navigationPosition: previewNav?.position,
+            onPrev: previewNav?.hasPrev ? goPrev : undefined,
+            onNext: previewNav?.hasNext ? goNext : undefined,
+            onClose: () => setSelectedId(null),
+          }}
           center={center}
           zoom={zoom}
           fitBoundsGeometry={fitBoundsGeometry}
@@ -758,15 +771,6 @@ export function MapFirstView(props: MapFirstViewProps) {
           />
         </MapStage>
       </div>
-
-      <EventDetailDrawer
-        eventId={previewEventId}
-        opened={previewEventId != null}
-        onClose={() => setPreviewEventId(null)}
-        navigation={previewNav ?? undefined}
-        onNavigatePrev={goPrev}
-        onNavigateNext={goNext}
-      />
     </div>
   );
 }

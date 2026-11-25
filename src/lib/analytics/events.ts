@@ -26,7 +26,7 @@ export const ANALYTICS_EVENTS = {
   /** The usage-analytics privacy notice was opened. */
   "privacy_notice.viewed": { from: ["profile", "onboarding"] },
 
-  /** An Event was opened (page or Detection drawer); `direct` when no known `from`. */
+  /** An Event was opened (page or Detection preview); `direct` when no known `from`. */
   "event.opened": { from: [...EVENT_FROM_VALUES, "direct"] },
   /** An Event section first scrolled into view (once per section per view). */
   "event.section_seen": { section: ["enrichment", "feedback"] },

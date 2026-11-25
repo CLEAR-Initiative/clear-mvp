@@ -23,7 +23,7 @@ function clamp(n: number, min: number, max: number): number {
   return Math.min(Math.max(n, min), Math.max(min, max));
 }
 
-function clampToParent(
+export function clampToParent(
   left: number,
   top: number,
   panel: Size,
@@ -51,6 +51,23 @@ export function panelCoversPin(
     panel.top + panel.height <= pinT ||
     panel.top >= pinB
   );
+}
+
+/** Detection opens in the bottom-right corner when two 320px cards fit across
+ * the control-safe area. A narrow map or a pin behind the corner uses the
+ * same pin-relative placement as the main map. */
+export function placeDetectionPreview(
+  anchor: MarkerScreenPoint | null,
+  area: Size,
+  panel: Size,
+): { left: number; top: number } {
+  const corner = clampToParent(area.width, area.height, panel, area);
+  if (!anchor || (area.width >= 640 && !panelCoversPin({ ...corner, ...panel }, anchor))) return corner;
+
+  const nearPin = placeNearMarker(anchor, area, panel);
+  // The full map allows a panel to clip if pin clearance cannot fit. In this
+  // smaller map the close button and full-detail link must stay reachable.
+  return clampToParent(nearPin.left, nearPin.top, panel, area);
 }
 
 /**

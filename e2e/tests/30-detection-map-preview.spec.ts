@@ -1,0 +1,211 @@
+import type { Locator, Page } from "@playwright/test";
+import type { Map as MapboxMap } from "mapbox-gl";
+import { SEEDED_EVENTS } from "../support/data";
+import { enableFeatureFlags, eventRows, gotoDetectionEvents } from "../support/helpers";
+import { test, expect } from "../support/test";
+
+// These two seeded signals have distinct points in the same part of Sudan.
+const flood = "Flood warnings along the Nile in Khartoum";
+const bridge = "Bridge damage reported in Omdurman";
+
+async function dragPreview(page: Page, preview: Locator) {
+  const card = (await preview.boundingBox())!;
+  const area = (await preview.locator("..").boundingBox())!;
+  const grip = (await preview.getByTestId("map-marker-panel-grip").boundingBox())!;
+  const targetY = card.y - area.y > 70 ? area.y + 12 : area.y + area.height - card.height - 20;
+  await page.mouse.move(grip.x + 15, grip.y + 12);
+  await page.mouse.down();
+  await page.mouse.move(grip.x + 15, targetY + 12, { steps: 8 });
+  await page.mouse.up();
+  await expect.poll(async () => Math.abs((await preview.boundingBox())!.y - card.y)).toBeGreaterThan(30);
+}
+
+// Compare the painted SVG to the actual pin head and card edge in screen coordinates.
+async function expectConnector(pin: Locator) {
+  await expect.poll(() => pin.evaluate(element => {
+    const head = element.querySelector(".marker-pin-head")!.getBoundingClientRect();
+    const card = document.querySelector('[data-testid="detection-marker-preview"]')?.getBoundingClientRect();
+    const line = document.querySelector<SVGLineElement>("[data-map-overlay-host] svg line");
+    if (!card || !line) return Infinity;
+    const svg = line.ownerSVGElement!.getBoundingClientRect();
+    const pinX = head.left + head.width / 2;
+    const pinY = head.top + head.height / 2;
+    const edge = pinX < card.left + card.width / 2 ? card.left : card.right;
+    return Math.max(
+      Math.abs(svg.left + line.x1.baseVal.value - pinX), Math.abs(svg.top + line.y1.baseVal.value - pinY),
+      Math.abs(svg.left + line.x2.baseVal.value - edge), Math.abs(svg.top + line.y2.baseVal.value - (card.top + card.height / 2)),
+    );
+  }), { message: "connector joins the selected pin head and facing card edge" }).toBeLessThan(2);
+}
+
+test.use({
+  launchOptions: { args: ["--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist"] },
+});
+
+test.beforeAll(async ({ playwright }) => {
+  await enableFeatureFlags(playwright, ["agent"]);
+});
+
+for (const [width, height] of [[1024, 768], [1366, 768], [1440, 900]] as const) {
+  test.describe(`Detection map preview at ${width} × ${height}`, () => {
+    test.use({ viewport: { width, height } });
+
+    test("an event opens a movable preview and the map controls remain usable", async ({ page }) => {
+      await gotoDetectionEvents(page);
+      const row = eventRows(page).filter({ hasText: SEEDED_EVENTS.khartoumFlood });
+      await row.click();
+      const preview = page.getByTestId("detection-marker-preview");
+      await expect(preview).toContainText(SEEDED_EVENTS.khartoumFlood);
+      await expect(row).toHaveAttribute("aria-pressed", "true");
+      const fullDetails = preview.getByRole("link", { name: /view details/i });
+      await expect(fullDetails).toHaveAttribute("href", /\/event\//);
+      const eventHref = await fullDetails.getAttribute("href");
+
+      await dragPreview(page, preview);
+
+      // A visible control can still be covered by the preview. Exercise it.
+      await page.getByRole("button", { name: "Open the Agent drawer" }).click({ trial: true });
+      if (process.env.E2E_REAL_MAP === "1") {
+        await page.getByRole("button", { name: "Zoom in", exact: true }).click({ trial: true });
+        await page.getByRole("button", { name: "Zoom out", exact: true }).click({ trial: true });
+      }
+      await page.getByTitle("Show timeline (T)").click();
+      await page.getByRole("button", { name: "Hide timeline (T)" }).click();
+      await page.getByTestId("map-layers-toggle").click();
+      await expect(page.getByText("Boundaries", { exact: true })).toBeVisible();
+      await page.getByTestId("map-layers-toggle").click();
+      await preview.getByRole("button", { name: "Close", exact: true }).click();
+      await expect(preview).toBeHidden();
+      await expect(page).toHaveURL(/\/detection/);
+      if (process.env.E2E_REAL_MAP === "1") {
+        // Search isolates the event from any nearby cluster while preserving the camera.
+        await page.getByPlaceholder("Search or filter…").fill(SEEDED_EVENTS.khartoumFlood);
+        await page.locator(".mapboxgl-map").getByRole("button", { name: SEEDED_EVENTS.khartoumFlood, exact: true }).click();
+        await expect(preview).toContainText(SEEDED_EVENTS.khartoumFlood);
+        await expect(row).toHaveAttribute("aria-pressed", "true");
+        await preview.getByRole("button", { name: "Close", exact: true }).click();
+      }
+
+      // The alert has its own feed ID but shares the event's point and detail page.
+      await page.getByRole("tab", { name: /Alerts/ }).click();
+      await eventRows(page).filter({ hasText: SEEDED_EVENTS.khartoumFlood }).click();
+      await expect(preview).toContainText(SEEDED_EVENTS.khartoumFlood);
+      await expect(fullDetails).toHaveAttribute("href", eventHref!);
+    });
+
+    test("a dragged signal preview stays put and its connector follows the selected pin", async ({ page }) => {
+      test.skip(process.env.E2E_REAL_MAP !== "1", "requires the real Mapbox canvas in the E2E image");
+      test.setTimeout(100_000);
+      // The seeded signals have no severity. Give this page classified signals
+      // so the default feed includes them, preserving their real IDs and points.
+      await page.route("**/api/trpc/**", async route => {
+        const names = new URL(route.request().url()).pathname.split("/api/trpc/")[1]?.split(",") ?? [];
+        const index = names.indexOf("signals.signalsPage");
+        if (index < 0) return route.fallback();
+        const response = await route.fetch();
+        const body = await response.json();
+        const result = Array.isArray(body) ? body[index] : body;
+        for (const signal of result.result.data.json.items) signal.severity ??= 3;
+        await route.fulfill({ response, json: body });
+      });
+      await page.goto("/detection?tab=signals", { waitUntil: "domcontentloaded" });
+      const floodRow = eventRows(page).filter({ hasText: flood });
+      const bridgeRow = eventRows(page).filter({ hasText: bridge });
+      await expect(floodRow).toBeVisible();
+      await page.waitForFunction(() => {
+        const map = window.__clearE2EMap as MapboxMap | undefined;
+        return map?.getSource("crisis-markers") && !map.isMoving();
+      });
+      // Start close enough to work with individual pins, at a repeatable camera.
+      await page.evaluate(() => {
+        (window.__clearE2EMap as MapboxMap).jumpTo({ center: [32.52, 15.615], zoom: 9.5 });
+      });
+      const map = page.locator(".mapboxgl-map");
+      const floodPin = map.getByRole("button", { name: flood, exact: true });
+      const bridgePin = map.getByRole("button", { name: bridge, exact: true });
+      await expect(floodPin).toBeVisible();
+      await expect(bridgePin).toBeVisible();
+      const camera = () => page.evaluate(() => {
+        const map = window.__clearE2EMap as MapboxMap;
+        return [map.getZoom(), ...map.getCenter().toArray()];
+      });
+      const initial = await camera();
+      await floodRow.hover();
+      await expect(floodPin).toHaveAttribute("data-hovered", "true");
+      await bridgePin.hover();
+      await expect(bridgeRow).toHaveAttribute("data-hovered", "true");
+      await expect(floodPin).not.toHaveAttribute("data-hovered", "true");
+      await bridgePin.click();
+      const preview = page.getByTestId("detection-marker-preview");
+      await expect(preview).toContainText(bridge);
+      await expect(bridgeRow).toHaveAttribute("aria-pressed", "true");
+      await expect(bridgePin).toHaveAttribute("data-selected", "true");
+      await expectConnector(bridgePin);
+      const opening = (await preview.boundingBox())!;
+      const area = (await preview.locator("..").boundingBox())!;
+      if (width === 1024) {
+        const pin = (await bridgePin.locator(".marker-pin-head").boundingBox())!;
+        const dx = pin.x + pin.width / 2 - opening.x;
+        const dy = pin.y + pin.height / 2 - opening.y;
+        const clearance = Math.max(-dx, dx - opening.width, -dy, dy - opening.height);
+        expect(clearance).toBeCloseTo(34, 0);
+      } else {
+        expect(area.x + area.width - opening.x - opening.width).toBeCloseTo(8, 0);
+        expect(area.y + area.height - opening.y - opening.height).toBeCloseTo(8, 0);
+      }
+      await dragPreview(page, preview);
+      const dragged = (await preview.boundingBox())!;
+      await expectConnector(bridgePin);
+      await floodPin.click();
+      await expect(preview).toContainText(flood);
+      await expect(floodPin).toHaveAttribute("data-selected", "true");
+      await expect(floodRow).toHaveAttribute("aria-pressed", "true");
+      await expect(preview.getByRole("link", { name: /view details/i })).toHaveAttribute("href", /\/signal\//);
+      expect(await preview.boundingBox()).toMatchObject({ x: dragged.x, y: dragged.y });
+      await expectConnector(floodPin);
+      const next = preview.getByRole("button", { name: "Next signal" });
+      const previous = preview.getByRole("button", { name: "Previous signal" });
+      const [forward, back] = await next.isEnabled() ? [next, previous] : [previous, next];
+      await forward.click();
+      await expect(floodRow).toHaveAttribute("aria-pressed", "false");
+      expect(await preview.boundingBox()).toMatchObject({ x: dragged.x, y: dragged.y });
+      await back.click();
+      await expectConnector(floodPin);
+      expect(await camera()).toEqual(initial);
+
+      // Start an actual map drag on exposed canvas alongside the card.
+      const canvas = map.locator("canvas.mapboxgl-canvas");
+      const box = (await canvas.boundingBox())!;
+      const panX = box.x + box.width / 2;
+      const panY = dragged.y > box.y + 100 ? box.y + 72 : box.y + box.height - 120;
+      await page.mouse.move(panX, panY);
+      await page.mouse.down();
+      await page.mouse.move(panX + 45, panY, { steps: 8 });
+      await page.mouse.up();
+      await page.waitForFunction(() => !(window.__clearE2EMap as MapboxMap).isMoving());
+      const panned = await camera();
+      expect(panned[0]).toBe(initial[0]);
+      expect(panned[1]).not.toBe(initial[1]);
+      await expectConnector(floodPin);
+      expect(await preview.boundingBox()).toMatchObject({ x: dragged.x, y: dragged.y });
+
+      const line = map.locator("[data-map-overlay-host] svg line");
+      await page.evaluate(() => {
+        (window.__clearE2EMap as MapboxMap).jumpTo({ center: [0, 0] });
+      });
+      await expect(line).toHaveCount(0);
+      await expect(preview).toContainText(flood);
+      await page.evaluate(() => {
+        (window.__clearE2EMap as MapboxMap).jumpTo({ center: [32.52, 15.615] });
+      });
+      await expectConnector(floodPin);
+      await preview.getByRole("button", { name: "Close", exact: true }).click();
+      await expect(line).toHaveCount(0);
+      await bridgeRow.click();
+      await expect(preview).toContainText(bridge);
+      await expectConnector(bridgePin);
+      expect(await preview.boundingBox()).toMatchObject({ x: opening.x, y: opening.y });
+      expect(await camera()).toEqual(initial);
+    });
+  });
+}

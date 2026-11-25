@@ -39,10 +39,11 @@ export interface FeedItem {
   /** Row key, unique within a tab. */
   id: string;
   kind: "alert" | "event" | "signal";
-  /** The event behind the row (alerts and events), for the preview drawer. */
+  /** The event behind the row (alerts and events), shared with its map pin. */
   eventId: string | null;
   href: string;
   title: string;
+  description: string | null;
   severity: Severity | "unknown";
   isAlert: boolean;
   /** First source, shown on the row. */
@@ -131,6 +132,7 @@ export function eventToItem(e: GqlEvent, states: readonly RegionState[], untitle
     eventId: e.id,
     href: `/event/${e.id}?from=detection`,
     title: e.title ?? e.description ?? e.types[0] ?? untitled,
+    description: e.description ?? null,
     severity: sevOf(e.severity),
     isAlert: e.alerts.length > 0,
     source: e.signals[0]?.source?.name ?? null,
@@ -166,6 +168,7 @@ export function signalToItem(s: GqlSignal, states: readonly RegionState[], untit
     eventId: null,
     href: `/signal/${s.id}?from=detection`,
     title: s.title ?? s.description ?? untitled,
+    description: s.description ?? null,
     severity: sevOf(s.severity),
     isAlert: false,
     source: s.source.name,

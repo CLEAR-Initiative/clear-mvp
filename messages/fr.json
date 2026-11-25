@@ -1805,6 +1805,7 @@
       "today": "Aujourd'hui",
       "hideList": "Masquer la liste",
       "showList": "Afficher la liste",
+      "noMapPoint": "Aucun point sur cette carte",
       "places": "{count, plural, one {# lieu} other {# lieux}}",
       "qb": {
         "label": "Rechercher et filtrer",

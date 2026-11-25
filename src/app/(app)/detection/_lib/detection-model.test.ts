@@ -43,6 +43,7 @@ const H: HierarchyLevel1[] = [
 
 const item = (over: Partial<FeedItem> = {}): FeedItem => ({
   id: "e1", kind: "event", eventId: "e1", href: "/event/e1", title: "Shelling in Kadugli",
+  description: null,
   severity: "high", isAlert: false, source: "ACLED", sources: ["ACLED"], place: "Kadugli",
   stateId: "s-sk", stateName: "South Kordofan", districtId: "d-kad", typeCodes: ["ba"], signalCount: 2,
   lastAt: "2026-11-09T10:00:00Z", firstAt: null, lng: 29.7, lat: 11, ...over,

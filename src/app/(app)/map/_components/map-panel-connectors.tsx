@@ -39,7 +39,7 @@ interface MapPanelConnectorsProps {
 
 /**
  * Dashed orange SVG “spaghetti” diagonals from each open marker panel to its pin.
- * Desktop `/map` only — pointer-events none so the map stays interactive.
+ * Pointer-events none so the map stays interactive on both Map and Detection.
  * Rendered inside CrisisMap so lines sit above the canvas but under markers.
  */
 export function MapPanelConnectors({ links }: MapPanelConnectorsProps) {
