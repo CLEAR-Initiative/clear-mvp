@@ -1920,6 +1920,15 @@
       "turnIntoAlert": "Convertir en alerta",
       "noPermission": "Solo admins y analistas de equipo pueden elevar alertas"
     },
+    "alertState": {
+      "chip": "Alerta · {status}",
+      "raised": "Elevado a alerta",
+      "status": {
+        "published": "Publicada",
+        "draft": "Borrador",
+        "archived": "Archivada"
+      }
+    },
     "systemData": {
       "title": "Datos del sistema",
       "eventId": "ID del evento",

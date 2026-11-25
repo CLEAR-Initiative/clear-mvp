@@ -195,6 +195,7 @@ const CREATE_ALERT_MUTATION = `
     createAlert(input: $input) {
       id
       status
+      createdAt
       event { id title types rank }
     }
   }
