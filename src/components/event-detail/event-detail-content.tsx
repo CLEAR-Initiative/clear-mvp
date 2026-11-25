@@ -77,7 +77,13 @@ import {
 } from "~/components/ui/detail-navigation-skeletons";
 import { useAgentCurrentView } from "~/lib/agent-current-view";
 import { BidiTitle } from "~/components/ui/bidi-title";
-import { alertStatus, primaryAlert, type EventAlertRef } from "~/lib/event-alert";
+import {
+  alertStatus,
+  alertsForEvent,
+  primaryAlert,
+  rememberPromotedAlert,
+  type PromotedAlerts,
+} from "~/lib/event-alert";
 
 /** An event counts as active while its last signal is at most this old. */
 const ACTIVE_WINDOW_MS = 14 * 24 * 60 * 60 * 1000;
@@ -156,24 +162,23 @@ export function EventDetailContent({
   const router = useRouter();
   const [confirmPromote, setConfirmPromote] = useState(false);
   const [systemDataOpen, setSystemDataOpen] = useState(false);
-  // The alert this page just raised, keyed by event so prev/next navigation
-  // (which keeps this component mounted) doesn't carry it to another event.
-  const [promotedAlert, setPromotedAlert] = useState<
-    { eventId: string; alert: EventAlertRef } | null
-  >(null);
+  // Alerts raised from this page, by event id. Prev/next navigation keeps this
+  // component mounted and can serve an event from a cache that predates the
+  // promotion, so each event keeps its own entry.
+  const [promotedAlerts, setPromotedAlerts] = useState<PromotedAlerts>({});
   const promoteToAlert = api.alerts.promoteToAlert.useMutation({
     onSuccess: (alert, { eventId }) => {
-      setPromotedAlert({
-        eventId,
-        alert: { id: alert.id, status: alert.status, createdAt: alert.createdAt ?? null },
-      });
+      setPromotedAlerts((prev) =>
+        rememberPromotedAlert(prev, eventId, {
+          id: alert.id,
+          status: alert.status,
+          createdAt: alert.createdAt ?? null,
+        }),
+      );
       setConfirmPromote(false);
     },
   });
-  const currentAlert = primaryAlert([
-    ...(event?.alerts ?? []),
-    ...(promotedAlert && promotedAlert.eventId === event?.id ? [promotedAlert.alert] : []),
-  ]);
+  const currentAlert = primaryAlert(alertsForEvent(event?.id, event?.alerts, promotedAlerts));
   const isAlerted = currentAlert !== null;
   const currentAlertStatus = currentAlert ? alertStatus(currentAlert.status) : null;
   const alertRaisedAt = currentAlert?.createdAt ? new Date(currentAlert.createdAt) : null;

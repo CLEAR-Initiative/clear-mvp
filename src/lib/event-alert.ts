@@ -44,3 +44,30 @@ export function primaryAlert(
     return time(a) > time(best) ? a : best;
   });
 }
+
+/**
+ * Alerts raised from the event page in this session, by event id. The page
+ * stays mounted across prev/next navigation and the event query can be
+ * served from cache, so each promotion is remembered against its own event.
+ */
+export type PromotedAlerts = Readonly<Record<string, EventAlertRef>>;
+
+export function rememberPromotedAlert(
+  promoted: PromotedAlerts,
+  eventId: string,
+  alert: EventAlertRef,
+): PromotedAlerts {
+  return { ...promoted, [eventId]: alert };
+}
+
+/** The event's alerts plus any this page raised that the cache doesn't have yet. */
+export function alertsForEvent(
+  eventId: string | null | undefined,
+  fetched: readonly EventAlertRef[] | null | undefined,
+  promoted: PromotedAlerts,
+): EventAlertRef[] {
+  const alerts = [...(fetched ?? [])];
+  const local = eventId ? promoted[eventId] : undefined;
+  if (local && !alerts.some((a) => a.id === local.id)) alerts.push(local);
+  return alerts;
+}
