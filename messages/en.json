@@ -4699,7 +4699,8 @@
           "systemData": "System data",
           "takeAction": "Take an action"
         }
-      }
+      },
+      "showOnMap": "Show on map"
     },
     "mapSettings": {
       "title": "Map settings",
@@ -4728,9 +4729,6 @@
       "hide": "Hide timeline",
       "startHandle": "Start date",
       "endHandle": "End date"
-    },
-    "selection": {
-      "showOnMap": "Show the selection on the map"
     }
   }
 }

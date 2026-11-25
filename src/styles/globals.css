@@ -771,22 +771,6 @@ nextjs-portal {
   line-height: 1;
 }
 
-.map-v2-selection-indicator {
-  position: absolute;
-  z-index: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 60px;
-  height: 60px;
-  border: 6px solid var(--map-selection);
-  border-radius: 50%;
-  background: var(--color-bg-white);
-  color: var(--color-text-primary);
-  box-shadow: var(--map-element-shadow);
-  transform: translate(-50%, -50%);
-}
-
 /* LogIE Blockages hover popup — beat Mapbox’s default white chrome */
 .logie-blockages-popup .mapboxgl-popup-content {
   padding: 0 !important;

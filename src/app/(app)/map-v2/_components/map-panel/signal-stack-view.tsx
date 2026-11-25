@@ -10,9 +10,10 @@ import { useSignalsForMap } from "~/containers/map/hooks/use-signals-for-map";
 import { useTimeframeQuery } from "~/containers/map/hooks/use-timeframe";
 import type { LngLatPoint } from "~/containers/map/selection";
 import { useLocations } from "~/hooks/use-locations";
+import { BidiTitle } from "~/components/ui/bidi-title";
 import { reportHandledError } from "~/lib/report-handled-error";
 import { mapSeverity } from "~/lib/types/graphql";
-import { BackLink } from "./back-link";
+import { PanelNav } from "./panel-nav";
 import { PanelLoader } from "./panel-loader";
 import classes from "./panel-views.module.css";
 import { placeRampLabels } from "./ramp-labels";
@@ -165,7 +166,7 @@ export function SignalStackView({ point, onOpenSignal, onBack }: SignalStackView
                       c={TEXT_PRIMARY}
                       className={classes.rowTitle}
                     >
-                      {signal.title ?? tSignal("untitled")}
+                      <BidiTitle>{signal.title ?? tSignal("untitled")}</BidiTitle>
                     </Text>
                     <Box component="span" h={ROW_LINE_PX} mt={BADGE_NUDGE} className={classes.rowTag}>
                       <SeverityTag severity={mapSeverity(signal.severity)} />
@@ -183,7 +184,7 @@ export function SignalStackView({ point, onOpenSignal, onBack }: SignalStackView
   return (
     <Stack component="section" gap={24} p={24} aria-labelledby="map-panel-stack-title">
       <Stack gap={24}>
-        <BackLink to="layers" onBack={onBack} />
+        <PanelNav back={{ to: "layers", onBack }} point={point} />
         <Title id="map-panel-stack-title" order={2} fz={20} fw={700} lh={1.2} lts={-0.2} py={12} c={TEXT_PRIMARY}>
           {query.isPending ? t("titlePending") : t("title", { count: signals.length })}
         </Title>

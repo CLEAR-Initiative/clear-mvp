@@ -4,6 +4,7 @@ import {
   CLUSTER_MAX_ZOOM,
   clusterSize,
   createSignalIndex,
+  isSamePoint,
   viewClusters,
   worldPoints,
 } from "./clusters";
@@ -80,5 +81,22 @@ describe("abbreviateCount", () => {
     [12400, "12k"],
   ])("shows %i as %s", (count, text) => {
     expect(abbreviateCount(count)).toBe(text);
+  });
+});
+
+describe("isSamePoint", () => {
+  it("tells apart two stacks a few metres apart, as the map shows them", () => {
+    // Two stacks of two, ~3 m apart in longitude.
+    const index = createSignalIndex(
+      collection([signal("a", 30, 15), signal("b", 30, 15), signal("c", 30.00003, 15), signal("d", 30.00003, 15)]),
+    );
+    const stacks = viewClusters(index, WORLD, CLUSTER_MAX_ZOOM).filter((cluster) => cluster.stacked);
+
+    expect(stacks).toHaveLength(2);
+    expect(isSamePoint(stacks[0]!.coordinates, stacks[1]!.coordinates)).toBe(false);
+  });
+
+  it("matches a stack from its point rounded to 5 decimals in the URL", () => {
+    expect(isSamePoint([30.0000049, 14.9999951], [30, 15])).toBe(true);
   });
 });
