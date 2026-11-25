@@ -28,7 +28,7 @@ import {
 } from "./detail-parts";
 import classes from "./panel-views.module.css";
 import { SignalTakeAction } from "./take-action";
-import { useDetectionPoint } from "./use-detection-point";
+import { useMapDetection } from "./use-map-detection";
 
 type SignalDetailViewProps = { signalId: string; back: PanelBack };
 
@@ -59,7 +59,7 @@ function SignalDetail({ signal, back }: { signal: GqlSignalDetail; back: PanelBa
   const tPage = useTranslations("signalDetail");
   const format = useFormatter();
   const now = useNow();
-  const point = useDetectionPoint("signal", signal.id);
+  const point = useMapDetection("signal", signal.id).detection?.point ?? null;
   const categories = useMemo(
     () => getDisasterPills(signal.events.flatMap((event) => event.types)).map((pill) => pill.label),
     [signal.events],

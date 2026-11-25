@@ -17,6 +17,8 @@ export type MapDetection = {
   point: LngLatPoint | null;
   /** The location its place name comes from. */
   location: GqlLocation | null;
+  /** An alert's event, whose detail the alert shows. */
+  eventId?: string;
 };
 
 type MapSignal = Pick<
@@ -52,7 +54,13 @@ export function eventDetection(event: MapEvent): MapDetection {
 /** An alert reads as its event, under the alert's own id and point. */
 export function alertDetection(alert: MapAlert): MapDetection {
   const location = alert.representativePoint ?? alert.event.representativePoint ?? null;
-  return { ...eventDetection(alert.event), id: alert.id, point: locationPoint(location), location };
+  return {
+    ...eventDetection(alert.event),
+    id: alert.id,
+    point: locationPoint(location),
+    location,
+    eventId: alert.event.id,
+  };
 }
 
 /**

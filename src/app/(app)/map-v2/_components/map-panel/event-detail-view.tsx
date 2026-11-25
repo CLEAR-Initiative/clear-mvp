@@ -32,7 +32,7 @@ import {
 import { PanelLoader } from "./panel-loader";
 import classes from "./panel-views.module.css";
 import { EventTakeAction } from "./take-action";
-import { useDetectionPoint } from "./use-detection-point";
+import { useMapDetection } from "./use-map-detection";
 
 function toNumber(value: string | null | undefined): number | null {
   if (value === null || value === undefined) return null;
@@ -232,6 +232,6 @@ export function EventDetailLoader({ eventId, back, point }: EventDetailLoaderPro
 }
 
 export function EventDetailView({ eventId, back }: { eventId: string; back: PanelBack }) {
-  const point = useDetectionPoint("event", eventId);
+  const point = useMapDetection("event", eventId).detection?.point ?? null;
   return <EventDetailLoader eventId={eventId} back={back} point={point} />;
 }

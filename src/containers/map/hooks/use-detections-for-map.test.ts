@@ -49,7 +49,7 @@ describe("map detections", () => {
     });
   });
 
-  it("gives an alert its own id and point, and its event's title, severity and date", () => {
+  it("gives an alert its own id and point, and its event's id, title, severity and date", () => {
     const own = place("alert-point", 32, 17);
     expect(alertDetection({ id: "a1", representativePoint: own, event })).toEqual({
       id: "a1",
@@ -58,6 +58,7 @@ describe("map detections", () => {
       date: "2026-11-20T00:00:00.000Z",
       point: [32, 17],
       location: own,
+      eventId: "e1",
     });
   });
 
