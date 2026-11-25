@@ -43,11 +43,7 @@ const auto = (id: string, locationIds: string[], extra: Record<string, unknown> 
   ...extra,
 });
 
-/** The membership + automations round trip: the caller is in `teams`, the team has `automations`. */
-const teamAutomations = (automations: unknown[], teams = ["t1"]) => ({
-  myTeams: teams.map((id) => ({ id })),
-  analysisAutomations: automations,
-});
+const myTeams = { myTeams: [{ id: "t1" }] };
 
 function caller() {
   return createCaller({ headers: new Headers({ cookie: "better-auth.session_token=x" }) });
@@ -462,9 +458,10 @@ describe("analysis router", () => {
 
   it("lists the country frame and the team's automations with names and generation stamps", async () => {
     graphqlFetch.mockImplementation(async (query: string, vars: Record<string, unknown>) => {
+      if (query.includes("query AnalysisMyTeams")) return myTeams;
       if (query.includes("query TeamAnalysisAutomations")) {
         expect(vars).toEqual({ teamId: "t1" });
-        return teamAutomations([auto("auto-1", ["sheikan", "umrawaba"])]);
+        return { analysisAutomations: [auto("auto-1", ["sheikan", "umrawaba"])] };
       }
       if (query.includes("query ScopeLocations")) {
         const chain = [
@@ -530,7 +527,7 @@ describe("analysis router", () => {
     expect(result.countries[0]).toMatchObject({ analysisId: "now", headline: null });
   });
 
-  it("never lists automations without a team (clear-api would return every team's)", async () => {
+  it("never lists automations without a team", async () => {
     graphqlFetch.mockResolvedValue({ a0: null, a1: null });
     const result = await caller().analysis.scopes({ teamId: null, countries: [{ id: "sdn", name: "Sudan" }] });
     expect(result.created).toEqual([]);
@@ -564,19 +561,21 @@ describe("analysis router", () => {
       windowStart: "2026-07-01T00:00:00.000Z",
     };
     graphqlFetch
-      .mockResolvedValueOnce(teamAutomations([]))
+      .mockResolvedValueOnce(myTeams)
+      .mockResolvedValueOnce({ analysisAutomations: [] })
       .mockResolvedValueOnce({ createAnalysisAutomation: automation })
       .mockResolvedValueOnce({ requestAnalysis: { id: "req-1", status: "PENDING" } });
     const result = await caller().analysis.create({ teamId: "t1", locationIds: ["sheikan"], cadence: "daily" });
 
-    expect(graphqlFetch.mock.calls[0]![0]).toContain("query TeamAnalysisAutomations");
-    const [createQuery, createVars] = graphqlFetch.mock.calls[1]!;
+    expect(graphqlFetch.mock.calls[0]![0]).toContain("query AnalysisMyTeams");
+    expect(graphqlFetch.mock.calls[1]![0]).toContain("query TeamAnalysisAutomations");
+    const [createQuery, createVars] = graphqlFetch.mock.calls[2]!;
     expect(createQuery).toContain("createAnalysisAutomation");
     const input = (createVars as { input: Record<string, unknown> }).input;
     expect(input).toMatchObject({ teamId: "t1", locationIds: ["sheikan"], cadence: "daily" });
     expect(input.windowStart).toMatch(/T00:00:00\.000Z$/);
 
-    const [requestQuery, requestVars] = graphqlFetch.mock.calls[2]!;
+    const [requestQuery, requestVars] = graphqlFetch.mock.calls[3]!;
     expect(requestQuery).toContain("requestAnalysis");
     expect(requestVars).toEqual({
       input: {
@@ -593,7 +592,8 @@ describe("analysis router", () => {
 
   it("still creates the analysis when the first-version request fails", async () => {
     graphqlFetch
-      .mockResolvedValueOnce(teamAutomations([]))
+      .mockResolvedValueOnce(myTeams)
+      .mockResolvedValueOnce({ analysisAutomations: [] })
       .mockResolvedValueOnce({
         createAnalysisAutomation: { id: "auto-9", locationIds: ["x"], eventTypes: [], needSectors: [], windowStart: "2026-07-01T00:00:00.000Z" },
       })
@@ -610,7 +610,8 @@ describe("analysis router", () => {
 
   it("creates an on-request analysis weekly, requests its first version, then disables it", async () => {
     graphqlFetch
-      .mockResolvedValueOnce(teamAutomations([]))
+      .mockResolvedValueOnce(myTeams)
+      .mockResolvedValueOnce({ analysisAutomations: [] })
       .mockResolvedValueOnce({
         createAnalysisAutomation: { id: "auto-9", locationIds: ["x"], eventTypes: [], needSectors: [], windowStart: "2026-07-01T00:00:00.000Z" },
       })
@@ -619,49 +620,51 @@ describe("analysis router", () => {
     const result = await caller().analysis.create({ teamId: "t1", locationIds: ["x"], cadence: "manual" });
 
     const calls = graphqlFetch.mock.calls;
-    expect(calls[1]![0]).toContain("createAnalysisAutomation");
-    expect((calls[1]![1] as { input: { cadence: string } }).input.cadence).toBe("weekly");
-    expect(calls[2]![0]).toContain("requestAnalysis");
-    expect(calls[3]![0]).toContain("updateAnalysisAutomation");
-    expect(calls[3]![1]).toEqual({ id: "auto-9", input: { enabled: false } });
+    expect(calls[2]![0]).toContain("createAnalysisAutomation");
+    expect((calls[2]![1] as { input: { cadence: string } }).input.cadence).toBe("weekly");
+    expect(calls[3]![0]).toContain("requestAnalysis");
+    expect(calls[4]![0]).toContain("updateAnalysisAutomation");
+    expect(calls[4]![1]).toEqual({ id: "auto-9", input: { enabled: false } });
     expect(result).toEqual({ id: "auto-9", firstVersionRequested: true, existing: false, cadence: "manual" });
   });
 
   it("keeps an on-request analysis weekly and enabled when its first-version request fails", async () => {
     graphqlFetch
-      .mockResolvedValueOnce(teamAutomations([]))
+      .mockResolvedValueOnce(myTeams)
+      .mockResolvedValueOnce({ analysisAutomations: [] })
       .mockResolvedValueOnce({
         createAnalysisAutomation: { id: "auto-9", locationIds: ["x"], eventTypes: [], needSectors: [], windowStart: "2026-07-01T00:00:00.000Z" },
       })
       .mockRejectedValueOnce(new Error("queue down"));
     const result = await caller().analysis.create({ teamId: "t1", locationIds: ["x"], cadence: "manual" });
 
-    expect(graphqlFetch).toHaveBeenCalledTimes(3);
+    expect(graphqlFetch).toHaveBeenCalledTimes(4);
     expect(graphqlFetch.mock.calls.some(([q]) => (q as string).includes("updateAnalysisAutomation"))).toBe(false);
     expect(result).toEqual({ id: "auto-9", firstVersionRequested: false, existing: false, cadence: "weekly" });
   });
 
   it("returns the team's analysis over the same areas instead of creating a second one", async () => {
-    graphqlFetch.mockResolvedValueOnce(
-      teamAutomations([auto("auto-1", ["umrawaba", "sheikan"], { enabled: false })]),
-    );
+    graphqlFetch.mockResolvedValueOnce(myTeams).mockResolvedValueOnce({
+      analysisAutomations: [auto("auto-1", ["umrawaba", "sheikan"], { enabled: false })],
+    });
     const result = await caller().analysis.create({ teamId: "t1", locationIds: ["sheikan", "umrawaba"], cadence: "daily" });
-    expect(graphqlFetch).toHaveBeenCalledTimes(1);
+    expect(graphqlFetch).toHaveBeenCalledTimes(2);
     expect(result).toEqual({ id: "auto-1", firstVersionRequested: false, existing: true, cadence: "manual" });
   });
 
   it("rejects creating an analysis for a team the caller is not in", async () => {
-    graphqlFetch.mockResolvedValueOnce(teamAutomations([], ["other"]));
+    graphqlFetch.mockResolvedValueOnce({ myTeams: [{ id: "other" }] });
     await expect(
       caller().analysis.create({ teamId: "t1", locationIds: ["x"], cadence: "weekly" }),
     ).rejects.toMatchObject({ code: "FORBIDDEN" });
     expect(graphqlFetch).toHaveBeenCalledTimes(1);
+    expect(graphqlFetch.mock.calls[0]![0]).not.toContain("analysisAutomations(");
   });
 
   it("lets a platform admin create for a team they are not in", async () => {
     stubSession("admin");
     graphqlFetch
-      .mockResolvedValueOnce(teamAutomations([], []))
+      .mockResolvedValueOnce({ analysisAutomations: [] })
       .mockResolvedValueOnce({
         createAnalysisAutomation: { id: "auto-9", locationIds: ["x"], eventTypes: [], needSectors: [], windowStart: "2026-07-01T00:00:00.000Z" },
       })
@@ -708,7 +711,8 @@ describe("analysis router", () => {
 
   it("pauses an analysis for manual updates and re-enables it on a cadence", async () => {
     graphqlFetch.mockImplementation(async (query: string) => {
-      if (query.includes("query TeamAnalysisAutomations")) return teamAutomations([auto("auto-1", ["x"])]);
+      if (query.includes("query AnalysisMyTeams")) return myTeams;
+      if (query.includes("query TeamAnalysisAutomations")) return { analysisAutomations: [auto("auto-1", ["x"])] };
       return { updateAnalysisAutomation: { id: "auto-1" } };
     });
     await caller().analysis.setCadence({ id: "auto-1", cadence: "manual", teamId: "t1" });
@@ -722,29 +726,33 @@ describe("analysis router", () => {
 
   it("removes an automation of the caller's team", async () => {
     graphqlFetch
-      .mockResolvedValueOnce(teamAutomations([auto("auto-1", ["x"])]))
+      .mockResolvedValueOnce(myTeams)
+      .mockResolvedValueOnce({ analysisAutomations: [auto("auto-1", ["x"])] })
       .mockResolvedValueOnce({ deleteAnalysisAutomation: true });
     await caller().analysis.remove({ id: "auto-1", teamId: "t1" });
-    expect(graphqlFetch.mock.calls[1]![0]).toContain("deleteAnalysisAutomation");
-    expect(graphqlFetch.mock.calls[1]![1]).toEqual({ id: "auto-1" });
+    expect(graphqlFetch.mock.calls[2]![0]).toContain("deleteAnalysisAutomation");
+    expect(graphqlFetch.mock.calls[2]![1]).toEqual({ id: "auto-1" });
   });
 
   it("rejects remove and setCadence on a team the caller is not in", async () => {
-    graphqlFetch.mockResolvedValue(teamAutomations([auto("auto-1", ["x"])], ["other"]));
+    graphqlFetch.mockResolvedValue({ myTeams: [{ id: "other" }] });
     await expect(caller().analysis.remove({ id: "auto-1", teamId: "t1" })).rejects.toMatchObject({ code: "FORBIDDEN" });
     await expect(
       caller().analysis.setCadence({ id: "auto-1", cadence: "daily", teamId: "t1" }),
     ).rejects.toMatchObject({ code: "FORBIDDEN" });
-    expect(graphqlFetch.mock.calls.every(([q]) => (q as string).includes("query TeamAnalysisAutomations"))).toBe(true);
+    expect(graphqlFetch.mock.calls.every(([q]) => (q as string).includes("query AnalysisMyTeams"))).toBe(true);
   });
 
   it("rejects remove and setCadence on an automation outside the given team", async () => {
-    graphqlFetch.mockResolvedValue(teamAutomations([auto("auto-1", ["x"])]));
+    graphqlFetch.mockImplementation(async (query: string) => {
+      if (query.includes("query AnalysisMyTeams")) return myTeams;
+      if (query.includes("query TeamAnalysisAutomations")) return { analysisAutomations: [auto("auto-1", ["x"])] };
+      throw new Error(`unexpected query ${query.slice(0, 40)}`);
+    });
     await expect(caller().analysis.remove({ id: "auto-other", teamId: "t1" })).rejects.toMatchObject({ code: "NOT_FOUND" });
     await expect(
       caller().analysis.setCadence({ id: "auto-other", cadence: "daily", teamId: "t1" }),
     ).rejects.toMatchObject({ code: "NOT_FOUND" });
-    expect(graphqlFetch.mock.calls.every(([q]) => (q as string).includes("query TeamAnalysisAutomations"))).toBe(true);
   });
 
   it("lets a platform admin remove and set cadence without the team checks", async () => {
@@ -759,18 +767,34 @@ describe("analysis router", () => {
 
   it("lists no created analyses for a team the caller is not in", async () => {
     graphqlFetch.mockImplementation(async (query: string) => {
-      if (query.includes("query TeamAnalysisAutomations")) return teamAutomations([auto("auto-1", ["x"])], ["other"]);
+      if (query.includes("analysisAutomations(")) throw new Error("Not a member of this team");
+      if (query.includes("query AnalysisMyTeams")) return { myTeams: [{ id: "other" }] };
       if (query.includes("query AnalysisStamps")) return { a0: null, a1: null };
       throw new Error(`unexpected query ${query.slice(0, 40)}`);
     });
     const result = await caller().analysis.scopes({ teamId: "t1", countries: [{ id: "sdn", name: "Sudan" }] });
     expect(result.created).toEqual([]);
+    expect(result.countries).toMatchObject([{ id: "sdn", name: "Sudan" }]);
+    expect(graphqlFetch.mock.calls.some(([q]) => (q as string).includes("analysisAutomations("))).toBe(false);
+  });
+
+  it("lists a team's created analyses for a platform admin outside that team", async () => {
+    stubSession("admin");
+    graphqlFetch.mockImplementation(async (query: string) => {
+      if (query.includes("query AnalysisMyTeams")) return { myTeams: [] };
+      if (query.includes("query TeamAnalysisAutomations")) return { analysisAutomations: [auto("auto-1", ["x"])] };
+      if (query.includes("query ScopeLocations") || query.includes("query AnalysisStamps")) return {};
+      throw new Error(`unexpected query ${query.slice(0, 40)}`);
+    });
+    const result = await caller().analysis.scopes({ teamId: "t1", countries: [] });
+    expect(result.created).toMatchObject([{ id: "auto-1" }]);
   });
 
   it("keeps created analyses with a null country when the location lookup fails twice", async () => {
     let lookups = 0;
     graphqlFetch.mockImplementation(async (query: string) => {
-      if (query.includes("query TeamAnalysisAutomations")) return teamAutomations([auto("auto-1", ["sheikan"])]);
+      if (query.includes("query AnalysisMyTeams")) return myTeams;
+      if (query.includes("query TeamAnalysisAutomations")) return { analysisAutomations: [auto("auto-1", ["sheikan"])] };
       if (query.includes("query ScopeLocations")) {
         lookups += 1;
         throw new Error("timeout");
@@ -787,7 +811,8 @@ describe("analysis router", () => {
   it("retries a failed location lookup once and uses the second answer", async () => {
     let lookups = 0;
     graphqlFetch.mockImplementation(async (query: string) => {
-      if (query.includes("query TeamAnalysisAutomations")) return teamAutomations([auto("auto-1", ["sheikan"])]);
+      if (query.includes("query AnalysisMyTeams")) return myTeams;
+      if (query.includes("query TeamAnalysisAutomations")) return { analysisAutomations: [auto("auto-1", ["sheikan"])] };
       if (query.includes("query ScopeLocations")) {
         lookups += 1;
         if (lookups === 1) throw new Error("timeout");

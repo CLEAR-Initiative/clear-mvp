@@ -43,5 +43,5 @@ export function useActiveTeam() {
 
   const activeTeam = teams?.find((t) => t.id === activeTeamId) ?? null;
 
-  return { activeTeamId, activeTeam, teams, isLoading, isError, switchTeam };
+  return { activeTeamId: activeTeam?.id ?? null, activeTeam, teams, isLoading, isError, switchTeam };
 }
