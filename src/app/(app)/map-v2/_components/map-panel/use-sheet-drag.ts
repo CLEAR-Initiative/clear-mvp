@@ -4,18 +4,27 @@ import { useEffect, useMemo, useRef, type MouseEvent, type PointerEvent as React
 const DRAG_THRESHOLD_PX = 6;
 /** Released faster than this, the sheet follows the flick's direction wherever it is. */
 const FLICK_PX_PER_MS = 0.5;
+/** A pointer held still fires no moves; released longer than this after the last one, it is not a flick. */
+const FLICK_WINDOW_MS = 100;
 
 export type SheetDragHandle = {
   onPointerDown: (event: ReactPointerEvent<HTMLElement>) => void;
   onClickCapture: (event: MouseEvent<HTMLElement>) => void;
 };
 
-/**
- * Whether a released sheet ends up raised. `offset` is how far it was lowered from fully raised, out of
- * `range`; `velocity` is its speed downwards in px/ms.
- */
-export function settleSheet({ offset, range, velocity }: { offset: number; range: number; velocity: number }) {
-  if (Math.abs(velocity) >= FLICK_PX_PER_MS) return velocity < 0;
+type Release = {
+  /** How far the sheet was lowered from fully raised, out of `range`. */
+  offset: number;
+  range: number;
+  /** Its speed downwards in px/ms at the last move. */
+  velocity: number;
+  /** Time from the last move to the release, in ms. */
+  idleMs: number;
+};
+
+/** Whether a released sheet ends up raised: the way it was flicked, or else the half it was let go in. */
+export function settleSheet({ offset, range, velocity, idleMs }: Release) {
+  if (idleMs <= FLICK_WINDOW_MS && Math.abs(velocity) >= FLICK_PX_PER_MS) return velocity < 0;
   return offset < range / 2;
 }
 
@@ -68,7 +77,7 @@ export function useSheetDrag({ sheetRef, expanded, onSettle }: UseSheetDragOptio
       drag.lastTime = event.timeStamp;
     };
 
-    const finish = (drag: Drag, released: boolean) => {
+    const finish = (drag: Drag, released: boolean, releasedAt: number) => {
       if (!drag.dragging) return;
       const sheet = sheetRef.current;
       if (sheet) {
@@ -77,7 +86,8 @@ export function useSheetDrag({ sheetRef, expanded, onSettle }: UseSheetDragOptio
       }
       // The release would otherwise click the button the drag started on.
       suppressClickRef.current = released;
-      latest.current.onSettle(released ? settleSheet(drag) : latest.current.expanded);
+      const idleMs = releasedAt - drag.lastTime;
+      latest.current.onSettle(released ? settleSheet({ ...drag, idleMs }) : latest.current.expanded);
     };
 
     return {
@@ -107,7 +117,7 @@ export function useSheetDrag({ sheetRef, expanded, onSettle }: UseSheetDragOptio
         const onEnd = (e: PointerEvent) => {
           if (e.pointerId !== drag.pointerId) return;
           stop();
-          finish(drag, e.type === "pointerup");
+          finish(drag, e.type === "pointerup", e.timeStamp);
         };
         const stop = () => {
           window.removeEventListener("pointermove", onMove);
