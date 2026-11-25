@@ -2998,7 +2998,9 @@
       "unclassified": "Non classés",
       "chatter": "Bavardage",
       "proposals": "Signaux proposés",
-      "locations": "Changements d’emplacement",
+      "locations": "Tous",
+      "locationsPerson": "Par des personnes",
+      "locationsPipeline": "Par le pipeline",
       "places": "Lieux"
     },
     "search": "Rechercher texte, réf. d'admission",

@@ -2998,7 +2998,9 @@
       "unclassified": "Sin clasificar",
       "chatter": "Charla",
       "proposals": "Señales propuestas",
-      "locations": "Cambios de ubicación",
+      "locations": "Todas",
+      "locationsPerson": "De personas",
+      "locationsPipeline": "Del pipeline",
       "places": "Lugares"
     },
     "search": "Buscar texto, ref. de ingreso",

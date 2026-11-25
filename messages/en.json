@@ -2998,7 +2998,9 @@
       "unclassified": "Unclassified",
       "chatter": "Chatter",
       "proposals": "Proposed signals",
-      "locations": "Location changes",
+      "locations": "All",
+      "locationsPerson": "From people",
+      "locationsPipeline": "From the pipeline",
       "places": "Places"
     },
     "search": "Search text, intake refs",

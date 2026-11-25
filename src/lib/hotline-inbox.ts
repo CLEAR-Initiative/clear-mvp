@@ -50,13 +50,24 @@ export const INBOX_TABS = ["community", "proposals", "locations", "places"] as c
 export type InboxTab = (typeof INBOX_TABS)[number];
 
 /** The filters inside the tabs: every hotline thread ("community"), the
- * three hotline classifications, the proposed signals and the Location
- * challenges. */
-export const INBOX_FILTERS = ["community", "reports", "unclassified", "chatter", "proposals", "locations", "places"] as const;
+ * three hotline classifications, the proposed signals, the Location
+ * challenges, and those by origin (a person's, or the pipeline's). */
+export const INBOX_FILTERS = [
+  "community",
+  "reports",
+  "unclassified",
+  "chatter",
+  "proposals",
+  "locations",
+  "locationsPerson",
+  "locationsPipeline",
+  "places",
+] as const;
 export type InboxFilter = (typeof INBOX_FILTERS)[number];
 
 /** The tab a filter belongs to. */
 export function tabOf(filter: InboxFilter): InboxTab {
+  if (filter === "locationsPerson" || filter === "locationsPipeline") return "locations";
   return filter === "proposals" || filter === "locations" || filter === "places" ? filter : "community";
 }
 
@@ -571,6 +582,10 @@ export function matchesFilter(entry: InboxEntry, filter: InboxFilter): boolean {
       return isCaseGroupEntry(entry);
     case "locations":
       return isLocationChallengeEntry(entry);
+    case "locationsPerson":
+      return isLocationChallengeEntry(entry) && !isPipelineChallenge(entry.challenge);
+    case "locationsPipeline":
+      return isLocationChallengeEntry(entry) && isPipelineChallenge(entry.challenge);
     case "places":
       return isPlaceNameEntry(entry);
   }
@@ -621,8 +636,12 @@ export function entryWeight(entry: InboxEntry): number {
   return isCaseGroupEntry(entry) ? entry.undecided : 1;
 }
 
+function emptyFilterCounts(): Record<InboxFilter, number> {
+  return Object.fromEntries(INBOX_FILTERS.map((f) => [f, 0])) as Record<InboxFilter, number>;
+}
+
 export function countByFilter(entries: InboxEntry[]): Record<InboxFilter, number> {
-  const counts: Record<InboxFilter, number> = { community: 0, reports: 0, unclassified: 0, chatter: 0, proposals: 0, locations: 0, places: 0 };
+  const counts: Record<InboxFilter, number> = emptyFilterCounts();
   for (const e of entries) {
     for (const f of INBOX_FILTERS) if (matchesFilter(e, f)) counts[f] += entryWeight(e);
   }
@@ -636,7 +655,7 @@ export function countByFilter(entries: InboxEntry[]): Record<InboxFilter, number
  * `countByFilter`: work still waiting after it has been opened.
  */
 export function countUnreadByFilter(entries: InboxEntry[], readIds: ReadonlySet<string>): Record<InboxFilter, number> {
-  const counts: Record<InboxFilter, number> = { community: 0, reports: 0, unclassified: 0, chatter: 0, proposals: 0, locations: 0, places: 0 };
+  const counts: Record<InboxFilter, number> = emptyFilterCounts();
   for (const e of entries) {
     const weight = unreadWeight(e, readIds);
     for (const f of INBOX_FILTERS) if (matchesFilter(e, f)) counts[f] += weight;

@@ -537,6 +537,30 @@ describe("InboxPage Location challenges", () => {
     expect(screen.getByText("Signal lc-1", { selector: "[class*=paneTitle]" })).toBeInTheDocument();
   });
 
+  it("filters the challenges by who filed them", () => {
+    role = "team_admin";
+    locationsData = [
+      locationChallenge("lc-1"),
+      { ...locationChallenge("lc-2"), origin: "PIPELINE", createdByName: "svc-pipeline" },
+    ];
+    renderPage();
+    fireEvent.click(screen.getByTestId("inbox-tab-locations"));
+    expect(screen.getAllByTestId("inbox-entry")).toHaveLength(2);
+
+    fireEvent.click(screen.getByTestId("inbox-filter-locationsPipeline"));
+    const rows = screen.getAllByTestId("inbox-entry");
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toHaveTextContent("Signal lc-2");
+    expect(rows[0]).toHaveTextContent("location.pipelineFiler");
+
+    fireEvent.click(screen.getByTestId("inbox-filter-locationsPerson"));
+    expect(screen.getAllByTestId("inbox-entry")).toHaveLength(1);
+    expect(screen.getByTestId("inbox-entry")).toHaveTextContent("Signal lc-1");
+
+    fireEvent.click(screen.getByTestId("inbox-filter-locations"));
+    expect(screen.getAllByTestId("inbox-entry")).toHaveLength(2);
+  });
+
   it("hides them from an analyst, who files them", () => {
     role = "analyst";
     locationsData = [locationChallenge("lc-1")];

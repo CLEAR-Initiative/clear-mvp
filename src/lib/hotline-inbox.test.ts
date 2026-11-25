@@ -361,7 +361,7 @@ describe("visibleEntries / countByFilter", () => {
   });
 
   it("counts per filter", () => {
-    expect(countByFilter(entries)).toEqual({ community: 3, reports: 1, unclassified: 1, chatter: 1, proposals: 0, locations: 0, places: 0 });
+    expect(countByFilter(entries)).toEqual({ community: 3, reports: 1, unclassified: 1, chatter: 1, proposals: 0, locations: 0, locationsPerson: 0, locationsPipeline: 0, places: 0 });
   });
 
   it("drops an opened Review item from the filter number and keeps the queue count", () => {
@@ -372,6 +372,8 @@ describe("visibleEntries / countByFilter", () => {
       chatter: 1,
       proposals: 0,
       locations: 0,
+      locationsPerson: 0,
+      locationsPipeline: 0,
       places: 0,
     });
     expect(countByFilter(entries).community).toBe(3);
@@ -476,7 +478,7 @@ describe("tabs", () => {
   it("lists the community filters under Community signals and proposals alone under its tab", () => {
     expect(filtersFor("community")).toEqual(["community", "reports", "unclassified", "chatter"]);
     expect(filtersFor("proposals")).toEqual(["proposals"]);
-    expect(filtersFor("locations")).toEqual(["locations"]);
+    expect(filtersFor("locations")).toEqual(["locations", "locationsPerson", "locationsPipeline"]);
     expect(tabOf("chatter")).toBe("community");
     expect(tabOf("proposals")).toBe("proposals");
     expect(tabOf("locations")).toBe("locations");
@@ -564,7 +566,7 @@ describe("web case groups (V4)", () => {
     expect(matchesFilter(entries[1]!, "reports")).toBe(false);
     expect(matchesFilter(entries[1]!, "community")).toBe(false);
     expect(matchesFilter(entries[0]!, "proposals")).toBe(false);
-    expect(countByFilter(entries)).toEqual({ community: 1, reports: 1, unclassified: 0, chatter: 0, proposals: 2, locations: 0, places: 0 });
+    expect(countByFilter(entries)).toEqual({ community: 1, reports: 1, unclassified: 0, chatter: 0, proposals: 2, locations: 0, locationsPerson: 0, locationsPipeline: 0, places: 0 });
     expect(visibleEntries(entries, "proposals", "", "newest").map((e) => e.id)).toEqual(["cases:e1"]);
   });
 
@@ -664,6 +666,27 @@ describe("Location challenges", () => {
     const [entry] = buildLocationChallengeEntries([filed]);
     expect(visibleEntries([entry!], "locations", "clear pipeline", "newest")).toHaveLength(1);
     expect(visibleEntries([entry!], "locations", "svc-pipeline", "newest")).toHaveLength(0);
+  });
+
+  it("filters the Location changes tab by origin, with a count for each", () => {
+    const entries = buildLocationChallengeEntries([
+      challenge("c1"),
+      challenge("c2", { origin: "PIPELINE" }),
+      challenge("c3", { origin: "PIPELINE" }),
+    ]);
+    expect(filtersFor("locations")).toEqual(["locations", "locationsPerson", "locationsPipeline"]);
+    expect(tabOf("locationsPipeline")).toBe("locations");
+    const ids = (filter: "locations" | "locationsPerson" | "locationsPipeline") =>
+      visibleEntries(entries, filter, "", "newest").map((e) => e.id).sort();
+    expect(ids("locations")).toEqual(["location:c1", "location:c2", "location:c3"]);
+    expect(ids("locationsPerson")).toEqual(["location:c1"]);
+    expect(ids("locationsPipeline")).toEqual(["location:c2", "location:c3"]);
+    expect(countByFilter(entries)).toMatchObject({ locations: 3, locationsPerson: 1, locationsPipeline: 2 });
+    expect(countUnreadByFilter(entries, new Set(["location:c2"]))).toMatchObject({
+      locations: 2,
+      locationsPerson: 1,
+      locationsPipeline: 1,
+    });
   });
 
   it("keeps an untitled Signal's row titled by the row itself", () => {

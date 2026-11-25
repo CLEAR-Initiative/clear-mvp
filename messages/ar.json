@@ -2998,7 +2998,9 @@
       "unclassified": "غير مصنّف",
       "chatter": "دردشة",
       "proposals": "الإشارات المقترحة",
-      "locations": "تغييرات المواقع",
+      "locations": "الكل",
+      "locationsPerson": "من الأشخاص",
+      "locationsPipeline": "من النظام الآلي",
       "places": "الأماكن"
     },
     "search": "بحث في النص ومراجع الاستقبال",
