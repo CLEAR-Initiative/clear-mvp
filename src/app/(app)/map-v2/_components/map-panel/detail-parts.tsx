@@ -9,10 +9,11 @@ import { BidiTitle } from "~/components/ui/bidi-title";
 import { SeverityTag } from "~/containers/map/layers/signals/severity-tag";
 import type { LngLatPoint } from "~/containers/map/selection";
 import { mapSeverity } from "~/lib/types/graphql";
-import { BackLink, type PanelBack } from "./back-link";
+import type { PanelBack } from "./back-link";
 import { PanelLoader } from "./panel-loader";
-import { PanelNav } from "./panel-nav";
+import { PanelNav, PanelTop } from "./panel-nav";
 import classes from "./panel-views.module.css";
+import { usePeekTitle } from "./sheet-context";
 
 export const TEXT_PRIMARY = "var(--color-text-primary)";
 export const TEXT_SECONDARY = "var(--color-text-secondary)";
@@ -48,26 +49,27 @@ type DetailHeaderProps = {
   children: React.ReactNode;
 };
 
-/** The tinted top of a detail view, kept in sight while the sections scroll under it. */
+/** The tinted top of a detail view: title, tags and meta under the nav row. */
 export function DetailHeader({ back, point, title, severity, categories, children }: DetailHeaderProps) {
+  usePeekTitle(title);
+
   return (
-    <Stack component="header" gap={16} className={classes.detailHeader}>
-      <div>
-        <Stack gap={24}>
-          <PanelNav back={back} point={point} />
+    <PanelTop back={back} point={point} tinted>
+      <Stack component="header" gap={16}>
+        <div>
           <Title id={DETAIL_TITLE_ID} order={2} fz={20} fw={700} lh={1.2} lts={-0.2} py={12} c={TEXT_PRIMARY}>
             <BidiTitle>{title}</BidiTitle>
           </Title>
-        </Stack>
-        <Group gap={10} py={4} align="flex-start">
-          <SeverityTag severity={mapSeverity(severity)} />
-          {categories.map((category) => (
-            <CategoryTag key={category} label={category} />
-          ))}
-        </Group>
-      </div>
-      <Group className={classes.meta}>{children}</Group>
-    </Stack>
+          <Group gap={10} py={4} align="flex-start">
+            <SeverityTag severity={mapSeverity(severity)} />
+            {categories.map((category) => (
+              <CategoryTag key={category} label={category} />
+            ))}
+          </Group>
+        </div>
+        <Group className={classes.meta}>{children}</Group>
+      </Stack>
+    </PanelTop>
   );
 }
 
@@ -244,7 +246,7 @@ export type LoadingCopy = { loading: string; error: string; notFound: string };
 export function DetailStatus({ back, status }: { back: PanelBack; status: React.ReactNode }) {
   return (
     <Stack gap={24} p={24}>
-      <BackLink {...back} />
+      <PanelNav back={back} point={null} />
       {status}
     </Stack>
   );

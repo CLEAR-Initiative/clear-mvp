@@ -7,6 +7,45 @@
   text-decoration: underline;
 }
 
+/* The sheet's close and show-on-map buttons: an icon in a 32px target, centred on the nav row's line. */
+.iconButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  margin-block: -6px;
+}
+
+.iconButton:last-child {
+  margin-inline-end: -6px;
+}
+
+/* In the sheet the nav row also drags the sheet. */
+.dragHandle {
+  touch-action: none;
+  user-select: none;
+}
+
+/* The top of a view: the nav row stays at the top of the scrolling view while the rest passes under it. */
+.topNav {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 24px 24px 12px;
+  background: var(--color-bg-white);
+}
+
+.topHeading {
+  padding: 12px 24px 10px;
+  background: var(--color-bg-white);
+}
+
+.topNav[data-tinted="true"],
+.topHeading[data-tinted="true"] {
+  background: var(--color-accent-light);
+}
+
 /* Signal list */
 
 .ramp {
@@ -66,14 +105,6 @@
 
 /* Detail views */
 
-/* Stays at the top of the scrolling panel while the sections pass under it. */
-.detailHeader {
-  position: sticky;
-  top: 0;
-  z-index: 1;
-  padding: 24px 24px 10px;
-  background: var(--color-accent-light);
-}
 
 .category {
   border-color: var(--map-accent);

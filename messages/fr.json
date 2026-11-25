@@ -4656,6 +4656,7 @@
       "label": "Commandes de la carte",
       "collapse": "Masquer les commandes de la carte",
       "expand": "Afficher les commandes de la carte",
+      "close": "Fermer",
       "back": {
         "layers": "Retour aux couches",
         "signals": "Retour à tous les signaux",

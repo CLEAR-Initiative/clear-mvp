@@ -4656,6 +4656,7 @@
       "label": "Controles del mapa",
       "collapse": "Ocultar controles del mapa",
       "expand": "Mostrar controles del mapa",
+      "close": "Cerrar",
       "back": {
         "layers": "Volver a las capas",
         "signals": "Volver a todas las señales",

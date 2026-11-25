@@ -113,6 +113,7 @@
   --map-timeline-on-handle: #FFFFFF;
   --map-timeline-preset-active: #D1381D;
   --map-timeline-on-preset-active: #FFFFFF;
+  --map-sheet-backdrop: rgba(0, 0, 0, 0.4);
   --map-heatmap-low: #E0D493;
   --map-heatmap-high: #A1000D;
   --map-toggle-off: #E9E9E9;
@@ -195,6 +196,7 @@
   --map-timeline-on-handle: #111111;
   --map-timeline-preset-active: #D1381D;
   --map-timeline-on-preset-active: #FFFFFF;
+  --map-sheet-backdrop: rgba(0, 0, 0, 0.6);
   --map-heatmap-low: #E0D493;
   --map-heatmap-high: #D11A23;
   --map-toggle-off: #2D2D2D;
@@ -371,7 +373,7 @@ body[data-nav-overlay="true"] {
     bottom: 76px !important;
   }
   .map-v2 .mapboxgl-ctrl-bottom-right {
-    bottom: 0 !important;
+    bottom: var(--map-sheet-overlap, 0px) !important;
   }
 }
 
@@ -401,6 +403,20 @@ body[data-nav-overlay="true"] {
 .map-v2-layout {
   --map-panel-w: 368px;
   --map-inset-left: 0px;
+  /* Below 62em the Map panel is a sheet: its peek under the map, raised to this far below the top. */
+  --map-sheet-peek-h: 56px;
+  --map-sheet-top: 64px;
+}
+@media (max-width: 61.99em) {
+  /* The lowered sheet is moved down past the layout's bottom; that part must not make the page scroll. */
+  .map-v2-layout {
+    /* The map runs this far under the peek, so the peek's rounded corners show the map; its chrome stays above. */
+    --map-sheet-overlap: 16px;
+    overflow: clip;
+  }
+  .map-v2-layout .map-v2-root {
+    height: calc(100% - var(--map-sheet-peek-h) + var(--map-sheet-overlap));
+  }
 }
 @media (min-width: 48em) {
   body[data-nav-overlay="true"] .map-v2-layout {
@@ -440,10 +456,12 @@ body[data-nav-overlay="true"] {
   bottom: max(40px, calc(var(--map-timeline-h, 0px) + 24px));
 }
 .map-v2 .mapboxgl-ctrl-bottom-left {
+  bottom: var(--map-sheet-overlap, 0px);
   left: var(--map-offset-left, 0px);
   transition: left 200ms ease;
 }
 .map-v2 .mapboxgl-ctrl-bottom-right {
+  bottom: var(--map-sheet-overlap, 0px);
   right: var(--map-offset-right, 0px);
   transition: right 200ms ease;
 }

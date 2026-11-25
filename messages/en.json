@@ -4656,6 +4656,7 @@
       "label": "Map controls",
       "collapse": "Hide map controls",
       "expand": "Show map controls",
+      "close": "Close",
       "back": {
         "layers": "Back to layers",
         "signals": "Back to all signals",
