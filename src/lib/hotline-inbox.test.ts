@@ -30,6 +30,8 @@ import {
   nextSelection,
   visibleEntries,
   withDecision,
+  challengeFiler,
+  isPipelineChallenge,
 } from "./hotline-inbox";
 import type {
   GqlGroundInboxMessage,
@@ -609,6 +611,7 @@ describe("Location challenges", () => {
       proposedLng: 24.95,
       proposedName: "Kalma",
       createdBy: "u-analyst",
+      origin: "PERSON",
       createdByName: "Amira",
       createdAt: "2026-10-28T09:00:00Z",
       updatedAt: "2026-10-28T09:00:00Z",
@@ -649,6 +652,18 @@ describe("Location challenges", () => {
     for (const query of ["nyala", "kalma", "bielel", "wrong town", "amira", "sudan team"]) {
       expect(visibleEntries([entry!], "locations", query, "newest")).toHaveLength(1);
     }
+  });
+
+  it("names the pipeline as the filer of a challenge it filed, not its service user", () => {
+    const filed = challenge("c2", { origin: "PIPELINE", createdByName: "svc-pipeline" });
+    expect(isPipelineChallenge(filed)).toBe(true);
+    expect(challengeFiler(filed, "CLEAR pipeline")).toBe("CLEAR pipeline");
+    expect(challengeFiler(challenge("c1"), "CLEAR pipeline")).toBe("Amira");
+    expect(challengeFiler(challenge("c1", { createdByName: "  " }), "CLEAR pipeline")).toBeNull();
+
+    const [entry] = buildLocationChallengeEntries([filed]);
+    expect(visibleEntries([entry!], "locations", "clear pipeline", "newest")).toHaveLength(1);
+    expect(visibleEntries([entry!], "locations", "svc-pipeline", "newest")).toHaveLength(0);
   });
 
   it("keeps an untitled Signal's row titled by the row itself", () => {

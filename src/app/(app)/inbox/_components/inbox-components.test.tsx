@@ -297,6 +297,7 @@ describe("EntryList", () => {
       createdAt: "2026-10-28T09:00:00Z",
       updatedAt: "2026-10-28T09:00:00Z",
       teamId: "T1",
+      origin: "PERSON" as const,
       team: null,
       signal: { id: "sig-1", title: "Clashes near the market", generalLocation: null, originLocation: null, destinationLocation: null },
     };
@@ -322,6 +323,17 @@ describe("EntryList", () => {
         proposedPlacement: null,
         signal: { ...base.signal, title: null },
       },
+      {
+        ...base,
+        id: "lc-3",
+        origin: "PIPELINE" as const,
+        proposedLat: 12.0,
+        proposedLng: 24.95,
+        proposedName: "Dataminr point",
+        hasProposedPoint: true,
+        createdByName: "svc-pipeline",
+        proposedPlacement: null,
+      },
     ]);
     wrap(<EntryList {...baseProps} entries={entries} />);
     const rows = screen.getAllByTestId("inbox-entry");
@@ -332,6 +344,12 @@ describe("EntryList", () => {
     expect(within(rows[0]!).getByTestId("inbox-kind-pill")).toHaveAttribute("data-kind", "location_challenge");
     expect(rows[1]).toHaveTextContent("location.untitled");
     expect(rows[1]).toHaveTextContent("location.preview.bare");
+    expect(within(rows[0]!).getByTestId("inbox-location-filer")).toHaveAttribute("data-origin", "PERSON");
+    // The pipeline's challenge names the pipeline, not its service user.
+    const pipelineFiler = within(rows[2]!).getByTestId("inbox-location-filer");
+    expect(pipelineFiler).toHaveAttribute("data-origin", "PIPELINE");
+    expect(pipelineFiler).toHaveTextContent("location.pipelineFiler");
+    expect(rows[2]).not.toHaveTextContent("svc-pipeline");
     fireEvent.click(rows[0]!);
     expect(baseProps.onSelect).toHaveBeenCalledWith("location:lc-1");
   });

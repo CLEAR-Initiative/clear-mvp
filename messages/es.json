@@ -3140,6 +3140,7 @@
         "bare": "Pin marcado como incorrecto, sin punto propuesto"
       },
       "filedBy": "Presentado por {name} · {date}",
+      "pipelineFiler": "Pipeline de CLEAR",
       "filed": "Presentado el {date}",
       "openSignal": "Abrir la señal",
       "now": "Ubicación actual",

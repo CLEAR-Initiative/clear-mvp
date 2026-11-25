@@ -270,6 +270,26 @@ export function buildPlaceNameEntries(rows: GqlUnresolvedPlaceName[]): PlaceName
   }));
 }
 
+/** True when the pipeline filed the challenge, not a person. */
+export function isPipelineChallenge(challenge: Pick<GqlLocationChallengeToDecide, "origin">): boolean {
+  return challenge.origin === "PIPELINE";
+}
+
+/** The pipeline's name as a filer, in search text. The Inbox shows the
+ * translated `inbox.location.pipelineFiler`. */
+const PIPELINE_FILER = "CLEAR pipeline";
+
+/** Who filed a Location challenge, as the Inbox names them: the person, or
+ * `pipelineLabel` for one the pipeline filed (its service user's name is not
+ * shown). Null when a person's name is not known. */
+export function challengeFiler(
+  challenge: Pick<GqlLocationChallengeToDecide, "origin" | "createdByName">,
+  pipelineLabel: string,
+): string | null {
+  if (isPipelineChallenge(challenge)) return pipelineLabel;
+  return challenge.createdByName?.trim() || null;
+}
+
 /** The id of a Location challenge's entry. */
 export function locationChallengeEntryId(challengeId: string): string {
   return `location:${challengeId}`;
@@ -295,7 +315,7 @@ export function buildLocationChallengeEntries(challenges: GqlLocationChallengeTo
         challenge.proposedName,
         locationChain(challenge.proposedPlacement),
         challenge.note,
-        challenge.createdByName,
+        challengeFiler(challenge, PIPELINE_FILER),
         challenge.team?.name,
       ]
         .filter((part): part is string => !!part)

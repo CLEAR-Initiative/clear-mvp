@@ -3140,6 +3140,7 @@
         "bare": "Épingle signalée comme fausse, aucun point proposé"
       },
       "filedBy": "Déposée par {name} · {date}",
+      "pipelineFiler": "Pipeline CLEAR",
       "filed": "Déposée le {date}",
       "openSignal": "Ouvrir le signal",
       "now": "Emplacement actuel",

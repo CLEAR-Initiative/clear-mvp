@@ -3,6 +3,7 @@
 import { useFormatter, useNow, useTranslations } from "next-intl";
 import { IconPaperclip, IconSearch } from "@tabler/icons-react";
 import {
+  challengeFiler,
   isCaseGroupEntry,
   isLocationChallengeEntry,
   isHotlineEntry,
@@ -102,6 +103,7 @@ function LocationChallengeRow({ entry }: { entry: LocationChallengeEntry }) {
     c.proposedName?.trim() ||
     locationChain(c.proposedPlacement) ||
     (c.proposedLat != null && c.proposedLng != null ? `${c.proposedLat.toFixed(4)}, ${c.proposedLng.toFixed(4)}` : null);
+  const filer = challengeFiler(c, t("location.pipelineFiler"));
   return (
     <span className={styles.entryBody}>
       <span className={styles.entryLine1}>
@@ -113,7 +115,11 @@ function LocationChallengeRow({ entry }: { entry: LocationChallengeEntry }) {
       </span>
       <span className={styles.entryMeta}>
         <InboxEntryPills entry={entry} />
-        {c.createdByName?.trim() && <span className={styles.relation}>{c.createdByName.trim()}</span>}
+        {filer && (
+          <span className={styles.relation} data-testid="inbox-location-filer" data-origin={c.origin}>
+            {filer}
+          </span>
+        )}
       </span>
     </span>
   );

@@ -83,6 +83,7 @@ function challenge(overrides: Partial<GqlLocationChallengeToDecide> = {}): GqlLo
     proposedLng: 24.95,
     proposedName: "Kalma",
     createdBy: "u-analyst",
+    origin: "PERSON",
     createdByName: "Amira",
     createdAt: "2026-10-28T09:00:00Z",
     updatedAt: "2026-10-28T09:00:00Z",
@@ -136,6 +137,13 @@ afterEach(() => {
 });
 
 describe("LocationChallengePane", () => {
+  it("names the pipeline as the filer of a challenge it filed", () => {
+    open(challenge({ origin: "PIPELINE", createdByName: "svc-pipeline" }));
+    expect(
+      screen.getByText('location.filedBy:{"name":"location.pipelineFiler","date":"28 Oct 2026"}'),
+    ).toBeInTheDocument();
+  });
+
   it("shows where the Signal is, what was proposed and why, and accepts the proposed point", () => {
     const entry = open();
     expect(screen.getByTestId("inbox-location-now")).toHaveTextContent("Nyala, Sudan");

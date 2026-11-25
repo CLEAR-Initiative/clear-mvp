@@ -3140,6 +3140,7 @@
         "bare": "Pin marked as wrong, no point proposed"
       },
       "filedBy": "Filed by {name} · {date}",
+      "pipelineFiler": "CLEAR pipeline",
       "filed": "Filed {date}",
       "openSignal": "Open the signal",
       "now": "Current location",

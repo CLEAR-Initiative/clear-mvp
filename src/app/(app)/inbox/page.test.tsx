@@ -300,6 +300,7 @@ function locationChallenge(id: string): GqlLocationChallengeToDecide {
     proposedLng: 24.95,
     proposedName: "Kalma",
     createdBy: "u-analyst",
+    origin: "PERSON",
     createdByName: "Amira",
     createdAt: "2026-10-28T09:00:00Z",
     updatedAt: "2026-10-28T09:00:00Z",

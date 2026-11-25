@@ -103,10 +103,18 @@ export interface GqlSignalLocationChallenge {
   hasProposedPoint: boolean;
 }
 
+/** Who filed a Location challenge (clear-api `SignalLocationChallengeOrigin`). */
+export type LocationChallengeOrigin = "PERSON" | "PIPELINE";
+
 /** An open Location challenge as its decider reads it in the Inbox (clear-api
  *  `signalLocationChallengesToDecide`). */
 export interface GqlLocationChallengeToDecide extends GqlSignalLocationChallenge {
   teamId: string | null;
+  /** Who filed it: a person in the app, or the pipeline when the place a
+   *  Signal's text names is in another state than the point its source sent. */
+  origin: LocationChallengeOrigin;
+  /** The filer's name. For origin PIPELINE it is the pipeline's service
+   *  user: show "CLEAR pipeline" instead. */
   createdByName: string | null;
   /** The team it was filed for, with its area (no locations = global
    *  monitoring). Null for a challenge filed before teams were recorded. */
