@@ -47,6 +47,21 @@ async function dragPreview(page: Page, preview: Locator) {
   await expect.poll(async () => Math.abs((await preview.boundingBox())!.y - card.y)).toBeGreaterThan(30);
 }
 
+async function expectDefaultPlacement(preview: Locator, pin: Locator, width: number) {
+  const card = (await preview.boundingBox())!;
+  if (width === 1024) {
+    const head = (await pin.locator(".marker-pin-head").boundingBox())!;
+    const dx = head.x + head.width / 2 - card.x;
+    const dy = head.y + head.height / 2 - card.y;
+    const clearance = Math.max(-dx, dx - card.width, -dy, dy - card.height);
+    expect(clearance).toBeCloseTo(34, 0);
+  } else {
+    const area = (await preview.locator("..").boundingBox())!;
+    expect(area.x + area.width - card.x - card.width).toBeCloseTo(8, 0);
+    expect(area.y + area.height - card.y - card.height).toBeCloseTo(8, 0);
+  }
+}
+
 // Compare the painted SVG to the actual pin head and card edge in screen coordinates.
 async function expectConnector(pin: Locator) {
   await expect.poll(() => pin.evaluate(element => {
@@ -255,18 +270,7 @@ for (const [width, height] of [[1024, 768], [1366, 768], [1440, 900]] as const) 
       await expect(bridgeRow).toHaveAttribute("aria-pressed", "true");
       await expect(bridgePin).toHaveAttribute("data-selected", "true");
       await expectConnector(bridgePin);
-      const opening = (await preview.boundingBox())!;
-      const area = (await preview.locator("..").boundingBox())!;
-      if (width === 1024) {
-        const pin = (await bridgePin.locator(".marker-pin-head").boundingBox())!;
-        const dx = pin.x + pin.width / 2 - opening.x;
-        const dy = pin.y + pin.height / 2 - opening.y;
-        const clearance = Math.max(-dx, dx - opening.width, -dy, dy - opening.height);
-        expect(clearance).toBeCloseTo(34, 0);
-      } else {
-        expect(area.x + area.width - opening.x - opening.width).toBeCloseTo(8, 0);
-        expect(area.y + area.height - opening.y - opening.height).toBeCloseTo(8, 0);
-      }
+      await expectDefaultPlacement(preview, bridgePin, width);
       await dragPreview(page, preview);
       const dragged = (await preview.boundingBox())!;
       await expectConnector(bridgePin);
@@ -318,7 +322,8 @@ for (const [width, height] of [[1024, 768], [1366, 768], [1440, 900]] as const) 
       await bridgeRow.click();
       await expect(preview).toContainText(bridge);
       await expectConnector(bridgePin);
-      expect(await preview.boundingBox()).toMatchObject({ x: opening.x, y: opening.y });
+      await expectDefaultPlacement(preview, bridgePin, width);
+      expect(Math.abs((await preview.boundingBox())!.y - dragged.y)).toBeGreaterThan(30);
       expect(await camera()).toEqual(initial);
     });
   });
