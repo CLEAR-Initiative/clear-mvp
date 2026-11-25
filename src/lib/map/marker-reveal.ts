@@ -3,13 +3,18 @@ import { MAPBOX_GLOBE_MERCATOR_MORPH_MAX_ZOOM } from "./topography-terrain";
 
 type Point = [number, number];
 
+function longitudeNear(lng: number, reference: number) {
+  return lng + 360 * Math.round((reference - lng) / 360);
+}
+
 function isVisible(map: MapboxMap, target: Point) {
   const point = map.project(target);
   const canvas = map.getCanvas();
   if (point.x < 0 || point.y < 0 || point.x > canvas.clientWidth || point.y > canvas.clientHeight) return false;
   // The far side of the globe also projects inside the canvas. Check which location faces us.
   if (map.getZoom() < MAPBOX_GLOBE_MERCATOR_MORPH_MAX_ZOOM && map.getProjection().name === "globe") {
-    return map.unproject(point).distanceTo({ lng: target[0], lat: target[1] }) < 1000;
+    const surface = map.unproject(point);
+    return Math.abs(surface.lat - target[1]) < 0.01 && Math.abs(longitudeNear(surface.lng, target[0]) - target[0]) < 0.01;
   }
   return true;
 }
@@ -37,8 +42,7 @@ export function createMarkerReveal(map: MapboxMap) {
     const [lng, lat] = previous ?? start.toArray();
     // Include the actual camera start when the analyst has panned away from the old pin.
     // Keep all longitudes on the same side of the antimeridian as the destination.
-    const nearTarget = (longitude: number) => longitude + 360 * Math.round((target[0] - longitude) / 360);
-    const longitudes = [nearTarget(start.lng), nearTarget(lng), target[0]];
+    const longitudes = [longitudeNear(start.lng, target[0]), longitudeNear(lng, target[0]), target[0]];
     const latitudes = [start.lat, lat, target[1]];
     const overview = map.cameraForBounds([
       [Math.min(...longitudes), Math.min(...latitudes)],
