@@ -4183,7 +4183,7 @@
         },
         "corrections": {
           "label": "Location challenges",
-          "sub": "{open, number} open · {decided, number} decided"
+          "sub": "{open, number} open · {decided, number} decided · {person, number} from people · {pipeline, number} from the pipeline"
         },
         "ofSignals": "{n, number} of {total, number} signals",
         "none": "none in range"

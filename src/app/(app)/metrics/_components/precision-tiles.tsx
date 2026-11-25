@@ -10,7 +10,8 @@ const SUB = "var(--color-text-muted)";
 
 /** The headline numbers: the share at district or finer overall and for the
  * emphasised source, the share with no location, and the location challenges
- * filed in range (the correctness proxy). */
+ * filed in range (the correctness proxy), with how many people filed and how
+ * many the pipeline filed. */
 export function PrecisionTiles({ metrics }: { metrics: LocationPrecisionMetrics }) {
   const t = useTranslations("metrics.precision.tiles");
   const format = useFormatter();
@@ -50,7 +51,12 @@ export function PrecisionTiles({ metrics }: { metrics: LocationPrecisionMetrics 
           label: t("corrections.label"),
           value: format.number(corrections.total),
           color: VALUE,
-          sub: t("corrections.sub", { open: corrections.open, decided: corrections.decided }),
+          sub: t("corrections.sub", {
+            open: corrections.open,
+            decided: corrections.decided,
+            person: corrections.byOrigin.person,
+            pipeline: corrections.byOrigin.pipeline,
+          }),
           subColor: SUB,
         },
       ]}

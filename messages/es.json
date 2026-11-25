@@ -4183,7 +4183,7 @@
         },
         "corrections": {
           "label": "Impugnaciones de ubicación",
-          "sub": "{open, number} abiertas · {decided, number} resueltas"
+          "sub": "{open, number} abiertas · {decided, number} resueltas · {person, number} de personas · {pipeline, number} del pipeline"
         },
         "ofSignals": "{n, number} de {total, number} señales",
         "none": "ninguna en el rango"

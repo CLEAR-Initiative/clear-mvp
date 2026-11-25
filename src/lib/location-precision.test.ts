@@ -16,6 +16,10 @@ const RAW: GqlLocationPrecisionMetrics = {
     { isoWeek: "2026-W45", weekStart: "2026-11-02T00:00:00.000Z", source: "dataminr", total: 0, noLocation: 0, country: 0, state: 0, district: 0, point: 0, isPartial: true },
   ],
   corrections: { open: 2, accepted: 1, corrected: 1, declined: 0, superseded: 1 },
+  correctionsByOrigin: {
+    person: { open: 1, accepted: 1, corrected: 0, declined: 0, superseded: 1 },
+    pipeline: { open: 1, accepted: 0, corrected: 1, declined: 0, superseded: 0 },
+  },
 };
 
 describe("withShares", () => {
@@ -28,7 +32,16 @@ describe("withShares", () => {
     expect(m.bySource[1]!.shares.point).toBe(0.9);
     expect(m.weekly[1]).toMatchObject({ isoWeek: "2026-W45", source: "sudan-war-x", fine: 4, fineShare: 0.5, isPartial: true });
     expect(m.weekly[3]!.fineShare).toBeNull();
-    expect(m.corrections).toEqual({ open: 2, accepted: 1, corrected: 1, declined: 0, superseded: 1, decided: 2, total: 5 });
+    expect(m.corrections).toEqual({
+      open: 2,
+      accepted: 1,
+      corrected: 1,
+      declined: 0,
+      superseded: 1,
+      decided: 2,
+      total: 5,
+      byOrigin: { person: 3, pipeline: 2 },
+    });
   });
 
   it("gives null shares with nothing in range", () => {

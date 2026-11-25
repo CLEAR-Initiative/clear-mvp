@@ -4183,7 +4183,7 @@
         },
         "corrections": {
           "label": "Contestations de localisation",
-          "sub": "{open, number} ouvertes · {decided, number} tranchées"
+          "sub": "{open, number} ouvertes · {decided, number} tranchées · {person, number} par des personnes · {pipeline, number} par le pipeline"
         },
         "ofSignals": "{n, number} sur {total, number} signaux",
         "none": "aucun sur la période"

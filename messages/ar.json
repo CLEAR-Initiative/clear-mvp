@@ -4183,7 +4183,7 @@
         },
         "corrections": {
           "label": "اعتراضات على الموقع",
-          "sub": "{open, number} مفتوحة · {decided, number} مبتوت فيها"
+          "sub": "{open, number} مفتوحة · {decided, number} مبتوت فيها · {person, number} من الأشخاص · {pipeline, number} من النظام الآلي"
         },
         "ofSignals": "{n, number} من {total, number} إشارة",
         "none": "لا شيء في النطاق"
