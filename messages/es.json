@@ -1775,8 +1775,8 @@
         "alerts": "{count, plural, one {alerta} other {alertas}}",
         "signals": "{count, plural, one {señal} other {señales}}"
       },
-      "count": "<b>{total}</b> {noun} · {scope} · {date}",
-      "countNarrowed": "<b>{shown}</b> de {total} {noun} · {scope} · {date}",
+      "count": "<b>{total}</b> {noun} · {scope}",
+      "countNarrowed": "<b>{shown}</b> de {total} {noun} · {scope}",
       "newCount": "{count} nuevos",
       "empty": {
         "events": "Ningún evento coincide",
@@ -1802,6 +1802,13 @@
         "90d": "90 d"
       },
       "timelineSummary": "{range} · <b>{total}</b> {noun}",
+      "date": {
+        "change": "Cambiar el periodo",
+        "custom": "Periodo personalizado",
+        "from": "Desde",
+        "to": "Hasta",
+        "apply": "Aplicar"
+      },
       "today": "Hoy",
       "hideList": "Ocultar lista",
       "showList": "Mostrar lista",

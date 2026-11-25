@@ -26,7 +26,8 @@ interface FeedColumnProps {
   /** "event" | "alert" | "signal" for the count noun. */
   noun: "events" | "alerts" | "signals";
   scopeLabel: string;
-  dateLabel: string;
+  /** The date the count covers, as the button that changes it. */
+  dateControl: ReactNode;
   /** The search and filter bar. */
   queryBar: ReactNode;
   sortChoices: readonly SortChoice[];
@@ -60,7 +61,7 @@ interface FeedColumnProps {
 
 export const FeedColumn = forwardRef<FeedColumnHandle, FeedColumnProps>(function FeedColumn(props, ref) {
   const {
-    hidden, items, totalCount, narrowed, noun, scopeLabel, dateLabel, queryBar, sortChoices, sortKey, onSortChange,
+    hidden, items, totalCount, narrowed, noun, scopeLabel, dateControl, queryBar, sortChoices, sortKey, onSortChange,
     timeMode, typePaths, newCount, onRefresh, selectedId, hoveredId, onSelect, onHover, loading, isFetchingMore, hasMore, onLoadMore, recovery,
     onRecover, refreshKey, freshIds, checkedIds, onToggleCheck, bulkBar, skeleton,
   } = props;
@@ -100,15 +101,18 @@ export const FeedColumn = forwardRef<FeedColumnHandle, FeedColumnProps>(function
 
   const nounLabel = t(`noun.${noun}`, { count: narrowed ? totalCount : items.length });
   const countText = narrowed
-    ? t.rich("countNarrowed", { shown: format.number(items.length), total: format.number(totalCount), noun: nounLabel, scope: scopeLabel, date: dateLabel, b: (c) => <b>{c}</b> })
-    : t.rich("count", { total: format.number(totalCount), noun: nounLabel, scope: scopeLabel, date: dateLabel, b: (c) => <b>{c}</b> });
+    ? t.rich("countNarrowed", { shown: format.number(items.length), total: format.number(totalCount), noun: nounLabel, scope: scopeLabel, b: (c) => <b>{c}</b> })
+    : t.rich("count", { total: format.number(totalCount), noun: nounLabel, scope: scopeLabel, b: (c) => <b>{c}</b> });
 
   return (
     <aside className={`${css.list} ${hidden ? css.listHidden : ""}`} aria-hidden={hidden || undefined}>
       <div className={css.toolbar}>
         {queryBar}
         <div className={css.countRow}>
-          <span className={css.count}>{loading ? "…" : countText}</span>
+          <div className={css.countLead}>
+            <span className={css.count}>{loading ? "…" : countText}</span>
+            {dateControl}
+          </div>
           <div className={css.countActions}>
             {newCount > 0 && (
               <button type="button" className={css.newPill} onClick={onRefresh}>

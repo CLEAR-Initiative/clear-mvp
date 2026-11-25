@@ -24,6 +24,7 @@ import {
   dateOfKey,
   daysOf,
   eventToItem,
+  formatDayRange,
   involvesState,
   isDimActive,
   itemForMapPin,
@@ -49,6 +50,7 @@ import {
 } from "../../_lib/detection-model";
 import { EventBulkBar } from "../event-bulk-bar";
 import { CompactHeader, type HeaderTab } from "./compact-header";
+import { DateMenu } from "./date-menu";
 import { FeedColumn, type FeedColumnHandle } from "./feed-column";
 import { MapStage } from "./map-stage";
 import type { PlaceLabel } from "./place-labels";
@@ -165,6 +167,8 @@ export function MapFirstView(props: MapFirstViewProps) {
   const [listOpen, setListOpen] = useState(true);
   const [timelineOpen, setTimelineOpen] = useState(false);
   const [dragging, setDragging] = useState(false);
+  // The feed's date button is pointed at or open: the timeline shows it is the same filter.
+  const [dateActive, setDateActive] = useState(false);
   const [checkedIds, setCheckedIds] = useState<string[]>([]);
   const [freshIds, setFreshIds] = useState<ReadonlySet<string>>(new Set());
   const feedRef = useRef<FeedColumnHandle>(null);
@@ -431,10 +435,7 @@ export function MapFirstView(props: MapFirstViewProps) {
   }, [windowDays, filters.fromIso, filters.effectiveTo, windowStartMs]);
   const customLabel = useMemo(() => {
     if (!filters.customRange) return null;
-    const f = new Intl.DateTimeFormat(locale === "en" ? "en-GB" : locale, { day: "numeric", month: "short", timeZone: "UTC" });
-    const from = f.format(new Date(filters.customRange.from));
-    const to = f.format(new Date(filters.customRange.to));
-    return from === to ? from : `${from} – ${to}`;
+    return formatDayRange(filters.customRange.from, filters.customRange.to, locale === "en" ? "en-GB" : locale, new Date());
   }, [filters.customRange, locale]);
   const dateLabel =
     windowDays == null
@@ -648,6 +649,23 @@ export function MapFirstView(props: MapFirstViewProps) {
     />
   );
 
+  const dateMenu = (
+    <DateMenu
+      label={dateLabel}
+      dateKey={dateKey}
+      isDefault={dateIsDefault}
+      fromIso={filters.fromIso}
+      toIso={filters.effectiveTo}
+      linked={dragging}
+      onPreset={(key) => {
+        const d = dateOfKey(key);
+        if (d) filters.onDateChange(d);
+      }}
+      onCustomRange={filters.setCustomRange}
+      onActiveChange={setDateActive}
+    />
+  );
+
   const queryBar = (
     <QueryBar
       ref={queryRef}
@@ -692,7 +710,10 @@ export function MapFirstView(props: MapFirstViewProps) {
         {header}
         <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: 24 }}>
           {/* History has no feed column: the shared place, type, severity and date filters sit above its table. */}
-          <div className={css.historyBar}>{queryBar}</div>
+          <div className={css.historyRow}>
+            <div className={css.historyBar}>{queryBar}</div>
+            {dateMenu}
+          </div>
           {history}
         </div>
       </div>
@@ -711,7 +732,7 @@ export function MapFirstView(props: MapFirstViewProps) {
           narrowed={narrowed}
           noun={nounKey}
           scopeLabel={scopeLabel}
-          dateLabel={dateLabel}
+          dateControl={dateMenu}
           queryBar={queryBar}
           sortChoices={sortChoices}
           sortKey={feed.sort}
@@ -792,9 +813,9 @@ export function MapFirstView(props: MapFirstViewProps) {
             counts={dailyCounts}
             windowStartMs={windowStartMs}
             range={selRange}
-            windowDays={windowDays}
+            label={dateLabel}
             dateKey={dateKey}
-            fixedLabel={fixedLabel}
+            linked={dateActive}
             total={feed.total}
             noun={t(`noun.${nounKey}`, { count: feed.total })}
             isDefault={dateIsDefault}
