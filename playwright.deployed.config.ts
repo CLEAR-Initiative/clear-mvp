@@ -34,7 +34,12 @@ export default defineConfig({
     baseURL: BASE_URL,
     locale: "en",
     timezoneId: "Africa/Khartoum",
-    trace: "retain-on-failure",
+    // No trace and no video: a trace records the sign-in request (the account's
+    // password) and the session cookie, and the workflow uploads the report as
+    // an artifact that anyone with read access to the public repo can download.
+    // The screenshot on failure is of the page only.
+    trace: "off",
+    video: "off",
     screenshot: "only-on-failure",
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
