@@ -1915,6 +1915,15 @@
       "turnIntoAlert": "تحويل إلى تنبيه",
       "noPermission": "يمكن للمسؤولين ومحللي الفرق فقط رفع التنبيهات"
     },
+    "alertState": {
+      "chip": "تنبيه · {status}",
+      "raised": "تم رفعه كتنبيه",
+      "status": {
+        "published": "منشور",
+        "draft": "مسودة",
+        "archived": "مؤرشف"
+      }
+    },
     "systemData": {
       "title": "بيانات النظام",
       "eventId": "معرّف الحدث",

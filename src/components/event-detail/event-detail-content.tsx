@@ -77,6 +77,7 @@ import {
 } from "~/components/ui/detail-navigation-skeletons";
 import { useAgentCurrentView } from "~/lib/agent-current-view";
 import { BidiTitle } from "~/components/ui/bidi-title";
+import { alertStatus, primaryAlert, type EventAlertRef } from "~/lib/event-alert";
 
 /** An event counts as active while its last signal is at most this old. */
 const ACTIVE_WINDOW_MS = 14 * 24 * 60 * 60 * 1000;
@@ -153,13 +154,29 @@ export function EventDetailContent({
   const format = useFormatter();
   const now = useNow({ updateInterval: 60_000 });
   const router = useRouter();
-  const isAlready = (event?.alerts?.length ?? 0) > 0;
-  const [promoted, setPromoted] = useState(false);
   const [confirmPromote, setConfirmPromote] = useState(false);
   const [systemDataOpen, setSystemDataOpen] = useState(false);
+  // The alert this page just raised, keyed by event so prev/next navigation
+  // (which keeps this component mounted) doesn't carry it to another event.
+  const [promotedAlert, setPromotedAlert] = useState<
+    { eventId: string; alert: EventAlertRef } | null
+  >(null);
   const promoteToAlert = api.alerts.promoteToAlert.useMutation({
-    onSuccess: () => { setPromoted(true); setConfirmPromote(false); },
+    onSuccess: (alert, { eventId }) => {
+      setPromotedAlert({
+        eventId,
+        alert: { id: alert.id, status: alert.status, createdAt: alert.createdAt ?? null },
+      });
+      setConfirmPromote(false);
+    },
   });
+  const currentAlert = primaryAlert([
+    ...(event?.alerts ?? []),
+    ...(promotedAlert && promotedAlert.eventId === event?.id ? [promotedAlert.alert] : []),
+  ]);
+  const isAlerted = currentAlert !== null;
+  const currentAlertStatus = currentAlert ? alertStatus(currentAlert.status) : null;
+  const alertRaisedAt = currentAlert?.createdAt ? new Date(currentAlert.createdAt) : null;
   // Promoting an event to an alert is gated to admin or a team analyst on the
   // backend (createAlert -> requireRole(["admin", "analyst"]), the analyst now
   // a location-scoped team role). Mirror that here so other roles don't see an
@@ -476,7 +493,7 @@ export function EventDetailContent({
         pt={isStacked ? 16 : 20}
         pb={isStacked ? 16 : 20}
         style={{
-          background: isAlready || promoted ? "var(--color-critical-light)" : "var(--color-bg-white)",
+          background: isAlerted ? "var(--color-critical-light)" : "var(--color-bg-white)",
           borderBottom: "1px solid var(--color-border)",
           borderInlineStart: `4px solid ${headerBorderColor}`,
         }}
@@ -497,6 +514,38 @@ export function EventDetailContent({
           }}>
             {tCommon(`severities.${sev}`)}
           </span>
+          {currentAlert && (
+            <span
+              data-testid="event-alert-chip"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 4,
+                padding: "2px 10px",
+                borderRadius: 999,
+                fontSize: 11,
+                fontWeight: 700,
+                letterSpacing: "0.04em",
+                textTransform: "uppercase",
+                ...(currentAlertStatus === "archived"
+                  ? {
+                      background: "var(--color-bg-muted)",
+                      color: "var(--color-text-secondary)",
+                      border: "1px solid var(--color-border)",
+                    }
+                  : {
+                      background: "var(--color-critical-light)",
+                      color: "var(--color-critical)",
+                      border: "1px solid color-mix(in srgb, var(--color-critical) 35%, transparent)",
+                    }),
+              }}
+            >
+              <IconBellRinging size={12} aria-hidden />
+              {currentAlertStatus
+                ? t("alertState.chip", { status: t(`alertState.status.${currentAlertStatus}`) })
+                : t("actions.alert")}
+            </span>
+          )}
         </Group>
 
         {/* Title row - title left, active status right, both top-aligned */}
@@ -923,23 +972,33 @@ export function EventDetailContent({
                 </Box>
                 <Box p={16}>
                   <Stack gap={8}>
-                    {isAlready || promoted ? (
-                      <Button
-                        variant="filled"
-                        size="xs"
-                        leftSection={<IconBellRinging size={13} />}
-                        fullWidth
-                        disabled
+                    {currentAlert ? (
+                      <Box
+                        data-testid="event-alert-status"
+                        p={10}
                         style={{
-                          fontSize: 12,
+                          borderRadius: 6,
                           background: "var(--color-critical-light)",
-                          color: "var(--color-critical)",
                           border: "1px solid color-mix(in srgb, var(--color-critical) 20%, transparent)",
-                          cursor: "default",
                         }}
                       >
-                        {t("actions.alert")}
-                      </Button>
+                        <Group gap={6} wrap="nowrap">
+                          <IconBellRinging size={14} color="var(--color-critical)" aria-hidden />
+                          <Text size="xs" fw={600} c="var(--color-critical)">
+                            {t("alertState.raised")}
+                          </Text>
+                        </Group>
+                        {(currentAlertStatus || alertRaisedAt) && (
+                          <Text size="xs" c="var(--color-text-secondary)" mt={4} style={{ paddingInlineStart: 20 }}>
+                            {[
+                              currentAlertStatus ? t(`alertState.status.${currentAlertStatus}`) : null,
+                              alertRaisedAt ? format.dateTime(alertRaisedAt, "dateTime") : null,
+                            ]
+                              .filter(Boolean)
+                              .join(" · ")}
+                          </Text>
+                        )}
+                      </Box>
                     ) : confirmPromote ? (
                       <Stack gap={6}>
                         <Text size="xs" c="var(--color-critical)" fw={600} style={{ textAlign: "center" }}>
