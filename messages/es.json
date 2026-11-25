@@ -4707,9 +4707,9 @@
       "roads": "Carreteras",
       "labels": "Etiquetas",
       "boundaries": {
-        "title": "Límites administrativos",
+        "title": "Límites",
         "country": "País",
-        "state": "Estado",
+        "state": "Estados",
         "districts": "Distritos"
       }
     },

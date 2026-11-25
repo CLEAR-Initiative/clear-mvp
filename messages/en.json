@@ -4707,9 +4707,9 @@
       "roads": "Roads",
       "labels": "Labels",
       "boundaries": {
-        "title": "Admin boundaries",
+        "title": "Boundaries",
         "country": "Country",
-        "state": "State",
+        "state": "States",
         "districts": "Districts"
       }
     },

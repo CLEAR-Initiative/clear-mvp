@@ -30,11 +30,11 @@ export function MapSettingsPanel() {
       ))}
       <Radio.Group
         label={t("boundaries.title")}
-        labelProps={{ fz: "sm", fw: 400, mb: 12 }}
+        labelProps={{ fz: "xs", fw: 400, lh: "18px", mb: 8 }}
         value={settings.boundaries}
         onChange={(value) => void setSettings({ boundaries: value as BoundaryLevel })}
       >
-        <Stack gap={12}>
+        <Group justify="space-between" wrap="nowrap">
           {BOUNDARY_LEVELS.map((level) => (
             <Radio
               key={level}
@@ -42,9 +42,10 @@ export function MapSettingsPanel() {
               size="xs"
               color="var(--color-accent)"
               label={t(`boundaries.${level}`)}
+              styles={{ label: { fontSize: "var(--mantine-font-size-sm)", lineHeight: "16px", paddingInlineStart: 8 } }}
             />
           ))}
-        </Stack>
+        </Group>
       </Radio.Group>
     </Stack>
   );
