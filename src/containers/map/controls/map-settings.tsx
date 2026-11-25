@@ -1,8 +1,9 @@
 "use client";
 
-import { Group, Stack, Switch, Text } from "@mantine/core";
+import { Group, Radio, Stack, Switch, Text } from "@mantine/core";
 import { useTranslations } from "next-intl";
 import type { MapSetting } from "../basemaps/map-settings";
+import { BOUNDARY_LEVELS, type BoundaryLevel } from "../boundaries/model";
 import { useMapSettings } from "../hooks/use-map-settings";
 
 const SETTINGS: ReadonlyArray<MapSetting> = ["roads", "labels"];
@@ -27,6 +28,24 @@ export function MapSettingsPanel() {
           />
         </Group>
       ))}
+      <Radio.Group
+        label={t("boundaries.title")}
+        labelProps={{ fz: "sm", fw: 400, mb: 12 }}
+        value={settings.boundaries}
+        onChange={(value) => void setSettings({ boundaries: value as BoundaryLevel })}
+      >
+        <Stack gap={12}>
+          {BOUNDARY_LEVELS.map((level) => (
+            <Radio
+              key={level}
+              value={level}
+              size="xs"
+              color="var(--color-accent)"
+              label={t(`boundaries.${level}`)}
+            />
+          ))}
+        </Stack>
+      </Radio.Group>
     </Stack>
   );
 }

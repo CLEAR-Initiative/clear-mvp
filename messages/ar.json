@@ -4705,7 +4705,13 @@
     "mapSettings": {
       "title": "إعدادات الخريطة",
       "roads": "الطرق",
-      "labels": "التسميات"
+      "labels": "التسميات",
+      "boundaries": {
+        "title": "الحدود الإدارية",
+        "country": "الدولة",
+        "state": "ولاية",
+        "districts": "المناطق"
+      }
     },
     "signalTooltip": {
       "signal": "إشارة",

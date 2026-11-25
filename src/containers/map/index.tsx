@@ -10,6 +10,8 @@ import { findLabelAnchorId } from "./label-anchor";
 import { findReliefAnchorId } from "./basemaps/relief-anchor";
 import { Topography } from "./basemaps/topography";
 import { MapSettingsLayers } from "./basemaps/map-settings-layers";
+import { AdminBoundaries } from "./boundaries/layer";
+import type { BoundaryScope } from "./boundaries/model";
 import { MapControls } from "./controls";
 import { useBasemap } from "./hooks/use-basemap";
 import { LayerManager } from "./layer-manager";
@@ -28,10 +30,17 @@ export type MapV2Props = {
   selection?: MapSelection | null;
   /** A click picked a target, or `null` for a click on empty map. */
   onSelect?: (target: MapSelectTarget | null) => void;
+  boundaryScope?: BoundaryScope | null;
   children?: ReactNode;
 };
 
-export default function MapV2({ offset: offsetProp, selection = null, onSelect, children }: MapV2Props) {
+export default function MapV2({
+  offset: offsetProp,
+  selection = null,
+  onSelect,
+  boundaryScope = null,
+  children,
+}: MapV2Props) {
   const isDark = useIsDark();
   const offset = useMapOffset(offsetProp);
   const mapRef = useRef<MapRef>(null);
@@ -101,6 +110,9 @@ export default function MapV2({ offset: offsetProp, selection = null, onSelect, 
             <MapInteractionsProvider selection={selection} onSelect={onSelect}>
               <LayerManager labelAnchorId={labelAnchorId} onLoadingChange={onLoadingChange} />
             </MapInteractionsProvider>
+          )}
+          {loaded && boundaryScope && (
+            <AdminBoundaries basemap={basemap} scope={boundaryScope} labelAnchorId={labelAnchorId} />
           )}
           <MapControls />
         </ReactMapGL>

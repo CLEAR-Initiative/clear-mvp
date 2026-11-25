@@ -6,6 +6,7 @@ import { Timeline } from "~/containers/map/timeline";
 import { TimeframeQueryProvider } from "~/containers/map/hooks/use-timeframe";
 import type { MapSelectTarget } from "~/containers/map/selection";
 import { setMapPanelCollapsedCookie } from "~/lib/map-panel-collapsed-cookie";
+import { useWorkingCountry } from "~/providers/working-country-provider";
 import { MapPanel } from "./map-panel";
 import { SignalDetailView } from "./map-panel/signal-detail-view";
 import { SignalStackView } from "./map-panel/signal-stack-view";
@@ -33,6 +34,7 @@ export function MapLayout({ initialPanelCollapsed }: { initialPanelCollapsed: bo
     [],
   );
   const selection = usePanelSelection();
+  const workingCountry = useWorkingCountry();
   const { selectSignal, selectStack, clear } = selection;
 
   const onSelect = useCallback(
@@ -88,6 +90,7 @@ export function MapLayout({ initialPanelCollapsed }: { initialPanelCollapsed: bo
             offset={{ left: insetLeft, bottom: timeline.open ? timeline.height : 0 }}
             selection={selection.mapSelection}
             onSelect={onSelect}
+            boundaryScope={workingCountry}
           >
             <Timeline onHeightChange={onTimelineHeightChange} insetStart={panelCollapsed ? PANEL_TOGGLE_CLEARANCE : 0} />
           </MapV2>

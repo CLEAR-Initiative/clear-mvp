@@ -4705,7 +4705,13 @@
     "mapSettings": {
       "title": "Ajustes del mapa",
       "roads": "Carreteras",
-      "labels": "Etiquetas"
+      "labels": "Etiquetas",
+      "boundaries": {
+        "title": "Límites administrativos",
+        "country": "País",
+        "state": "Estado",
+        "districts": "Distritos"
+      }
     },
     "signalTooltip": {
       "signal": "Señal",

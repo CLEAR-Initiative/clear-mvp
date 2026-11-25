@@ -5,3 +5,8 @@ export function markerId(id: string): string {
 export function slotBeforeIds(ids: readonly string[], labelAnchorId: string | undefined): (string | undefined)[] {
   return ids.map((_, i) => (i === 0 ? labelAnchorId : markerId(ids[i - 1]!)));
 }
+
+export function boundariesBeforeId(activeLayerIds: readonly string[], labelAnchorId: string | undefined): string | undefined {
+  const bottom = activeLayerIds.at(-1);
+  return bottom ? markerId(bottom) : labelAnchorId;
+}
