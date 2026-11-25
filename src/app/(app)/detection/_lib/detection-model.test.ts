@@ -15,6 +15,7 @@ import {
   isDimActive,
   isL1Checked,
   isStatePartial,
+  itemForMapPin,
   matchesText,
   normalizeText,
   normalizeTypeKeys,
@@ -50,6 +51,14 @@ const item = (over: Partial<FeedItem> = {}): FeedItem => ({
 });
 
 const none: FilterState = { locIds: [], severities: new Set(SEVERITIES), typeFilters: [], sources: null, search: "" };
+
+it("keeps the selected Alert when its Event pin represents multiple feed rows", () => {
+  const first = item({ id: "alert-1", kind: "alert" });
+  const second = item({ id: "alert-2", kind: "alert" });
+  expect(itemForMapPin([first, second], "e1")).toBe(first);
+  expect(itemForMapPin([first, second], "e1", second)).toBe(second);
+  expect(itemForMapPin([first, second], "other", second)).toBeUndefined();
+});
 
 describe("event type selection", () => {
   it("checking an L1 selects all its L2s and reads as the L1", () => {

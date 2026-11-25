@@ -14,6 +14,7 @@ import css from "./map-first.module.css";
 export interface FeedColumnHandle {
   /** Scroll an off-screen row so it sits about 60px from the top. */
   scrollToRow: (id: string) => void;
+  focusRow: (id: string) => void;
 }
 
 interface FeedColumnProps {
@@ -70,6 +71,7 @@ export const FeedColumn = forwardRef<FeedColumnHandle, FeedColumnProps>(function
   const rowRefs = useRef(new Map<string, HTMLElement>());
 
   useImperativeHandle(ref, () => ({
+    focusRow: (id) => rowRefs.current.get(id)?.focus({ preventScroll: true }),
     scrollToRow: (id) => {
       const feed = feedRef.current;
       const row = rowRefs.current.get(id);

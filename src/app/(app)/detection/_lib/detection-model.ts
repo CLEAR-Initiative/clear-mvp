@@ -64,6 +64,13 @@ export interface FeedItem {
   lat: number | null;
 }
 
+/** Alerts for the same Event share a pin. Keep the selected row, or use the first match in feed order. */
+export function itemForMapPin(items: readonly FeedItem[], entityId: string | undefined, selected?: FeedItem) {
+  if (!entityId) return undefined;
+  if (selected && (selected.eventId ?? selected.id) === entityId) return selected;
+  return items.find((item) => (item.eventId ?? item.id) === entityId);
+}
+
 // ─── Normalisation ──────────────────────────────────────────────────────────
 
 /** A location's map point (polygons fall back to their centroid), as the map's markers do. */

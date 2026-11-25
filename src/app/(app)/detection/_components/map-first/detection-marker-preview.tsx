@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
+import { useId, useLayoutEffect, useRef, useState, type CSSProperties, type RefObject } from "react";
 import Link from "next/link";
 import { useFormatter, useTranslations } from "next-intl";
 import { ActionIcon, Button, Group, Text } from "@mantine/core";
@@ -16,6 +16,7 @@ import css from "./detection-marker-preview.module.css";
 
 interface PreviewProps {
   item: FeedItem;
+  cardRef: RefObject<HTMLElement | null>;
   /** Undefined while the map is finding the selected marker or its cluster. */
   anchor?: MarkerScreenPoint | null;
   hasMarker: boolean;
@@ -28,13 +29,12 @@ interface PreviewProps {
 }
 
 export function DetectionMarkerPreview({
-  item, anchor, hasMarker, timelineOpen, onClose, onPrev, onNext, navigationPosition, onGeometryChange,
+  item, cardRef, anchor, hasMarker, timelineOpen, onClose, onPrev, onNext, navigationPosition, onGeometryChange,
 }: PreviewProps) {
   const titleId = useId();
   const t = useTranslations();
   const format = useFormatter();
   const areaRef = useRef<HTMLDivElement>(null);
-  const cardRef = useRef<HTMLElement>(null);
   const [bounds, setBounds] = useState<{
     x: number; y: number;
     area: { width: number; height: number };
@@ -64,7 +64,7 @@ export function DetectionMarkerPreview({
     observer.observe(area);
     observer.observe(card);
     return () => observer.disconnect();
-  }, []);
+  }, [cardRef]);
 
   let position = { left: PANEL_MARGIN, top: PANEL_MARGIN };
   if (bounds) {
@@ -98,6 +98,7 @@ export function DetectionMarkerPreview({
         className={css.card}
         style={{ left, top, "--preview-top": `${top}px` } as CSSProperties}
         aria-labelledby={titleId}
+        tabIndex={-1}
         data-testid="detection-marker-preview"
       >
         <MapMarkerPanelHeader

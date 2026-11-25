@@ -518,6 +518,7 @@ On the desktop Detection map, selecting a feed row or a pin opens a single compa
 preview and keeps the feed and current map view in place. The preview opens in the
 bottom-right corner when there is room, or beside its pin on a narrower map. Selecting
 another item keeps the card in place and connects it to the newly selected visible pin.
+The address bar keeps the Detection view and filters. View details links to the record's full page.
 _Avoid_: "popup", "window", "modal" (it is not modal — the map stays interactive).
 
 **Signal tooltip** (map v2):

@@ -1,7 +1,7 @@
 import type { Locator, Page } from "@playwright/test";
 import type { Map as MapboxMap } from "mapbox-gl";
 import { SEEDED_EVENTS } from "../support/data";
-import { enableFeatureFlags, eventRows, gotoDetectionEvents } from "../support/helpers";
+import { countryIdByName, enableFeatureFlags, eventRows, gotoDetectionEvents } from "../support/helpers";
 import { test, expect } from "../support/test";
 
 // These two seeded signals have distinct points in the same part of Sudan.
@@ -45,6 +45,54 @@ test.use({
 test.beforeAll(async ({ playwright }) => {
   await enableFeatureFlags(playwright, ["agent"]);
 });
+
+for (const width of [790, 820]) {
+  test.describe(`Detection keyboard and feed at ${width} × 900`, () => {
+    test.use({ viewport: { width, height: 900 } });
+
+    test("opens a readable preview from the keyboard and keeps the filtered URL", async ({ page }) => {
+      const country = await countryIdByName(page, "Sudan");
+      await page.goto(`/detection?tab=events&c=${country}`, { waitUntil: "domcontentloaded" });
+      const row = eventRows(page).filter({ hasText: SEEDED_EVENTS.khartoumFlood });
+      await expect(row).toBeVisible();
+      const detectionUrl = page.url();
+      await row.press("Enter");
+      const preview = page.getByTestId("detection-marker-preview");
+      await expect(preview).toBeFocused();
+      await expect(page).toHaveURL(detectionUrl);
+      await expect(row).toHaveAttribute("aria-pressed", "true");
+      expect((await preview.boundingBox())!.width).toBeGreaterThan(220);
+      await row.click({ trial: true });
+      await preview.getByRole("button", { name: "Close", exact: true }).click({ trial: true });
+      const details = preview.getByRole("link", { name: /view details/i });
+      await expect(details).toHaveAttribute("href", /\/event\//);
+      await details.click({ trial: true });
+      await preview.press("Escape");
+      await expect(preview).toBeHidden();
+      await expect(row).toBeFocused();
+      await page.getByRole("button", { name: "Hide list" }).click();
+      await page.getByRole("button", { name: "Show list" }).click();
+      await row.click({ trial: true });
+
+      if (process.env.E2E_REAL_MAP !== "1") return;
+      // Isolate a single pin from nearby clusters so it can receive keyboard input.
+      await page.getByPlaceholder("Search or filter…").fill(SEEDED_EVENTS.khartoumFlood);
+      const pin = page.locator(".mapboxgl-map").getByRole("button", { name: SEEDED_EVENTS.khartoumFlood, exact: true });
+      await pin.press("Enter");
+      await expect(preview).toBeFocused();
+      await preview.press("Escape");
+      await expect(pin).toBeFocused();
+      await pin.press("Enter");
+      const canvas = page.locator("canvas.mapboxgl-canvas");
+      const longitude = () => page.evaluate(() => (window.__clearE2EMap as MapboxMap).getCenter().lng);
+      const before = await longitude();
+      await canvas.press("ArrowRight");
+      await expect.poll(longitude).not.toBe(before);
+      await expect(preview).toContainText(SEEDED_EVENTS.khartoumFlood);
+      await expect(row).toHaveAttribute("aria-pressed", "true");
+    });
+  });
+}
 
 for (const [width, height] of [[1024, 768], [1366, 768], [1440, 900]] as const) {
   test.describe(`Detection map preview at ${width} × ${height}`, () => {

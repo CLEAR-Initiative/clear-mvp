@@ -1,11 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import type { MapMarker } from "~/components/map/crisis-map";
 import type { BoundaryLevel } from "~/app/(app)/map/_components/map-settings-popover";
 import { DetectionFeedListSkeleton } from "~/components/ui/detection-page-skeleton";
-import { useDetailKeyboardNav } from "~/hooks/use-detail-keyboard-nav";
 import { useTrackEventOpened } from "~/lib/analytics/use-once-per-view";
 import { getListNavigation } from "~/lib/detail-list-nav";
 import { api } from "~/trpc/react";
@@ -27,6 +26,7 @@ import {
   eventToItem,
   involvesState,
   isDimActive,
+  itemForMapPin,
   matchesSearch,
   normalizeTypeKeys,
   parseQuery,
@@ -168,6 +168,8 @@ export function MapFirstView(props: MapFirstViewProps) {
   const [checkedIds, setCheckedIds] = useState<string[]>([]);
   const [freshIds, setFreshIds] = useState<ReadonlySet<string>>(new Set());
   const feedRef = useRef<FeedColumnHandle>(null);
+  const previewRef = useRef<HTMLElement>(null);
+  const keyboardOpener = useRef<HTMLElement | null>(null);
   const queryRef = useRef<QueryBarHandle>(null);
   const parsedQuery = parseQuery(query, locale);
   const search = parsedQuery.key ? "" : parsedQuery.value;
@@ -335,11 +337,10 @@ export function MapFirstView(props: MapFirstViewProps) {
   const items = useMemo(() => allItems.filter((it) => clientPass(it)), [allItems, clientPass]);
   // Pins follow the list: only items that pass every filter get one.
   const tabMarkers = feedTab === "alerts" ? markers.alerts : feedTab === "signals" ? markers.signals : markers.events;
-  const itemByKey = useMemo(() => new Map(items.map((it) => [it.eventId ?? it.id, it])), [items]);
-  const visibleMarkers = useMemo(
-    () => tabMarkers.filter((m) => m.eventId != null && itemByKey.has(m.eventId)),
-    [tabMarkers, itemByKey],
-  );
+  const visibleMarkers = useMemo(() => {
+    const entityIds = new Set(items.map((item) => item.eventId ?? item.id));
+    return tabMarkers.filter((marker) => marker.eventId != null && entityIds.has(marker.eventId));
+  }, [tabMarkers, items]);
   const narrowed = search.trim() !== "" || (feedTab !== "signals" && !!filters.sources) || (active.sev && filters.severities.size > 1);
 
   const sourceFacet = useMemo(() => sourceCounts(allItems, { ...filterState, locIds: [], typeFilters: [] }, hierarchy), [allItems, filterState, hierarchy]);
@@ -464,13 +465,41 @@ export function MapFirstView(props: MapFirstViewProps) {
   const goNext = useCallback(() => {
     if (previewNav?.nextId) selectAndRevealRow(previewNav.nextId);
   }, [previewNav?.nextId, selectAndRevealRow]);
-  useDetailKeyboardNav({
-    enabled: selectedItem != null,
-    hasPrev: previewNav?.hasPrev ?? false,
-    hasNext: previewNav?.hasNext ?? false,
-    onPrev: goPrev,
-    onNext: goNext,
-  });
+  const closePreview = () => {
+    if (previewRef.current?.contains(document.activeElement)) {
+      const opener = keyboardOpener.current;
+      if (opener?.isConnected && !opener.closest('[aria-hidden="true"]')) opener.focus({ preventScroll: true });
+      else if (listOpen && selectedId) feedRef.current?.focusRow(selectedId);
+    }
+    keyboardOpener.current = null;
+    setSelectedId(null);
+  };
+
+  const onPreviewKeyDown = (e: ReactKeyboardEvent<HTMLDivElement>) => {
+    const target = e.target;
+    if (!(target instanceof HTMLElement) || !e.currentTarget.contains(target) || e.metaKey || e.ctrlKey || e.altKey || isTyping(target)) return;
+    const row = target.classList.contains(css.row);
+    if ((e.key === "Enter" || e.key === " ") && (row || target.matches('.mapboxgl-marker[role="button"]'))) {
+      // Native pins and feed rows select on this key. Enter the newly rendered
+      // region without moving focus for pointer users or trapping it in the card.
+      keyboardOpener.current = target;
+      requestAnimationFrame(() => previewRef.current?.focus({ preventScroll: true }));
+      return;
+    }
+    if (!selectedItem || e.defaultPrevented) return;
+    if (e.key === "Escape") {
+      closePreview();
+    } else if (row || previewRef.current?.contains(target)) {
+      // Mapbox owns the canvas arrow keys for panning. Only the feed and card
+      // use them to browse the list of detections.
+      const id = e.key === "ArrowLeft" ? previewNav?.prevId : e.key === "ArrowRight" ? previewNav?.nextId : null;
+      if (id) {
+        e.preventDefault();
+        selectAndRevealRow(id);
+        if (row) feedRef.current?.focusRow(id);
+      }
+    }
+  };
 
   // Row hover highlights its pin; pin hover highlights its row.
   const hoveredItem = hoverId ? items.find((it) => it.id === hoverId) : null;
@@ -480,17 +509,17 @@ export function MapFirstView(props: MapFirstViewProps) {
   const onMarkerHover = useCallback(
     (m: MapMarker | null) => {
       const key = (m as DetectionMarker | null)?.eventId;
-      setHoverId(key ? (itemByKey.get(key)?.id ?? null) : null);
+      setHoverId(itemForMapPin(items, key, selectedItem)?.id ?? null);
     },
-    [itemByKey],
+    [items, selectedItem],
   );
   const selectedMarker = selectedItem
     ? visibleMarkers.find((m) => m.eventId === (selectedItem.eventId ?? selectedItem.id))
     : undefined;
   const onMarkerClick = useCallback((marker: DetectionMarker) => {
-    const item = marker.eventId && itemByKey.get(marker.eventId);
+    const item = itemForMapPin(items, marker.eventId, selectedItem);
     if (item) selectAndRevealRow(item.id);
-  }, [itemByKey, selectAndRevealRow]);
+  }, [items, selectedItem, selectAndRevealRow]);
 
   // ── Fresh rows after "n new" ──────────────────────────────────────────────
   const beforeRefresh = useRef<Set<string> | null>(null);
@@ -557,8 +586,6 @@ export function MapFirstView(props: MapFirstViewProps) {
       } else if (e.key === "t" || e.key === "T") {
         e.preventDefault();
         setTimeline(!timelineOpen);
-      } else if (e.key === "Escape" && !e.defaultPrevented) {
-        setSelectedId(null);
       }
     };
     window.addEventListener("keydown", onKey);
@@ -664,7 +691,7 @@ export function MapFirstView(props: MapFirstViewProps) {
   return (
     <div className={css.shell}>
       {header}
-      <div className={css.body}>
+      <div className={css.body} onKeyDown={onPreviewKeyDown}>
         <FeedColumn
           ref={feedRef}
           hidden={!listOpen}
@@ -721,12 +748,13 @@ export function MapFirstView(props: MapFirstViewProps) {
           selectedMarkerId={selectedMarker?.id ?? null}
           preview={selectedItem && {
             item: selectedItem,
+            cardRef: previewRef,
             hasMarker: selectedMarker != null,
             timelineOpen,
             navigationPosition: previewNav?.position,
             onPrev: previewNav?.hasPrev ? goPrev : undefined,
             onNext: previewNav?.hasNext ? goNext : undefined,
-            onClose: () => setSelectedId(null),
+            onClose: closePreview,
           }}
           center={center}
           zoom={zoom}
