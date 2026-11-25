@@ -86,6 +86,7 @@ import { setMapCursor } from "~/lib/map/map-cursor";
 import { createMapboxMap, loadMapboxGL, mapLoadStage } from "~/lib/map/load-mapbox-gl";
 import { reportHandledError } from "~/lib/report-handled-error";
 import { flyToOrientation, countryFitPadding, fitBoundsCameraOptions } from "~/lib/map/marker-detail-camera";
+import { createMarkerReveal } from "~/lib/map/marker-reveal";
 import {
   framedCountryAfterFocusChange,
   shouldSkipCountryFit,
@@ -169,6 +170,8 @@ export interface CrisisMapApi {
   samplePointAltitude: (lng: number, lat: number) => PointAltitudeResult;
   /** Current camera including pitch/bearing. */
   getViewCamera: () => MapViewCameraSnapshot | null;
+  /** Follow an offscreen feed selection at the user's current zoom. */
+  markerReveal: ReturnType<typeof createMarkerReveal>;
   /** Instant restore (no fly) for map ↔ detail round-trips. */
   restoreViewCamera: (camera: MapViewCameraSnapshot) => void;
   /** Programmatic fly for place search — does not fight React center/zoom props. */
@@ -247,6 +250,10 @@ interface CrisisMapProps {
   populationBoundaries?: AdminBoundary[];
   /** Marker ID to highlight with a pulse (synced from list hover). */
   hoveredMarkerId?: number | null;
+  /** Detection keeps the selected pin or its containing cluster highlighted after hover ends. */
+  selectedMarkerId?: number | null;
+  /** An undefined element means cluster membership is still loading. */
+  onSelectedMarkerElement?: (id: number | null, el: HTMLElement | null | undefined) => void;
   /** Suppress the automatic fitBounds-to-country when a focus country loads. Default true. */
   fitBoundsOnFocus?: boolean;
   /** Bump to re-run country fitBounds (e.g. after closing a lone-marker detail). */
@@ -395,7 +402,7 @@ interface CrisisMapProps {
   onLoad?: () => void;
   /**
    * Overlay content inside the map shell (same stacking context as Mapbox
-   * markers). Used by `/map` spaghetti connectors so lines sit under pins.
+   * markers). Used by spaghetti connectors so lines sit under pins.
    */
   children?: ReactNode;
 }
@@ -705,6 +712,8 @@ export function CrisisMap({
   focusCountryGeometry,
   populationBoundaries,
   hoveredMarkerId,
+  selectedMarkerId,
+  onSelectedMarkerElement,
   fitBoundsOnFocus = true,
   countryFitNonce = 0,
   preserveDrawingBuffer = false,
@@ -814,6 +823,8 @@ export function CrisisMap({
   const displayLngLatRef = useRef<Map<number, [number, number]>>(new Map());
   const markersDataRef = useRef<MapMarker[]>(markers);
   const hoveredMarkerIdRef = useRef<number | null>(null);
+  const selectedMarkerIdRef = useRef<number | null>(null);
+  const syncHighlightsRef = useRef<(() => void) | null>(null);
   const seismicDisplayedRef = useRef<SeismicMapCollection | null>(null);
   const seismicAnimRef = useRef<number | null>(null);
   const shakemapPaintIdsRef = useRef<Set<string>>(new Set());
@@ -1847,6 +1858,60 @@ export function CrisisMap({
     const HEAT_LAYER = "crisis-markers-density-heat-layer";
     const CLUSTER_GHOST = "cluster-ghost";
     const POINT_GHOST = "point-ghost";
+    // Cluster IDs belong to this GeoJSON source. Resolve membership only when a
+    // Detection row points to a pin that isn't mounted at the current zoom.
+    const membersByCluster = new Map<number, Set<number> | null>();
+    const syncHighlights = () => {
+      const hovered = hoveredMarkerIdRef.current;
+      const selected = selectedMarkerIdRef.current;
+      const mounted = clusterDomMarkers.current;
+      const needsCluster = onSelectedMarkerElement && [hovered, selected].some(
+        (id) => id != null && !mounted.has(`p-${id}`),
+      );
+      let anchor: HTMLElement | null = null;
+      let pendingCluster = false;
+      for (const [key, mk] of mounted) {
+        const id = Number(key.slice(2));
+        const point = key.startsWith("p-");
+        if (!point && !onSelectedMarkerElement) continue;
+        const el = mk.getElement() as HTMLElement;
+        if (!point && needsCluster && !membersByCluster.has(id)) {
+          membersByCluster.set(id, null);
+          m.getSource(SOURCE)?.getClusterLeaves(id, Infinity, 0, (error: unknown, leaves: GeoJSON.Feature[]) => {
+            if (syncHighlightsRef.current !== syncHighlights) return;
+            if (error) {
+              membersByCluster.delete(id);
+              reportMapError(m, error, "getClusterLeaves");
+              return;
+            }
+            const ids = new Set(leaves.map((leaf) => Number(leaf.properties?.id)));
+            membersByCluster.set(id, ids);
+            const selection = selectedMarkerIdRef.current;
+            const hover = hoveredMarkerIdRef.current;
+            if ((hover != null && ids.has(hover)) || (selection != null &&
+              (ids.has(selection) || !Array.from(membersByCluster.values()).includes(null)))) {
+              syncHighlights();
+            }
+          });
+        }
+        const members = point ? null : membersByCluster.get(id);
+        if (!point && members === null) pendingCluster = true;
+        const isHovered = point ? id === hovered : hovered != null && members?.has(hovered);
+        const isSelected = point ? id === selected : selected != null && members?.has(selected);
+        if (point) {
+          el.querySelector(".marker-ping-ring")?.classList.toggle("active", !!isHovered);
+          el.querySelector(".marker-dot")?.classList.toggle("active", !!isHovered);
+        }
+        if (onSelectedMarkerElement) {
+          if (point) el.setAttribute("aria-pressed", String(isSelected));
+          el.dataset.hovered = String(!!isHovered);
+          el.dataset.selected = String(!!isSelected);
+          if (isSelected) anchor = el.querySelector<HTMLElement>(".marker-pin-head") ?? el;
+        }
+      }
+      onSelectedMarkerElement?.(selected, anchor ?? (pendingCluster ? undefined : null));
+    };
+    syncHighlightsRef.current = syncHighlights;
 
     // Remove tracked markers. Orphan sweep only on full teardown — sweeping
     // every frame during zoom caused empty flashes between heatmap ↔ donuts.
@@ -1856,6 +1921,7 @@ export function CrisisMap({
       }
       clusterDomMarkers.current.clear();
       displayLngLatRef.current = new Map();
+      onSelectedMarkerElement?.(selectedMarkerIdRef.current, null);
       if (!sweepOrphans) return;
       try {
         m.getContainer()
@@ -1876,6 +1942,7 @@ export function CrisisMap({
     if (!showMarkers) {
       clearDomMarkers(true);
       removeLayers();
+      syncHighlightsRef.current = null;
       return;
     }
     const mb = mbRef.current;
@@ -2031,6 +2098,7 @@ export function CrisisMap({
           const cid    = props.cluster_id;
           if (!isValidLngLat(coords) || cid == null || !Number.isFinite(Number(cid))) continue;
           const el = buildDonutEl(props);
+          if (onSelectedMarkerElement) el.dataset.clusterId = String(cid);
           el.style.opacity = String(markerOpacityForZoom(m.getZoom(), densityOpts));
           el.addEventListener("click", () => {
             // Snapshot donut-level camera + cluster size before expanding.
@@ -2177,7 +2245,24 @@ export function CrisisMap({
         if (locationPickActiveRef.current) {
           el.style.pointerEvents = "none";
         }
-        if (hoveredMarkerIdRef.current != null && markerId === hoveredMarkerIdRef.current) {
+        if (onSelectedMarkerElement) {
+          el.title = String(props.title);
+          el.setAttribute("role", "button");
+          el.setAttribute("aria-label", el.title);
+          el.setAttribute("aria-pressed", "false");
+          el.tabIndex = 0;
+          el.addEventListener("focus", () => {
+            const marker = markersDataRef.current.find((mk) => mk.id === markerId);
+            if (marker) onMarkerHoverRef.current?.(marker);
+          });
+          el.addEventListener("blur", () => onMarkerHoverRef.current?.(null));
+          el.addEventListener("keydown", (e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              el.click();
+            }
+          });
+        } else if (hoveredMarkerIdRef.current != null && markerId === hoveredMarkerIdRef.current) {
           el.querySelector(".marker-ping-ring")?.classList.add("active");
           el.querySelector(".marker-dot")?.classList.add("active");
         }
@@ -2211,6 +2296,9 @@ export function CrisisMap({
       }
 
       mountedMode = clusterDomMarkers.current.size > 0 ? mode : "none";
+      if (onSelectedMarkerElement && (hoveredMarkerIdRef.current != null || selectedMarkerIdRef.current != null)) {
+        syncHighlights();
+      }
     };
 
     const syncDensityVisuals = (rebuildMarkers: boolean) => {
@@ -2277,6 +2365,22 @@ export function CrisisMap({
       syncDensityVisuals(true);
     };
 
+    const onMoveEnd = () => {
+      syncDensityVisuals(true);
+      // Cached tiles can finish drawing after moveend without another sourcedata
+      // event. Give Detection a settled frame to recover any missing pins.
+      if (onSelectedMarkerElement) m.once("idle", restoreMissingMarkers);
+    };
+    const restoreMissingMarkers = () => {
+      const features = m.queryRenderedFeatures({ layers: [POINT_GHOST, CLUSTER_GHOST] }) as GeoJSON.Feature[];
+      const missing = features.some(({ properties }) => {
+        if (!properties) return false;
+        const key = properties.cluster_id != null ? `c-${properties.cluster_id}` : `p-${properties.id}`;
+        return !clusterDomMarkers.current.has(key);
+      });
+      if (missing) syncDensityVisuals(true);
+    };
+
     // sourcedata fires when cluster tiles finish computing - rebuild markers.
     const onSourceData = (e: MapboxGLAny) => {
       if (e.sourceId === SOURCE && e.isSourceLoaded) syncDensityVisuals(true);
@@ -2284,35 +2388,32 @@ export function CrisisMap({
 
     m.on("zoom", scheduleZoomSync);
     m.on("zoomend", onZoomEnd);
-    m.on("moveend", onZoomEnd);
+    m.on("moveend", onMoveEnd);
     m.on("sourcedata", onSourceData);
     syncDensityVisuals(true);
 
     return () => {
+      syncHighlightsRef.current = null;
       if (zoomRaf) cancelAnimationFrame(zoomRaf);
       clearDomMarkers(true);
       removeLayers();
       m.off("zoom", scheduleZoomSync);
       m.off("zoomend", onZoomEnd);
-      m.off("moveend", onZoomEnd);
+      m.off("moveend", onMoveEnd);
+      m.off("idle", restoreMissingMarkers);
       m.off("sourcedata", onSourceData);
     };
-  }, [markers, loaded, showMarkers, showDensityHeatmap, baseMapType, appearance]);
+  }, [markers, loaded, showMarkers, showDensityHeatmap, baseMapType, appearance, onSelectedMarkerElement]);
 
   // ── Marker hover pulse (synced from list) ────────────────────────────────
   useEffect(() => {
-    hoveredMarkerIdRef.current = hoveredMarkerId ?? null;
-    for (const [key, mk] of clusterDomMarkers.current) {
-      if (!key.startsWith("p-")) continue;
-      const id = Number(key.slice(2));
-      const outerEl = (mk as MapboxGLAny).getElement() as HTMLElement;
-      const ring = outerEl.querySelector(".marker-ping-ring");
-      const dot  = outerEl.querySelector(".marker-dot");
-      const on = hoveredMarkerId != null && id === hoveredMarkerId;
-      ring?.classList.toggle("active", on);
-      dot?.classList.toggle("active", on);
-    }
-  }, [hoveredMarkerId]);
+    const hovered = hoveredMarkerId ?? null;
+    const selected = selectedMarkerId ?? null;
+    if (hovered === hoveredMarkerIdRef.current && selected === selectedMarkerIdRef.current) return;
+    hoveredMarkerIdRef.current = hovered;
+    selectedMarkerIdRef.current = selected;
+    syncHighlightsRef.current?.();
+  }, [hoveredMarkerId, selectedMarkerId]);
 
   // ── NRC Sudan office centroids (HTML markers; separate from crisis pins) ─
   // Coordinates are city/locality centroids from NRC Sudan Annual Report 2025
@@ -3567,11 +3668,13 @@ export function CrisisMap({
   // Expose project helpers for overlays (spaghetti connectors on /map).
   useEffect(() => {
     if (!mapApiRef) return;
-    if (!loaded) {
+    if (!loaded || !map.current) {
       mapApiRef.current = null;
       return;
     }
+    const markerReveal = createMarkerReveal(map.current);
     mapApiRef.current = {
+      markerReveal,
       projectMarker: (id, lng, lat) => {
         const m = map.current;
         if (!m) return null;
@@ -3670,6 +3773,7 @@ export function CrisisMap({
       },
     };
     return () => {
+      markerReveal.cancel();
       mapApiRef.current = null;
     };
   }, [loaded, mapApiRef]);

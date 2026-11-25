@@ -25,9 +25,9 @@ export function eventRows(page: Page) {
  * Navigate from the Detection Events list to a specific event's detail page by
  * its (seeded) title.
  *
- * A plain row click opens the preview drawer without mounting page-mode
+ * A plain row click opens the preview without mounting page-mode
  * chrome (Add to Crisis, Alert), so go to the row's full event page so those
- * actions stay reachable. "Back to Events" is page-only: the drawer never
+ * actions stay reachable. "Back to Events" is page-only: the preview never
  * renders it, so it is the signal we actually left the overlay.
  */
 export async function gotoEventByTitle(page: Page, title: string) {

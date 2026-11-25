@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   PANEL_GAP,
+  PANEL_MARGIN,
   panelCoversPin,
+  placeDetectionPreview,
   placeNearMarker,
 } from "./map-panel-placement";
 
@@ -52,5 +54,31 @@ describe("placeNearMarker", () => {
       pos.left >= anchor.x + PANEL_GAP ||
       pos.left + panel.width <= anchor.x - PANEL_GAP;
     expect(clearVertically || clearHorizontally).toBe(true);
+  });
+});
+
+describe("placeDetectionPreview", () => {
+  const area = { width: 640, height: 700 };
+  const corner = { left: area.width - panel.width - PANEL_MARGIN, top: area.height - panel.height - PANEL_MARGIN };
+
+  it("uses the clear bottom-right corner at 640px of usable space", () => {
+    expect(placeDetectionPreview({ x: 90, y: 200 }, area, panel)).toEqual(corner);
+  });
+
+  it("places beside the pin when the corner would cover it", () => {
+    const anchor = { x: 520, y: 600 };
+    const position = placeDetectionPreview(anchor, area, panel);
+    expect(position).toEqual(placeNearMarker(anchor, area, panel));
+    expect(panelCoversPin({ ...position, ...panel }, anchor)).toBe(false);
+  });
+
+  it("prefers the pin below the width threshold, even with an empty corner", () => {
+    const narrow = { ...area, width: 639 };
+    const anchor = { x: 90, y: 200 };
+    expect(placeDetectionPreview(anchor, narrow, panel)).toEqual(placeNearMarker(anchor, narrow, panel));
+  });
+
+  it("opens in the corner when the marker has no visible map point", () => {
+    expect(placeDetectionPreview(null, area, panel)).toEqual(corner);
   });
 });

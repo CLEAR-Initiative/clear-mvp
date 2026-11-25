@@ -124,7 +124,10 @@
 .list {
   /* The query bar's list and the sort menu are placed against the column. */
   position: relative;
-  width: clamp(360px, 32%, 480px);
+  /* On a small tablet the global navigation also uses space. Leave enough
+     map width for the preview and its controls beside the scrollable feed. */
+  --feed-width: min(clamp(360px, 32%, 480px), calc(100% - 340px));
+  width: var(--feed-width);
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
@@ -135,7 +138,7 @@
 }
 
 .listHidden {
-  margin-inline-start: calc(-1 * clamp(360px, 32%, 480px));
+  margin-inline-start: calc(-1 * var(--feed-width));
 }
 
 .toolbar {
@@ -228,7 +231,7 @@
 .row {
   position: relative;
   display: grid;
-  grid-template-columns: 92px minmax(0, 1fr);
+  grid-template-columns: min(92px, 32%) minmax(0, 1fr);
   gap: 12px;
   padding: 12px 14px;
   background: var(--color-bg-white);
@@ -239,13 +242,15 @@
   flex-shrink: 0;
 }
 
-.row:hover {
+.row:hover,
+.row[data-hovered] {
   background: var(--color-bg-muted);
 }
 
 .rowSelected {
   background: var(--color-bg-muted);
-  border-color: #525252;
+  border-color: var(--color-accent);
+  box-shadow: inset 3px 0 var(--color-accent);
 }
 
 .rowFresh {
@@ -483,6 +488,20 @@
   min-width: 0;
   position: relative;
   overflow: hidden;
+}
+
+.map :global(.mapboxgl-marker[data-hovered="true"]),
+.map :global(.mapboxgl-marker[data-selected="true"]) {
+  z-index: 3;
+}
+
+.map :global([data-selected="true"] .marker-pin-head),
+.map :global([data-cluster-id][data-selected="true"]),
+.map :global([data-cluster-id][data-hovered="true"]) {
+  border-radius: 50%;
+  outline: 3px solid var(--color-accent);
+  outline-offset: 3px;
+  box-shadow: 0 0 0 3px var(--color-bg-white);
 }
 
 .map :global(.mapboxgl-ctrl-bottom-right .mapboxgl-ctrl-attrib) {
@@ -1070,6 +1089,7 @@
 
 .timelineTop {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 10px;
 }

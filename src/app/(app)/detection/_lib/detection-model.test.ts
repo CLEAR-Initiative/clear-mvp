@@ -15,6 +15,7 @@ import {
   isDimActive,
   isL1Checked,
   isStatePartial,
+  itemForMapPin,
   matchesText,
   normalizeText,
   normalizeTypeKeys,
@@ -43,12 +44,21 @@ const H: HierarchyLevel1[] = [
 
 const item = (over: Partial<FeedItem> = {}): FeedItem => ({
   id: "e1", kind: "event", eventId: "e1", href: "/event/e1", title: "Shelling in Kadugli",
+  description: null,
   severity: "high", isAlert: false, source: "ACLED", sources: ["ACLED"], place: "Kadugli",
   stateId: "s-sk", stateName: "South Kordofan", districtId: "d-kad", typeCodes: ["ba"], signalCount: 2,
   lastAt: "2026-11-09T10:00:00Z", firstAt: null, lng: 29.7, lat: 11, ...over,
 });
 
 const none: FilterState = { locIds: [], severities: new Set(SEVERITIES), typeFilters: [], sources: null, search: "" };
+
+it("keeps the selected Alert when its Event pin represents multiple feed rows", () => {
+  const first = item({ id: "alert-1", kind: "alert" });
+  const second = item({ id: "alert-2", kind: "alert" });
+  expect(itemForMapPin([first, second], "e1")).toBe(first);
+  expect(itemForMapPin([first, second], "e1", second)).toBe(second);
+  expect(itemForMapPin([first, second], "other", second)).toBeUndefined();
+});
 
 describe("event type selection", () => {
   it("checking an L1 selects all its L2s and reads as the L1", () => {

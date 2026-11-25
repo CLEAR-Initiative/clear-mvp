@@ -2,7 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNo
 import { useFormatter, useTranslations } from "next-intl";
 import { Box, Text, Group, Stack, Badge, Button, CloseButton, ScrollArea, UnstyledButton } from "@mantine/core";
 import { useMediaQuery } from "@mantine/hooks";
-import { IconClipboard, IconGripHorizontal } from "@tabler/icons-react";
+import { IconClipboard } from "@tabler/icons-react";
 import Link from "next/link";
 import { type CrisisMarker } from "./map-markers-data";
 import type { MarkerScreenPoint } from "~/components/map/crisis-map";
@@ -23,6 +23,7 @@ import { api } from "~/trpc/react";
 import styles from "./map-marker-detail.module.css";
 import type { PointAltitudeResult } from "~/lib/map/point-altitude";
 import { BidiTitle } from "~/components/ui/bidi-title";
+import { MapMarkerPanelHeader } from "./map-marker-panel-header";
 
 /** In-panel Location correction place-on-map flow (Signal pins only). */
 export type LocationCorrectionUi = {
@@ -85,14 +86,6 @@ const severityColors: Record<string, { bg: string; color: string }> = {
   medium:   { bg: "var(--color-warning-light)",  color: "#D97706" },
   low:      { bg: "var(--color-success-light)",  color: "#059669" },
 };
-
-interface DragState {
-  pointerId: number;
-  originX: number;
-  originY: number;
-  startOffsetX: number;
-  startOffsetY: number;
-}
 
 /** Auto-nudge window after focus-fly only — ignore later pan/zoom once settled. */
 const OPEN_NUDGE_MS = 2200;
@@ -170,7 +163,6 @@ export function MapMarkerDetail({
   );
 
   const boxRef = useRef<HTMLDivElement>(null);
-  const dragRef = useRef<DragState | null>(null);
   const swipeRef = useRef<{ pointerId: number; startX: number; startY: number } | null>(null);
   const swipeDeltaRef = useRef({ x: 0, y: 0 });
   const onGeometryChangeRef = useRef(onGeometryChange);
@@ -301,39 +293,6 @@ export function MapMarkerDetail({
       y: Math.min(Math.max(nextY, minY), Math.max(minY, maxY)),
     };
   }, [offset.x, offset.y]);
-
-  const handlePointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
-    // Desktop-only drag; ignore secondary buttons and interactive controls.
-    if (isMobile || e.button !== 0) return;
-    if ((e.target as HTMLElement).closest("button, a, input, [data-no-drag]")) return;
-
-    onActivate?.();
-
-    dragRef.current = {
-      pointerId: e.pointerId,
-      originX: e.clientX,
-      originY: e.clientY,
-      startOffsetX: offset.x,
-      startOffsetY: offset.y,
-    };
-    e.currentTarget.setPointerCapture(e.pointerId);
-    setDragging(true);
-  }, [isMobile, offset.x, offset.y, onActivate]);
-
-  const handlePointerMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
-    const drag = dragRef.current;
-    if (!drag || drag.pointerId !== e.pointerId) return;
-    const nextX = drag.startOffsetX + (e.clientX - drag.originX);
-    const nextY = drag.startOffsetY + (e.clientY - drag.originY);
-    setOffset(clampOffset(nextX, nextY));
-  }, [clampOffset]);
-
-  const endDrag = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
-    if (!dragRef.current || dragRef.current.pointerId !== e.pointerId) return;
-    dragRef.current = null;
-    setDragging(false);
-    try { e.currentTarget.releasePointerCapture(e.pointerId); } catch { /* ignore */ }
-  }, []);
 
   // Mobile: vertical swipe-down dismisses; horizontal swipe goes prev/next.
   // Transform is written directly to the DOM (no React re-render per move).
@@ -489,61 +448,17 @@ export function MapMarkerDetail({
         zIndex: dragging ? Math.max(stackZIndex, 30) : Math.max(stackZIndex, 20),
       }}
     >
-      {/* Desktop: drag chrome — grip + title row */}
       {!isMobile && (
-        <Box
-          onPointerDown={handlePointerDown}
-          onPointerMove={handlePointerMove}
-          onPointerUp={endDrag}
-          onPointerCancel={endDrag}
-          onMouseEnter={() => setHeaderHovered(true)}
-          onMouseLeave={() => setHeaderHovered(false)}
-          style={{
-            cursor: dragging ? "grabbing" : "grab",
-            userSelect: "none",
-            touchAction: "none",
-            background: emphasized
-              ? "color-mix(in srgb, var(--color-bg-muted) 70%, var(--color-bg-white))"
-              : "transparent",
-            transition: dragging ? "none" : "background 140ms ease",
-            borderRadius: "8px 8px 0 0",
-          }}
-        >
-          {/* Six-dot grip — signals the panel is movable */}
-          <Box
-            style={{
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-              paddingTop: 6,
-              paddingBottom: 2,
-            }}
-            aria-hidden
-          >
-            <IconGripHorizontal
-              size={16}
-              stroke={1.5}
-              style={{
-                color: emphasized ? "var(--color-text-secondary)" : "var(--color-text-muted)",
-                opacity: emphasized ? 0.9 : 0.55,
-                transition: "opacity 140ms ease, color 140ms ease",
-              }}
-            />
-          </Box>
-
-          <Group
-            justify="space-between"
-            px={16}
-            pb={12}
-            pt={4}
-            className="border-b border-[var(--color-border)]"
-          >
-            <Text fw={600} size="sm" lineClamp={2} style={{ flex: 1 }}>
-              <BidiTitle>{marker.title}</BidiTitle>
-            </Text>
-            <CloseButton size="sm" onClick={onClose} data-no-drag />
-          </Group>
-        </Box>
+        <MapMarkerPanelHeader
+          title={marker.title}
+          x={offset.x}
+          y={offset.y}
+          onMove={(x, y) => setOffset(clampOffset(x, y))}
+          onActivate={onActivate}
+          onDragChange={setDragging}
+          onHoverChange={setHeaderHovered}
+          onClose={onClose}
+        />
       )}
 
       {/* Mobile header — drag handle + title (gestures on whole sheet) */}
