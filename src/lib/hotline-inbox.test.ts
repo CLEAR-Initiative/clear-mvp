@@ -689,6 +689,16 @@ describe("Location challenges", () => {
     });
   });
 
+  it("finds a pipeline challenge by the filer label of the reader's language", () => {
+    const filed = challenge("c2", { origin: "PIPELINE", createdByName: "svc-pipeline" });
+    const [entry] = buildLocationChallengeEntries([filed, challenge("c1")], "Pipeline CLEAR");
+    expect(visibleEntries([entry!], "locations", "pipeline clear", "newest")).toHaveLength(1);
+    expect(visibleEntries([entry!], "locations", "clear pipeline", "newest")).toHaveLength(1);
+    // A person's challenge does not match the pipeline's name.
+    const [, persons] = buildLocationChallengeEntries([filed, challenge("c1")], "Pipeline CLEAR");
+    expect(visibleEntries([persons!], "locations", "pipeline", "newest")).toHaveLength(0);
+  });
+
   it("keeps an untitled Signal's row titled by the row itself", () => {
     const [entry] = buildLocationChallengeEntries([
       challenge("c1", { signal: { ...challenge("c1").signal, title: "  " } }),

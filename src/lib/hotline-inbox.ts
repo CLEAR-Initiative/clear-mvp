@@ -286,8 +286,8 @@ export function isPipelineChallenge(challenge: Pick<GqlLocationChallengeToDecide
   return challenge.origin === "PIPELINE";
 }
 
-/** The pipeline's name as a filer, in search text. The Inbox shows the
- * translated `inbox.location.pipelineFiler`. */
+/** The pipeline's English name as a filer, always in search text beside the
+ * reader's own-language label (`inbox.location.pipelineFiler`). */
 const PIPELINE_FILER = "CLEAR pipeline";
 
 /** Who filed a Location challenge, as the Inbox names them: the person, or
@@ -312,7 +312,12 @@ export function locationChallengeEntryId(challengeId: string): string {
  * Signal's place, the proposed place, the note and the filer, so search finds
  * a challenge by any of them.
  */
-export function buildLocationChallengeEntries(challenges: GqlLocationChallengeToDecide[]): LocationChallengeEntry[] {
+export function buildLocationChallengeEntries(
+  challenges: GqlLocationChallengeToDecide[],
+  /** The pipeline's name as a filer in the reader's language, so search
+   * finds a pipeline challenge by the label the reader sees. */
+  pipelineLabel: string = PIPELINE_FILER,
+): LocationChallengeEntry[] {
   return challenges.map((challenge) => {
     const signalTitle = challenge.signal.title?.trim() || null;
     return {
@@ -326,7 +331,8 @@ export function buildLocationChallengeEntries(challenges: GqlLocationChallengeTo
         challenge.proposedName,
         locationChain(challenge.proposedPlacement),
         challenge.note,
-        challengeFiler(challenge, PIPELINE_FILER),
+        challengeFiler(challenge, pipelineLabel),
+        isPipelineChallenge(challenge) && pipelineLabel !== PIPELINE_FILER ? PIPELINE_FILER : null,
         challenge.team?.name,
       ]
         .filter((part): part is string => !!part)
