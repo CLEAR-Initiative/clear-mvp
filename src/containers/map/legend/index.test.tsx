@@ -76,13 +76,15 @@ describe("Legend", () => {
     );
 
     fireEvent.click(screen.getByRole("button", { name: "controls.legend" }));
-    expect(screen.getByText("mapV2.layers.signals.fewerSignals")).toBeInTheDocument();
+    expect(screen.getByText("mapV2.layers.signals.fewerSignals").closest('[aria-hidden="true"]')).toBeNull();
+    expect(screen.getByText("mapV2.layers.signals.high").closest('[aria-hidden="true"]')).not.toBeNull();
 
     fireEvent.click(screen.getByRole("radio", { name: "mapV2.layers.signals.heatmap" }));
     await waitFor(() =>
       expect(lastLayers()).toEqual([{ id: "signals", visibility: true, opacity: 1, settings: { density: "heatmap" } }]),
     );
-    expect(screen.getByText("mapV2.layers.signals.high")).toBeInTheDocument();
+    expect(screen.getByText("mapV2.layers.signals.high").closest('[aria-hidden="true"]')).toBeNull();
+    expect(screen.getByText("mapV2.layers.signals.fewerSignals").closest('[aria-hidden="true"]')).not.toBeNull();
 
     fireEvent.click(screen.getByRole("radio", { name: "mapV2.layers.signals.clusters" }));
     await waitFor(() => expect(lastLayers()).toStrictEqual([{ id: "signals", visibility: true, opacity: 1 }]));

@@ -4,6 +4,7 @@ import { useTranslations } from "next-intl";
 import { Marker, useMap } from "react-map-gl/mapbox";
 import { ZOOM_RANGE } from "../../constants";
 import { abbreviateCount, clusterSize, type ClusterMarker } from "./clusters";
+import { donutBand, donutGradient } from "./donut";
 
 type SignalClusterMarkerProps = {
   cluster: ClusterMarker;
@@ -37,6 +38,10 @@ export function SignalClusterMarker({ cluster, opacity, selected, onSelectStack 
         onClick={onClick}
         style={{ width: outer, height: outer, opacity }}
       >
+        <span
+          className="map-v2-cluster-ring"
+          style={{ background: donutGradient(cluster.severity), "--ring-band": `${donutBand(outer)}px` } as React.CSSProperties}
+        />
         <span className="map-v2-cluster-count" style={{ width: inner, height: inner }}>
           {abbreviateCount(cluster.count)}
         </span>

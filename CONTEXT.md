@@ -332,11 +332,16 @@ _Avoid_: white overlays; page-level content fade-in; opacity-0 entry animations 
 
 **Signal cluster**:
 A group of **Signals** that sit close together on the map at the current zoom, drawn as
-one numbered circle. In the **Global** view it is a plain blue circle. The design shows a
-donut with the severity mix once a country is chosen; that is not built yet. Clicking it
-zooms in until it splits, except for **Stacked signals**, which it selects.
+one numbered **Severity donut**, with or without a **Working country**. Clicking it zooms
+in until it splits, except for **Stacked signals**, which it selects.
 _Avoid_: "event" or "crisis" for a cluster (a cluster is a map grouping, not a
-**Detection**); "donut" for the Global blue circle.
+**Detection**).
+
+**Severity donut**:
+A **Signal cluster** drawn as a ring split by the severity of its signals, in legend order
+(Critical, High, Medium, Low, Unknown) clockwise from the top, each part sized by its count,
+with the count in the centre.
+_Avoid_: "chart" or "pie" for it; a donut that leaves out signals with no severity.
 
 **Stacked signals**:
 **Signals** that share exactly the same point, often a country or city centre. Zooming

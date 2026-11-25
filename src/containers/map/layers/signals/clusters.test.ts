@@ -8,13 +8,13 @@ import {
   viewClusters,
   worldPoints,
 } from "./clusters";
-import type { SignalFeature, SignalFeatureCollection } from "./to-features";
+import type { SeverityBucket, SignalFeature, SignalFeatureCollection } from "./to-features";
 
-function signal(id: string, lng: number, lat: number): SignalFeature {
+function signal(id: string, lng: number, lat: number, severity: SeverityBucket = "high"): SignalFeature {
   return {
     type: "Feature",
     geometry: { type: "Point", coordinates: [lng, lat] },
-    properties: { id, title: null, severity: "high" },
+    properties: { id, title: null, severity },
   };
 }
 
@@ -55,6 +55,31 @@ describe("viewClusters", () => {
     const [cluster] = viewClusters(index, WORLD, 20);
     expect(cluster).toMatchObject({ count: 2, stacked: true });
     expect(cluster!.expansionZoom).toBeGreaterThan(CLUSTER_MAX_ZOOM);
+  });
+});
+
+describe("cluster severity counts", () => {
+  it("adds up to the cluster count when clusters merge at a lower zoom", () => {
+    const index = createSignalIndex(
+      collection([
+        signal("a", 30, 15, "critical"),
+        signal("b", 30.001, 15.001, "high"),
+        signal("c", 30.002, 15.002, "unknown"),
+        signal("d", 31, 16, "high"),
+        signal("e", 31.001, 16.001, "low"),
+      ]),
+    );
+
+    const split = viewClusters(index, WORLD, 8);
+    expect(split.map((c) => c.severity)).toEqual(
+      expect.arrayContaining([
+        { critical: 1, high: 1, medium: 0, low: 0, unknown: 1 },
+        { critical: 0, high: 1, medium: 0, low: 1, unknown: 0 },
+      ]),
+    );
+
+    const [merged] = viewClusters(index, WORLD, 2);
+    expect(merged).toMatchObject({ count: 5, severity: { critical: 1, high: 2, medium: 0, low: 1, unknown: 1 } });
   });
 });
 

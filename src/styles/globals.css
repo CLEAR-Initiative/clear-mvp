@@ -102,7 +102,6 @@
   --map-accent-ring: #FB531F;
   --map-road-corridor: #976E49;
   --map-road-minor: #AEB1B7;
-  --map-cluster: #3A6FDC;
   --map-selection: #3A6FDC;
   --map-slider: #3F59E0;
   --map-slider-track: #F0F2FD;
@@ -185,7 +184,6 @@
   --map-accent-ring: #FB531F;
   --map-road-corridor: #B0926D;
   --map-road-minor: #757575;
-  --map-cluster: #6B93E8;
   --map-selection: #6B93E8;
   --map-slider: #6B93E8;
   --map-slider-track: #2D2D2D;
@@ -717,7 +715,7 @@ nextjs-portal {
   padding: 0;
   border: 0;
   border-radius: 50%;
-  background: var(--map-cluster);
+  background: var(--color-bg-white);
   cursor: pointer;
 }
 .map-v2-cluster::before {
@@ -731,6 +729,15 @@ nextjs-portal {
 }
 .map-v2-cluster[data-selected="true"] {
   box-shadow: 0 0 0 2px var(--color-bg-white);
+}
+.map-v2-cluster-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  mask: radial-gradient(closest-side, transparent calc(100% - var(--ring-band)), #000 calc(100% - var(--ring-band)));
+}
+.map-v2-cluster-ring + .map-v2-cluster-count {
+  position: relative;
 }
 /* The selection ring blinks: it holds, fades out, then comes back. */
 .map-v2-cluster[data-selected="true"]::after {

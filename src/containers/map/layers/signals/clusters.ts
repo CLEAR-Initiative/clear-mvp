@@ -1,4 +1,6 @@
 import Supercluster from "supercluster";
+import { emptySeverityCounts, type SeverityCounts } from "./donut";
+import { SEVERITY_BUCKETS } from "./severity-tokens";
 import type { SignalFeature, SignalFeatureCollection } from "./to-features";
 
 export const CLUSTER_MAX_ZOOM = 22;
@@ -17,7 +19,7 @@ export function isSamePoint(a: [number, number], b: [number, number]): boolean {
   return Math.abs(a[0] - b[0]) <= STACK_TOLERANCE_DEG && Math.abs(a[1] - b[1]) <= STACK_TOLERANCE_DEG;
 }
 
-export type SignalIndex = Supercluster<SignalFeature["properties"]>;
+export type SignalIndex = Supercluster<SignalFeature["properties"], SeverityCounts>;
 
 export type ViewBounds = { west: number; south: number; east: number; north: number };
 
@@ -28,6 +30,7 @@ export type ClusterMarker = {
   coordinates: [number, number];
   expansionZoom: number;
   stacked: boolean;
+  severity: SeverityCounts;
 };
 
 export function createSignalIndex(collection: SignalFeatureCollection): SignalIndex {
@@ -35,6 +38,10 @@ export function createSignalIndex(collection: SignalFeatureCollection): SignalIn
     radius: CLUSTER_RADIUS_PX,
     extent: CLUSTER_EXTENT,
     maxZoom: CLUSTER_MAX_ZOOM,
+    map: ({ severity }) => ({ ...emptySeverityCounts(), [severity]: 1 }),
+    reduce: (accumulated, counts) => {
+      for (const bucket of SEVERITY_BUCKETS) accumulated[bucket] += counts[bucket];
+    },
   });
   index.load(collection.features);
   return index;
@@ -71,10 +78,17 @@ export function viewClusters(index: SignalIndex, { west, south, east, north }: V
       coordinates: [lng, lat],
       expansionZoom,
       stacked: expansionZoom > CLUSTER_MAX_ZOOM,
+      severity: pickSeverityCounts(properties),
     });
   }
 
   return clusters;
+}
+
+function pickSeverityCounts(properties: SeverityCounts): SeverityCounts {
+  const counts = emptySeverityCounts();
+  for (const bucket of SEVERITY_BUCKETS) counts[bucket] = properties[bucket];
+  return counts;
 }
 
 export function clusterLeafIds(index: SignalIndex, clusterId: number): string[] {
