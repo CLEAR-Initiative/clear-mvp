@@ -723,12 +723,19 @@ describe("Insights > Analysis tab", () => {
     expect(screen.getByTestId("analysis-generating")).toHaveTextContent("analysis.generating.title");
   });
 
-  it("offers New analysis to every role, and hides remove from viewers", async () => {
+  it("hides New analysis and remove from roles clear-api would refuse", () => {
     role = "viewer";
+    scopesResult.created = [created()];
+    renderHome();
+    expect(screen.queryByTestId("analysis-new")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("analysis-remove")).not.toBeInTheDocument();
+  });
+
+  it("offers New analysis to an admin with no team, and the form asks for a team", async () => {
+    role = "admin";
     activeTeamId = null;
     scopesResult.created = [created()];
     renderHome();
-    expect(screen.getByTestId("analysis-new")).toBeInTheDocument();
     expect(screen.queryByTestId("analysis-remove")).not.toBeInTheDocument();
     fireEvent.click(screen.getByTestId("analysis-new"));
     expect(await screen.findByTestId("analysis-create-submit")).toBeDisabled();
