@@ -30,10 +30,12 @@ export function AnalysisTab() {
   const { activeTeamId, teams } = useTeam();
   const teamId = activeTeamId ?? teams?.find((t) => t.id)?.id ?? null;
   const me = api.auth.me.useQuery(undefined, { staleTime: 60_000 });
-  // Create is part of the flow for every signed-in role. Removing one, and
-  // changing how often it updates, stays with an admin or a team analyst.
-  const canManage =
-    canManageAnalyses(me.data?.user?.role, me.data?.user?.teamMemberships) && !!teamId;
+  // Creating, removing and changing how often an analysis updates stay with an
+  // admin or a team analyst: clear-api refuses everyone else. Create does not
+  // wait for a team, so an admin with no team still reaches the form, which
+  // asks for one.
+  const mayManage = canManageAnalyses(me.data?.user?.role, me.data?.user?.teamMemberships);
+  const canManage = mayManage && !!teamId;
 
   const [picked, setPicked] = useState<string | null>(null);
   const [opened, setOpened] = useState<Opened | null>(null);
@@ -230,7 +232,7 @@ export function AnalysisTab() {
           country={scopes.data?.countries[0] ?? null}
           created={created}
           loading={scopes.isLoading}
-          canCreate
+          canCreate={mayManage}
           canRemove={canManage}
           teamId={teamId}
           selector={selector}
