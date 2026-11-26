@@ -72,7 +72,7 @@ export function detectionsQueryInput(kind: DetectionKind, range: { from: string;
  * The detections of `kind` the map shows for the timeline's range. Only the query for `kind` runs; the
  * signals one shares its cache with the Map panel.
  */
-export function useDetectionsForMap(kind: DetectionKind) {
+export function useDetectionsForMap(kind: DetectionKind | null) {
   const range = useTimeframeQuery();
   const signals = api.signals.forMap.useQuery(detectionsQueryInput("signal", range), {
     placeholderData: (prev) => prev,
@@ -87,18 +87,19 @@ export function useDetectionsForMap(kind: DetectionKind) {
     enabled: kind === "alert",
   });
 
-  const query = { signal: signals, event: events, alert: alerts }[kind];
+  const query = kind ? { signal: signals, event: events, alert: alerts }[kind] : null;
   const data = useMemo(() => {
     if (kind === "signal") return signals.data?.map(signalDetection);
     if (kind === "event") return events.data?.events.map(eventDetection);
-    return alerts.data?.alerts.map(alertDetection);
+    if (kind === "alert") return alerts.data?.alerts.map(alertDetection);
+    return undefined;
   }, [kind, signals.data, events.data, alerts.data]);
 
   return {
     data,
-    isPending: query.isPending,
-    isError: query.isError,
-    error: query.error,
-    isPlaceholderData: query.isPlaceholderData,
+    isPending: query?.isPending ?? false,
+    isError: query?.isError ?? false,
+    error: query?.error ?? null,
+    isPlaceholderData: query?.isPlaceholderData ?? false,
   };
 }

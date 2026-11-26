@@ -4821,8 +4821,17 @@
       },
       "last24h": "Last 24 hours",
       "lastDays": "Last {count} days",
-      "count": "{total, plural, one {<b>#</b> signal} other {<b>#</b> signals}}",
-      "countPending": "<b>—</b> signals",
+      "count": {
+        "alert": "{total, plural, one {<b>#</b> alert} other {<b>#</b> alerts}}",
+        "event": "{total, plural, one {<b>#</b> event} other {<b>#</b> events}}",
+        "signal": "{total, plural, one {<b>#</b> signal} other {<b>#</b> signals}}"
+      },
+      "countPending": {
+        "alert": "<b>—</b> alerts",
+        "event": "<b>—</b> events",
+        "signal": "<b>—</b> signals"
+      },
+      "countNone": "<b>—</b>",
       "today": "Today",
       "show": "Show timeline",
       "hide": "Hide timeline",

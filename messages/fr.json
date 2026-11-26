@@ -4821,8 +4821,17 @@
       },
       "last24h": "Dernières 24 heures",
       "lastDays": "{count} derniers jours",
-      "count": "{total, plural, one {<b>#</b> signal} other {<b>#</b> signaux}}",
-      "countPending": "<b>—</b> signaux",
+      "count": {
+        "alert": "{total, plural, one {<b>#</b> alerte} other {<b>#</b> alertes}}",
+        "event": "{total, plural, one {<b>#</b> événement} other {<b>#</b> événements}}",
+        "signal": "{total, plural, one {<b>#</b> signal} other {<b>#</b> signaux}}"
+      },
+      "countPending": {
+        "alert": "<b>—</b> alertes",
+        "event": "<b>—</b> événements",
+        "signal": "<b>—</b> signaux"
+      },
+      "countNone": "<b>—</b>",
       "today": "Aujourd'hui",
       "show": "Afficher la frise",
       "hide": "Masquer la frise",

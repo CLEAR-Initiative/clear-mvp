@@ -4821,8 +4821,17 @@
       },
       "last24h": "آخر 24 ساعة",
       "lastDays": "آخر {count} يومًا",
-      "count": "{total, plural, zero {<b>#</b> إشارة} one {<b>#</b> إشارة} two {<b>#</b> إشارتان} few {<b>#</b> إشارات} many {<b>#</b> إشارة} other {<b>#</b> إشارة}}",
-      "countPending": "<b>—</b> إشارات",
+      "count": {
+        "alert": "{total, plural, zero {<b>#</b> تنبيه} one {<b>#</b> تنبيه} two {<b>#</b> تنبيهان} few {<b>#</b> تنبيهات} many {<b>#</b> تنبيهًا} other {<b>#</b> تنبيه}}",
+        "event": "{total, plural, zero {<b>#</b> حدث} one {<b>#</b> حدث} two {<b>#</b> حدثان} few {<b>#</b> أحداث} many {<b>#</b> حدثًا} other {<b>#</b> حدث}}",
+        "signal": "{total, plural, zero {<b>#</b> إشارة} one {<b>#</b> إشارة} two {<b>#</b> إشارتان} few {<b>#</b> إشارات} many {<b>#</b> إشارة} other {<b>#</b> إشارة}}"
+      },
+      "countPending": {
+        "alert": "<b>—</b> تنبيهات",
+        "event": "<b>—</b> أحداث",
+        "signal": "<b>—</b> إشارات"
+      },
+      "countNone": "<b>—</b>",
       "today": "اليوم",
       "show": "إظهار الخط الزمني",
       "hide": "إخفاء الخط الزمني",
