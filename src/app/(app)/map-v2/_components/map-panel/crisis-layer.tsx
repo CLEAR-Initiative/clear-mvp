@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useId, useRef, useState } from "react";
 import { Select, Switch, UnstyledButton } from "@mantine/core";
 import { IconBulb, IconChevronDown, IconChevronsDown, IconX } from "@tabler/icons-react";
 import { useTranslations } from "next-intl";
@@ -13,7 +13,9 @@ const LEVEL_ORDER: DetectionKind[] = ["alert", "event", "signal"];
 
 export function CrisisLayer({ onLevelChange }: { onLevelChange: () => void }) {
   const t = useTranslations("mapV2");
-  const { level, visible, setLevel, setVisible } = useDetectionLevel();
+  const { level, setLevel } = useDetectionLevel();
+  const lastLevel = useRef<DetectionKind>(level ?? "alert");
+  if (level) lastLevel.current = level;
   const [open, setOpen] = useState(true);
   const bodyId = useId();
   const activeCount = level ? 1 : 0;
@@ -50,12 +52,8 @@ export function CrisisLayer({ onLevelChange }: { onLevelChange: () => void }) {
           <span className={classes.rowLabel}>{t("panel.crisisLayer.disasters")}</span>
           <Switch
             size="xs"
-            checked={level !== null && visible}
-            onChange={(event) => {
-              const next = event.currentTarget.checked;
-              setVisible(next);
-              if (next && !level) onLevelChange();
-            }}
+            checked={level !== null}
+            onChange={(event) => changeLevel(event.currentTarget.checked ? lastLevel.current : null)}
             aria-label={t("panel.crisisLayer.showDisasters")}
             classNames={{ track: classes.switchTrack }}
           />

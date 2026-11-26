@@ -98,12 +98,26 @@ describe("CrisisLayer", () => {
     expect(screen.getByPlaceholderText("panel.crisisLayer.placeholder")).toHaveValue("");
   });
 
-  it("hides and shows the detection layer with the Disasters toggle", async () => {
-    const { onUrlUpdate, lastLayers } = renderSection({ layers: JSON.stringify([layer("alerts")]) });
+  it("removes the detection layer and its count with the Disasters toggle", async () => {
+    const { onUrlUpdate, lastLayers } = renderSection({ layers: JSON.stringify([layer("alerts"), layer("roads")]) });
+    expect(screen.getByLabelText("panel.crisisLayer.activeCount")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("switch", { name: "panel.crisisLayer.showDisasters" }));
+
     await waitFor(() => expect(onUrlUpdate).toHaveBeenCalled());
-    expect(lastLayers()).toEqual([layer("alerts", false)]);
+    expect(lastLayers()).toEqual([layer("roads")]);
+    await waitFor(() => expect(screen.queryByLabelText("panel.crisisLayer.activeCount")).not.toBeInTheDocument());
+  });
+
+  it("brings back the last level when the toggle turns on again", async () => {
+    const { lastLayers } = renderSection({ layers: JSON.stringify([layer("events")]) });
+    const toggle = screen.getByRole("switch", { name: "panel.crisisLayer.showDisasters" });
+
+    fireEvent.click(toggle);
+    await waitFor(() => expect(toggle).not.toBeChecked());
+    fireEvent.click(toggle);
+
+    await waitFor(() => expect(detectionIds(lastLayers())).toEqual(["events"]));
   });
 
   it("shows the new level when one is picked while the layer is hidden", async () => {

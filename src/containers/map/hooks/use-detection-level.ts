@@ -13,23 +13,14 @@ function withLevel(layers: ActiveLayer[], kind: DetectionKind | null): ActiveLay
 }
 
 export function useDetectionLevel() {
-  const [layers, { setLayers, updateLayer }] = useActiveLayers();
+  const [layers, { setLayers }] = useActiveLayers();
   const layer = layers.find((item) => detectionKindOf(item.id) !== null) ?? null;
   const level = layer ? detectionKindOf(layer.id) : null;
-  const visible = layer?.visibility ?? false;
 
   const setLevel = useCallback(
     (kind: DetectionKind | null) => void setLayers((current) => withLevel(current, kind)),
     [setLayers],
   );
 
-  const setVisible = useCallback(
-    (next: boolean) => {
-      if (layer) void updateLayer(layer.id, { visibility: next });
-      else if (next) setLevel("alert");
-    },
-    [layer, updateLayer, setLevel],
-  );
-
-  return { level, visible, setLevel, setVisible };
+  return { level, setLevel };
 }
