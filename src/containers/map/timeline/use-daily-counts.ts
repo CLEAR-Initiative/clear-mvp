@@ -21,7 +21,6 @@ export function useDailyCounts(
     staleTime: 60_000,
     refetchOnWindowFocus: false,
     retry: false,
-    placeholderData: (prev) => prev,
   });
 
   useEffect(() => {
