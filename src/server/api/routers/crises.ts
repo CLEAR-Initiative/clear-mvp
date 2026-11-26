@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { CRISIS_RATIONALE_MAX } from "~/lib/crisis/rationale";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { graphqlFetch, cookieHeaders } from "~/server/api/graphql";
 import type { GqlEvent, GqlLocation } from "~/lib/types/graphql";
@@ -234,8 +235,8 @@ const REMOVE_ATTACHMENT_MUTATION = `
 `;
 
 const ADD_EVENT_TO_CRISIS_MUTATION = `
-  mutation AddEventToCrisis($crisisId: String!, $eventId: String!) {
-    addEventToCrisis(crisisId: $crisisId, eventId: $eventId) {
+  mutation AddEventToCrisis($crisisId: String!, $eventId: String!, $rationale: String) {
+    addEventToCrisis(crisisId: $crisisId, eventId: $eventId, rationale: $rationale) {
       id
       crisisId
       eventId
@@ -287,6 +288,9 @@ const DELETE_CRISIS_MUTATION = `
   }
 `;
 
+/** A rationale clear-api accepts: required, trimmed, at most 4000 characters. */
+const crisisRationale = z.string().trim().min(1).max(CRISIS_RATIONALE_MAX);
+
 export const crisesRouter = createTRPCRouter({
   list: protectedProcedure.query(async ({ ctx }) => {
     const data = await graphqlFetch<{ crises: GqlCrisis[] }>(
@@ -333,6 +337,9 @@ export const crisesRouter = createTRPCRouter({
          *  team_member) without a global admin role. Ignored
          *  (harmlessly) for platform admins. */
         teamId: z.string().optional(),
+        /** Why these events are a crisis. clear-api requires it and keeps it
+         *  in the decision log with who decided and when (ADR-0024). */
+        rationale: crisisRationale,
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -365,7 +372,7 @@ export const crisesRouter = createTRPCRouter({
     }),
 
   addEvent: protectedProcedure
-    .input(z.object({ crisisId: z.string(), eventId: z.string() }))
+    .input(z.object({ crisisId: z.string(), eventId: z.string(), rationale: crisisRationale }))
     .mutation(async ({ ctx, input }) => {
       const data = await graphqlFetch<{
         addEventToCrisis: {
