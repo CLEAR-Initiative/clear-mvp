@@ -4722,7 +4722,13 @@
     "mapSettings": {
       "title": "إعدادات الخريطة",
       "roads": "الطرق",
-      "labels": "التسميات"
+      "labels": "التسميات",
+      "boundaries": {
+        "title": "الحدود",
+        "country": "الدولة",
+        "state": "الولايات",
+        "districts": "المناطق"
+      }
     },
     "signalTooltip": {
       "signal": "إشارة",

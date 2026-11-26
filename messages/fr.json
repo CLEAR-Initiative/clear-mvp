@@ -4722,7 +4722,13 @@
     "mapSettings": {
       "title": "Paramètres de la carte",
       "roads": "Routes",
-      "labels": "Libellés"
+      "labels": "Libellés",
+      "boundaries": {
+        "title": "Limites",
+        "country": "Pays",
+        "state": "États",
+        "districts": "Districts"
+      }
     },
     "signalTooltip": {
       "signal": "Signal",

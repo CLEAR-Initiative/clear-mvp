@@ -389,9 +389,20 @@ switching to Simple or Satellite; resetting pitch on basemap swap; draping DEM o
 Satellite or Simple in this wedge.
 
 **Map settings**:
-The panel under the basemap choice that holds **Roads**, **Labels** and the admin
-boundary level. Settings apply on every basemap in the triad.
+The panel under the basemap choice that holds **Roads**, **Labels** and **Admin
+boundaries**. Settings apply on every basemap in the triad.
 _Avoid_: putting Map settings in the Layers panel; treating a setting as a basemap.
+
+**Admin boundaries**:
+The outlines of one administrative level, Country, States or Districts, chosen under
+"Boundaries" in **Map settings**. One level shows at a time, and States is the default;
+there is no "off". The
+lines come from CLEAR's own locations, the same regions that signals are counted
+against, so they cover only the **Working country**, or every country in the **Country
+scope** when no country is pinned. Global monitoring shows none.
+_Avoid_: calling them a layer (they are a setting, not in the legend); "subdued"
+(they are drawn in the map's boundary blue); reading the basemap's own country borders
+as Admin boundaries.
 
 **Roads** (overlay):
 The basemap's ground network: road lines, footpaths and steps, their names, and route

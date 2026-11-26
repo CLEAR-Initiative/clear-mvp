@@ -10,6 +10,7 @@ import { findLabelAnchorId } from "./label-anchor";
 import { findReliefAnchorId } from "./basemaps/relief-anchor";
 import { Topography } from "./basemaps/topography";
 import { MapSettingsLayers } from "./basemaps/map-settings-layers";
+import { AdminBoundaries } from "./boundaries/layer";
 import { MapControls } from "./controls";
 import { useBasemap } from "./hooks/use-basemap";
 import { LayerManager } from "./layer-manager";
@@ -31,7 +32,12 @@ export type MapV2Props = {
   children?: ReactNode;
 };
 
-export default function MapV2({ offset: offsetProp, selection = null, onSelect, children }: MapV2Props) {
+export default function MapV2({
+  offset: offsetProp,
+  selection = null,
+  onSelect,
+  children,
+}: MapV2Props) {
   const isDark = useIsDark();
   const offset = useMapOffset(offsetProp);
   const mapRef = useRef<MapRef>(null);
@@ -102,6 +108,7 @@ export default function MapV2({ offset: offsetProp, selection = null, onSelect, 
               <LayerManager labelAnchorId={labelAnchorId} onLoadingChange={onLoadingChange} />
             </MapInteractionsProvider>
           )}
+          {loaded && <AdminBoundaries basemap={basemap} labelAnchorId={labelAnchorId} />}
           <MapControls />
         </ReactMapGL>
         {children}
