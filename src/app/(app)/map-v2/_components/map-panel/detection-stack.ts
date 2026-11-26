@@ -1,7 +1,7 @@
 import type { MapDetection } from "~/containers/map/hooks/use-detections-for-map";
-import { isSamePoint } from "~/containers/map/layers/signals/clusters";
-import { SEVERITY_BUCKETS } from "~/containers/map/layers/signals/severity-tokens";
-import type { SeverityBucket } from "~/containers/map/layers/signals/to-features";
+import { isSamePoint } from "~/containers/map/layers/detections/clusters";
+import { SEVERITY_BUCKETS } from "~/containers/map/layers/detections/severity-tokens";
+import type { SeverityBucket } from "~/containers/map/layers/detections/to-features";
 import type { LngLatPoint } from "~/containers/map/selection";
 import { resolveLocationName } from "~/lib/location";
 import { mapSeverity } from "~/lib/types/graphql";

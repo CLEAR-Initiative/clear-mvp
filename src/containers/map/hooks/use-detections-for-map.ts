@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import type { GqlAlert, GqlEvent, GqlLocation, GqlSignal } from "~/lib/types/graphql";
 import { api } from "~/trpc/react";
-import { locationPoint, signalPoint } from "../layers/signals/to-features";
+import { locationPoint, signalPoint } from "../layers/detections/to-features";
 import type { DetectionKind, LngLatPoint } from "../selection";
 import { useTimeframeQuery } from "./use-timeframe";
 

@@ -1,5 +1,5 @@
-import { SignalsLayer } from "./signals/layer";
-import { SignalsLegend } from "./signals/legend";
+import { SignalsLayer } from "./detections/layer";
+import { SignalsLegend } from "./detections/legend";
 import type { LayerDefinition } from "./types";
 
 export const LAYERS = {
