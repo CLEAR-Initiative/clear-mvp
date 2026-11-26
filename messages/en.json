@@ -1971,14 +1971,7 @@
       "nameLabel": "Crisis name",
       "namePlaceholder": "e.g. Khartoum flooding, August 2026",
       "confirmCreate": "Create crisis",
-      "cancel": "Cancel",
-      "rationaleLabelCreate": "Why is this a crisis?",
-      "rationaleLabelAdd": "Why does this belong in the crisis?",
-      "rationaleHint": "Required. Saved with your name and the time, so others can see why.",
-      "rationalePlaceholder": "e.g. Same flood wave, displacement reported in both districts",
-      "rationaleModalTitle": "Add to crisis",
-      "rationaleModalHint": "{count, plural, one {Add # event to “{title}”.} other {Add # events to “{title}”.}}",
-      "confirmAdd": "Add to crisis"
+      "cancel": "Cancel"
     },
     "enrichment": {
       "title": "Enrichment",

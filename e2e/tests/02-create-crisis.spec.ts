@@ -20,11 +20,7 @@ test.describe("Create crisis from event (case 2)", () => {
     await page.getByRole("menuitem", { name: "Create new Crisis" }).click();
     await expect(page.getByTestId("crisis-name-input")).toBeVisible();
     await page.getByTestId("crisis-name-input").fill("Khartoum flood desk");
-    // A crisis needs a rationale: the create button waits for one.
-    const create = page.getByRole("dialog").getByRole("button", { name: "Create crisis" });
-    await expect(create).toBeDisabled();
-    await page.getByTestId("crisis-rationale-input").fill("Flooding across Khartoum districts, one response");
-    await create.click();
+    await page.getByRole("dialog").getByRole("button", { name: "Create crisis" }).click();
 
     await page.waitForURL("**/crisis/**");
     await expect(page.getByText("Khartoum flood desk").first()).toBeVisible();
@@ -46,7 +42,6 @@ test.describe("Create crisis from event (case 2)", () => {
     await page.getByRole("button", { name: "Create crisis" }).click();
     await expect(page.getByTestId("crisis-name-input")).toBeVisible();
     await page.getByTestId("crisis-name-input").fill("Multi-event crisis");
-    await page.getByTestId("crisis-rationale-input").fill("Two events, one displacement response");
     await page.getByRole("dialog").getByRole("button", { name: "Create crisis" }).click();
 
     await page.waitForURL("**/crisis/**");

@@ -23,7 +23,6 @@ import { severityColors, severityLabels } from "~/lib/constants/severity";
 import { resolveLocationName } from "~/lib/location";
 import { eventMatchesSearch, type RecommendReason } from "~/lib/crisis/recommend-events";
 import { useTeam } from "~/providers/team-provider";
-import { AddToCrisisRationaleModal } from "~/components/crisis/add-to-crisis-rationale-modal";
 
 interface AddEventsToCrisisModalProps {
   opened: boolean;
@@ -49,10 +48,6 @@ export function AddEventsToCrisisModal({
   const { activeTeamId } = useTeam();
   const [search, setSearch] = useState("");
   const [addingId, setAddingId] = useState<string | null>(null);
-  /** The event chosen to add, waiting for its rationale. */
-  const [pendingEventId, setPendingEventId] = useState<string | null>(null);
-  // Already cached by the crisis page; only its title is used here.
-  const crisisQuery = api.crises.get.useQuery({ id: crisisId }, { enabled: opened, staleTime: 60_000 });
 
   // Search stays local — the candidate pool is fetched once when the
   // modal opens so typing does not re-run the 100-event GraphQL page.
@@ -90,11 +85,10 @@ export function AddEventsToCrisisModal({
       .slice(0, 40);
   }, [showingSearch, search, recommended, pool]);
 
-  async function handleAdd(eventId: string, rationale: string) {
+  async function handleAdd(eventId: string) {
     setAddingId(eventId);
     try {
-      await addEvent.mutateAsync({ crisisId, eventId, rationale });
-      setPendingEventId(null);
+      await addEvent.mutateAsync({ crisisId, eventId });
       notifications.show({
         color: "teal",
         title: t("addSuccessTitle"),
@@ -167,20 +161,12 @@ export function AddEventsToCrisisModal({
               reasons={reasons}
               adding={addingId === event.id}
               disabled={addingId !== null}
-              onAdd={() => setPendingEventId(event.id)}
+              onAdd={() => void handleAdd(event.id)}
               formatRelative={(d) => format.relativeTime(d, now)}
             />
           ))}
         </Stack>
       )}
-      <AddToCrisisRationaleModal
-        opened={pendingEventId != null}
-        onClose={() => setPendingEventId(null)}
-        crisisTitle={crisisQuery.data?.title ?? null}
-        eventCount={1}
-        pending={addingId !== null}
-        onConfirm={(rationale) => pendingEventId && void handleAdd(pendingEventId, rationale)}
-      />
     </Modal>
   );
 }

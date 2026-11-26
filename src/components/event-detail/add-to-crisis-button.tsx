@@ -7,7 +7,6 @@ import { notifications } from "@mantine/notifications";
 import { IconLayoutGridAdd, IconChevronDown, IconPlus } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
 import { CreateCrisisModal } from "~/components/crisis/create-crisis-modal";
-import { AddToCrisisRationaleModal } from "~/components/crisis/add-to-crisis-rationale-modal";
 
 interface AddToCrisisButtonProps {
   eventId: string;
@@ -22,7 +21,7 @@ interface AddToCrisisButtonProps {
 /**
  * Dropdown that lets users link an event to a crisis:
  *   - "Create new Crisis" opens a name prompt, then createFromEvents.
- *   - An existing crisis asks why the event belongs, then addEventToCrisis.
+ *   - Existing crises call addEventToCrisis directly.
  */
 export function AddToCrisisButton({
   eventId,
@@ -33,8 +32,6 @@ export function AddToCrisisButton({
   const utils = api.useUtils();
   const [menuOpened, setMenuOpened] = useState(false);
   const [createOpened, setCreateOpened] = useState(false);
-  /** The existing crisis chosen from the menu, waiting for a rationale. */
-  const [target, setTarget] = useState<{ id: string; title: string | null } | null>(null);
 
   const crisesQuery = api.crises.listMenu.useQuery(undefined, {
     enabled: menuOpened,
@@ -42,7 +39,6 @@ export function AddToCrisisButton({
 
   const addEvent = api.crises.addEvent.useMutation({
     onSuccess: (_data, vars) => {
-      setTarget(null);
       notifications.show({
         color: "teal",
         title: t("addToCrisis.linkedTitle"),
@@ -121,7 +117,7 @@ export function AddToCrisisButton({
           {(crisesQuery.data ?? []).map((s) => (
             <Menu.Item
               key={s.id}
-              onClick={() => setTarget({ id: s.id, title: s.title ?? null })}
+              onClick={() => addEvent.mutate({ crisisId: s.id, eventId })}
             >
               <Group justify="space-between" wrap="nowrap">
                 <Text size="sm" truncate style={{ flex: 1 }}>
@@ -135,15 +131,6 @@ export function AddToCrisisButton({
           ))}
         </Menu.Dropdown>
       </Menu>
-
-      <AddToCrisisRationaleModal
-        opened={target != null}
-        onClose={() => setTarget(null)}
-        crisisTitle={target?.title ?? null}
-        eventCount={1}
-        pending={pending}
-        onConfirm={(rationale) => target && addEvent.mutate({ crisisId: target.id, eventId, rationale })}
-      />
 
       <CreateCrisisModal
         opened={createOpened}
