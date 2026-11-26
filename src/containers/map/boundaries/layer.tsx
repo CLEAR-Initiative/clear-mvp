@@ -1,12 +1,13 @@
 "use client";
 
 import { Layer, Source } from "react-map-gl/mapbox";
+import { useWorkingCountry } from "~/providers/working-country-provider";
 import type { BasemapId } from "../constants";
 import { useActiveLayers } from "../hooks/use-active-layers";
 import { useMapSettings } from "../hooks/use-map-settings";
 import { useThemeColors } from "../hooks/use-theme-color";
 import { boundariesBeforeId } from "../layer-manager/order";
-import { BOUNDARY_WIDTH, type BoundaryScope } from "./model";
+import { BOUNDARY_WIDTH } from "./model";
 import { useAdminBoundaries } from "./use-admin-boundaries";
 
 const BOUNDARY_TOKENS = {
@@ -20,12 +21,12 @@ const HALO_ID = "map-v2-boundaries-halo";
 
 type AdminBoundariesProps = {
   basemap: BasemapId;
-  scope: BoundaryScope;
   labelAnchorId: string | undefined;
 };
 
-export function AdminBoundaries({ basemap, scope, labelAnchorId }: AdminBoundariesProps) {
+export function AdminBoundaries({ basemap, labelAnchorId }: AdminBoundariesProps) {
   const [{ boundaries: level }] = useMapSettings();
+  const scope = useWorkingCountry();
   const [activeLayers] = useActiveLayers();
   const colors = useThemeColors(BOUNDARY_TOKENS);
   const data = useAdminBoundaries(level, scope);
