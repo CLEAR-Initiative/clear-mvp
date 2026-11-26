@@ -8,7 +8,6 @@ import { IconBellRinging, IconLayoutGridAdd, IconPlus, IconX } from "@tabler/ico
 import { api } from "~/trpc/react";
 import { canWriteCrisisEvents } from "~/lib/roles";
 import { CreateCrisisModal } from "~/components/crisis/create-crisis-modal";
-import { AddToCrisisRationaleModal } from "~/components/crisis/add-to-crisis-rationale-modal";
 import { CreateAlertModal } from "./create-alert-modal";
 
 interface EventBulkBarProps {
@@ -38,8 +37,6 @@ export function EventBulkBar({
   const [menuOpened, setMenuOpened] = useState(false);
   const [createOpened, setCreateOpened] = useState(false);
   const [alertOpened, setAlertOpened] = useState(false);
-  /** The existing crisis chosen from the menu, waiting for a rationale. */
-  const [target, setTarget] = useState<{ id: string; title: string | null } | null>(null);
 
   const crisesQuery = api.crises.listMenu.useQuery(undefined, {
     enabled: menuOpened,
@@ -47,13 +44,11 @@ export function EventBulkBar({
 
   const addEvent = api.crises.addEvent.useMutation();
 
-  // One rationale covers the whole selection: each add records it.
-  async function addSelectedToCrisis(crisisId: string, rationale: string) {
+  async function addSelectedToCrisis(crisisId: string) {
     try {
       for (const eventId of selectedIds) {
-        await addEvent.mutateAsync({ crisisId, eventId, rationale });
+        await addEvent.mutateAsync({ crisisId, eventId });
       }
-      setTarget(null);
       notifications.show({
         color: "teal",
         title: tCrisis("linkedTitle"),
@@ -157,7 +152,7 @@ export function EventBulkBar({
               {(crisesQuery.data ?? []).map((s) => (
                 <Menu.Item
                   key={s.id}
-                  onClick={() => setTarget({ id: s.id, title: s.title ?? null })}
+                  onClick={() => void addSelectedToCrisis(s.id)}
                 >
                   <Group justify="space-between" wrap="nowrap">
                     <Text size="sm" truncate style={{ flex: 1 }}>
@@ -182,15 +177,6 @@ export function EventBulkBar({
           </Button>
         </Group>
       </Group>
-
-      <AddToCrisisRationaleModal
-        opened={target != null}
-        onClose={() => setTarget(null)}
-        crisisTitle={target?.title ?? null}
-        eventCount={selectedIds.length}
-        pending={addEvent.isPending}
-        onConfirm={(rationale) => target && void addSelectedToCrisis(target.id, rationale)}
-      />
 
       <CreateCrisisModal
         opened={createOpened}

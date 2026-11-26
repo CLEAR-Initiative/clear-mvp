@@ -1971,14 +1971,7 @@
       "nameLabel": "Nombre de la crisis",
       "namePlaceholder": "p. ej. Inundaciones en Jartum, agosto 2026",
       "confirmCreate": "Crear crisis",
-      "cancel": "Cancelar",
-      "rationaleLabelCreate": "¿Por qué es una crisis?",
-      "rationaleLabelAdd": "¿Por qué pertenece a la crisis?",
-      "rationaleHint": "Obligatorio. Se guarda con su nombre y la hora, para que otros sepan por qué.",
-      "rationalePlaceholder": "p. ej. La misma crecida, desplazamientos en ambos distritos",
-      "rationaleModalTitle": "Añadir a la crisis",
-      "rationaleModalHint": "{count, plural, one {Añadir # evento a «{title}».} other {Añadir # eventos a «{title}».}}",
-      "confirmAdd": "Añadir a la crisis"
+      "cancel": "Cancelar"
     },
     "enrichment": {
       "title": "Enriquecimiento",

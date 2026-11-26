@@ -7,8 +7,6 @@ import { Button, Group, Modal, Text, TextInput } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import { api } from "~/trpc/react";
 import { useTeam } from "~/providers/team-provider";
-import { isValidCrisisRationale } from "~/lib/crisis/rationale";
-import { CrisisRationaleField } from "./crisis-rationale-field";
 
 export function clampCrisisSeverity(n: number): number {
   if (!Number.isFinite(n)) return 3;
@@ -40,13 +38,9 @@ export function CreateCrisisModal({
   const utils = api.useUtils();
   const { activeTeamId } = useTeam();
   const [title, setTitle] = useState(suggestedTitle);
-  const [rationale, setRationale] = useState("");
 
   useEffect(() => {
-    if (opened) {
-      setTitle(suggestedTitle);
-      setRationale("");
-    }
+    if (opened) setTitle(suggestedTitle);
   }, [opened, suggestedTitle]);
 
   const createCrisis = api.crises.createFromEvents.useMutation({
@@ -78,20 +72,7 @@ export function CreateCrisisModal({
   });
 
   const trimmed = title.trim();
-  const canSubmit =
-    trimmed.length > 0 && isValidCrisisRationale(rationale) && eventIds.length > 0 && !createCrisis.isPending;
-
-  const submit = () => {
-    if (!canSubmit) return;
-    createCrisis.mutate({
-      title: trimmed,
-      severity: clampCrisisSeverity(defaultSeverity),
-      needs: {},
-      eventIds,
-      teamId: activeTeamId ?? undefined,
-      rationale: rationale.trim(),
-    });
-  };
+  const canSubmit = trimmed.length > 0 && eventIds.length > 0 && !createCrisis.isPending;
 
   return (
     <Modal
@@ -110,15 +91,32 @@ export function CreateCrisisModal({
         onChange={(e) => setTitle(e.currentTarget.value)}
         data-testid="crisis-name-input"
         autoFocus
-        mb={12}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" && canSubmit) {
+            createCrisis.mutate({
+              title: trimmed,
+              severity: clampCrisisSeverity(defaultSeverity),
+              needs: {},
+              eventIds,
+              teamId: activeTeamId ?? undefined,
+            });
+          }
+        }}
       />
-      <CrisisRationaleField value={rationale} onChange={setRationale} mode="create" />
       <Group justify="flex-end" mt={16}>
         <Button variant="subtle" color="gray" onClick={onClose} disabled={createCrisis.isPending}>
           {t("cancel")}
         </Button>
         <Button
-          onClick={submit}
+          onClick={() =>
+            createCrisis.mutate({
+              title: trimmed,
+              severity: clampCrisisSeverity(defaultSeverity),
+              needs: {},
+              eventIds,
+              teamId: activeTeamId ?? undefined,
+            })
+          }
           loading={createCrisis.isPending}
           disabled={!canSubmit}
         >
