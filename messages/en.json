@@ -4614,6 +4614,30 @@
     "loading": "Loading the map",
     "loadingLayers": "Loading {layers}",
     "layers": {
+      "alerts": {
+        "title": "Alerts",
+        "inSentence": "alerts",
+        "item": "Alert",
+        "untitled": "Untitled alert",
+        "cluster": {
+          "zoom": "{count} alerts, zoom in",
+          "stacked": "{count} alerts at this location"
+        },
+        "fewer": "Fewer alerts",
+        "more": "More alerts"
+      },
+      "events": {
+        "title": "Events",
+        "inSentence": "events",
+        "item": "Event",
+        "untitled": "Untitled event",
+        "cluster": {
+          "zoom": "{count} events, zoom in",
+          "stacked": "{count} events at this location"
+        },
+        "fewer": "Fewer events",
+        "more": "More events"
+      },
       "signals": {
         "title": "Signals",
         "inSentence": "signals",

@@ -4614,6 +4614,30 @@
     "loading": "Chargement de la carte",
     "loadingLayers": "Chargement : {layers}",
     "layers": {
+      "alerts": {
+        "title": "Alertes",
+        "inSentence": "alertes",
+        "item": "Alerte",
+        "untitled": "Alerte sans titre",
+        "cluster": {
+          "zoom": "{count} alertes, zoomer",
+          "stacked": "{count} alertes à cet emplacement"
+        },
+        "fewer": "Moins d’alertes",
+        "more": "Plus d’alertes"
+      },
+      "events": {
+        "title": "Événements",
+        "inSentence": "événements",
+        "item": "Événement",
+        "untitled": "Événement sans titre",
+        "cluster": {
+          "zoom": "{count} événements, zoomer",
+          "stacked": "{count} événements à cet emplacement"
+        },
+        "fewer": "Moins d’événements",
+        "more": "Plus d’événements"
+      },
       "signals": {
         "title": "Signaux",
         "inSentence": "signaux",
