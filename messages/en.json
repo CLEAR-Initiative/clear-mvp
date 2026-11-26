@@ -4668,7 +4668,8 @@
       "closeLegend": "Close legend",
       "hideLayer": "Hide layer",
       "showLayer": "Show layer",
-      "opacity": "Opacity"
+      "opacity": "Opacity",
+      "closeBasemap": "Close basemap"
     },
     "panel": {
       "label": "Map controls",
