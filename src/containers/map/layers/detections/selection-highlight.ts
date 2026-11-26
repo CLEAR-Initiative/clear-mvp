@@ -1,9 +1,9 @@
-import type { MapSelection } from "../../selection";
+import type { DetectionKind, MapSelection } from "../../selection";
 import { clusterLeafIds, isSamePoint, type ClusterMarker, type SignalIndex } from "./clusters";
 import type { DetectionFeatureCollection } from "./to-features";
 
 export type SelectionHighlight = {
-  /** The selected signal when it is drawn as its own point. */
+  /** The selected detection when it is drawn as its own point. */
   pointId: string | null;
   /** The cluster that holds the selection at the current zoom. */
   clusterKey: string | null;
@@ -12,6 +12,7 @@ export type SelectionHighlight = {
 const NONE: SelectionHighlight = { pointId: null, clusterKey: null };
 
 type Input = {
+  kind: DetectionKind;
   selection: MapSelection | null;
   data: DetectionFeatureCollection;
   pointIds: ReadonlySet<string>;
@@ -26,10 +27,9 @@ function clusterHolding(ids: ReadonlySet<string>, clusters: ClusterMarker[], ind
   return null;
 }
 
-/** Where to draw the selection ring: on the signal's own point, or on the cluster that holds it. */
-export function selectionHighlight({ selection, data, pointIds, clusters, index }: Input): SelectionHighlight {
-  // This layer draws signals: an event or alert selection has nothing to ring here.
-  if (selection?.kind !== "signal") return NONE;
+/** Where to draw the selection ring: on the detection's own point, or on the cluster that holds it. */
+export function selectionHighlight({ kind, selection, data, pointIds, clusters, index }: Input): SelectionHighlight {
+  if (selection?.kind !== kind) return NONE;
 
   if (selection.type === "detection") {
     if (!data.features.some((f) => f.properties.id === selection.id)) return NONE;

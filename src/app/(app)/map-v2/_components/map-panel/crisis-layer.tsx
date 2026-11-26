@@ -11,7 +11,6 @@ import classes from "./crisis-layer.module.css";
 
 const LEVEL_ORDER: DetectionKind[] = ["alert", "event", "signal"];
 
-/** The Map panel's home view: picks the Detection level the map shows. */
 export function CrisisLayer({ onLevelChange }: { onLevelChange: () => void }) {
   const t = useTranslations("mapV2");
   const { level, visible, setLevel, setVisible } = useDetectionLevel();

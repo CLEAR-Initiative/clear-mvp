@@ -12,7 +12,6 @@ function withLevel(layers: ActiveLayer[], kind: DetectionKind | null): ActiveLay
   return next;
 }
 
-/** The Detection level: which detections the map shows, read from and written to the detection layer in `?layers`. */
 export function useDetectionLevel() {
   const [layers, { setLayers, updateLayer }] = useActiveLayers();
   const layer = layers.find((item) => detectionKindOf(item.id) !== null) ?? null;

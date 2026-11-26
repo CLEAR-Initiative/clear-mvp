@@ -47,8 +47,8 @@ export function DetectionsLayer({
   useSelectableDetections(id, kind);
 
   const highlight = useMemo(
-    () => selectionHighlight({ selection, data, pointIds, clusters, index }),
-    [selection, data, pointIds, clusters, index],
+    () => selectionHighlight({ kind, selection, data, pointIds, clusters, index }),
+    [kind, selection, data, pointIds, clusters, index],
   );
 
   useSelectionBlink(`${id}-selected`, opacity, shown && highlight.pointId !== null);

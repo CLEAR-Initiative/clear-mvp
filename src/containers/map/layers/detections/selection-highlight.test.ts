@@ -22,6 +22,7 @@ const world = { west: -180, south: -85, east: 180, north: 85 };
 function at(zoom: number) {
   const points = worldPoints(index, zoom);
   return {
+    kind: "signal" as const,
     data,
     index,
     clusters: viewClusters(index, world, zoom),
@@ -62,13 +63,21 @@ describe("selectionHighlight", () => {
     expect(highlight.clusterKey).not.toBeNull();
   });
 
-  it("rings nothing for an event or alert, even with a signal's id", () => {
+  it("rings an alert on the alerts layer", () => {
+    expect(
+      selectionHighlight({ ...at(3), kind: "alert", selection: { type: "detection", kind: "alert", id: "d" } }),
+    ).toEqual({ pointId: "d", clusterKey: null });
+  });
+
+  it("rings nothing for a selection of another kind, even with one of the layer's ids", () => {
     const none = { pointId: null, clusterKey: null };
 
-    expect(selectionHighlight({ ...at(3), selection: { type: "detection", kind: "event", id: "d" } })).toEqual(none);
-    expect(selectionHighlight({ ...at(22), selection: { type: "stack", kind: "alert", coordinates: [30, 15] } })).toEqual(
-      none,
-    );
+    expect(
+      selectionHighlight({ ...at(3), kind: "alert", selection: { type: "detection", kind: "event", id: "d" } }),
+    ).toEqual(none);
+    expect(
+      selectionHighlight({ ...at(22), kind: "signal", selection: { type: "stack", kind: "alert", coordinates: [30, 15] } }),
+    ).toEqual(none);
   });
 
   it("shows nothing for a selection that is not in the data", () => {
