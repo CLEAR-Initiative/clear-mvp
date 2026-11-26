@@ -16,6 +16,7 @@ type MapPanelProps = {
   children?: React.ReactNode;
 };
 
+/** The panel beside the map on wide screens; smaller screens get the map sheet instead. */
 export function MapPanel({ collapsed, onToggle, contentKey, children }: MapPanelProps) {
   const panelRef = useRef<HTMLElement>(null);
   useEffect(() => {

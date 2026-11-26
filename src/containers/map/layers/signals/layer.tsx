@@ -46,7 +46,12 @@ export function SignalsLayer({ id, beforeId, opacity, visible, settings, onStatu
 
   const onSelectStack = useCallback(
     (cluster: ClusterMarker) =>
-      select({ type: "signal-stack", coordinates: cluster.coordinates, signalIds: clusterLeafIds(index, cluster.clusterId) }),
+      select({
+        type: "stack",
+        kind: "signal",
+        coordinates: cluster.coordinates,
+        ids: clusterLeafIds(index, cluster.clusterId),
+      }),
     [select, index],
   );
 

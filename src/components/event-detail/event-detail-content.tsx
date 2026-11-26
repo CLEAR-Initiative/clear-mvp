@@ -55,6 +55,7 @@ import type { GqlEvent, GqlLocation } from "~/lib/types/graphql";
 import { getDisasterLabel, getDisasterPills, getDisasterL2Pills } from "~/lib/disaster-types";
 import { resolveLocationName } from "~/lib/location";
 import { CommentsSection } from "~/components/comments-section";
+import { areaPopulationOf, formatIdp, idpPerCapitaOf } from "~/lib/area-context";
 import { FeedbackSection } from "~/components/feedback-section";
 import { AddToCrisisButton } from "~/components/event-detail/add-to-crisis-button";
 import { RequestEnrichmentButton } from "~/components/event-detail/request-enrichment-button";
@@ -401,36 +402,9 @@ export function EventDetailContent({
   const signalCount = event.signals.length;
   const sourceCount = new Set(event.signals.map((s) => s.source.name)).size;
 
-  // Resolve best available location population: prefer L2, fall back to L1, then L0.
-  const areaPopulation = (() => {
-    const primaryLoc = event.generalLocation ?? event.originLocation ?? event.destinationLocation;
-    if (!primaryLoc) return null;
-    const candidates = [primaryLoc, ...(primaryLoc.ancestors ?? [])];
-    for (const level of [2, 1, 0]) {
-      const loc = candidates.find((c) => c.level === level && c.population);
-      if (loc) return { name: loc.name, value: loc.population! };
-    }
-    return null;
-  })();
-
-  // IDP per capita: find iom_dtm_displacement metadata, falling back A2 → A1 → A0.
-  const idpData = (() => {
-    const primaryLoc = event.generalLocation ?? event.originLocation ?? event.destinationLocation;
-    if (!primaryLoc) return null;
-    const candidates = [primaryLoc, ...(primaryLoc.ancestors ?? [])];
-    for (const level of [2, 1, 0]) {
-      const loc = candidates.find((c) => c.level === level);
-      if (!loc) continue;
-      const meta = loc.metadata?.find((m) => m.type === "iom_dtm_displacement");
-      if (!meta?.data) continue;
-      const displaced = (meta.data as Record<string, unknown>).population_displaced as number | undefined;
-      if (typeof displaced !== "number" || !isFinite(displaced)) continue;
-      const population = loc.population ? Number(loc.population) : null;
-      const ratio = population ? displaced / population : null;
-      return { displaced, population, ratio, name: loc.name };
-    }
-    return null;
-  })();
+  const primaryAreaLocation = event.generalLocation ?? event.originLocation ?? event.destinationLocation;
+  const areaPopulation = areaPopulationOf(primaryAreaLocation);
+  const idpData = idpPerCapitaOf(primaryAreaLocation);
 
   return (
     <Box>
@@ -709,11 +683,7 @@ export function EventDetailContent({
                     icon: <IconTrendingUp size={14} color="var(--color-text-muted)" />,
                     iconBg: "var(--color-bg-muted)",
                     value:
-                      idpData?.ratio != null
-                        ? `${(idpData.ratio * 100).toFixed(1)}%`
-                        : idpData?.displaced != null
-                          ? format.number(idpData.displaced, "compact")
-                          : "-",
+                      idpData ? formatIdp(idpData, (n) => format.number(n, "compact")) : "-",
                     label: idpData
                       ? t("kpi.idpPerCapitaIn", { name: idpData.name })
                       : t("kpi.idpPerCapita"),

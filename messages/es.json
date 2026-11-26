@@ -4673,18 +4673,55 @@
       "label": "Controles del mapa",
       "collapse": "Ocultar controles del mapa",
       "expand": "Mostrar controles del mapa",
+      "close": "Cerrar",
       "back": {
         "layers": "Volver a las capas",
-        "signals": "Volver a todas las señales"
+        "signals": "Volver a todas las señales",
+        "events": "Volver a todos los eventos",
+        "alerts": "Volver a todas las alertas"
       },
       "stack": {
-        "titlePending": "Señales en la ubicación seleccionada",
-        "title": "{count, plural, one {# señal} other {# señales}} en la ubicación seleccionada",
-        "intro": {
-          "lastDays": "Publicadas {days, plural, one {el último día} other {en los últimos # días}} en {location}.",
-          "lastDaysNoLocation": "Publicadas {days, plural, one {el último día} other {en los últimos # días}}.",
-          "range": "Publicadas entre el {from} y el {to} en {location}.",
-          "rangeNoLocation": "Publicadas entre el {from} y el {to}."
+        "signal": {
+          "titlePending": "Señales en la ubicación seleccionada",
+          "title": "{count, plural, one {# señal} other {# señales}} en la ubicación seleccionada",
+          "intro": {
+            "lastDays": "Publicadas {days, plural, one {el último día} other {en los últimos # días}} en {location}.",
+            "lastDaysNoLocation": "Publicadas {days, plural, one {el último día} other {en los últimos # días}}.",
+            "range": "Publicadas entre el {from} y el {to} en {location}.",
+            "rangeNoLocation": "Publicadas entre el {from} y el {to}."
+          },
+          "column": "Señal",
+          "loading": "Cargando las señales",
+          "error": "No se pudieron cargar las señales. Inténtalo más tarde.",
+          "empty": "No hay señales en esta ubicación en este periodo."
+        },
+        "event": {
+          "titlePending": "Eventos en la ubicación seleccionada",
+          "title": "{count, plural, one {# evento} other {# eventos}} en la ubicación seleccionada",
+          "intro": {
+            "lastDays": "Detectados {days, plural, one {el último día} other {en los últimos # días}} en {location}.",
+            "lastDaysNoLocation": "Detectados {days, plural, one {el último día} other {en los últimos # días}}.",
+            "range": "Detectados entre el {from} y el {to} en {location}.",
+            "rangeNoLocation": "Detectados entre el {from} y el {to}."
+          },
+          "column": "Evento",
+          "loading": "Cargando los eventos",
+          "error": "No se pudieron cargar los eventos. Inténtalo más tarde.",
+          "empty": "No hay eventos en esta ubicación en este periodo."
+        },
+        "alert": {
+          "titlePending": "Alertas en la ubicación seleccionada",
+          "title": "{count, plural, one {# alerta} other {# alertas}} en la ubicación seleccionada",
+          "intro": {
+            "lastDays": "Detectadas {days, plural, one {el último día} other {en los últimos # días}} en {location}.",
+            "lastDaysNoLocation": "Detectadas {days, plural, one {el último día} other {en los últimos # días}}.",
+            "range": "Detectadas entre el {from} y el {to} en {location}.",
+            "rangeNoLocation": "Detectadas entre el {from} y el {to}."
+          },
+          "column": "Alerta",
+          "loading": "Cargando las alertas",
+          "error": "No se pudieron cargar las alertas. Inténtalo más tarde.",
+          "empty": "No hay alertas en esta ubicación en este periodo."
         },
         "severityCount": {
           "critical": "{count} Crítica",
@@ -4693,20 +4730,32 @@
           "low": "{count} Baja",
           "unknown": "{count} Desconocida"
         },
-        "columns": {
-          "signal": "Señal",
-          "severity": "Severidad"
-        },
-        "loading": "Cargando las señales",
-        "error": "No se pudieron cargar las señales. Inténtalo más tarde.",
-        "empty": "No hay señales en esta ubicación en este periodo."
+        "severityColumn": "Severidad"
       },
       "detail": {
-        "loading": "Cargando la señal",
-        "error": "No se pudo cargar la señal. Inténtalo más tarde.",
-        "notFound": "No se encontró esta señal.",
-        "noSummary": "Esta señal no tiene resumen.",
-        "comingSoon": "Próximamente",
+        "signal": {
+          "loading": "Cargando la señal",
+          "error": "No se pudo cargar la señal. Inténtalo más tarde.",
+          "notFound": "No se encontró esta señal.",
+          "noSummary": "Esta señal no tiene resumen."
+        },
+        "event": {
+          "loading": "Cargando el evento",
+          "error": "No se pudo cargar el evento. Inténtalo más tarde.",
+          "notFound": "No se encontró este evento.",
+          "noSummary": "Este evento no tiene resumen."
+        },
+        "alert": {
+          "loading": "Cargando la alerta",
+          "error": "No se pudo cargar la alerta. Inténtalo más tarde.",
+          "notFound": "No se encontró esta alerta."
+        },
+        "untitledEvent": "Evento sin título",
+        "relatedEventCount": "{count, plural, one {# evento relacionado} other {# eventos relacionados}}",
+        "loadingRelated": "Cargando los eventos relacionados",
+        "signalsHint": "Otras señales de los mismos eventos",
+        "expand": "Mostrar {section}",
+        "collapse": "Ocultar {section}",
         "sections": {
           "summary": "Resumen",
           "impact": "Impacto",

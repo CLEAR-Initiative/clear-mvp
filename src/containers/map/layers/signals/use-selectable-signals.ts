@@ -8,7 +8,7 @@ import type { MapSelectTarget } from "../../selection";
 
 function toSignalTarget(feature: GeoJSONFeature): MapSelectTarget | null {
   const id: unknown = feature.properties?.id;
-  return typeof id === "string" ? { type: "signal", id } : null;
+  return typeof id === "string" ? { type: "detection", kind: "signal", id } : null;
 }
 
 /** Makes a click on a signal point select it, and shows a pointer cursor over the points. */
