@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { GqlLocation } from "~/lib/types/graphql";
-import { alertDetection, eventDetection, signalDetection } from "./use-detections-for-map";
+import { alertDetection, detectionsQueryInput, eventDetection, signalDetection } from "./use-detections-for-map";
 
 function place(id: string, lng: number, lat: number): GqlLocation {
   return { id, name: id, level: 2, geometry: { type: "Point", coordinates: [lng, lat] } } as GqlLocation;
@@ -64,5 +64,16 @@ describe("map detections", () => {
 
   it("falls back to the event's point for an alert without one", () => {
     expect(alertDetection({ id: "a1", representativePoint: null, event }).point).toEqual([30, 15]);
+  });
+});
+
+describe("detectionsQueryInput", () => {
+  const range = { from: "2026-10-27T00:00:00.000Z" };
+  it("asks for published alerts only", () => {
+    expect(detectionsQueryInput("alert", range)).toEqual({ ...range, includeDummy: true, status: "published" });
+  });
+  it("sends no status for events and signals", () => {
+    expect(detectionsQueryInput("event", range)).not.toHaveProperty("status");
+    expect(detectionsQueryInput("signal", range)).not.toHaveProperty("status");
   });
 });

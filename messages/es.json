@@ -4617,20 +4617,14 @@
       "signals": {
         "title": "Señales",
         "inSentence": "señales",
-        "severity": "Severidad",
+        "item": "Señal",
+        "untitled": "Señal sin título",
         "cluster": {
           "zoom": "{count} señales, acercar",
           "stacked": "{count} señales en esta ubicación"
         },
-        "density": "Densidad",
-        "showing": "Mostrando:",
-        "densityDisplay": "Visualización de densidad",
-        "clusters": "Agrupaciones",
-        "heatmap": "Mapa de calor",
-        "fewerSignals": "Menos señales",
-        "moreSignals": "Más señales",
-        "low": "Baja",
-        "high": "Alta"
+        "fewer": "Menos señales",
+        "more": "Más señales"
       }
     },
     "errors": {
@@ -4780,7 +4774,6 @@
       }
     },
     "signalTooltip": {
-      "signal": "Señal",
       "severity": "Severidad",
       "untitled": "Señal sin título"
     },
@@ -4801,6 +4794,16 @@
       "hide": "Ocultar línea de tiempo",
       "startHandle": "Fecha de inicio",
       "endHandle": "Fecha de fin"
+    },
+    "detectionLegend": {
+      "severity": "Severidad",
+      "density": "Densidad",
+      "showing": "Mostrando:",
+      "densityDisplay": "Visualización de densidad",
+      "clusters": "Agrupaciones",
+      "heatmap": "Mapa de calor",
+      "low": "Baja",
+      "high": "Alta"
     }
   }
 }

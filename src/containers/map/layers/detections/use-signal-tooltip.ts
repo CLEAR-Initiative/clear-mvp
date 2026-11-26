@@ -3,12 +3,12 @@
 import type { MapMouseEvent } from "mapbox-gl";
 import { useEffect, useState } from "react";
 import { useMap } from "react-map-gl/mapbox";
-import { toHoveredSignal, type HoveredSignal } from "./hovered-signal";
+import { toHoveredDetection, type HoveredDetection } from "./hovered-signal";
 import type { DensityDisplay } from "./settings";
 
-export function useSignalTooltip(layerId: string, visible: boolean, density: DensityDisplay): HoveredSignal | null {
+export function useSignalTooltip(layerId: string, visible: boolean, density: DensityDisplay): HoveredDetection | null {
   const { current: mapRef } = useMap();
-  const [signal, setSignal] = useState<HoveredSignal | null>(null);
+  const [signal, setSignal] = useState<HoveredDetection | null>(null);
 
   useEffect(() => {
     setSignal(null);
@@ -20,14 +20,14 @@ export function useSignalTooltip(layerId: string, visible: boolean, density: Den
     const container = map.getCanvasContainer();
     let pointerType = "mouse";
 
-    const show = (next: HoveredSignal | null) => setSignal((prev) => (prev?.id === next?.id ? prev : next));
+    const show = (next: HoveredDetection | null) => setSignal((prev) => (prev?.id === next?.id ? prev : next));
     // Mapbox's MapMouseEvent wraps a MouseEvent, which has no pointerType.
     const onPointer = (event: PointerEvent) => {
       pointerType = event.pointerType;
     };
     const onMouseMove = (event: MapMouseEvent) => {
       if (pointerType === "touch") return;
-      show(toHoveredSignal(event.features?.[0]));
+      show(toHoveredDetection(event.features?.[0]));
     };
     const onMouseLeave = () => {
       if (pointerType === "touch") return;
@@ -35,7 +35,7 @@ export function useSignalTooltip(layerId: string, visible: boolean, density: Den
     };
     const onClick = (event: MapMouseEvent) => {
       if (pointerType !== "touch" || !map.getLayer(layerId)) return;
-      show(toHoveredSignal(map.queryRenderedFeatures(event.point, { layers: [layerId] })[0]));
+      show(toHoveredDetection(map.queryRenderedFeatures(event.point, { layers: [layerId] })[0]));
     };
     const onMoveStart = () => show(null);
 

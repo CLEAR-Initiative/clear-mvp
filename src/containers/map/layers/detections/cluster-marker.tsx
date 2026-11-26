@@ -3,18 +3,26 @@
 import { useTranslations } from "next-intl";
 import { Marker, useMap } from "react-map-gl/mapbox";
 import { ZOOM_RANGE } from "../../constants";
+import type { LayerId } from "../registry";
 import { abbreviateCount, clusterSize, type ClusterMarker } from "./clusters";
 import { donutBand, donutGradient } from "./donut";
 
-type SignalClusterMarkerProps = {
+type DetectionClusterMarkerProps = {
+  layerId: LayerId;
   cluster: ClusterMarker;
   opacity: number;
   selected: boolean;
   onSelectStack: (cluster: ClusterMarker) => void;
 };
 
-export function SignalClusterMarker({ cluster, opacity, selected, onSelectStack }: SignalClusterMarkerProps) {
-  const t = useTranslations("mapV2.layers.signals.cluster");
+export function DetectionClusterMarker({
+  layerId,
+  cluster,
+  opacity,
+  selected,
+  onSelectStack,
+}: DetectionClusterMarkerProps) {
+  const t = useTranslations(`mapV2.layers.${layerId}.cluster`);
   const { current: map } = useMap();
   const { outer, inner } = clusterSize(cluster.count);
   const [longitude, latitude] = cluster.coordinates;

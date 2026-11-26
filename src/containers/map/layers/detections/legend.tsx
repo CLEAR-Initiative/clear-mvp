@@ -19,23 +19,23 @@ function isDensityDisplay(value: string): value is DensityDisplay {
   return (DENSITY_DISPLAYS as readonly string[]).includes(value);
 }
 
-export function SignalsLegend({ settings, onSettingsChange }: LegendProps) {
+export function DetectionsLegend({ id, settings, onSettingsChange }: LegendProps) {
   const t = useTranslations();
   const { density } = parseSignalsSettings(settings);
 
   return (
     <div className={classes.root}>
       <div className={classes.density}>
-        <h3 className={classes.heading}>{t("mapV2.layers.signals.density")}</h3>
+        <h3 className={classes.heading}>{t("mapV2.detectionLegend.density")}</h3>
         <div className={classes.showing}>
-          <span>{t("mapV2.layers.signals.showing")}</span>
+          <span>{t("mapV2.detectionLegend.showing")}</span>
           <SegmentedControl
-            aria-label={t("mapV2.layers.signals.densityDisplay")}
+            aria-label={t("mapV2.detectionLegend.densityDisplay")}
             value={density}
             onChange={(value) => {
               if (isDensityDisplay(value)) onSettingsChange(signalsSettingsFor(value));
             }}
-            data={DENSITY_DISPLAYS.map((value) => ({ value, label: t(`mapV2.layers.signals.${value}`) }))}
+            data={DENSITY_DISPLAYS.map((value) => ({ value, label: t(`mapV2.detectionLegend.${value}`) }))}
             withItemsBorders={false}
             classNames={{
               root: classes.switch,
@@ -47,24 +47,24 @@ export function SignalsLegend({ settings, onSettingsChange }: LegendProps) {
         </div>
         <div className={classes.scales}>
           <div className={classes.scale} aria-hidden={density !== "clusters"}>
-            <span>{t("mapV2.layers.signals.fewerSignals")}</span>
+            <span>{t(`mapV2.layers.${id}.fewer`)}</span>
             {DENSITY_DONUT_SIZES.map((size) => (
               <span key={size} className={classes.donut} style={{ width: size, height: size }}>
                 <span className="map-v2-cluster-ring" style={donutRingStyle(size)} />
               </span>
             ))}
-            <span>{t("mapV2.layers.signals.moreSignals")}</span>
+            <span>{t(`mapV2.layers.${id}.more`)}</span>
           </div>
           <div aria-hidden={density !== "heatmap"}>
             <div className={classes.heat} />
             <div className={classes.ends}>
-              <span>{t("mapV2.layers.signals.low")}</span>
-              <span>{t("mapV2.layers.signals.high")}</span>
+              <span>{t("mapV2.detectionLegend.low")}</span>
+              <span>{t("mapV2.detectionLegend.high")}</span>
             </div>
           </div>
         </div>
       </div>
-      <h3 className={classes.heading}>{t("mapV2.layers.signals.severity")}</h3>
+      <h3 className={classes.heading}>{t("mapV2.detectionLegend.severity")}</h3>
       <div>
         <div className={classes.bar}>
           {SEVERITY_BUCKETS.map((bucket) => (

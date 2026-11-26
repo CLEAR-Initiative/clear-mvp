@@ -14,6 +14,7 @@ export type LayerProps = {
 };
 
 export type LegendProps = {
+  id: LayerId;
   settings: LayerSettings | undefined;
   onSettingsChange: (settings: LayerSettings | undefined) => void;
 };

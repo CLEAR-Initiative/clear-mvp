@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { createSignalIndex, viewClusters, worldPoints } from "./clusters";
 import { selectionHighlight } from "./selection-highlight";
-import type { SignalFeature, SignalFeatureCollection } from "./to-features";
+import type { DetectionFeature, DetectionFeatureCollection } from "./to-features";
 
-function signal(id: string, lng: number, lat: number): SignalFeature {
+function signal(id: string, lng: number, lat: number): DetectionFeature {
   return {
     type: "Feature",
     geometry: { type: "Point", coordinates: [lng, lat] },
@@ -12,7 +12,7 @@ function signal(id: string, lng: number, lat: number): SignalFeature {
 }
 
 // a and b are stacked at one point, c sits close by, d is alone far away.
-const data: SignalFeatureCollection = {
+const data: DetectionFeatureCollection = {
   type: "FeatureCollection",
   features: [signal("a", 30, 15), signal("b", 30, 15), signal("c", 30.01, 15.01), signal("d", -70, -10)],
 };

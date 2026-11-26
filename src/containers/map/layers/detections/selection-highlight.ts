@@ -1,6 +1,6 @@
 import type { MapSelection } from "../../selection";
 import { clusterLeafIds, isSamePoint, type ClusterMarker, type SignalIndex } from "./clusters";
-import type { SignalFeatureCollection } from "./to-features";
+import type { DetectionFeatureCollection } from "./to-features";
 
 export type SelectionHighlight = {
   /** The selected signal when it is drawn as its own point. */
@@ -13,7 +13,7 @@ const NONE: SelectionHighlight = { pointId: null, clusterKey: null };
 
 type Input = {
   selection: MapSelection | null;
-  data: SignalFeatureCollection;
+  data: DetectionFeatureCollection;
   pointIds: ReadonlySet<string>;
   clusters: ClusterMarker[];
   index: SignalIndex;

@@ -4617,20 +4617,14 @@
       "signals": {
         "title": "Signaux",
         "inSentence": "signaux",
-        "severity": "Gravité",
+        "item": "Signal",
+        "untitled": "Signal sans titre",
         "cluster": {
           "zoom": "{count} signaux, zoomer",
           "stacked": "{count} signaux à cet emplacement"
         },
-        "density": "Densité",
-        "showing": "Affichage :",
-        "densityDisplay": "Affichage de la densité",
-        "clusters": "Groupes",
-        "heatmap": "Carte de chaleur",
-        "fewerSignals": "Moins de signaux",
-        "moreSignals": "Plus de signaux",
-        "low": "Faible",
-        "high": "Élevée"
+        "fewer": "Moins de signaux",
+        "more": "Plus de signaux"
       }
     },
     "errors": {
@@ -4780,7 +4774,6 @@
       }
     },
     "signalTooltip": {
-      "signal": "Signal",
       "severity": "Gravité",
       "untitled": "Signal sans titre"
     },
@@ -4801,6 +4794,16 @@
       "hide": "Masquer la frise",
       "startHandle": "Date de début",
       "endHandle": "Date de fin"
+    },
+    "detectionLegend": {
+      "severity": "Gravité",
+      "density": "Densité",
+      "showing": "Affichage :",
+      "densityDisplay": "Affichage de la densité",
+      "clusters": "Groupes",
+      "heatmap": "Carte de chaleur",
+      "low": "Faible",
+      "high": "Élevée"
     }
   }
 }
