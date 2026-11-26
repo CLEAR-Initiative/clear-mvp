@@ -1966,7 +1966,14 @@
       "nameLabel": "Nom de la crise",
       "namePlaceholder": "ex. Inondations à Khartoum, août 2026",
       "confirmCreate": "Créer la crise",
-      "cancel": "Annuler"
+      "cancel": "Annuler",
+      "rationaleLabelCreate": "Pourquoi est-ce une crise ?",
+      "rationaleLabelAdd": "Pourquoi cet événement fait-il partie de la crise ?",
+      "rationaleHint": "Obligatoire. Enregistré avec votre nom et l’heure, pour que les autres sachent pourquoi.",
+      "rationalePlaceholder": "ex. Même crue, déplacements signalés dans les deux districts",
+      "rationaleModalTitle": "Ajouter à la crise",
+      "rationaleModalHint": "{count, plural, one {Ajouter # événement à « {title} ».} other {Ajouter # événements à « {title} ».}}",
+      "confirmAdd": "Ajouter à la crise"
     },
     "nav": {
       "previous": "Événement précédent",

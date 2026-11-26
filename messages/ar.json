@@ -1966,7 +1966,14 @@
       "nameLabel": "اسم الأزمة",
       "namePlaceholder": "مثال: فيضانات الخرطوم، أغسطس 2026",
       "confirmCreate": "إنشاء الأزمة",
-      "cancel": "إلغاء"
+      "cancel": "إلغاء",
+      "rationaleLabelCreate": "لماذا تُعدّ هذه أزمة؟",
+      "rationaleLabelAdd": "لماذا ينتمي هذا إلى الأزمة؟",
+      "rationaleHint": "مطلوب. يُحفظ مع اسمك والوقت، ليعرف الآخرون السبب.",
+      "rationalePlaceholder": "مثال: موجة الفيضان نفسها، ونزوح مُبلَّغ عنه في المنطقتين",
+      "rationaleModalTitle": "إضافة إلى الأزمة",
+      "rationaleModalHint": "{count, plural, one {إضافة حدث واحد إلى «{title}».} other {إضافة # أحداث إلى «{title}».}}",
+      "confirmAdd": "إضافة إلى الأزمة"
     },
     "nav": {
       "previous": "الحدث السابق",
