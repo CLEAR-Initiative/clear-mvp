@@ -139,6 +139,7 @@ import {
 import { useAgentDeepLink } from "~/components/agent/use-agent-deep-link";
 import { readMapFiltersSession, writeMapFiltersSession } from "~/lib/map-filters-session";
 import { useHydrated } from "~/hooks/use-hydrated";
+import { ClientOnly } from "~/components/client-only";
 
 const MAX_OPEN_PANELS = 4;
 
@@ -2882,9 +2883,14 @@ function MapPageContent() {
 }
 
 export default function MapPage() {
+  // The page seeds its state from the browser: the map preference cookie,
+  // the session camera and the place focus. The server sees none of them,
+  // so render it after hydration only, or React throws #418.
   return (
-    <Suspense fallback={null}>
-      <MapPageContent />
-    </Suspense>
+    <ClientOnly fallback={<MapLoadingPlaceholder />}>
+      <Suspense fallback={null}>
+        <MapPageContent />
+      </Suspense>
+    </ClientOnly>
   );
 }
