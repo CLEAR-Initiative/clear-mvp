@@ -283,7 +283,7 @@ global role, team role, organisation id, team id and language.
 **Event source** (`from`): the fixed value every in-app link to an Event carries —
 `map`, `detection`, `analysis`, `crisis`, `signal`, `related_event`, `agent`, `inbox`,
 `email`, `sms`, `webhook` (`src/lib/analytics/event-source.ts`). Missing or unknown is
-`direct`. `event.opened {from}` fires once per open (page or Detection drawer).
+`direct`. `event.opened {from}` fires once per open (page or Detection preview).
 **Analytics opt-out**: the Profile toggle; stored on the account (clear-api
 `User.analyticsOptOut`, read via `auth.me`), so it holds in every browser. Off means the
 tracker isn't loaded at all, and it doesn't load until the account value is known. A
@@ -330,6 +330,33 @@ _Avoid_: white overlays; page-level content fade-in; opacity-0 entry animations 
 
 ### Map foundation
 
+**Signal cluster**:
+A group of **Signals** that sit close together on the map at the current zoom, drawn as
+one numbered **Severity donut**, with or without a **Working country**. Clicking it zooms
+in until it splits, except for **Stacked signals**, which it selects.
+_Avoid_: "event" or "crisis" for a cluster (a cluster is a map grouping, not a
+**Detection**).
+
+**Severity donut**:
+A **Signal cluster** drawn as a ring split by the severity of its signals, in legend order
+(Critical, High, Medium, Low, Unknown) clockwise from the top, each part sized by its count,
+with the count in the centre.
+_Avoid_: "chart" or "pie" for it; a donut that leaves out signals with no severity.
+
+**Stacked signals**:
+**Signals** that share exactly the same point, often a country or city centre. Zooming
+never splits them, so they stay a **Signal cluster** at every zoom. Clicking that cluster
+selects the stack: the **Map panel** lists its signals (the **Signal list**).
+_Avoid_: spiderfying stacks on map v2; "duplicates" (stacked signals are distinct
+signals at one place).
+
+**Density display**:
+How the signals layer shows where **Signals** gather: **Clusters** (numbered **Signal
+clusters**) or **Heatmap** (a colour field weighted by severity). The user picks one in the
+legend. In Heatmap, the heat gives way to single signals once the map reaches country zoom.
+_Avoid_: "aggregation mode" (the old map's code name, picked by zoom, not by the user);
+"alerts density".
+
 **Basemap triad**:
 Exactly one basemap is active: **Simple**, **Topography**, or **Satellite**. Not a
 Satellite checkbox stacked on Simple.
@@ -338,7 +365,7 @@ choice; shipping operational layers before the triad is correct.
 
 **Topography** (basemap):
 The relief basemap in the triad. **Hybrid**: readable top-down relief by default
-(**hillshade** + **terrain mesh** together), with a real DEM-backed mesh (Mapbox
+(**hillshade** + **contour lines** + **terrain mesh** together), with a real DEM-backed mesh (Mapbox
 `setTerrain` on the existing terrain DEM — not Cesium) so optional tilt reveals true
 3D height. Visual **exaggeration is Country-band boosted** (stronger at z5–8, relaxes
 toward Site) so Topography is obviously distinct from Simple where program managers
@@ -360,6 +387,69 @@ _Avoid_: auto-pitch on selecting Topography; a separate “3D” Layers toggle f
 silent tilt with no teaching; persistent tilt chrome; leaving the mesh stuck after
 switching to Simple or Satellite; resetting pitch on basemap swap; draping DEM on
 Satellite or Simple in this wedge.
+
+**Map settings**:
+The panel under the basemap choice that holds **Roads**, **Labels** and **Admin
+boundaries**. Settings apply on every basemap in the triad.
+_Avoid_: putting Map settings in the Layers panel; treating a setting as a basemap.
+
+**Admin boundaries**:
+The outlines of one administrative level, Country, States or Districts, chosen under
+"Boundaries" in **Map settings**. One level shows at a time, and States is the default;
+there is no "off". The
+lines come from CLEAR's own locations, the same regions that signals are counted
+against, so they cover only the **Working country**, or every country in the **Country
+scope** when no country is pinned. Global monitoring shows none.
+_Avoid_: calling them a layer (they are a setting, not in the legend); "subdued"
+(they are drawn in the map's boundary blue); reading the basemap's own country borders
+as Admin boundaries.
+
+**Roads** (overlay):
+The basemap's ground network: road lines, footpaths and steps, their names, and route
+shields, shown or hidden together on every basemap. Rail lines are not part of Roads. On
+**Simple** and **Topography** it is drawn with the corridor-first emphasis (trunk
+corridors stand out from minor roads).
+_Avoid_: confusing it with **Access** or **Blockages**; leaving road names visible when
+Roads is off.
+
+**Labels**:
+Every basemap text and icon that is not part of **Roads**: country, state and place
+names, points of interest, stations and airports, water and natural features. Turning
+off both **Roads** and Labels leaves a clean basemap; rail lines, water and land stay.
+_Avoid_: treating road or path names as Labels; hiding rail lines with Labels.
+
+**Map panel**:
+The panel on `/map-v2` that sits next to the app nav and floats over the map, on screens
+992px or wider. Narrower screens have no Map panel. It shows the **Signal list** or the
+**Signal detail** of the **Map selection**, and nothing else yet. A selection opens it when it
+is collapsed. A round toggle on the panel's right edge collapses it, and the choice is kept
+across reloads.
+The page, not the map, owns the Map panel: it tells the map which part of it is covered
+(an offset per side), and the map eases its camera padding, its controls and the Mapbox
+attribution to stay clear of that part. When the nav or the Map panel opens or collapses,
+the map keeps its centre and zoom: the camera shifts so the visible area stays centred,
+and the map does not resize.
+_Avoid_: "sidebar" (ambiguous with app navigation); confusing it with **Map settings**,
+which opens from the basemap control.
+
+**Timeframe**:
+The date range that scopes the **Detections** shown on the map (today, **Signals**). It is
+either a **preset** (the last 24 hours, 7 days, 30 days or 90 days) or a **custom range**
+set with the handles on the **Timeline**. A timeframe that ends today is counted back from
+now, so it moves with time; a preset is one of these. A custom range that ends before today
+is fixed dates, and a shared link shows the same dates to everyone. The default is the last
+30 days. There is no "all time" timeframe yet.
+_Avoid_: "window" (taken by **Brief window** and the Situation Analysis window); "date
+filter".
+
+**Timeline**:
+The bar at the bottom of the map that shows how many **Signals** there are for each day of the
+last 90 days, and where the user sets the **Timeframe**. Its count includes **Signals** that
+have no location, so it can be higher than the number of dots on the map. Open on wide
+screens; on narrow screens only its collapsed summary shows, and the Timeframe cannot be
+changed there.
+_Avoid_: "timeline playback" (not designed); confusing it with a **Detection**'s own
+history.
 
 **Point altitude**:
 The DEM elevation (metres) sampled at a map point while **Topography** is active
@@ -435,7 +525,47 @@ stacking bottom sheets on mobile.
 **Marker detail panel**:
 The floating card that shows a map marker's summary and View details CTA. Draggable on
 desktop; bottom sheet on mobile.
+On the desktop Detection map, selecting a feed row or a pin opens a single compact
+preview and keeps the feed open. Selecting an offscreen point from the feed or with the
+preview's previous and next arrows briefly frames both locations, then centers the new point
+at the original zoom. Selecting a visible point leaves the camera in place. The preview opens
+in the bottom-right corner when there is room, or beside its pin on a narrower map. Selecting
+another item keeps the card in place and connects it to the newly selected visible pin.
+The address bar keeps the Detection view and filters. View details links to the record's full page.
 _Avoid_: "popup", "window", "modal" (it is not modal — the map stays interactive).
+
+**Signal tooltip** (map v2):
+The small card that names a signal and its severity while the pointer rests on its point;
+a tap opens it on touch screens. Read-only: no close button, no View details. Where points
+overlap it shows the top one only. Not a **Marker detail panel**: on map v2 a click on a
+signal selects it and the **Map panel** shows its **Signal detail**.
+_Avoid_: "popup" (the old roadmap word); "disaster" for the signal it names. The Figma
+label says "Disaster name"; the app labels the value "Signal", because it is the signal's title.
+
+**Map selection** (map v2):
+What a click on the map picked: a **Signal**, a stack of **Stacked signals**, or nothing (a
+click on empty map). The map only reports the click and draws what it is told is selected;
+the page that embeds the map decides what a selection means, because the same map will sit
+in pages with no **Map panel**. On `/map-v2` the selection lives in the URL (`?signal=<id>`,
+`?stack=<lng>,<lat>`, both for a signal opened from a stack's list) and replaces the history
+entry, so browser Back leaves the page. It is the same on every screen width, even where no
+panel shows it yet. The map rings the selected point, or the cluster that holds it at the
+current zoom, with a blink. Selecting never moves the camera; **Show on map**, next to the
+panel's back link, centres the map on the selection at the current zoom.
+_Avoid_: "active marker"; letting the map read or write the selection URL itself.
+
+**Signal list** (map v2):
+The **Map panel** view of a selected stack: how many signals, when and where they were
+published (the period is the range the signals layer shows, worded "in the last N days"
+when it ends today), their severity mix, and the signals most severe first. Clicking a
+signal opens its **Signal detail**, whose back link returns to the list.
+_Avoid_: "alerts" for these rows (the Figma copy says alerts; they are **Signals**).
+
+**Signal detail** (map v2):
+The **Map panel** view of one selected **Signal**: title, severity, disaster type, place,
+dates, source and summary. The other sections of the design (impact, area context, signals,
+related events, system data, take an action) show "Coming soon" until they have data.
+_Avoid_: calling the summary "AI generated" (it is the signal's own description).
 
 ### Country framing
 

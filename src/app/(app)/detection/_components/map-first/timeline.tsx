@@ -23,12 +23,12 @@ interface TimelineProps {
   windowStartMs: number;
   /** The selected bars, or null when the date filter lies outside the window. */
   range: BarRange | null;
-  /** Days in the window for a rolling range ("last N days"), else null. */
-  windowDays: number | null;
+  /** The range in words, the same ones the feed's date button shows. */
+  label: string;
   /** The current date key, when it is a preset or custom "last N days". */
   dateKey: DateKey | null;
-  /** Label for a calendar month filter ("Oct 2026"). */
-  fixedLabel: string | null;
+  /** Set while the feed's date button is pointed at or open. */
+  linked: boolean;
   total: number;
   noun: string;
   isDefault: boolean;
@@ -47,7 +47,7 @@ type Draft = { range: BarRange; handle: "start" | "end" };
  * timeline with presets and a from and a to handle.
  */
 export function Timeline({
-  open, onOpenChange, counts, windowStartMs, range, windowDays, dateKey, fixedLabel, total, noun, isDefault,
+  open, onOpenChange, counts, windowStartMs, range, label, dateKey, linked, total, noun, isDefault,
   onPreset, onRangeCommit, onDragChange,
 }: TimelineProps) {
   const t = useTranslations("detection.mapFirst");
@@ -77,10 +77,10 @@ export function Timeline({
   const dayOf = (i: number) => fmt.format(new Date(windowStartMs + i * DAY_MS));
   const spanLabel = (r: BarRange) => (r[0] === r[1] ? dayOf(r[0]) : `${dayOf(r[0])} – ${dayOf(r[1])}`);
 
-  // A draft (or a custom range) reads as dates; a rolling range keeps "Last N days".
-  const rangeLabel = draft
-    ? spanLabel(draft.range)
-    : (fixedLabel ?? (windowDays === 1 ? t("last24h") : windowDays != null ? t("lastDays", { count: windowDays }) : range ? spanLabel(range) : ""));
+  // A draft reads as dates; otherwise the range is worded as the feed words it.
+  const rangeLabel = draft ? spanLabel(draft.range) : label;
+  // The days a rolling range covers, as the hover text.
+  const rangeDates = !draft && range ? spanLabel(range) : undefined;
   const inRange = (i: number) => shown != null && i >= shown[0] && i <= shown[1];
 
   const indexAt = (clientX: number) => {
@@ -97,7 +97,13 @@ export function Timeline({
 
   if (!open) {
     return (
-      <button type="button" className={`${css.frost} ${css.timelinePill}`} title={t("showTimeline")} onClick={() => onOpenChange(true)}>
+      <button
+        type="button"
+        className={`${css.frost} ${css.timelinePill}`}
+        data-linked={linked || undefined}
+        title={t("showTimeline")}
+        onClick={() => onOpenChange(true)}
+      >
         <IconCalendar size={15} color={isDefault ? "var(--color-text-secondary)" : "var(--color-accent)"} />
         <span className={css.timelineRange}>{rangeLabel}</span>
         <span className={css.timelineCount}>{t("totalNoun", { total: format.number(total), noun })}</span>
@@ -111,11 +117,10 @@ export function Timeline({
     );
   }
 
-  const summaryRange = draft || windowDays == null ? rangeLabel : windowDays === 1 ? t("last24h") : range ? spanLabel(range) : rangeLabel;
   const pct = (i: number) => `${(i / TIMELINE_DAYS) * 100}%`;
 
   return (
-    <div className={`${css.frost} ${css.timeline}`}>
+    <div className={`${css.frost} ${css.timeline}`} data-linked={linked || undefined}>
       <div className={css.timelineTop}>
         {DATE_PRESETS.map((key) => (
           <button
@@ -131,8 +136,8 @@ export function Timeline({
             {t(`presets.${key}`)}
           </button>
         ))}
-        <span className={css.timelineSummary}>
-          {t.rich("timelineSummary", { range: summaryRange, total: format.number(total), noun, b: (c) => <b>{c}</b> })}
+        <span className={css.timelineSummary} title={rangeDates}>
+          {t.rich("timelineSummary", { range: rangeLabel, total: format.number(total), noun, b: (c) => <b>{c}</b> })}
         </span>
         <button type="button" className={css.collapse} title={t("hideTimeline")} aria-label={t("hideTimeline")} onClick={() => onOpenChange(false)}>
           <IconChevronDown size={15} />

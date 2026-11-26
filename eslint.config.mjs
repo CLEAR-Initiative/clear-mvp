@@ -40,6 +40,38 @@ const eslintConfig = [
       ],
     },
   },
+  {
+    // A paint value that reads feature-state must keep reading it, or Mapbox
+    // can crash its render loop (GlitchTip prod #912). `setPaintPropertySafe`
+    // checks that; a direct call skips the check.
+    files: ["src/components/map/**", "src/lib/map/**"],
+    rules: {
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector: "CallExpression[callee.property.name='setPaintProperty']",
+          message: "Use setPaintPropertySafe from ~/lib/map/safe-paint, which checks the feature-state rule.",
+        },
+      ],
+    },
+  },
+  {
+    files: ["src/containers/map/**"],
+    rules: {
+      "import/no-restricted-paths": [
+        "error",
+        {
+          zones: [
+            {
+              target: "./src/containers/map",
+              from: ["./src/components/map", "./src/lib/map", "./src/app/(app)/map"],
+              message: "Map v2 is built in isolation from the old map.",
+            },
+          ],
+        },
+      ],
+    },
+  },
 ];
 
 export default eslintConfig;

@@ -97,6 +97,7 @@ on specific features. [`.env.example`](./.env.example) documents each one.
 | `NOTION_TOKEN`, `NOTION_FEEDBACK_DB_ID` | Feedback form | `/api/feedback` writes to this Notion database. |
 | `ACAPS_API_TOKEN` | INFORM Severity data | ACAPS API token. |
 | `SENTRY_DSN`, `SENTRY_ENV`, `NEXT_PUBLIC_SENTRY_DSN` | Error tracking | GlitchTip (Sentry-compatible). Leave unset locally. |
+| `NEXT_PUBLIC_SENTRY_RELEASE` | Error tracking | The release on each error event (`clear-mvp@MAJOR.MINOR.PATCH`). The image build sets it. Leave unset locally. |
 | `NEXT_PUBLIC_UMAMI_HOST_URL`, `NEXT_PUBLIC_UMAMI_WEBSITE_ID`, `NEXT_PUBLIC_UMAMI_SRC` | Usage analytics | Self-hosted Umami. Unset = no tracker. Also needs the `usage_analytics` flag. See `src/lib/analytics`. |
 
 `NEXT_PUBLIC_*` variables are baked in at build time and shipped to the browser. Everything else
@@ -109,7 +110,7 @@ the team manages in a private infrastructure repo, not on Vercel. Their server-s
 set there; their `NEXT_PUBLIC_*` values are baked into the Docker image at build time. Only
 `NEXT_PUBLIC_MAPBOX_TOKEN` and `NEXT_PUBLIC_SENTRY_DSN` (GitHub environment secrets on this
 repo), `NEXT_PUBLIC_UMAMI_HOST_URL` and `NEXT_PUBLIC_UMAMI_WEBSITE_ID` (GitHub environment
-variables, not secrets) and `NEXT_PUBLIC_SENTRY_ENV` (the environment name) are passed through. Any other, such as
+variables, not secrets), `NEXT_PUBLIC_SENTRY_ENV` (the environment name) and `NEXT_PUBLIC_SENTRY_RELEASE` (the version tag) are passed through. Any other, such as
 `NEXT_PUBLIC_LOGIE_BLOCKAGES_URL`, also needs a build arg in
 [`.github/actions/build-image`](./.github/actions/build-image/action.yml) and an `ARG`/`ENV` pair
 in the [`Dockerfile`](./Dockerfile); a secret alone does nothing.
@@ -146,6 +147,7 @@ src/
 │   ├── agent/            CLEAR Agent (Mastra) and its tools
 │   └── env.ts            Server-side env access
 ├── components/           Shared UI
+├── containers/map/       Map v2 at /map-v2, behind the `map_v2` flag; imports nothing from the old map
 ├── lib/                  Non-React helpers (types, severity, disaster types, auth client)
 ├── i18n/                 Locale setup (strings live in /messages)
 ├── trpc/  providers/  hooks/  styles/
@@ -153,7 +155,7 @@ src/
 ```
 
 **Stack:** Next.js 15 (App Router) · React 19 · tRPC 11 + TanStack Query 5 · Mantine 8 +
-Tailwind 4 · Better Auth (sessions live in clear-api) · Mapbox GL · Mastra (CLEAR Agent) ·
+Tailwind 4 · Better Auth (sessions live in clear-api) · Mapbox GL + react-map-gl · nuqs (URL state) · Mastra (CLEAR Agent) ·
 next-intl · Sentry.
 
 ### Conventions worth knowing

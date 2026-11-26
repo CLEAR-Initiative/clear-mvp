@@ -12,6 +12,8 @@
  * Cue chips replace periodic X ticks; bridge points keep the closed-access mark.
  */
 
+import { setPaintPropertySafe } from "./safe-paint";
+
 export const BLOCKAGES_SOURCE_ID = "logie-blockages";
 export const BLOCKAGE_MARK_ICON_ID = "logie-blockage-mark";
 
@@ -569,7 +571,7 @@ export function setBlockagesFillProgress(
     try {
       if (map.getLayer(id)) {
         // Multiply base opacity by progress to fade in/out
-        map.setPaintProperty(id, "line-opacity", baseOpacity * t);
+        setPaintPropertySafe(map, id, "line-opacity", baseOpacity * t);
       }
     } catch {
       /* layer may not exist yet or style mid-swap */

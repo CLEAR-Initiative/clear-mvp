@@ -160,13 +160,11 @@ const AUTOMATION_FIELDS = `
 `;
 
 /**
- * The caller's teams and a team's automations in one round trip: clear-api
- * checks only the role on automation writes and lists any team's automations
- * (S1/S2), so membership is checked here as well.
+ * Keep this query separate from myTeams. If clear-api denies the automation
+ * read, graphqlFetch rejects the whole response, including the membership list.
  */
 const TEAM_AUTOMATIONS_QUERY = `
-  query TeamAnalysisAutomations($teamId: String) {
-    myTeams { id }
+  query TeamAnalysisAutomations($teamId: String!) {
     analysisAutomations(teamId: $teamId) { ${AUTOMATION_FIELDS} }
   }
 `;
@@ -241,20 +239,24 @@ interface AnalysisDocumentRow {
 
 type Caller = { user: { role: string } };
 
-/** A team's automations, with whether the caller belongs to the team. */
+/** Platform admins can access any team. For other callers, myTeams must include the requested team. */
+async function canAccessTeam(ctx: Caller, teamId: string, headers: Record<string, string>): Promise<boolean> {
+  if (isPlatformAdmin(ctx.user.role)) return true;
+  const data = await graphqlFetch<{ myTeams: { id: string }[] | null }>(MY_TEAMS_QUERY, {}, headers);
+  return (data.myTeams ?? []).some((t) => t.id === teamId);
+}
+
+/** Call after checking that the caller belongs to the team or is a platform admin. */
 async function fetchTeamAutomations(
   teamId: string,
   headers: Record<string, string>,
-): Promise<{ member: boolean; automations: GqlAutomation[] }> {
-  const data = await graphqlFetch<{ myTeams: { id: string }[] | null; analysisAutomations: GqlAutomation[] | null }>(
+): Promise<GqlAutomation[]> {
+  const data = await graphqlFetch<{ analysisAutomations: GqlAutomation[] | null }>(
     TEAM_AUTOMATIONS_QUERY,
     { teamId },
     headers,
   );
-  return {
-    member: (data.myTeams ?? []).some((t) => t.id === teamId),
-    automations: data.analysisAutomations ?? [],
-  };
+  return data.analysisAutomations ?? [];
 }
 
 /** The cadence a user picked for an automation: a disabled one updates only on request. */
@@ -273,14 +275,13 @@ async function requireTeamAutomations(
   teamId: string,
   headers: Record<string, string>,
 ): Promise<GqlAutomation[]> {
-  const { member, automations } = await fetchTeamAutomations(teamId, headers);
-  if (!member && !isPlatformAdmin(ctx.user.role)) forbidden();
-  return automations;
+  await requireTeamMember(ctx, teamId, headers);
+  return fetchTeamAutomations(teamId, headers);
 }
 
 /**
  * An automation write: the caller must belong to `teamId` and the automation
- * to that team. Platform admins skip both checks (and the round trip).
+ * to that team. Platform admins skip both checks and their GraphQL queries.
  */
 async function requireTeamAutomation(
   ctx: Caller,
@@ -297,9 +298,7 @@ async function requireTeamAutomation(
 
 /** A team-scoped request: the caller must belong to `teamId` unless a platform admin. */
 async function requireTeamMember(ctx: Caller, teamId: string, headers: Record<string, string>): Promise<void> {
-  if (isPlatformAdmin(ctx.user.role)) return;
-  const data = await graphqlFetch<{ myTeams: { id: string }[] | null }>(MY_TEAMS_QUERY, {}, headers);
-  if (!(data.myTeams ?? []).some((t) => t.id === teamId)) forbidden();
+  if (!(await canAccessTeam(ctx, teamId, headers))) forbidden();
 }
 
 /**
@@ -609,12 +608,10 @@ export const analysisRouter = createTRPCRouter({
       const headers = cookieHeaders(ctx);
       const year = new Date().getUTCFullYear();
 
-      // Without a team, clear-api would list every team's automations; it
-      // would also list a team the caller is not in, so that is checked here.
+      // Country analyses are available even when the caller can't read the team's automations.
       let automations: GqlAutomation[] = [];
-      if (input.teamId) {
-        const team = await fetchTeamAutomations(input.teamId, headers);
-        if (team.member || isPlatformAdmin(ctx.user.role)) automations = team.automations;
+      if (input.teamId && (await canAccessTeam(ctx, input.teamId, headers))) {
+        automations = await fetchTeamAutomations(input.teamId, headers);
       }
 
       const locationIds = [...new Set(automations.flatMap((a) => a.locationIds))];

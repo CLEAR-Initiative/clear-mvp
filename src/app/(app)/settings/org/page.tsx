@@ -24,6 +24,8 @@ import { useTranslations } from "next-intl";
 import { IconPlus, IconTrash, IconUserPlus } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
 import { isPlatformAdmin } from "~/lib/roles";
+import { canEditOrg } from "./can-edit-org";
+import { useHydrated } from "~/hooks/use-hydrated";
 
 type TeamRole = "team_admin" | "analyst" | "emergency_response_manager" | "team_member";
 
@@ -53,6 +55,9 @@ function OrgSettingsPageContent() {
   const urlOrgId = searchParams.get("id");
   const orgsQuery = api.teams.myOrganisations.useQuery();
   const authQuery = api.auth.me.useQuery();
+  // OnboardingGuard starts myOrganisations in the browser, so the server
+  // renders the loader. Keep it until hydration ends (#418).
+  const hydrated = useHydrated();
   const [selectedOrgId, setSelectedOrgId] = useState<string | null>(urlOrgId);
   const [createModalOpened, { open: openCreateModal, close: closeCreateModal }] = useDisclosure(false);
 
@@ -68,9 +73,10 @@ function OrgSettingsPageContent() {
     router.replace(`/settings/org${params.toString() ? `?${params.toString()}` : ""}`, { scroll: false });
   }
   const userRole = authQuery.data?.user?.role ?? "";
+  const userId = authQuery.data?.user?.id;
   const canCreateOrg = canCreateOrgFromRole(userRole);
 
-  if (orgsQuery.isLoading || authQuery.isLoading) {
+  if (!hydrated || orgsQuery.isLoading || authQuery.isLoading) {
     return (
       <Box p="xl" ta="center">
         <Loader size="sm" />
@@ -116,7 +122,7 @@ function OrgSettingsPageContent() {
         />
       )}
 
-      <OrgDetail orgId={activeOrg.id} userRole={userRole} />
+      <OrgDetail orgId={activeOrg.id} userRole={userRole} userId={userId} />
       <CreateOrgModal opened={createModalOpened} onClose={closeCreateModal} />
     </Box>
   );
@@ -183,7 +189,15 @@ function CreateOrgModal({ opened, onClose }: { opened: boolean; onClose: () => v
 }
 
 /* ─── Org Detail ───────────────────────────────────────────── */
-function OrgDetail({ orgId, userRole }: { orgId: string; userRole: string }) {
+function OrgDetail({
+  orgId,
+  userRole,
+  userId,
+}: {
+  orgId: string;
+  userRole: string;
+  userId: string | undefined;
+}) {
   const t = useTranslations("settings.org");
   const tCommon = useTranslations("common.actions");
   const orgQuery = api.teams.organisation.useQuery({ id: orgId });
@@ -233,13 +247,8 @@ function OrgDetail({ orgId, userRole }: { orgId: string; userRole: string }) {
     return <Loader size="sm" />;
   }
 
-  // User can edit if they're a global admin, or an org-level org_admin.
-  // `org_admin` is the sole org-scoped edit role now — `owner` was folded
-  // into `org_admin` when the taxonomy was consolidated.
-  const isGlobalPrivileged = isPlatformAdmin(userRole);
-  const currentOrgMember = org.members?.find(() => true); // TODO: match by current user ID when available
-  const isOrgAdmin = currentOrgMember?.role === "org_admin";
-  const canEdit = isGlobalPrivileged || isOrgAdmin;
+  // Platform admins, and members of this org with the org_admin role.
+  const canEdit = canEditOrg({ userRole, userId, members: org.members });
 
   // Build user options for the member selector, excluding existing members
   const existingMemberIds = new Set(org.members?.map((m) => m.user.id) ?? []);

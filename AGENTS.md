@@ -21,11 +21,16 @@ bun run test                    # unit tests (Vitest); single file: bun run test
 bun run e2e                     # Playwright suite against a Docker stack; needs ../clear-api
 ```
 
-On a pull request to `dev`, two workflows start in parallel. The unit workflow runs
+On a pull request to `dev` or `prod`, two workflows start in parallel. The unit workflow runs
 `bunx vitest run`, `bunx tsc --noEmit`, `node scripts/check-messages.mjs`, then `bun run lint`.
 The E2E workflow runs the Playwright smoke suite on its own and does not wait for the unit
-workflow. Run `bun run check` and `bun run test` before pushing. Run `bun run e2e` when you touched a page flow, auth, or the
+workflow. It builds clear-api from `dev`, except for a hotfix pull request into `prod` (head is
+not `dev`), which builds it from `prod`. Run `bun run check` and `bun run test` before pushing. Run `bun run e2e` when you touched a page flow, auth, or the
 compose files.
+
+After a dev release, `Check / Dev smoke after deploy` signs in on the deployed dev site and
+opens Detection (`e2e/deployed`, `playwright.deployed.config.ts`). It is not part of
+`bun run e2e`. A failure posts in the deploy Matrix room.
 
 ## Gotchas
 

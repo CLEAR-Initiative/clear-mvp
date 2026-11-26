@@ -1,0 +1,154 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.heading {
+  margin: 0;
+  font-size: 10px;
+  font-weight: 400;
+  line-height: 14px;
+  text-transform: uppercase;
+  color: var(--color-text-primary);
+}
+
+.bar {
+  display: flex;
+  height: 10px;
+  margin-top: 4px;
+}
+
+.bar > span {
+  flex: 1;
+}
+
+.labels {
+  display: flex;
+  margin-top: 2px;
+  font-size: 10px;
+  line-height: 16px;
+  text-align: center;
+  color: var(--color-text-secondary);
+}
+
+.labels > span {
+  flex: 1;
+}
+
+.density {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.showing {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 10px;
+  line-height: 14px;
+  color: var(--color-text-primary);
+}
+
+.switch {
+  padding: 0;
+  border-radius: 4px;
+  background: var(--map-toggle-off);
+}
+
+.switchControl {
+  flex: 0 0 auto;
+  min-width: 64px;
+}
+
+.switchLabel {
+  padding: 2px 4px;
+  font-size: 10px;
+  font-weight: 400;
+  line-height: 16px;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+
+.switchLabel[data-active] {
+  color: var(--map-accent);
+}
+
+.switchIndicator {
+  border: 1px solid var(--map-accent);
+  border-radius: 4px;
+  background: var(--color-bg-primary);
+  box-shadow: none;
+}
+
+.scales {
+  display: grid;
+}
+
+.scales > * {
+  grid-area: 1 / 1;
+}
+
+.scales > [aria-hidden="true"] {
+  visibility: hidden;
+}
+
+.scale {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 4px;
+  font-size: 10px;
+  line-height: 16px;
+  color: var(--color-text-secondary);
+}
+
+.scale > span:first-child,
+.scale > span:last-child {
+  flex: 1;
+}
+
+.scale > span:last-child {
+  text-align: end;
+}
+
+.donut {
+  position: relative;
+  flex-shrink: 0;
+}
+
+@media (max-width: 22.5em) {
+  .scale {
+    flex-wrap: wrap;
+    justify-content: center;
+    row-gap: 4px;
+  }
+
+  .scale > span:first-child,
+  .scale > span:last-child {
+    flex: 1 0 calc(50% - 4px);
+    order: 1;
+  }
+}
+
+.heat {
+  height: 10px;
+  margin: 8px 0;
+  background: linear-gradient(to right, var(--map-heatmap-low), var(--map-heatmap-high));
+}
+
+.heat:dir(rtl) {
+  background: linear-gradient(to left, var(--map-heatmap-low), var(--map-heatmap-high));
+}
+
+.ends {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 5px;
+  font-size: 10px;
+  line-height: 16px;
+  color: var(--color-text-secondary);
+}

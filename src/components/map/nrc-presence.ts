@@ -33,15 +33,23 @@ export const PRESENCE_COUNTRY_MAX_ZOOM = 6.5;
 /** Country labels next to the pins appear from this zoom. */
 export const PRESENCE_LABEL_MIN_ZOOM = 2.6;
 
-/** Fill opacity: hover in the world state, selected vs other NRC countries in the country state. */
+const HOVER: unknown = ["boolean", ["feature-state", "hover"], false];
+
+/**
+ * Fill opacity: hover in the world state, selected vs other NRC countries in
+ * the country state.
+ *
+ * Both states read the hover feature state. Tiles built for one state then
+ * still react to hover right after the switch, and the change passes the
+ * paint guard (`~/lib/map/safe-paint`). In the country state hover changes
+ * nothing: both hover branches return 0.08.
+ */
 export function presenceFillOpacity(selectedIso: string | null): unknown {
   if (selectedIso) {
-    return ["case", ["==", ["get", "iso_3166_1"], selectedIso], 0.26, 0.08];
+    return ["case", ["==", ["get", "iso_3166_1"], selectedIso], 0.26, HOVER, 0.08, 0.08];
   }
   return ["case", HOVER, 0.62, 0.42];
 }
-
-const HOVER: unknown = ["boolean", ["feature-state", "hover"], false];
 
 /**
  * Borders are invisible at world zoom and fade in towards the country scale.

@@ -8,6 +8,7 @@ import {
 } from "react";
 import { api } from "~/trpc/react";
 import { FEATURE_FLAGS, type FeatureFlagDefinition } from "~/lib/constants/feature-flags";
+import { useHydrated } from "~/hooks/use-hydrated";
 
 export type EnrichedFeatureFlag = FeatureFlagDefinition & { enabled: boolean };
 
@@ -91,11 +92,28 @@ export function FeatureFlagsProvider({ children }: { children: ReactNode }) {
   );
 }
 
-export function useFeatureFlags() {
-  return useContext(FeatureFlagsContext);
+// What the server renders: the flags are fetched only in the browser, so
+// server markup always uses the defaults with the flags still loading.
+const DEFAULT_FLAGS: Record<string, boolean> = Object.fromEntries(
+  FEATURE_FLAGS.map((f) => [f.key, f.defaultEnabled]),
+);
+const DEFAULT_FEATURES: EnrichedFeatureFlag[] = FEATURE_FLAGS.map((f) => ({ ...f, enabled: f.defaultEnabled }));
+
+/**
+ * The flags as the consuming component may render them. Until that component
+ * has hydrated, this is the server view (defaults, loading): if the flags
+ * landed before a page's Suspense boundary hydrated, branching on them during
+ * hydration renders markup the server never sent and React throws #418.
+ * One render later the component catches up with the loaded flags.
+ */
+export function useFeatureFlags(): FeatureFlagsContextValue {
+  const ctx = useContext(FeatureFlagsContext);
+  const hydrated = useHydrated();
+  if (hydrated) return ctx;
+  return { ...ctx, flags: DEFAULT_FLAGS, features: DEFAULT_FEATURES, isLoading: true };
 }
 
 export function useFeatureEnabled(key: string): boolean {
-  const { flags } = useContext(FeatureFlagsContext);
+  const { flags } = useFeatureFlags();
   return flags[key] ?? true; // Default to enabled if key not found
 }

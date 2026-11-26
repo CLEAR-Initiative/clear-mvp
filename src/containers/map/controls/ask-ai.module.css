@@ -1,0 +1,28 @@
+.button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 2px solid transparent;
+  border-radius: 4px;
+  background:
+    linear-gradient(var(--color-bg-white), var(--color-bg-white)) padding-box,
+    linear-gradient(90deg, var(--map-ai-start), var(--map-ai-end)) border-box;
+  box-shadow: var(--map-element-shadow);
+}
+
+.icon {
+  flex-shrink: 0;
+}
+
+.button:hover,
+.button:focus-visible {
+  background: linear-gradient(270deg, var(--map-ai-end), var(--map-ai-start)) border-box;
+}
+
+.button:hover .iconStroke,
+.button:focus-visible .iconStroke {
+  stroke: var(--map-ai-on-gradient);
+  stroke-width: 2;
+}

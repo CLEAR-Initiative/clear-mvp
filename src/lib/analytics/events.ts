@@ -3,7 +3,7 @@
  *
  * Every event carries ids and fixed values only: never names, emails, search
  * text, Agent prompts, titles or any other free text. Each property is either
- * a fixed list of allowed values, `ID` (a cuid-shaped identifier) or `ROUTE`
+ * a fixed list of allowed values, `ID` (a record id, see isRecordId) or `ROUTE`
  * (a route pattern with ids collapsed, see ./route-pattern.ts).
  *
  * To add an event: add an entry here, use it via `track()`, and add a case to
@@ -17,7 +17,7 @@ import { ROUTE, isRoutePattern } from "./route-pattern";
 
 export { ROUTE };
 
-/** Marker for a property that holds a record id (cuid), never free text. */
+/** Marker for a property that holds a record id (see isRecordId), never free text. */
 export const ID = "id" as const;
 
 type PropertySpec = readonly string[] | typeof ID | typeof ROUTE;
@@ -26,7 +26,7 @@ export const ANALYTICS_EVENTS = {
   /** The usage-analytics privacy notice was opened. */
   "privacy_notice.viewed": { from: ["profile", "onboarding"] },
 
-  /** An Event was opened (page or Detection drawer); `direct` when no known `from`. */
+  /** An Event was opened (page or Detection preview); `direct` when no known `from`. */
   "event.opened": { from: [...EVENT_FROM_VALUES, "direct"] },
   /** An Event section first scrolled into view (once per section per view). */
   "event.section_seen": { section: ["enrichment", "feedback"] },
@@ -66,7 +66,17 @@ export type AnalyticsEventProps<E extends AnalyticsEventName> = {
   -readonly [K in keyof (typeof ANALYTICS_EVENTS)[E]]: PropValue<(typeof ANALYTICS_EVENTS)[E][K]>;
 };
 
-const CUID = /^[a-z0-9]{20,32}$/;
+/**
+ * Record id formats: a Prisma cuid, a case id (`case` + 32 hex) or a
+ * pipeline-minted lowercase UUIDv5. Signals carry all three.
+ */
+const RECORD_ID =
+  /^(?:[a-z0-9]{20,32}|case[0-9a-f]{32}|[0-9a-f]{8}-[0-9a-f]{4}-5[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})$/;
+
+/** Whether `value` is a record id an `ID` property may carry. */
+export function isRecordId(value: string): boolean {
+  return RECORD_ID.test(value);
+}
 
 /**
  * Whether `name` + `props` are exactly what the allowlist permits: a known
@@ -82,7 +92,7 @@ export function isAllowedEvent(name: string, props: Record<string, unknown> = {}
     const allowed = spec[key];
     const value = props[key];
     if (allowed === undefined || typeof value !== "string") return false;
-    if (allowed === ID) return CUID.test(value);
+    if (allowed === ID) return isRecordId(value);
     if (allowed === ROUTE) return isRoutePattern(value);
     return allowed.includes(value);
   });

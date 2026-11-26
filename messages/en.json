@@ -1775,8 +1775,8 @@
         "alerts": "{count, plural, one {alert} other {alerts}}",
         "signals": "{count, plural, one {signal} other {signals}}"
       },
-      "count": "<b>{total}</b> {noun} · {scope} · {date}",
-      "countNarrowed": "<b>{shown}</b> of {total} {noun} · {scope} · {date}",
+      "count": "<b>{total}</b> {noun} · {scope}",
+      "countNarrowed": "<b>{shown}</b> of {total} {noun} · {scope}",
       "newCount": "{count} new",
       "empty": {
         "events": "No events match",
@@ -1802,9 +1802,17 @@
         "90d": "90d"
       },
       "timelineSummary": "{range} · <b>{total}</b> {noun}",
+      "date": {
+        "change": "Change time range",
+        "custom": "Custom range",
+        "from": "From",
+        "to": "To",
+        "apply": "Apply"
+      },
       "today": "Today",
       "hideList": "Hide list",
       "showList": "Show list",
+      "noMapPoint": "No point on this map",
       "places": "{count, plural, one {# place} other {# places}}",
       "qb": {
         "label": "Search and filter",
@@ -2769,7 +2777,16 @@
         "selectUserPlaceholder": "Select a user",
         "noMatchingUsers": "No matching users",
         "roleLabel": "Role",
-        "add": "Add"
+        "add": "Add",
+        "notInOrgUseInvite": "Not in this organisation yet. Invite them by email below.",
+        "invite": {
+          "emailLabel": "Invite by email",
+          "emailPlaceholder": "name@example.org",
+          "roleLabel": "Role",
+          "submit": "Invite",
+          "sent": "Invite sent to {email}. They join this team as {role} when they accept it.",
+          "addedExisting": "{email} is already in the organisation and has been added to this team."
+        }
       },
       "locations": {
         "title": "Location Scope",
@@ -4592,5 +4609,149 @@
     "reload": "Reload page",
     "tryAgain": "Try again",
     "reference": "Reference: {digest}"
+  },
+  "mapV2": {
+    "loading": "Loading the map",
+    "loadingLayers": "Loading {layers}",
+    "layers": {
+      "signals": {
+        "title": "Signals",
+        "inSentence": "signals",
+        "severity": "Severity",
+        "cluster": {
+          "zoom": "{count} signals, zoom in",
+          "stacked": "{count} signals at this location"
+        },
+        "density": "Density",
+        "showing": "Showing:",
+        "densityDisplay": "Density display",
+        "clusters": "Clusters",
+        "heatmap": "Heatmap",
+        "fewerSignals": "Fewer signals",
+        "moreSignals": "More signals",
+        "low": "Low",
+        "high": "High"
+      }
+    },
+    "errors": {
+      "layerUnavailable": {
+        "title": "Map layer unavailable",
+        "description": "Some map layers cannot be shown right now. Try again later."
+      }
+    },
+    "basemaps": {
+      "button": "Basemap",
+      "title": "Basemap",
+      "simple-light": {
+        "title": "Light map",
+        "description": "Light basemap version from Mapbox"
+      },
+      "simple-dark": {
+        "title": "Dark map",
+        "description": "Dark basemap version from Mapbox"
+      },
+      "satellite": {
+        "title": "Satellite map",
+        "description": "Satellite basemap version from Mapbox"
+      },
+      "topography": {
+        "title": "Topography",
+        "description": "Terrain details and contour lines"
+      }
+    },
+    "controls": {
+      "zoomIn": "Zoom in",
+      "zoomOut": "Zoom out",
+      "askAi": "Ask AI",
+      "legend": "Legend",
+      "removeLayer": "Remove {layer}",
+      "hideLayer": "Hide layer",
+      "showLayer": "Show layer",
+      "opacity": "Opacity"
+    },
+    "panel": {
+      "label": "Map controls",
+      "collapse": "Hide map controls",
+      "expand": "Show map controls",
+      "back": {
+        "layers": "Back to layers",
+        "signals": "Back to all signals"
+      },
+      "stack": {
+        "titlePending": "Signals in the selected location",
+        "title": "{count, plural, one {# signal} other {# signals}} in the selected location",
+        "intro": {
+          "lastDays": "Published in the last {days, plural, one {day} other {# days}} at {location}.",
+          "lastDaysNoLocation": "Published in the last {days, plural, one {day} other {# days}}.",
+          "range": "Published between {from} and {to} at {location}.",
+          "rangeNoLocation": "Published between {from} and {to}."
+        },
+        "severityCount": {
+          "critical": "{count} Critical",
+          "high": "{count} High",
+          "medium": "{count} Medium",
+          "low": "{count} Low",
+          "unknown": "{count} Unknown"
+        },
+        "columns": {
+          "signal": "Signal",
+          "severity": "Severity"
+        },
+        "loading": "Loading the signals",
+        "error": "The signals could not be loaded. Try again later.",
+        "empty": "No signals at this location in this period."
+      },
+      "detail": {
+        "loading": "Loading the signal",
+        "error": "The signal could not be loaded. Try again later.",
+        "notFound": "This signal could not be found.",
+        "noSummary": "This signal has no summary.",
+        "comingSoon": "Coming soon",
+        "sections": {
+          "summary": "Summary",
+          "impact": "Impact",
+          "areaContext": "Area context",
+          "signals": "Signals",
+          "relatedEvents": "Related events",
+          "systemData": "System data",
+          "takeAction": "Take an action"
+        }
+      },
+      "showOnMap": "Show on map"
+    },
+    "mapSettings": {
+      "title": "Map settings",
+      "roads": "Roads",
+      "labels": "Labels",
+      "boundaries": {
+        "title": "Boundaries",
+        "country": "Country",
+        "state": "States",
+        "districts": "Districts"
+      }
+    },
+    "signalTooltip": {
+      "signal": "Signal",
+      "severity": "Severity",
+      "untitled": "Untitled signal"
+    },
+    "timeline": {
+      "label": "Timeframe",
+      "presets": {
+        "24h": "24h",
+        "7d": "7d",
+        "30d": "30d",
+        "90d": "90d"
+      },
+      "last24h": "Last 24 hours",
+      "lastDays": "Last {count} days",
+      "count": "{total, plural, one {<b>#</b> signal} other {<b>#</b> signals}}",
+      "countPending": "<b>—</b> signals",
+      "today": "Today",
+      "show": "Show timeline",
+      "hide": "Hide timeline",
+      "startHandle": "Start date",
+      "endHandle": "End date"
+    }
   }
 }

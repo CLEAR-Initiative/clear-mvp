@@ -485,6 +485,18 @@ describe("POST /api/agent — CLEAR data (agent_clear_data)", () => {
     expect(JSON.stringify(userTurn.content)).not.toContain("Current view —");
   });
 
+  it.each([
+    ["a Prisma cuid", "cmvtdzfl0000fl307lu5gzbq3"],
+    ["a case id", "case0123456789abcdef0123456789abcdef"],
+    ["a pipeline UUIDv5", "5c1e8f2a-3b4d-5e6f-8a9b-0c1d2e3f4a5b"],
+  ])("keeps a Signal entity whose id is %s", async (_name, id) => {
+    scriptModel([{ text: "Hi." }]);
+    const POST = await loadRoute();
+    const view = { route: `/signal/${id}`, entity: { kind: "signal", id } };
+    await (await POST(agentRequest(ALICE, { ...turn("t1", "Hi"), currentView: view }))).text();
+    expect(clearApi.messagesOf("t1")[0]!.currentView).toEqual(view);
+  });
+
   it("ignores the Current view while agent_clear_data is off", async () => {
     clearApi.flags.agent_clear_data = false;
     scriptModel([{ text: "Hi." }]);

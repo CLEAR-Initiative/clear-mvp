@@ -50,6 +50,8 @@ import { PageHeader, StatsGrid } from "~/components/ui";
 import type { StatItem } from "~/components/ui";
 import { colors, fontSizesPx, spacingPx } from "~/lib/tokens";
 import { sortUsersStable } from "./users-order";
+import { inviteTeamsLabel } from "./invite-teams";
+import { useHydrated } from "~/hooks/use-hydrated";
 
 /* ─── Shared ──────────────────────────────────────────────── */
 const border = `1px solid ${colors.border}`;
@@ -1087,6 +1089,10 @@ function OrganisationsPanel() {
     isLoading,
     refetch,
   } = api.teams.myOrganisations.useQuery(undefined, { staleTime: 30_000 });
+  // OnboardingGuard starts myOrganisations in the browser, and Mantine keeps
+  // this tab panel mounted, so the server renders the loader. Keep it until
+  // hydration ends (#418).
+  const hydrated = useHydrated();
   const [createOpen, setCreateOpen] = useState(false);
 
   // Wizard state
@@ -1236,7 +1242,7 @@ function OrganisationsPanel() {
     setInviteErrors(errors);
   };
 
-  if (isLoading) {
+  if (!hydrated || isLoading) {
     return (
       <Box p={24} style={{ display: "flex", justifyContent: "center" }}>
         <Loader />
@@ -2010,14 +2016,14 @@ function InvitationsPanel() {
                       </Badge>
                     </Table.Td>
                     <Table.Td>
-                      {invite.team ? (
+                      {inviteTeamsLabel(invite) ? (
                         <Text
                           style={{
                             fontSize: fontSizesPx.base,
                             color: colors.textSecondary,
                           }}
                         >
-                          {invite.team.name} ({invite.teamRole ?? "team_member"})
+                          {inviteTeamsLabel(invite)}
                         </Text>
                       ) : (
                         <Text

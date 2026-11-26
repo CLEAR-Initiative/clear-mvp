@@ -12,8 +12,9 @@ import { useSortLabels, type SortChoice, type SortGroup } from "./query-bar";
 import css from "./map-first.module.css";
 
 export interface FeedColumnHandle {
-  /** Scroll the list so the row sits about 60px from the top. */
+  /** Scroll an off-screen row so it sits about 60px from the top. */
   scrollToRow: (id: string) => void;
+  focusRow: (id: string) => void;
 }
 
 interface FeedColumnProps {
@@ -25,7 +26,8 @@ interface FeedColumnProps {
   /** "event" | "alert" | "signal" for the count noun. */
   noun: "events" | "alerts" | "signals";
   scopeLabel: string;
-  dateLabel: string;
+  /** The date the count covers, as the button that changes it. */
+  dateControl: ReactNode;
   /** The search and filter bar. */
   queryBar: ReactNode;
   sortChoices: readonly SortChoice[];
@@ -38,6 +40,7 @@ interface FeedColumnProps {
   newCount: number;
   onRefresh: () => void;
   selectedId: string | null;
+  hoveredId: string | null;
   onSelect: (item: FeedItem) => void;
   onHover: (id: string | null) => void;
   loading: boolean;
@@ -58,8 +61,8 @@ interface FeedColumnProps {
 
 export const FeedColumn = forwardRef<FeedColumnHandle, FeedColumnProps>(function FeedColumn(props, ref) {
   const {
-    hidden, items, totalCount, narrowed, noun, scopeLabel, dateLabel, queryBar, sortChoices, sortKey, onSortChange,
-    timeMode, typePaths, newCount, onRefresh, selectedId, onSelect, onHover, loading, isFetchingMore, hasMore, onLoadMore, recovery,
+    hidden, items, totalCount, narrowed, noun, scopeLabel, dateControl, queryBar, sortChoices, sortKey, onSortChange,
+    timeMode, typePaths, newCount, onRefresh, selectedId, hoveredId, onSelect, onHover, loading, isFetchingMore, hasMore, onLoadMore, recovery,
     onRecover, refreshKey, freshIds, checkedIds, onToggleCheck, bulkBar, skeleton,
   } = props;
   const t = useTranslations("detection.mapFirst");
@@ -69,11 +72,15 @@ export const FeedColumn = forwardRef<FeedColumnHandle, FeedColumnProps>(function
   const rowRefs = useRef(new Map<string, HTMLElement>());
 
   useImperativeHandle(ref, () => ({
+    focusRow: (id) => rowRefs.current.get(id)?.focus({ preventScroll: true }),
     scrollToRow: (id) => {
       const feed = feedRef.current;
       const row = rowRefs.current.get(id);
       if (!feed || !row) return;
-      feed.scrollTop = Math.max(0, row.offsetTop - feed.offsetTop - 60);
+      const bounds = row.getBoundingClientRect();
+      const viewport = feed.getBoundingClientRect();
+      if (bounds.top >= viewport.top && bounds.bottom <= viewport.bottom) return;
+      feed.scrollTop += bounds.top - viewport.top - 60;
     },
   }));
 
@@ -94,15 +101,18 @@ export const FeedColumn = forwardRef<FeedColumnHandle, FeedColumnProps>(function
 
   const nounLabel = t(`noun.${noun}`, { count: narrowed ? totalCount : items.length });
   const countText = narrowed
-    ? t.rich("countNarrowed", { shown: format.number(items.length), total: format.number(totalCount), noun: nounLabel, scope: scopeLabel, date: dateLabel, b: (c) => <b>{c}</b> })
-    : t.rich("count", { total: format.number(totalCount), noun: nounLabel, scope: scopeLabel, date: dateLabel, b: (c) => <b>{c}</b> });
+    ? t.rich("countNarrowed", { shown: format.number(items.length), total: format.number(totalCount), noun: nounLabel, scope: scopeLabel, b: (c) => <b>{c}</b> })
+    : t.rich("count", { total: format.number(totalCount), noun: nounLabel, scope: scopeLabel, b: (c) => <b>{c}</b> });
 
   return (
     <aside className={`${css.list} ${hidden ? css.listHidden : ""}`} aria-hidden={hidden || undefined}>
       <div className={css.toolbar}>
         {queryBar}
         <div className={css.countRow}>
-          <span className={css.count}>{loading ? "…" : countText}</span>
+          <div className={css.countLead}>
+            <span className={css.count}>{loading ? "…" : countText}</span>
+            {dateControl}
+          </div>
           <div className={css.countActions}>
             {newCount > 0 && (
               <button type="button" className={css.newPill} onClick={onRefresh}>
@@ -139,6 +149,7 @@ export const FeedColumn = forwardRef<FeedColumnHandle, FeedColumnProps>(function
             timeMode={timeMode}
             typePaths={typePaths}
             selected={selectedId === item.id}
+            hovered={hoveredId === item.id}
             fresh={freshIds.has(item.id)}
             checked={checkedIds.includes(item.id)}
             anyChecked={checkedIds.length > 0}
@@ -254,12 +265,13 @@ function SortMenu({ choices, value, onChange }: { choices: readonly SortChoice[]
 }
 
 function FeedRow({
-  item, timeMode, typePaths, selected, fresh, checked, anyChecked, onToggleCheck, onSelect, onHover, registerRef,
+  item, timeMode, typePaths, selected, hovered, fresh, checked, anyChecked, onToggleCheck, onSelect, onHover, registerRef,
 }: {
   item: FeedItem;
   timeMode: "activity" | "published";
   typePaths: ReadonlyMap<string, string>;
   selected: boolean;
+  hovered: boolean;
   fresh: boolean;
   checked: boolean;
   anyChecked: boolean;
@@ -285,6 +297,8 @@ function FeedRow({
       // Named by its title: from its content the name would start with the
       // select button's label ("Select event").
       aria-label={item.title}
+      aria-pressed={selected}
+      data-hovered={hovered || undefined}
       tabIndex={0}
       data-testid={`feed-row-${item.id}`}
       className={`${css.row} ${selected ? css.rowSelected : ""} ${fresh ? css.rowFresh : ""}`}
@@ -304,6 +318,8 @@ function FeedRow({
       }}
       onMouseEnter={() => onHover(item.id)}
       onMouseLeave={() => onHover(null)}
+      onFocus={() => onHover(item.id)}
+      onBlur={() => onHover(null)}
     >
       {onToggleCheck && (
         <button

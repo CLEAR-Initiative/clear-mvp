@@ -1,13 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { useRouter } from "next/navigation";
-import { EventDetailDrawer } from "~/components/event-detail";
-import type { MapMarker } from "~/components/map/crisis-map";
+import type { CrisisMapApi, MapMarker } from "~/components/map/crisis-map";
 import type { BoundaryLevel } from "~/app/(app)/map/_components/map-settings-popover";
 import { DetectionFeedListSkeleton } from "~/components/ui/detection-page-skeleton";
-import { useDetailKeyboardNav } from "~/hooks/use-detail-keyboard-nav";
+import { useTrackEventOpened } from "~/lib/analytics/use-once-per-view";
 import { getListNavigation } from "~/lib/detail-list-nav";
 import { api } from "~/trpc/react";
 import type { GqlAlert, GqlEvent, GqlSignal } from "~/lib/types/graphql";
@@ -26,8 +24,10 @@ import {
   dateOfKey,
   daysOf,
   eventToItem,
+  formatDayRange,
   involvesState,
   isDimActive,
+  itemForMapPin,
   matchesSearch,
   normalizeTypeKeys,
   parseQuery,
@@ -50,6 +50,7 @@ import {
 } from "../../_lib/detection-model";
 import { EventBulkBar } from "../event-bulk-bar";
 import { CompactHeader, type HeaderTab } from "./compact-header";
+import { DateMenu } from "./date-menu";
 import { FeedColumn, type FeedColumnHandle } from "./feed-column";
 import { MapStage } from "./map-stage";
 import type { PlaceLabel } from "./place-labels";
@@ -156,21 +157,24 @@ export function MapFirstView(props: MapFirstViewProps) {
   const tDet = useTranslations("detection");
   const tMap = useTranslations("map");
   const locale = useLocale();
-  const router = useRouter();
   const feedTab: FeedTab = tab === "alerts" || tab === "signals" || tab === "history" ? tab : "events";
 
   // ── UI state ──────────────────────────────────────────────────────────────
   // The query bar's text: free text searches the rows, "key:" opens a value list.
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [previewEventId, setPreviewEventId] = useState<string | null>(null);
   const [hoverId, setHoverId] = useState<string | null>(null);
   const [listOpen, setListOpen] = useState(true);
   const [timelineOpen, setTimelineOpen] = useState(false);
   const [dragging, setDragging] = useState(false);
+  // The feed's date button is pointed at or open: the timeline shows it is the same filter.
+  const [dateActive, setDateActive] = useState(false);
   const [checkedIds, setCheckedIds] = useState<string[]>([]);
   const [freshIds, setFreshIds] = useState<ReadonlySet<string>>(new Set());
   const feedRef = useRef<FeedColumnHandle>(null);
+  const mapApiRef = useRef<CrisisMapApi | null>(null);
+  const previewRef = useRef<HTMLElement>(null);
+  const keyboardOpener = useRef<HTMLElement | null>(null);
   const queryRef = useRef<QueryBarHandle>(null);
   const parsedQuery = parseQuery(query, locale);
   const search = parsedQuery.key ? "" : parsedQuery.value;
@@ -338,11 +342,10 @@ export function MapFirstView(props: MapFirstViewProps) {
   const items = useMemo(() => allItems.filter((it) => clientPass(it)), [allItems, clientPass]);
   // Pins follow the list: only items that pass every filter get one.
   const tabMarkers = feedTab === "alerts" ? markers.alerts : feedTab === "signals" ? markers.signals : markers.events;
-  const itemByKey = useMemo(() => new Map(items.map((it) => [it.eventId ?? it.id, it])), [items]);
-  const visibleMarkers = useMemo(
-    () => tabMarkers.filter((m) => m.eventId != null && itemByKey.has(m.eventId)),
-    [tabMarkers, itemByKey],
-  );
+  const visibleMarkers = useMemo(() => {
+    const entityIds = new Set(items.map((item) => item.eventId ?? item.id));
+    return tabMarkers.filter((marker) => marker.eventId != null && entityIds.has(marker.eventId));
+  }, [tabMarkers, items]);
   const narrowed = search.trim() !== "" || (feedTab !== "signals" && !!filters.sources) || (active.sev && filters.severities.size > 1);
 
   const sourceFacet = useMemo(() => sourceCounts(allItems, { ...filterState, locIds: [], typeFilters: [] }, hierarchy), [allItems, filterState, hierarchy]);
@@ -432,10 +435,7 @@ export function MapFirstView(props: MapFirstViewProps) {
   }, [windowDays, filters.fromIso, filters.effectiveTo, windowStartMs]);
   const customLabel = useMemo(() => {
     if (!filters.customRange) return null;
-    const f = new Intl.DateTimeFormat(locale === "en" ? "en-GB" : locale, { day: "numeric", month: "short", timeZone: "UTC" });
-    const from = f.format(new Date(filters.customRange.from));
-    const to = f.format(new Date(filters.customRange.to));
-    return from === to ? from : `${from} – ${to}`;
+    return formatDayRange(filters.customRange.from, filters.customRange.to, locale === "en" ? "en-GB" : locale, new Date());
   }, [filters.customRange, locale]);
   const dateLabel =
     windowDays == null
@@ -445,53 +445,93 @@ export function MapFirstView(props: MapFirstViewProps) {
         : t("lastDays", { count: windowDays });
   const nounKey = feedTab === "alerts" ? "alerts" : feedTab === "signals" ? "signals" : "events";
 
-  // ── Selection, hover and drawer ───────────────────────────────────────────
+  // ── Selection, hover and preview ──────────────────────────────────────────
   const itemIds = useMemo(() => items.map((it) => it.id), [items]);
+  const selectedItem = items.find((it) => it.id === selectedId);
+  const markerFor = (item?: FeedItem) => item && visibleMarkers.find((m) => m.eventId === (item.eventId ?? item.id));
+  const selectedMarker = markerFor(selectedItem);
+  useTrackEventOpened(selectedItem?.eventId ?? null, "detection");
   useEffect(() => {
-    if (selectedId && !itemIds.includes(selectedId)) setSelectedId(null);
-  }, [itemIds, selectedId]);
+    if (feedTab === "history" || !selectedItem) {
+      mapApiRef.current?.markerReveal.cancel();
+      setSelectedId(null);
+    }
+  }, [selectedItem, feedTab]);
 
-  const previewIds = useMemo(() => items.map((it) => it.eventId).filter((v): v is string => !!v), [items]);
   const previewNav = useMemo(
-    () => (previewEventId != null ? getListNavigation(previewIds, previewEventId) : null),
-    [previewIds, previewEventId],
+    () => (selectedId != null ? getListNavigation(itemIds, selectedId) : null),
+    [itemIds, selectedId],
   );
-  const goPrev = useCallback(() => {
-    if (previewNav?.prevId) setPreviewEventId(previewNav.prevId);
-  }, [previewNav?.prevId]);
-  const goNext = useCallback(() => {
-    if (previewNav?.nextId) setPreviewEventId(previewNav.nextId);
-  }, [previewNav?.nextId]);
-  useDetailKeyboardNav({
-    enabled: previewEventId != null,
-    hasPrev: previewNav?.hasPrev ?? false,
-    hasNext: previewNav?.hasNext ?? false,
-    onPrev: goPrev,
-    onNext: goNext,
-  });
+  const selectItem = (item: FeedItem) => {
+    setSelectedId(item.id);
+    const marker = markerFor(item);
+    const camera = mapApiRef.current?.markerReveal;
+    if (marker) {
+      camera?.reveal([marker.lng, marker.lat], selectedMarker && [selectedMarker.lng, selectedMarker.lat]);
+    } else {
+      camera?.cancel();
+    }
+  };
+  const navigatePreview = (id: string | null) => {
+    const item = items.find((it) => it.id === id);
+    if (!item) return;
+    selectItem(item);
+    feedRef.current?.scrollToRow(item.id);
+  };
+  const closePreview = () => {
+    mapApiRef.current?.markerReveal.cancel();
+    if (previewRef.current?.contains(document.activeElement)) {
+      const opener = keyboardOpener.current;
+      if (opener?.isConnected && !opener.closest('[aria-hidden="true"]')) opener.focus({ preventScroll: true });
+      else if (listOpen && selectedId) feedRef.current?.focusRow(selectedId);
+    }
+    keyboardOpener.current = null;
+    setSelectedId(null);
+  };
 
-  const onSelectRow = useCallback(
-    (it: FeedItem) => {
-      setSelectedId(it.id);
-      // Events and alerts open in the side peek; a signal has none, so it opens its page.
-      if (it.eventId) setPreviewEventId(it.eventId);
-      else router.push(it.href);
-    },
-    [router],
-  );
+  const onPreviewKeyDown = (e: ReactKeyboardEvent<HTMLDivElement>) => {
+    const target = e.target;
+    if (!(target instanceof HTMLElement) || !e.currentTarget.contains(target) || e.metaKey || e.ctrlKey || e.altKey || isTyping(target)) return;
+    const row = target.classList.contains(css.row);
+    if ((e.key === "Enter" || e.key === " ") && (row || target.matches('.mapboxgl-marker[role="button"]'))) {
+      // Native pins and feed rows select on this key. Enter the newly rendered
+      // region without moving focus for pointer users or trapping it in the card.
+      keyboardOpener.current = target;
+      requestAnimationFrame(() => previewRef.current?.focus({ preventScroll: true }));
+      return;
+    }
+    if (!selectedItem || e.defaultPrevented) return;
+    if (e.key === "Escape") {
+      closePreview();
+    } else if (row || previewRef.current?.contains(target)) {
+      // Mapbox owns the canvas arrow keys for panning. Only the feed and card
+      // use them to browse the list of detections.
+      const id = e.key === "ArrowLeft" ? previewNav?.prevId : e.key === "ArrowRight" ? previewNav?.nextId : null;
+      if (id) {
+        e.preventDefault();
+        navigatePreview(id);
+        if (row) feedRef.current?.focusRow(id);
+      }
+    }
+  };
 
   // Row hover highlights its pin; pin hover highlights its row.
-  const hoveredItem = hoverId ? items.find((it) => it.id === hoverId) : null;
-  const hoveredMarkerId = hoveredItem
-    ? (visibleMarkers.find((m) => m.eventId === (hoveredItem.eventId ?? hoveredItem.id))?.id ?? null)
-    : null;
+  const hoveredItem = hoverId ? items.find((it) => it.id === hoverId) : undefined;
+  const hoveredMarkerId = markerFor(hoveredItem)?.id ?? null;
   const onMarkerHover = useCallback(
     (m: MapMarker | null) => {
       const key = (m as DetectionMarker | null)?.eventId;
-      setHoverId(key ? (itemByKey.get(key)?.id ?? null) : null);
+      setHoverId(itemForMapPin(items, key, selectedItem)?.id ?? null);
     },
-    [itemByKey],
+    [items, selectedItem],
   );
+  const onMarkerClick = useCallback((marker: DetectionMarker) => {
+    const item = itemForMapPin(items, marker.eventId, selectedItem);
+    if (!item) return;
+    mapApiRef.current?.markerReveal.cancel();
+    setSelectedId(item.id);
+    feedRef.current?.scrollToRow(item.id);
+  }, [items, selectedItem]);
 
   // ── Fresh rows after "n new" ──────────────────────────────────────────────
   const beforeRefresh = useRef<Set<string> | null>(null);
@@ -609,6 +649,23 @@ export function MapFirstView(props: MapFirstViewProps) {
     />
   );
 
+  const dateMenu = (
+    <DateMenu
+      label={dateLabel}
+      dateKey={dateKey}
+      isDefault={dateIsDefault}
+      fromIso={filters.fromIso}
+      toIso={filters.effectiveTo}
+      linked={dragging}
+      onPreset={(key) => {
+        const d = dateOfKey(key);
+        if (d) filters.onDateChange(d);
+      }}
+      onCustomRange={filters.setCustomRange}
+      onActiveChange={setDateActive}
+    />
+  );
+
   const queryBar = (
     <QueryBar
       ref={queryRef}
@@ -653,7 +710,10 @@ export function MapFirstView(props: MapFirstViewProps) {
         {header}
         <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: 24 }}>
           {/* History has no feed column: the shared place, type, severity and date filters sit above its table. */}
-          <div className={css.historyBar}>{queryBar}</div>
+          <div className={css.historyRow}>
+            <div className={css.historyBar}>{queryBar}</div>
+            {dateMenu}
+          </div>
           {history}
         </div>
       </div>
@@ -663,7 +723,7 @@ export function MapFirstView(props: MapFirstViewProps) {
   return (
     <div className={css.shell}>
       {header}
-      <div className={css.body}>
+      <div className={css.body} onKeyDown={onPreviewKeyDown}>
         <FeedColumn
           ref={feedRef}
           hidden={!listOpen}
@@ -672,7 +732,7 @@ export function MapFirstView(props: MapFirstViewProps) {
           narrowed={narrowed}
           noun={nounKey}
           scopeLabel={scopeLabel}
-          dateLabel={dateLabel}
+          dateControl={dateMenu}
           queryBar={queryBar}
           sortChoices={sortChoices}
           sortKey={feed.sort}
@@ -682,7 +742,8 @@ export function MapFirstView(props: MapFirstViewProps) {
           newCount={feed.newCount}
           onRefresh={onRefresh}
           selectedId={selectedId}
-          onSelect={onSelectRow}
+          hoveredId={hoverId}
+          onSelect={selectItem}
           onHover={setHoverId}
           loading={feed.loading}
           isFetchingMore={feed.isFetchingMore}
@@ -712,9 +773,22 @@ export function MapFirstView(props: MapFirstViewProps) {
         />
 
         <MapStage
+          mapApiRef={mapApiRef}
           markers={visibleMarkers}
           hoveredMarkerId={hoveredMarkerId}
           onMarkerHover={onMarkerHover}
+          onMarkerClick={onMarkerClick}
+          selectedMarkerId={selectedMarker?.id ?? null}
+          preview={selectedItem && {
+            item: selectedItem,
+            cardRef: previewRef,
+            hasMarker: selectedMarker != null,
+            timelineOpen,
+            navigationPosition: previewNav?.position,
+            onPrev: previewNav?.hasPrev ? () => navigatePreview(previewNav.prevId) : undefined,
+            onNext: previewNav?.hasNext ? () => navigatePreview(previewNav.nextId) : undefined,
+            onClose: closePreview,
+          }}
           center={center}
           zoom={zoom}
           fitBoundsGeometry={fitBoundsGeometry}
@@ -739,9 +813,9 @@ export function MapFirstView(props: MapFirstViewProps) {
             counts={dailyCounts}
             windowStartMs={windowStartMs}
             range={selRange}
-            windowDays={windowDays}
+            label={dateLabel}
             dateKey={dateKey}
-            fixedLabel={fixedLabel}
+            linked={dateActive}
             total={feed.total}
             noun={t(`noun.${nounKey}`, { count: feed.total })}
             isDefault={dateIsDefault}
@@ -758,15 +832,6 @@ export function MapFirstView(props: MapFirstViewProps) {
           />
         </MapStage>
       </div>
-
-      <EventDetailDrawer
-        eventId={previewEventId}
-        opened={previewEventId != null}
-        onClose={() => setPreviewEventId(null)}
-        navigation={previewNav ?? undefined}
-        onNavigatePrev={goPrev}
-        onNavigateNext={goNext}
-      />
     </div>
   );
 }

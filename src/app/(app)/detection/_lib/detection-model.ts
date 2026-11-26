@@ -39,10 +39,11 @@ export interface FeedItem {
   /** Row key, unique within a tab. */
   id: string;
   kind: "alert" | "event" | "signal";
-  /** The event behind the row (alerts and events), for the preview drawer. */
+  /** The event behind the row (alerts and events), shared with its map pin. */
   eventId: string | null;
   href: string;
   title: string;
+  description: string | null;
   severity: Severity | "unknown";
   isAlert: boolean;
   /** First source, shown on the row. */
@@ -61,6 +62,13 @@ export interface FeedItem {
   firstAt: string | null;
   lng: number | null;
   lat: number | null;
+}
+
+/** Alerts for the same Event share a pin. Keep the selected row, or use the first match in feed order. */
+export function itemForMapPin(items: readonly FeedItem[], entityId: string | undefined, selected?: FeedItem) {
+  if (!entityId) return undefined;
+  if (selected && (selected.eventId ?? selected.id) === entityId) return selected;
+  return items.find((item) => (item.eventId ?? item.id) === entityId);
 }
 
 // ─── Normalisation ──────────────────────────────────────────────────────────
@@ -131,6 +139,7 @@ export function eventToItem(e: GqlEvent, states: readonly RegionState[], untitle
     eventId: e.id,
     href: `/event/${e.id}?from=detection`,
     title: e.title ?? e.description ?? e.types[0] ?? untitled,
+    description: e.description ?? null,
     severity: sevOf(e.severity),
     isAlert: e.alerts.length > 0,
     source: e.signals[0]?.source?.name ?? null,
@@ -166,6 +175,7 @@ export function signalToItem(s: GqlSignal, states: readonly RegionState[], untit
     eventId: null,
     href: `/signal/${s.id}?from=detection`,
     title: s.title ?? s.description ?? untitled,
+    description: s.description ?? null,
     severity: sevOf(s.severity),
     isAlert: false,
     source: s.source.name,
@@ -365,6 +375,21 @@ export function dateOfKey(key: string): string | null {
   if (!m) return null;
   const n = Number(m[1]);
   return n >= 1 && n <= 90 ? dateForDays(n) : null;
+}
+
+/**
+ * A from-to of UTC days in words: "3 Aug – 14 Sept", one day as "3 Aug". The
+ * year shows when either end is outside the current one ("3 Aug 2025 – 14 Sept 2025").
+ */
+export function formatDayRange(fromIso: string, toIso: string, locale: string, now: Date): string {
+  const from = new Date(fromIso);
+  const to = new Date(toIso);
+  const thisYear = now.getUTCFullYear();
+  const withYear = from.getUTCFullYear() !== thisYear || to.getUTCFullYear() !== thisYear;
+  const f = new Intl.DateTimeFormat(locale, { day: "numeric", month: "short", year: withYear ? "numeric" : undefined, timeZone: "UTC" });
+  const a = f.format(from);
+  const b = f.format(to);
+  return a === b ? a : `${a} – ${b}`;
 }
 
 // ─── Filters and matching ───────────────────────────────────────────────────

@@ -1775,8 +1775,8 @@
         "alerts": "{count, plural, one {alerta} other {alertas}}",
         "signals": "{count, plural, one {señal} other {señales}}"
       },
-      "count": "<b>{total}</b> {noun} · {scope} · {date}",
-      "countNarrowed": "<b>{shown}</b> de {total} {noun} · {scope} · {date}",
+      "count": "<b>{total}</b> {noun} · {scope}",
+      "countNarrowed": "<b>{shown}</b> de {total} {noun} · {scope}",
       "newCount": "{count} nuevos",
       "empty": {
         "events": "Ningún evento coincide",
@@ -1802,9 +1802,17 @@
         "90d": "90 d"
       },
       "timelineSummary": "{range} · <b>{total}</b> {noun}",
+      "date": {
+        "change": "Cambiar el periodo",
+        "custom": "Periodo personalizado",
+        "from": "Desde",
+        "to": "Hasta",
+        "apply": "Aplicar"
+      },
       "today": "Hoy",
       "hideList": "Ocultar lista",
       "showList": "Mostrar lista",
+      "noMapPoint": "Sin punto en este mapa",
       "places": "{count, plural, one {# lugar} other {# lugares}}",
       "qb": {
         "label": "Buscar y filtrar",
@@ -2769,7 +2777,16 @@
         "selectUserPlaceholder": "Seleccione un usuario",
         "noMatchingUsers": "Ningún usuario coincide",
         "roleLabel": "Rol",
-        "add": "Añadir"
+        "add": "Añadir",
+        "notInOrgUseInvite": "Aún no está en esta organización. Invítele por correo abajo.",
+        "invite": {
+          "emailLabel": "Invitar por correo",
+          "emailPlaceholder": "nombre@ejemplo.org",
+          "roleLabel": "Rol",
+          "submit": "Invitar",
+          "sent": "Invitación enviada a {email}. Se unirá a este equipo como {role} cuando la acepte.",
+          "addedExisting": "{email} ya está en la organización y se ha añadido a este equipo."
+        }
       },
       "locations": {
         "title": "Alcance de ubicación",
@@ -4592,5 +4609,149 @@
     "reload": "Recargar página",
     "tryAgain": "Reintentar",
     "reference": "Referencia: {digest}"
+  },
+  "mapV2": {
+    "loading": "Cargando el mapa",
+    "loadingLayers": "Cargando {layers}",
+    "layers": {
+      "signals": {
+        "title": "Señales",
+        "inSentence": "señales",
+        "severity": "Severidad",
+        "cluster": {
+          "zoom": "{count} señales, acercar",
+          "stacked": "{count} señales en esta ubicación"
+        },
+        "density": "Densidad",
+        "showing": "Mostrando:",
+        "densityDisplay": "Visualización de densidad",
+        "clusters": "Agrupaciones",
+        "heatmap": "Mapa de calor",
+        "fewerSignals": "Menos señales",
+        "moreSignals": "Más señales",
+        "low": "Baja",
+        "high": "Alta"
+      }
+    },
+    "errors": {
+      "layerUnavailable": {
+        "title": "Capa del mapa no disponible",
+        "description": "Algunas capas del mapa no se pueden mostrar ahora. Inténtalo más tarde."
+      }
+    },
+    "basemaps": {
+      "button": "Mapa base",
+      "title": "Mapa base",
+      "simple-light": {
+        "title": "Mapa claro",
+        "description": "Versión clara del mapa base de Mapbox"
+      },
+      "simple-dark": {
+        "title": "Mapa oscuro",
+        "description": "Versión oscura del mapa base de Mapbox"
+      },
+      "satellite": {
+        "title": "Mapa satelital",
+        "description": "Versión satelital del mapa base de Mapbox"
+      },
+      "topography": {
+        "title": "Topografía",
+        "description": "Detalles del terreno y curvas de nivel"
+      }
+    },
+    "controls": {
+      "zoomIn": "Acercar",
+      "zoomOut": "Alejar",
+      "askAi": "Preguntar a la IA",
+      "legend": "Leyenda",
+      "removeLayer": "Quitar {layer}",
+      "hideLayer": "Ocultar capa",
+      "showLayer": "Mostrar capa",
+      "opacity": "Opacidad"
+    },
+    "panel": {
+      "label": "Controles del mapa",
+      "collapse": "Ocultar controles del mapa",
+      "expand": "Mostrar controles del mapa",
+      "back": {
+        "layers": "Volver a las capas",
+        "signals": "Volver a todas las señales"
+      },
+      "stack": {
+        "titlePending": "Señales en la ubicación seleccionada",
+        "title": "{count, plural, one {# señal} other {# señales}} en la ubicación seleccionada",
+        "intro": {
+          "lastDays": "Publicadas {days, plural, one {el último día} other {en los últimos # días}} en {location}.",
+          "lastDaysNoLocation": "Publicadas {days, plural, one {el último día} other {en los últimos # días}}.",
+          "range": "Publicadas entre el {from} y el {to} en {location}.",
+          "rangeNoLocation": "Publicadas entre el {from} y el {to}."
+        },
+        "severityCount": {
+          "critical": "{count} Crítica",
+          "high": "{count} Alta",
+          "medium": "{count} Media",
+          "low": "{count} Baja",
+          "unknown": "{count} Desconocida"
+        },
+        "columns": {
+          "signal": "Señal",
+          "severity": "Severidad"
+        },
+        "loading": "Cargando las señales",
+        "error": "No se pudieron cargar las señales. Inténtalo más tarde.",
+        "empty": "No hay señales en esta ubicación en este periodo."
+      },
+      "detail": {
+        "loading": "Cargando la señal",
+        "error": "No se pudo cargar la señal. Inténtalo más tarde.",
+        "notFound": "No se encontró esta señal.",
+        "noSummary": "Esta señal no tiene resumen.",
+        "comingSoon": "Próximamente",
+        "sections": {
+          "summary": "Resumen",
+          "impact": "Impacto",
+          "areaContext": "Contexto de la zona",
+          "signals": "Señales",
+          "relatedEvents": "Eventos relacionados",
+          "systemData": "Datos del sistema",
+          "takeAction": "Actuar"
+        }
+      },
+      "showOnMap": "Mostrar en el mapa"
+    },
+    "mapSettings": {
+      "title": "Ajustes del mapa",
+      "roads": "Carreteras",
+      "labels": "Etiquetas",
+      "boundaries": {
+        "title": "Límites",
+        "country": "País",
+        "state": "Estados",
+        "districts": "Distritos"
+      }
+    },
+    "signalTooltip": {
+      "signal": "Señal",
+      "severity": "Severidad",
+      "untitled": "Señal sin título"
+    },
+    "timeline": {
+      "label": "Periodo",
+      "presets": {
+        "24h": "24 h",
+        "7d": "7 d",
+        "30d": "30 d",
+        "90d": "90 d"
+      },
+      "last24h": "Últimas 24 horas",
+      "lastDays": "Últimos {count} días",
+      "count": "{total, plural, one {<b>#</b> señal} other {<b>#</b> señales}}",
+      "countPending": "<b>—</b> señales",
+      "today": "Hoy",
+      "show": "Mostrar línea de tiempo",
+      "hide": "Ocultar línea de tiempo",
+      "startHandle": "Fecha de inicio",
+      "endHandle": "Fecha de fin"
+    }
   }
 }

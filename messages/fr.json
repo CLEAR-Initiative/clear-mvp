@@ -1775,8 +1775,8 @@
         "alerts": "{count, plural, one {alerte} other {alertes}}",
         "signals": "{count, plural, one {signal} other {signaux}}"
       },
-      "count": "<b>{total}</b> {noun} · {scope} · {date}",
-      "countNarrowed": "<b>{shown}</b> sur {total} {noun} · {scope} · {date}",
+      "count": "<b>{total}</b> {noun} · {scope}",
+      "countNarrowed": "<b>{shown}</b> sur {total} {noun} · {scope}",
       "newCount": "{count} nouveaux",
       "empty": {
         "events": "Aucun événement ne correspond",
@@ -1802,9 +1802,17 @@
         "90d": "90 j"
       },
       "timelineSummary": "{range} · <b>{total}</b> {noun}",
+      "date": {
+        "change": "Changer la période",
+        "custom": "Période personnalisée",
+        "from": "Du",
+        "to": "Au",
+        "apply": "Appliquer"
+      },
       "today": "Aujourd'hui",
       "hideList": "Masquer la liste",
       "showList": "Afficher la liste",
+      "noMapPoint": "Aucun point sur cette carte",
       "places": "{count, plural, one {# lieu} other {# lieux}}",
       "qb": {
         "label": "Rechercher et filtrer",
@@ -2769,7 +2777,16 @@
         "selectUserPlaceholder": "Sélectionnez un utilisateur",
         "noMatchingUsers": "Aucun utilisateur correspondant",
         "roleLabel": "Rôle",
-        "add": "Ajouter"
+        "add": "Ajouter",
+        "notInOrgUseInvite": "Pas encore dans cette organisation. Invitez cette personne par e-mail ci-dessous.",
+        "invite": {
+          "emailLabel": "Inviter par e-mail",
+          "emailPlaceholder": "nom@exemple.org",
+          "roleLabel": "Rôle",
+          "submit": "Inviter",
+          "sent": "Invitation envoyée à {email}. La personne rejoindra cette équipe en tant que {role} après l'avoir acceptée.",
+          "addedExisting": "{email} fait déjà partie de l'organisation et a été ajouté(e) à cette équipe."
+        }
       },
       "locations": {
         "title": "Périmètre géographique",
@@ -4592,5 +4609,149 @@
     "reload": "Recharger la page",
     "tryAgain": "Réessayer",
     "reference": "Référence : {digest}"
+  },
+  "mapV2": {
+    "loading": "Chargement de la carte",
+    "loadingLayers": "Chargement : {layers}",
+    "layers": {
+      "signals": {
+        "title": "Signaux",
+        "inSentence": "signaux",
+        "severity": "Gravité",
+        "cluster": {
+          "zoom": "{count} signaux, zoomer",
+          "stacked": "{count} signaux à cet emplacement"
+        },
+        "density": "Densité",
+        "showing": "Affichage :",
+        "densityDisplay": "Affichage de la densité",
+        "clusters": "Groupes",
+        "heatmap": "Carte de chaleur",
+        "fewerSignals": "Moins de signaux",
+        "moreSignals": "Plus de signaux",
+        "low": "Faible",
+        "high": "Élevée"
+      }
+    },
+    "errors": {
+      "layerUnavailable": {
+        "title": "Couche de carte indisponible",
+        "description": "Certaines couches de la carte ne peuvent pas être affichées pour le moment. Réessayez plus tard."
+      }
+    },
+    "basemaps": {
+      "button": "Fond de carte",
+      "title": "Fond de carte",
+      "simple-light": {
+        "title": "Carte claire",
+        "description": "Version claire du fond de carte par Mapbox"
+      },
+      "simple-dark": {
+        "title": "Carte sombre",
+        "description": "Version sombre du fond de carte par Mapbox"
+      },
+      "satellite": {
+        "title": "Carte satellite",
+        "description": "Version satellite du fond de carte par Mapbox"
+      },
+      "topography": {
+        "title": "Topographie",
+        "description": "Détails du relief et courbes de niveau"
+      }
+    },
+    "controls": {
+      "zoomIn": "Zoom avant",
+      "zoomOut": "Zoom arrière",
+      "askAi": "Demander à l'IA",
+      "legend": "Légende",
+      "removeLayer": "Retirer {layer}",
+      "hideLayer": "Masquer la couche",
+      "showLayer": "Afficher la couche",
+      "opacity": "Opacité"
+    },
+    "panel": {
+      "label": "Commandes de la carte",
+      "collapse": "Masquer les commandes de la carte",
+      "expand": "Afficher les commandes de la carte",
+      "back": {
+        "layers": "Retour aux couches",
+        "signals": "Retour à tous les signaux"
+      },
+      "stack": {
+        "titlePending": "Signaux à l’emplacement sélectionné",
+        "title": "{count, plural, one {# signal} other {# signaux}} à l’emplacement sélectionné",
+        "intro": {
+          "lastDays": "Publiés {days, plural, one {le dernier jour} other {ces # derniers jours}} à {location}.",
+          "lastDaysNoLocation": "Publiés {days, plural, one {le dernier jour} other {ces # derniers jours}}.",
+          "range": "Publiés entre le {from} et le {to} à {location}.",
+          "rangeNoLocation": "Publiés entre le {from} et le {to}."
+        },
+        "severityCount": {
+          "critical": "{count} Critique",
+          "high": "{count} Élevée",
+          "medium": "{count} Moyenne",
+          "low": "{count} Faible",
+          "unknown": "{count} Inconnue"
+        },
+        "columns": {
+          "signal": "Signal",
+          "severity": "Gravité"
+        },
+        "loading": "Chargement des signaux",
+        "error": "Impossible de charger les signaux. Réessayez plus tard.",
+        "empty": "Aucun signal à cet emplacement sur cette période."
+      },
+      "detail": {
+        "loading": "Chargement du signal",
+        "error": "Impossible de charger le signal. Réessayez plus tard.",
+        "notFound": "Ce signal est introuvable.",
+        "noSummary": "Ce signal n’a pas de résumé.",
+        "comingSoon": "Bientôt disponible",
+        "sections": {
+          "summary": "Résumé",
+          "impact": "Impact",
+          "areaContext": "Contexte de la zone",
+          "signals": "Signaux",
+          "relatedEvents": "Événements liés",
+          "systemData": "Données système",
+          "takeAction": "Agir"
+        }
+      },
+      "showOnMap": "Afficher sur la carte"
+    },
+    "mapSettings": {
+      "title": "Paramètres de la carte",
+      "roads": "Routes",
+      "labels": "Libellés",
+      "boundaries": {
+        "title": "Limites",
+        "country": "Pays",
+        "state": "États",
+        "districts": "Districts"
+      }
+    },
+    "signalTooltip": {
+      "signal": "Signal",
+      "severity": "Gravité",
+      "untitled": "Signal sans titre"
+    },
+    "timeline": {
+      "label": "Période",
+      "presets": {
+        "24h": "24 h",
+        "7d": "7 j",
+        "30d": "30 j",
+        "90d": "90 j"
+      },
+      "last24h": "Dernières 24 heures",
+      "lastDays": "{count} derniers jours",
+      "count": "{total, plural, one {<b>#</b> signal} other {<b>#</b> signaux}}",
+      "countPending": "<b>—</b> signaux",
+      "today": "Aujourd'hui",
+      "show": "Afficher la frise",
+      "hide": "Masquer la frise",
+      "startHandle": "Date de début",
+      "endHandle": "Date de fin"
+    }
   }
 }

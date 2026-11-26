@@ -1775,8 +1775,8 @@
         "alerts": "{count, plural, one {تنبيه} other {تنبيهات}}",
         "signals": "{count, plural, one {إشارة} other {إشارات}}"
       },
-      "count": "<b>{total}</b> {noun} · {scope} · {date}",
-      "countNarrowed": "<b>{shown}</b> من {total} {noun} · {scope} · {date}",
+      "count": "<b>{total}</b> {noun} · {scope}",
+      "countNarrowed": "<b>{shown}</b> من {total} {noun} · {scope}",
       "newCount": "{count} جديد",
       "empty": {
         "events": "لا توجد أحداث مطابقة",
@@ -1802,9 +1802,17 @@
         "90d": "90 يومًا"
       },
       "timelineSummary": "{range} · <b>{total}</b> {noun}",
+      "date": {
+        "change": "تغيير الفترة الزمنية",
+        "custom": "فترة مخصصة",
+        "from": "من",
+        "to": "إلى",
+        "apply": "تطبيق"
+      },
       "today": "اليوم",
       "hideList": "إخفاء القائمة",
       "showList": "إظهار القائمة",
+      "noMapPoint": "لا توجد نقطة على هذه الخريطة",
       "places": "{count} أماكن",
       "qb": {
         "label": "البحث والتصفية",
@@ -2769,7 +2777,16 @@
         "selectUserPlaceholder": "اختر مستخدماً",
         "noMatchingUsers": "لا يوجد مستخدمون مطابقون",
         "roleLabel": "الدور",
-        "add": "إضافة"
+        "add": "إضافة",
+        "notInOrgUseInvite": "ليس في هذه المنظمة بعد. ادعُه عبر البريد الإلكتروني أدناه.",
+        "invite": {
+          "emailLabel": "دعوة عبر البريد الإلكتروني",
+          "emailPlaceholder": "name@example.org",
+          "roleLabel": "الدور",
+          "submit": "دعوة",
+          "sent": "تم إرسال الدعوة إلى {email}. سينضم إلى هذا الفريق بدور {role} عند قبولها.",
+          "addedExisting": "{email} موجود بالفعل في المنظمة وتمت إضافته إلى هذا الفريق."
+        }
       },
       "locations": {
         "title": "نطاق المواقع",
@@ -4592,5 +4609,149 @@
     "reload": "إعادة تحميل الصفحة",
     "tryAgain": "إعادة المحاولة",
     "reference": "المرجع: {digest}"
+  },
+  "mapV2": {
+    "loading": "جارٍ تحميل الخريطة",
+    "loadingLayers": "جارٍ تحميل {layers}",
+    "layers": {
+      "signals": {
+        "title": "الإشارات",
+        "inSentence": "الإشارات",
+        "severity": "الخطورة",
+        "cluster": {
+          "zoom": "{count, plural, two {إشارتان} few {# إشارات} many {# إشارة} other {# إشارة}}، تكبير",
+          "stacked": "{count, plural, two {إشارتان} few {# إشارات} many {# إشارة} other {# إشارة}} في هذا الموقع"
+        },
+        "density": "الكثافة",
+        "showing": "العرض:",
+        "densityDisplay": "طريقة عرض الكثافة",
+        "clusters": "مجموعات",
+        "heatmap": "خريطة حرارية",
+        "fewerSignals": "إشارات أقل",
+        "moreSignals": "إشارات أكثر",
+        "low": "منخفضة",
+        "high": "مرتفعة"
+      }
+    },
+    "errors": {
+      "layerUnavailable": {
+        "title": "طبقة الخريطة غير متاحة",
+        "description": "تعذّر عرض بعض طبقات الخريطة الآن. حاول مرة أخرى لاحقًا."
+      }
+    },
+    "basemaps": {
+      "button": "الخريطة الأساسية",
+      "title": "الخريطة الأساسية",
+      "simple-light": {
+        "title": "خريطة فاتحة",
+        "description": "نسخة فاتحة من الخريطة الأساسية من Mapbox"
+      },
+      "simple-dark": {
+        "title": "خريطة داكنة",
+        "description": "نسخة داكنة من الخريطة الأساسية من Mapbox"
+      },
+      "satellite": {
+        "title": "خريطة الأقمار الصناعية",
+        "description": "نسخة الأقمار الصناعية من الخريطة الأساسية من Mapbox"
+      },
+      "topography": {
+        "title": "الطوبوغرافيا",
+        "description": "تفاصيل التضاريس وخطوط الكنتور"
+      }
+    },
+    "controls": {
+      "zoomIn": "تكبير",
+      "zoomOut": "تصغير",
+      "askAi": "اسأل الذكاء الاصطناعي",
+      "legend": "مفتاح الخريطة",
+      "removeLayer": "إزالة {layer}",
+      "hideLayer": "إخفاء الطبقة",
+      "showLayer": "إظهار الطبقة",
+      "opacity": "الشفافية"
+    },
+    "panel": {
+      "label": "عناصر التحكم في الخريطة",
+      "collapse": "إخفاء عناصر التحكم في الخريطة",
+      "expand": "إظهار عناصر التحكم في الخريطة",
+      "back": {
+        "layers": "العودة إلى الطبقات",
+        "signals": "العودة إلى كل الإشارات"
+      },
+      "stack": {
+        "titlePending": "الإشارات في الموقع المحدد",
+        "title": "{count, plural, zero {لا إشارات} one {إشارة واحدة} two {إشارتان} few {# إشارات} many {# إشارة} other {# إشارة}} في الموقع المحدد",
+        "intro": {
+          "lastDays": "نُشرت {days, plural, one {خلال اليوم الأخير} two {خلال اليومين الأخيرين} few {خلال آخر # أيام} other {خلال آخر # يومًا}} في {location}.",
+          "lastDaysNoLocation": "نُشرت {days, plural, one {خلال اليوم الأخير} two {خلال اليومين الأخيرين} few {خلال آخر # أيام} other {خلال آخر # يومًا}}.",
+          "range": "نُشرت بين {from} و{to} في {location}.",
+          "rangeNoLocation": "نُشرت بين {from} و{to}."
+        },
+        "severityCount": {
+          "critical": "{count} حرجة",
+          "high": "{count} عالية",
+          "medium": "{count} متوسطة",
+          "low": "{count} منخفضة",
+          "unknown": "{count} غير معروفة"
+        },
+        "columns": {
+          "signal": "إشارة",
+          "severity": "الخطورة"
+        },
+        "loading": "جارٍ تحميل الإشارات",
+        "error": "تعذّر تحميل الإشارات. حاول مرة أخرى لاحقًا.",
+        "empty": "لا توجد إشارات في هذا الموقع خلال هذه الفترة."
+      },
+      "detail": {
+        "loading": "جارٍ تحميل الإشارة",
+        "error": "تعذّر تحميل الإشارة. حاول مرة أخرى لاحقًا.",
+        "notFound": "تعذّر العثور على هذه الإشارة.",
+        "noSummary": "لا يوجد ملخص لهذه الإشارة.",
+        "comingSoon": "قريبًا",
+        "sections": {
+          "summary": "الملخص",
+          "impact": "الأثر",
+          "areaContext": "سياق المنطقة",
+          "signals": "الإشارات",
+          "relatedEvents": "الأحداث ذات الصلة",
+          "systemData": "بيانات النظام",
+          "takeAction": "اتخاذ إجراء"
+        }
+      },
+      "showOnMap": "إظهار على الخريطة"
+    },
+    "mapSettings": {
+      "title": "إعدادات الخريطة",
+      "roads": "الطرق",
+      "labels": "التسميات",
+      "boundaries": {
+        "title": "الحدود",
+        "country": "الدولة",
+        "state": "الولايات",
+        "districts": "المناطق"
+      }
+    },
+    "signalTooltip": {
+      "signal": "إشارة",
+      "severity": "الخطورة",
+      "untitled": "إشارة بلا عنوان"
+    },
+    "timeline": {
+      "label": "الإطار الزمني",
+      "presets": {
+        "24h": "24 س",
+        "7d": "7 أيام",
+        "30d": "30 يومًا",
+        "90d": "90 يومًا"
+      },
+      "last24h": "آخر 24 ساعة",
+      "lastDays": "آخر {count} يومًا",
+      "count": "{total, plural, zero {<b>#</b> إشارة} one {<b>#</b> إشارة} two {<b>#</b> إشارتان} few {<b>#</b> إشارات} many {<b>#</b> إشارة} other {<b>#</b> إشارة}}",
+      "countPending": "<b>—</b> إشارات",
+      "today": "اليوم",
+      "show": "إظهار الخط الزمني",
+      "hide": "إخفاء الخط الزمني",
+      "startHandle": "تاريخ البدء",
+      "endHandle": "تاريخ الانتهاء"
+    }
   }
 }
