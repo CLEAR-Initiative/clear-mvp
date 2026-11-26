@@ -5,7 +5,7 @@ import { IconCalendar, IconClock, IconDatabase, IconMapPin } from "@tabler/icons
 import { useFormatter, useNow, useTranslations } from "next-intl";
 import { useEffect, useMemo } from "react";
 import { eventHref } from "~/lib/analytics/event-source";
-import { getDisasterLabel, getDisasterPills } from "~/lib/disaster-types";
+import { getDisasterPills } from "~/lib/disaster-types";
 import { resolveLocationName } from "~/lib/location";
 import { signalLocationOf } from "~/lib/location-challenge";
 import { reportHandledError } from "~/lib/report-handled-error";
@@ -103,7 +103,7 @@ function SignalDetail({ signal, back }: { signal: GqlSignalDetail; back: PanelBa
               items={siblings.map((sibling) => ({
                 id: sibling.id,
                 href: `/signal/${sibling.id}`,
-                title: sibling.title ?? tPage("similar.fallbackTitle", { id: sibling.id }),
+                title: sibling.title ?? tSignal("untitled"),
               }))}
             />
           ) : (
@@ -120,9 +120,7 @@ function SignalDetail({ signal, back }: { signal: GqlSignalDetail; back: PanelBa
               items={signal.events.map((event) => ({
                 id: event.id,
                 href: eventHref(event.id, "map"),
-                title:
-                  event.title ??
-                  (event.types[0] ? getDisasterLabel(event.types[0]) : tPage("events.fallbackTitle", { id: event.id })),
+                title: event.title ?? t("untitledEvent"),
                 severity: event.severity,
                 category: getDisasterPills(event.types)[0]?.label,
               }))}

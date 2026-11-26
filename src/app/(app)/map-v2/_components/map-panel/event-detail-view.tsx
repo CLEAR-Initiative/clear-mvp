@@ -7,7 +7,7 @@ import { useEffect, useMemo } from "react";
 import type { LngLatPoint } from "~/containers/map/selection";
 import { eventHref } from "~/lib/analytics/event-source";
 import { areaPopulationOf, formatIdp, idpPerCapitaOf } from "~/lib/area-context";
-import { getDisasterLabel, getDisasterPills } from "~/lib/disaster-types";
+import { getDisasterPills } from "~/lib/disaster-types";
 import { resolveLocationName } from "~/lib/location";
 import { reportHandledError } from "~/lib/report-handled-error";
 import type { GqlEvent } from "~/lib/types/graphql";
@@ -44,10 +44,6 @@ function eventLocations(event: GqlEvent) {
   return [event.generalLocation, event.originLocation, event.destinationLocation].filter((location) => !!location);
 }
 
-function eventTitle(event: Pick<GqlEvent, "title" | "types">): string | null {
-  return event.title ?? (event.types[0] ? getDisasterLabel(event.types[0]) : null);
-}
-
 type EventDetailProps = {
   event: GqlEvent;
   related: GqlEvent[] | undefined;
@@ -58,6 +54,7 @@ type EventDetailProps = {
 function EventDetail({ event, related, back, point }: EventDetailProps) {
   const t = useTranslations("mapV2.panel.detail");
   const tPage = useTranslations("eventDetail");
+  const tSignal = useTranslations("mapV2.signalTooltip");
   const format = useFormatter();
   const now = useNow();
   const compact = (value: number) => format.number(value, "compact");
@@ -81,7 +78,7 @@ function EventDetail({ event, related, back, point }: EventDetailProps) {
       <DetailHeader
         back={back}
         point={point}
-        title={eventTitle(event) ?? t("untitledEvent")}
+        title={event.title ?? t("untitledEvent")}
         severity={event.severity}
         categories={categories}
       >
@@ -137,7 +134,7 @@ function EventDetail({ event, related, back, point }: EventDetailProps) {
               items={event.signals.map((signal) => ({
                 id: signal.id,
                 href: `/signal/${signal.id}`,
-                title: signal.title ?? tPage("signals.fallbackTitle", { id: signal.id }),
+                title: signal.title ?? tSignal("untitled"),
               }))}
             />
           ) : (
@@ -156,7 +153,7 @@ function EventDetail({ event, related, back, point }: EventDetailProps) {
               items={related.map((relatedEvent) => ({
                 id: relatedEvent.id,
                 href: eventHref(relatedEvent.id, "map"),
-                title: eventTitle(relatedEvent) ?? relatedEvent.description ?? t("untitledEvent"),
+                title: relatedEvent.title ?? t("untitledEvent"),
                 severity: relatedEvent.severity,
                 category: getDisasterPills(relatedEvent.types)[0]?.label,
               }))}

@@ -411,6 +411,9 @@ _Avoid_: treating road or path names as Labels; hiding rail lines with Labels.
 The panel on `/map-v2` that sits next to the app nav and floats over the map, on screens
 992px or wider. It shows the **Stack list** or the
 detail (**Signal detail**, **Event detail**) of the **Map selection**, and nothing else yet.
+A signal, event or alert without a title reads "Untitled signal" or "Untitled event" (an
+alert reads as its event) everywhere in the panel: not its type, description or id. The type
+shows as its pill, not in place of the title.
 A selection opens it when it
 is collapsed. A round toggle on the panel's right edge collapses it, and the choice is kept
 across reloads.
