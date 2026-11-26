@@ -4665,6 +4665,7 @@
       "askAi": "اسأل الذكاء الاصطناعي",
       "legend": "مفتاح الخريطة",
       "removeLayer": "إزالة {layer}",
+      "closeLegend": "إغلاق وسيلة الإيضاح",
       "hideLayer": "إخفاء الطبقة",
       "showLayer": "إظهار الطبقة",
       "opacity": "الشفافية"

@@ -109,7 +109,7 @@ export default function MapV2({
             </MapInteractionsProvider>
           )}
           {loaded && <AdminBoundaries basemap={basemap} labelAnchorId={labelAnchorId} />}
-          <MapControls />
+          <MapControls selection={selection} />
         </ReactMapGL>
         {children}
         <MapLoader mapLoading={!loaded || loadingLayerIds === null} loadingLayerIds={loadingLayerIds ?? []} />
