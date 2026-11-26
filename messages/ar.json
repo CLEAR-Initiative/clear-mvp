@@ -4784,7 +4784,17 @@
           "takeAction": "اتخاذ إجراء"
         }
       },
-      "showOnMap": "إظهار على الخريطة"
+      "showOnMap": "إظهار على الخريطة",
+      "crisisLayer": {
+        "title": "طبقة الأزمات",
+        "activeCount": "{count, plural, zero {لا طبقات نشطة} one {طبقة نشطة واحدة} two {طبقتان نشطتان} few {# طبقات نشطة} many {# طبقة نشطة} other {# طبقة نشطة}}",
+        "collapse": "إخفاء طبقة الأزمات",
+        "expand": "إظهار طبقة الأزمات",
+        "disasters": "الكوارث",
+        "showDisasters": "إظهار الكوارث",
+        "placeholder": "اختر عمليات الرصد",
+        "clear": "مسح عمليات الرصد"
+      }
     },
     "mapSettings": {
       "title": "إعدادات الخريطة",

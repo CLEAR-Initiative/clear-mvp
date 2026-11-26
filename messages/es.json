@@ -4784,7 +4784,17 @@
           "takeAction": "Actuar"
         }
       },
-      "showOnMap": "Mostrar en el mapa"
+      "showOnMap": "Mostrar en el mapa",
+      "crisisLayer": {
+        "title": "Capa de crisis",
+        "activeCount": "{count, plural, one {# capa activa} other {# capas activas}}",
+        "collapse": "Ocultar capa de crisis",
+        "expand": "Mostrar capa de crisis",
+        "disasters": "Desastres",
+        "showDisasters": "Mostrar desastres",
+        "placeholder": "Seleccionar detecciones",
+        "clear": "Borrar detecciones"
+      }
     },
     "mapSettings": {
       "title": "Ajustes del mapa",

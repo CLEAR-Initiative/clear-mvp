@@ -4784,7 +4784,17 @@
           "takeAction": "Take an action"
         }
       },
-      "showOnMap": "Show on map"
+      "showOnMap": "Show on map",
+      "crisisLayer": {
+        "title": "Crisis layer",
+        "activeCount": "{count, plural, one {# active layer} other {# active layers}}",
+        "collapse": "Hide crisis layer",
+        "expand": "Show crisis layer",
+        "disasters": "Disasters",
+        "showDisasters": "Show disasters",
+        "placeholder": "Select detections",
+        "clear": "Clear detections"
+      }
     },
     "mapSettings": {
       "title": "Map settings",

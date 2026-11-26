@@ -4784,7 +4784,17 @@
           "takeAction": "Agir"
         }
       },
-      "showOnMap": "Afficher sur la carte"
+      "showOnMap": "Afficher sur la carte",
+      "crisisLayer": {
+        "title": "Couche de crise",
+        "activeCount": "{count, plural, one {# couche active} other {# couches actives}}",
+        "collapse": "Masquer la couche de crise",
+        "expand": "Afficher la couche de crise",
+        "disasters": "Catastrophes",
+        "showDisasters": "Afficher les catastrophes",
+        "placeholder": "Sélectionner des détections",
+        "clear": "Effacer les détections"
+      }
     },
     "mapSettings": {
       "title": "Paramètres de la carte",
