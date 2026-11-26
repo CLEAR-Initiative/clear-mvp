@@ -11,13 +11,12 @@ import { MapPanel } from "./map-panel";
 import { AlertDetailView } from "./map-panel/alert-detail-view";
 import { backToList, type PanelBack } from "./map-panel/back-link";
 import { EventDetailView } from "./map-panel/event-detail-view";
+import { MapSheet } from "./map-panel/map-sheet";
 import { SignalDetailView } from "./map-panel/signal-detail-view";
 import { StackView } from "./map-panel/stack-view";
+import { usePanelLayout } from "./map-panel/use-panel-layout";
 import { useInsetLeft } from "./use-inset-left";
 import { usePanelSelection } from "./use-panel-selection";
-
-/** The Map panel only exists from this width up (see map-panel.module.css). */
-const PANEL_MEDIA_QUERY = "(min-width: 62em)";
 
 const PANEL_TOGGLE_CLEARANCE = 48;
 
@@ -44,18 +43,23 @@ export function MapLayout({ initialPanelCollapsed }: { initialPanelCollapsed: bo
   );
   const selection = usePanelSelection();
   const { selectDetail, selectStack, clear } = selection;
+  const layout = usePanelLayout();
+  // A link to a selection opens the sheet on it; otherwise the sheet starts lowered to its peek.
+  const [sheetExpanded, setSheetExpanded] = useState(() => Boolean(selection.kind));
 
   const onSelect = useCallback(
     (target: MapSelectTarget | null) => {
       if (!target) {
         clear();
+        setSheetExpanded(false);
         return;
       }
       if (target.type === "detection") selectDetail(target.kind, target.id);
       else selectStack(target.kind, target.coordinates);
-      if (panelCollapsed && window.matchMedia(PANEL_MEDIA_QUERY).matches) setCollapsed(false);
+      if (layout === "sheet") setSheetExpanded(true);
+      else if (panelCollapsed) setCollapsed(false);
     },
-    [clear, selectDetail, selectStack, panelCollapsed, setCollapsed],
+    [clear, selectDetail, selectStack, layout, panelCollapsed, setCollapsed],
   );
 
   const { kind } = selection;
@@ -83,6 +87,8 @@ export function MapLayout({ initialPanelCollapsed }: { initialPanelCollapsed: bo
     );
   }
 
+  const contentKey = `${kind ?? ""}|${selection.stackKey ?? ""}|${selection.detailId ?? ""}`;
+
   return (
     <TimeframeQueryProvider>
       <div
@@ -91,13 +97,13 @@ export function MapLayout({ initialPanelCollapsed }: { initialPanelCollapsed: bo
         style={{ "--map-timeline-h": `${timeline.height}px` } as CSSProperties}
       >
         <div ref={insetProbeRef} className="map-v2-inset-probe" aria-hidden />
-        <MapPanel
-          collapsed={panelCollapsed}
-          onToggle={togglePanel}
-          contentKey={`${kind ?? ""}|${selection.stackKey ?? ""}|${selection.detailId ?? ""}`}
-        >
-          {panelContent}
+        {/* Both frames are always laid out, as CSS shows one or the other; the views go in the one on screen. */}
+        <MapPanel collapsed={panelCollapsed} onToggle={togglePanel} contentKey={contentKey}>
+          {layout === "panel" && panelContent}
         </MapPanel>
+        <MapSheet expanded={sheetExpanded} onExpandedChange={setSheetExpanded} onClose={clear} contentKey={contentKey}>
+          {layout === "sheet" && panelContent}
+        </MapSheet>
         {insetLeft != null && (
           <MapV2
             offset={{ left: insetLeft, bottom: timeline.open ? timeline.height : 0 }}

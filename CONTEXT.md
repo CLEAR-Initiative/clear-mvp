@@ -409,11 +409,19 @@ _Avoid_: treating road or path names as Labels; hiding rail lines with Labels.
 
 **Map panel**:
 The panel on `/map-v2` that sits next to the app nav and floats over the map, on screens
-992px or wider. Narrower screens have no Map panel. It shows the **Stack list** or the
+992px or wider. It shows the **Stack list** or the
 detail (**Signal detail**, **Event detail**) of the **Map selection**, and nothing else yet.
 A selection opens it when it
 is collapsed. A round toggle on the panel's right edge collapses it, and the choice is kept
 across reloads.
+On narrower screens the Map panel is a sheet over the bottom of the map. Lowered, only its
+peek shows, a bar naming what the panel shows (empty with no selection); raised, it covers
+the map up to just below the app header and dims the rest. A tap on the peek, a drag up, a
+selection and a link to one raise it. The grabber at its top, the dimmed map, a drag down
+on its top row, **Show on map** and a close button lower it; the close button also clears
+the selection. Whether it
+is raised is not kept across reloads, nor shared with the wide screens' collapse. The map
+ends above the peek rather than taking an offset, so its controls and centre stay in sight.
 The page, not the map, owns the Map panel: it tells the map which part of it is covered
 (an offset per side), and the map eases its camera padding, its controls and the Mapbox
 attribution to stay clear of that part. When the nav or the Map panel opens or collapses,

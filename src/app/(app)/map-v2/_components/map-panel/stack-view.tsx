@@ -12,9 +12,10 @@ import { useLocations } from "~/hooks/use-locations";
 import { BidiTitle } from "~/components/ui/bidi-title";
 import { reportHandledError } from "~/lib/report-handled-error";
 import { mapSeverity } from "~/lib/types/graphql";
-import { PanelNav } from "./panel-nav";
+import { PanelTop } from "./panel-nav";
 import { PanelLoader } from "./panel-loader";
 import classes from "./panel-views.module.css";
+import { usePeekTitle } from "./sheet-context";
 import { placeRampLabels } from "./ramp-labels";
 import {
   commonLocationName,
@@ -111,6 +112,8 @@ export function StackView({ kind, point, onOpen, onBack }: StackViewProps) {
   const location = useMemo(() => commonLocationName(items, locationById), [items, locationById]);
   const period = stackPeriod(range, now);
   const untitled = kind === "signal" ? tSignal("untitled") : tDetail("untitledEvent");
+  const title = query.isPending ? tKind("titlePending") : tKind("title", { count: items.length });
+  usePeekTitle(title);
 
   useEffect(() => {
     if (query.error) reportHandledError(query.error, { feature: "map-v2", stage: `${kind}-stack` });
@@ -193,14 +196,16 @@ export function StackView({ kind, point, onOpen, onBack }: StackViewProps) {
   }
 
   return (
-    <Stack component="section" gap={24} p={24} aria-labelledby="map-panel-stack-title">
-      <Stack gap={24}>
-        <PanelNav back={{ to: "layers", onBack }} point={point} />
+    <section aria-labelledby="map-panel-stack-title">
+      <PanelTop back={{ to: "layers", onBack }} point={point}>
         <Title id="map-panel-stack-title" order={2} fz={20} fw={700} lh={1.2} lts={-0.2} py={12} c={TEXT_PRIMARY}>
-          {query.isPending ? tKind("titlePending") : tKind("title", { count: items.length })}
+          {title}
         </Title>
-      </Stack>
-      {body}
-    </Stack>
+      </PanelTop>
+      {/* With the top's 10px bottom padding, the 24px the list always had under the title. */}
+      <Box px={24} pt={14} pb={24}>
+        {body}
+      </Box>
+    </section>
   );
 }

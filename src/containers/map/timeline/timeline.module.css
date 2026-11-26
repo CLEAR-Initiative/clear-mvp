@@ -140,7 +140,7 @@
 .pillRoot {
   position: absolute;
   right: calc(var(--map-offset-right, 0px) + 24px);
-  bottom: 36px;
+  bottom: calc(36px + var(--map-sheet-overlap, 0px));
   z-index: 1;
 }
 

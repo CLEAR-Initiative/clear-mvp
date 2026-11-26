@@ -1,0 +1,120 @@
+/*
+ * The map sheet, below 62em where the Map panel does not show. Lowered, only its peek shows (--map-sheet-peek-h);
+ * raised, it covers the map up to --map-sheet-top and dims the rest.
+ */
+
+.sheet {
+  position: absolute;
+  top: var(--map-sheet-top);
+  right: 0;
+  bottom: 0;
+  left: var(--map-inset-left);
+  z-index: 41;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 16px 16px 0 0;
+  background: var(--color-bg-white);
+  box-shadow: var(--map-element-shadow);
+  transform: translateY(calc(100% - var(--map-sheet-peek-h)));
+  transition: transform 250ms ease;
+}
+
+.sheet[data-expanded="true"] {
+  transform: none;
+}
+
+/* Dims only the map: on tablets the app's nav floats beside it and stays usable. */
+.backdrop {
+  position: absolute;
+  inset: 0;
+  left: var(--map-inset-left);
+  z-index: 40;
+  background: var(--map-sheet-backdrop);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 250ms ease;
+}
+
+.backdrop[data-visible="true"] {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* The drag handle at the top of the sheet; lowered, it is the whole peek and names what the sheet shows. */
+.bar {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  align-items: stretch;
+  gap: 4px;
+  padding: 8px 16px;
+  /* The sheet's corners, so the focus ring follows them. */
+  border-radius: 16px 16px 0 0;
+  touch-action: none;
+  user-select: none;
+}
+
+/* The sheet clips what passes its edges, the focus ring's usual place outside the bar included: draw it inside. */
+.bar:focus-visible {
+  outline-offset: -2px;
+}
+
+/* Lowered, the bar fills the peek exactly; any shorter and the top of the view shows under it. */
+.sheet:not([data-expanded="true"]) .bar {
+  height: var(--map-sheet-peek-h);
+}
+
+/* Raised, only the grabber is left, laid over the view's top padding so the view's own colour reaches the edge. */
+.sheet[data-expanded="true"] .bar {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  z-index: 2;
+  height: 20px;
+  padding-block: 8px;
+}
+
+.grabber {
+  align-self: center;
+  width: 32px;
+  height: 4px;
+  border-radius: 2px;
+  /* The same grey in both themes, at least 3:1 against the sheet and the detail views' tint in each. */
+  background: var(--color-text-muted);
+}
+
+.peek {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: 8px;
+  color: var(--color-text-primary);
+}
+
+.peekTitle {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.body {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+@media (min-width: 62em) {
+  .sheet,
+  .backdrop {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sheet,
+  .backdrop {
+    transition: none;
+  }
+}
