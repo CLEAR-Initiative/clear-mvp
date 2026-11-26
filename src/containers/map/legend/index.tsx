@@ -1,23 +1,29 @@
 "use client";
 
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useRef } from "react";
 import { UnstyledButton } from "@mantine/core";
-import { useMediaQuery } from "@mantine/hooks";
+import { useMediaQuery, useUncontrolled } from "@mantine/hooks";
 import { IconStack2 } from "@tabler/icons-react";
 import { useTranslations } from "next-intl";
 import { useActiveLayers } from "../hooks/use-active-layers";
-import type { MapSelection } from "../selection";
+import { MapSheet, WIDE_QUERY } from "../sheet/map-sheet";
 import { LegendRows } from "./legend-rows";
-import { LegendSheet } from "./legend-sheet";
 import classes from "./legend.module.css";
 
-const OPEN_BY_DEFAULT_QUERY = "(min-width: 48em)";
+type LegendProps = {
+  opened?: boolean;
+  onOpenedChange?: (opened: boolean) => void;
+};
 
-export function Legend({ selection = null }: { selection?: MapSelection | null }) {
+export function Legend({ opened: openedProp, onOpenedChange }: LegendProps) {
   const t = useTranslations("mapV2");
   const [activeLayers] = useActiveLayers();
-  const wide = useMediaQuery(OPEN_BY_DEFAULT_QUERY, undefined, { getInitialValueInEffect: false }) ?? false;
-  const [opened, setOpened] = useState(() => window.matchMedia(OPEN_BY_DEFAULT_QUERY).matches);
+  const wide = useMediaQuery(WIDE_QUERY, undefined, { getInitialValueInEffect: false }) ?? false;
+  const [opened, setOpened] = useUncontrolled({
+    value: openedProp,
+    defaultValue: window.matchMedia(WIDE_QUERY).matches,
+    onChange: onOpenedChange,
+  });
   const buttonRef = useRef<HTMLButtonElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
   const openedByClickRef = useRef(false);
@@ -28,10 +34,6 @@ export function Legend({ selection = null }: { selection?: MapSelection | null }
     openedByClickRef.current = false;
     if (!wide) closeRef.current?.focus();
   }, [opened, wide]);
-
-  useEffect(() => {
-    if (selection && !window.matchMedia(OPEN_BY_DEFAULT_QUERY).matches) setOpened(false);
-  }, [selection]);
 
   if (activeLayers.length === 0) return null;
 
@@ -63,9 +65,17 @@ export function Legend({ selection = null }: { selection?: MapSelection | null }
           </section>
         )
       ) : (
-        <LegendSheet id={cardId} opened={opened} onClose={close} closeRef={closeRef}>
+        <MapSheet
+          id={cardId}
+          title={t("controls.legend")}
+          icon={<IconStack2 size={20} aria-hidden />}
+          closeLabel={t("controls.closeLegend")}
+          opened={opened}
+          onClose={close}
+          closeRef={closeRef}
+        >
           <LegendRows onRemoved={onSheetRowRemoved} />
-        </LegendSheet>
+        </MapSheet>
       )}
       <UnstyledButton
         ref={buttonRef}
@@ -76,7 +86,7 @@ export function Legend({ selection = null }: { selection?: MapSelection | null }
         className={classes.button}
         onClick={() => {
           openedByClickRef.current = !opened;
-          setOpened((value) => !value);
+          setOpened(!opened);
         }}
       >
         <IconStack2 size={16} />
