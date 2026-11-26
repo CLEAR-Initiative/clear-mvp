@@ -16,6 +16,9 @@ vi.mock("~/containers/map/layers/registry", () => ({
 
 const { CrisisLayer } = await import("./crisis-layer");
 
+// jsdom has no scrollIntoView, and the open Combobox dropdown calls it.
+Element.prototype.scrollIntoView = () => undefined;
+
 afterEach(() => {
   cleanup();
 });
