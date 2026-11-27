@@ -590,8 +590,8 @@ _Avoid_: "active marker"; letting the map read or write the selection URL itself
 **Stack list** (map v2):
 The **Map panel** view of a selected stack, all of one **Detection kind**: how many signals,
 events or alerts, when and where they were published (signals) or detected (events and
-alerts; the period is the range the map shows, worded "in the last N days" when it ends
-today), their severity mix, and the items most severe first. Clicking one opens its detail,
+alerts; the period is the map's **Timeframe**, worded "in the last N days" ("in the last 24
+hours" for one day) when it is rolling, and as dates when it is fixed), their severity mix, and the items most severe first. Clicking one opens its detail,
 whose back link returns to the list.
 _Avoid_: "Signal list" now that it lists events and alerts too; "alerts" for signal rows (the
 Figma copy says alerts).

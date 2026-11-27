@@ -4705,8 +4705,8 @@
           "titlePending": "Signaux à l’emplacement sélectionné",
           "title": "{count, plural, one {# signal} other {# signaux}} à l’emplacement sélectionné",
           "intro": {
-            "lastDays": "Publiés {days, plural, one {le dernier jour} other {ces # derniers jours}} à {location}.",
-            "lastDaysNoLocation": "Publiés {days, plural, one {le dernier jour} other {ces # derniers jours}}.",
+            "lastDays": "Publiés {days, plural, one {ces dernières 24 heures} other {ces # derniers jours}} à {location}.",
+            "lastDaysNoLocation": "Publiés {days, plural, one {ces dernières 24 heures} other {ces # derniers jours}}.",
             "range": "Publiés entre le {from} et le {to} à {location}.",
             "rangeNoLocation": "Publiés entre le {from} et le {to}."
           },
@@ -4719,8 +4719,8 @@
           "titlePending": "Événements à l’emplacement sélectionné",
           "title": "{count, plural, one {# événement} other {# événements}} à l’emplacement sélectionné",
           "intro": {
-            "lastDays": "Détectés {days, plural, one {le dernier jour} other {ces # derniers jours}} à {location}.",
-            "lastDaysNoLocation": "Détectés {days, plural, one {le dernier jour} other {ces # derniers jours}}.",
+            "lastDays": "Détectés {days, plural, one {ces dernières 24 heures} other {ces # derniers jours}} à {location}.",
+            "lastDaysNoLocation": "Détectés {days, plural, one {ces dernières 24 heures} other {ces # derniers jours}}.",
             "range": "Détectés entre le {from} et le {to} à {location}.",
             "rangeNoLocation": "Détectés entre le {from} et le {to}."
           },
@@ -4733,8 +4733,8 @@
           "titlePending": "Alertes à l’emplacement sélectionné",
           "title": "{count, plural, one {# alerte} other {# alertes}} à l’emplacement sélectionné",
           "intro": {
-            "lastDays": "Détectées {days, plural, one {le dernier jour} other {ces # derniers jours}} à {location}.",
-            "lastDaysNoLocation": "Détectées {days, plural, one {le dernier jour} other {ces # derniers jours}}.",
+            "lastDays": "Détectées {days, plural, one {ces dernières 24 heures} other {ces # derniers jours}} à {location}.",
+            "lastDaysNoLocation": "Détectées {days, plural, one {ces dernières 24 heures} other {ces # derniers jours}}.",
             "range": "Détectées entre le {from} et le {to} à {location}.",
             "rangeNoLocation": "Détectées entre le {from} et le {to}."
           },

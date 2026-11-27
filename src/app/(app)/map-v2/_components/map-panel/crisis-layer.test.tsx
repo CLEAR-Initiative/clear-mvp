@@ -98,15 +98,25 @@ describe("CrisisLayer", () => {
     expect(screen.getByPlaceholderText("panel.crisisLayer.placeholder")).toHaveValue("");
   });
 
+  it("moves focus to the level input after ×", async () => {
+    renderSection({ layers: JSON.stringify([layer("alerts")]) });
+
+    fireEvent.click(screen.getByRole("button", { name: "panel.crisisLayer.clear" }));
+
+    const input = screen.getByPlaceholderText("panel.crisisLayer.placeholder");
+    await waitFor(() => expect(input).toHaveFocus());
+    expect(screen.queryByRole("option")).not.toBeInTheDocument();
+  });
+
   it("removes the detection layer and its count with the Disasters toggle", async () => {
     const { onUrlUpdate, lastLayers } = renderSection({ layers: JSON.stringify([layer("alerts"), layer("roads")]) });
-    expect(screen.getByLabelText("panel.crisisLayer.activeCount")).toBeInTheDocument();
+    expect(screen.getByText("panel.crisisLayer.activeCount")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("switch", { name: "panel.crisisLayer.showDisasters" }));
 
     await waitFor(() => expect(onUrlUpdate).toHaveBeenCalled());
     expect(lastLayers()).toEqual([layer("roads")]);
-    await waitFor(() => expect(screen.queryByLabelText("panel.crisisLayer.activeCount")).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByText("panel.crisisLayer.activeCount")).not.toBeInTheDocument());
   });
 
   it("brings back the last level when the toggle turns on again", async () => {
@@ -127,6 +137,16 @@ describe("CrisisLayer", () => {
 
     await waitFor(() => expect(onUrlUpdate).toHaveBeenCalled());
     expect(lastLayers()).toEqual([layer("events")]);
+  });
+
+  it("keeps opacity and density display when the level changes", async () => {
+    const alerts = { id: "alerts", visibility: false, opacity: 0.5, settings: { density: "heatmap" } };
+    const { onUrlUpdate, lastLayers } = renderSection({ layers: JSON.stringify([alerts]) });
+
+    await pick("layers.events.title");
+
+    await waitFor(() => expect(onUrlUpdate).toHaveBeenCalled());
+    expect(lastLayers()).toEqual([{ id: "events", visibility: true, opacity: 0.5, settings: { density: "heatmap" } }]);
   });
 
   it("adds alerts when the toggle turns on with no level", async () => {

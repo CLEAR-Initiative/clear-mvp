@@ -79,28 +79,15 @@ describe("commonLocationName", () => {
 });
 
 describe("stackPeriod", () => {
-  const now = new Date(2026, 10, 23, 15, 0);
-
-  it("words the default window as the last 30 days", () => {
-    expect(stackPeriod({ from: new Date(2026, 9, 24).toISOString() }, now)).toEqual({ kind: "lastDays", days: 30 });
+  it("words a rolling timeframe in days, whatever time it is", () => {
+    expect(stackPeriod({ kind: "rolling", days: 7 })).toEqual({ kind: "lastDays", days: 7 });
   });
 
-  it("words a range ending today in days", () => {
-    const filters = { from: new Date(2026, 10, 16).toISOString(), to: new Date(2026, 10, 23, 23, 59).toISOString() };
-
-    expect(stackPeriod(filters, now)).toEqual({ kind: "lastDays", days: 7 });
-  });
-
-  it("gives the dates of a range that ends before today", () => {
-    const from = new Date(2026, 8, 1);
-    const to = new Date(2026, 8, 30);
-
-    expect(stackPeriod({ from: from.toISOString(), to: to.toISOString() }, now)).toEqual({ kind: "range", from, to });
-  });
-
-  it("gives the dates of a range that does not start at midnight", () => {
-    const from = new Date(2026, 10, 20, 12, 0);
-
-    expect(stackPeriod({ from: from.toISOString() }, now)).toEqual({ kind: "range", from, to: now });
+  it("gives a fixed timeframe's days as UTC midnights", () => {
+    expect(stackPeriod({ kind: "fixed", from: "2026-10-18", to: "2026-11-17" })).toEqual({
+      kind: "range",
+      from: new Date(Date.UTC(2026, 9, 18)),
+      to: new Date(Date.UTC(2026, 10, 17)),
+    });
   });
 });

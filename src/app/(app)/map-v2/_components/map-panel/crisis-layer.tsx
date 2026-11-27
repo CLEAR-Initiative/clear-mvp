@@ -1,7 +1,7 @@
 "use client";
 
 import { useId, useRef, useState } from "react";
-import { Select, Switch, UnstyledButton } from "@mantine/core";
+import { Select, Switch, UnstyledButton, VisuallyHidden } from "@mantine/core";
 import { IconBulb, IconChevronDown, IconChevronsDown, IconX } from "@tabler/icons-react";
 import { useTranslations } from "next-intl";
 import { useDetectionLevel } from "~/containers/map/hooks/use-detection-level";
@@ -15,6 +15,7 @@ export function CrisisLayer({ onLevelChange }: { onLevelChange: () => void }) {
   const t = useTranslations("mapV2");
   const { level, setLevel } = useDetectionLevel();
   const lastLevel = useRef<DetectionKind>(level ?? "alert");
+  const inputRef = useRef<HTMLInputElement>(null);
   if (level) lastLevel.current = level;
   const [open, setOpen] = useState(true);
   const bodyId = useId();
@@ -32,8 +33,9 @@ export function CrisisLayer({ onLevelChange }: { onLevelChange: () => void }) {
           {t("panel.crisisLayer.title")}
         </h2>
         {activeCount > 0 && (
-          <span className={classes.badge} aria-label={t("panel.crisisLayer.activeCount", { count: activeCount })}>
-            {activeCount}
+          <span className={classes.badge}>
+            <span aria-hidden>{activeCount}</span>
+            <VisuallyHidden>{t("panel.crisisLayer.activeCount", { count: activeCount })}</VisuallyHidden>
           </span>
         )}
         <UnstyledButton
@@ -59,6 +61,7 @@ export function CrisisLayer({ onLevelChange }: { onLevelChange: () => void }) {
           />
         </div>
         <Select
+          ref={inputRef}
           value={level}
           onChange={(value) => changeLevel(isDetectionKind(value) ? value : null)}
           data={LEVEL_ORDER.map((kind) => ({ value: kind, label: t(`layers.${DETECTION_LAYER_IDS[kind]}.title`) }))}
@@ -72,7 +75,10 @@ export function CrisisLayer({ onLevelChange }: { onLevelChange: () => void }) {
               <UnstyledButton
                 className={classes.clear}
                 aria-label={t("panel.crisisLayer.clear")}
-                onClick={() => changeLevel(null)}
+                onClick={() => {
+                  changeLevel(null);
+                  inputRef.current?.focus();
+                }}
               >
                 <IconX size={16} />
               </UnstyledButton>

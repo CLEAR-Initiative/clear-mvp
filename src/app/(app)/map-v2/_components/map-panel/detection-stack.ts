@@ -3,6 +3,7 @@ import { isSamePoint } from "~/containers/map/layers/detections/clusters";
 import { SEVERITY_BUCKETS } from "~/containers/map/layers/detections/severity-tokens";
 import type { SeverityBucket } from "~/containers/map/layers/detections/to-features";
 import type { LngLatPoint } from "~/containers/map/selection";
+import type { Timeframe } from "~/containers/map/timeframe/model";
 import { resolveLocationName } from "~/lib/location";
 import { mapSeverity } from "~/lib/types/graphql";
 
@@ -47,28 +48,11 @@ export function commonLocationName(
   return best;
 }
 
-/** The range the items were fetched for. `to` left out means "up to now". ISO strings. */
-export type StackRange = { from: string; to?: string };
-
 export type StackPeriod = { kind: "lastDays"; days: number } | { kind: "range"; from: Date; to: Date };
 
-const DAY_MS = 24 * 60 * 60 * 1000;
+const utcDay = (day: string) => new Date(`${day}T00:00:00Z`);
 
-function startOfDay(date: Date): Date {
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
-}
-
-/**
- * The period the range covers, worded relative to today when it is a run of whole days that ends
- * today ("the last 30 days"), and as dates otherwise.
- */
-export function stackPeriod(range: StackRange, now: Date): StackPeriod {
-  const from = new Date(range.from);
-  const to = range.to ? new Date(range.to) : now;
-  const today = startOfDay(now);
-  const endsToday = to >= today;
-  const fromMidnight = from.getTime() === startOfDay(from).getTime();
-  const days = Math.round((today.getTime() - from.getTime()) / DAY_MS);
-  if (endsToday && fromMidnight && days >= 1) return { kind: "lastDays", days };
-  return { kind: "range", from, to };
+export function stackPeriod(timeframe: Timeframe): StackPeriod {
+  if (timeframe.kind === "rolling") return { kind: "lastDays", days: timeframe.days };
+  return { kind: "range", from: utcDay(timeframe.from), to: utcDay(timeframe.to) };
 }
