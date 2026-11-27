@@ -95,7 +95,7 @@ export function MapLayout({ initialPanelCollapsed }: { initialPanelCollapsed: bo
     panelContent = (
       <>
         <PlaceHeader onPlaceChange={clear} />
-        <CrisisLayer onLevelChange={clear} />
+        <CrisisLayer onLevelChange={clear} onFilterChange={clear} />
       </>
     );
   }

@@ -153,3 +153,10 @@ input:checked + .switchTrack {
   color: var(--map-on-accent);
   background: var(--map-accent);
 }
+
+.note {
+  margin: 0;
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--color-text-muted);
+}

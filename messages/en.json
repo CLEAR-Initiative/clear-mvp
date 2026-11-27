@@ -4795,7 +4795,13 @@
         "disasters": "Disasters",
         "showDisasters": "Show disasters",
         "placeholder": "Select detections",
-        "clear": "Clear detections"
+        "clear": "Clear detections",
+        "allCategories": "All categories",
+        "allCrisisTypes": "All crisis types",
+        "clearCategory": "Clear category",
+        "clearCrisisType": "Clear crisis type",
+        "signalsNote": "Signals can't be filtered by category or crisis type yet.",
+        "noOptions": "Nothing to pick"
       }
     },
     "place": {

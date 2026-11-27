@@ -45,6 +45,10 @@ vi.mock("../hooks/use-map-place", () => ({
   useMapPlace: () => ({ status: "ready", place: { kind: "global" } }),
 }));
 
+vi.mock("../hooks/use-map-filters", () => ({
+  useMapFilters: () => ({ eventTypes: undefined, held: false }),
+}));
+
 const { Timeline } = await import("./index");
 const { TimeframeQueryProvider } = await import("../hooks/use-timeframe");
 

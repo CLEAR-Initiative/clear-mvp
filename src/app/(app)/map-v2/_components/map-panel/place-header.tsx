@@ -7,6 +7,8 @@ import { useTranslations } from "next-intl";
 import { useMapPlace, type PlaceOption } from "~/containers/map/hooks/use-map-place";
 import { GLOBAL_PLACE, placeLocationId, type MapPlace } from "~/containers/map/place/model";
 import { GlobeIcon } from "./globe-icon";
+import dropdownClasses from "./panel-dropdown.module.css";
+import { panelDropdownProps } from "./panel-dropdown";
 import classes from "./place-header.module.css";
 import viewClasses from "./panel-views.module.css";
 import { useMapSheet, usePeekTitle } from "./sheet-context";
@@ -105,17 +107,7 @@ export function PlaceHeader({ onPlaceChange }: { onPlaceChange: () => void }) {
         <Combobox
           store={combobox}
           onOptionSubmit={submit}
-          position="bottom-start"
-          offset={4}
-          width="target"
-          middlewares={{
-            flip: true,
-            shift: true,
-            size: {
-              apply: ({ availableHeight, elements }) =>
-                elements.floating.style.setProperty("--place-dropdown-room", `${availableHeight}px`),
-            },
-          }}
+          {...panelDropdownProps}
         >
           <Combobox.Target>
             <InputBase
@@ -148,15 +140,15 @@ export function PlaceHeader({ onPlaceChange }: { onPlaceChange: () => void }) {
               data-picked={pickedState ? true : undefined}
             />
           </Combobox.Target>
-          <Combobox.Dropdown className={classes.dropdown}>
-            <Combobox.Options className={classes.options}>
+          <Combobox.Dropdown className={dropdownClasses.dropdown}>
+            <Combobox.Options className={dropdownClasses.options}>
               {rows.map((row) => (
-                <Combobox.Option key={row.value} value={row.value} active={row.checked} className={classes.option}>
+                <Combobox.Option key={row.value} value={row.value} active={row.checked} className={dropdownClasses.option}>
                   {row.checked && <IconCheck size={16} aria-hidden />}
                   {row.label}
                 </Combobox.Option>
               ))}
-              {rows.length === 0 && <Combobox.Empty className={classes.empty}>{t("noResults")}</Combobox.Empty>}
+              {rows.length === 0 && <Combobox.Empty className={dropdownClasses.empty}>{t("noResults")}</Combobox.Empty>}
             </Combobox.Options>
           </Combobox.Dropdown>
         </Combobox>
