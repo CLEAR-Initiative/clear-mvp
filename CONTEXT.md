@@ -438,8 +438,8 @@ across reloads.
 On narrower screens the Map panel is a sheet over the bottom of the map. Lowered, only its
 peek shows, a bar naming what the panel shows: the **Map place** with no selection;
 raised, it covers the map up to just below the app header and dims the rest. Raised with no
-selection, it shows the place header only, without the Crisis layer section, and every place
-picked there lowers it. A tap on the peek, a drag up, a
+selection, it shows the place header above the Crisis layer section, as on wide screens, and
+a change in either keeps it raised. A tap on the peek, a drag up, a
 selection and a link to one raise it. The grabber at its top, the dimmed map, a drag down
 on its top row, **Show on map** and a close button lower it; the close button also clears
 the selection. Whether it

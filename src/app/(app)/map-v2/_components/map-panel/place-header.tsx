@@ -39,7 +39,6 @@ export function PlaceHeader({ onPlaceChange }: { onPlaceChange: () => void }) {
   const pick = (next: MapPlace) => {
     setPlace(next);
     onPlaceChange();
-    sheet?.lower();
   };
 
   const country = place.kind === "global" ? null : place.kind === "country" ? place : place.country;
