@@ -94,9 +94,15 @@ export default function MapV2({
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !loaded || !fitBounds) return;
-    // Mapbox fits to the inset of the map's own padding; a padding passed to flyTo would replace it.
-    const camera = map.cameraForBounds(fitBounds, { padding: FIT_MARGIN });
-    if (camera) map.flyTo({ center: camera.center, zoom: camera.zoom, duration: FIT_DURATION_MS });
+    // A padding passed to cameraForBounds replaces the map's own padding instead of adding to it.
+    const padding = {
+      top: offset.top + FIT_MARGIN,
+      right: offset.right + FIT_MARGIN,
+      bottom: offset.bottom + FIT_MARGIN,
+      left: offset.left + FIT_MARGIN,
+    };
+    const camera = map.cameraForBounds(fitBounds, { padding });
+    if (camera) map.flyTo({ center: camera.center, zoom: camera.zoom, padding: offset, duration: FIT_DURATION_MS });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- a new key is a new fit; the bounds come with it
   }, [fitKey, loaded]);
 
