@@ -4683,9 +4683,11 @@
       "askAi": "Demander à l'IA",
       "legend": "Légende",
       "removeLayer": "Retirer {layer}",
+      "closeLegend": "Fermer la légende",
       "hideLayer": "Masquer la couche",
       "showLayer": "Afficher la couche",
-      "opacity": "Opacité"
+      "opacity": "Opacité",
+      "closeBasemap": "Fermer le fond de carte"
     },
     "panel": {
       "label": "Commandes de la carte",

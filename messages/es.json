@@ -4683,9 +4683,11 @@
       "askAi": "Preguntar a la IA",
       "legend": "Leyenda",
       "removeLayer": "Quitar {layer}",
+      "closeLegend": "Cerrar leyenda",
       "hideLayer": "Ocultar capa",
       "showLayer": "Mostrar capa",
-      "opacity": "Opacidad"
+      "opacity": "Opacidad",
+      "closeBasemap": "Cerrar mapa base"
     },
     "panel": {
       "label": "Controles del mapa",

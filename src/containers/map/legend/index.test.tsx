@@ -9,11 +9,24 @@ vi.mock("next-intl", () => ({
 }));
 
 vi.mock("../layers/registry", async () => ({
-  LAYERS: { signals: { Legend: (await import("../layers/detections/legend")).DetectionsLegend } },
-  isLayerId: (id: string) => id === "signals",
+  LAYERS: {
+    signals: { Legend: (await import("../layers/detections/legend")).DetectionsLegend },
+    alerts: { Legend: () => null },
+  },
+  isLayerId: (id: string) => id === "signals" || id === "alerts",
 }));
 
 const { Legend } = await import("./index");
+const { useActiveLayers } = await import("../hooks/use-active-layers");
+
+function AddSignals() {
+  const [, { setLayers }] = useActiveLayers();
+  return (
+    <button type="button" onClick={() => void setLayers([{ id: "signals", visibility: true, opacity: 1 }])}>
+      add signals
+    </button>
+  );
+}
 
 afterEach(() => {
   cleanup();
@@ -88,5 +101,69 @@ describe("Legend", () => {
 
     fireEvent.click(screen.getByRole("radio", { name: "mapV2.detectionLegend.clusters" }));
     await waitFor(() => expect(lastLayers()).toStrictEqual([{ id: "signals", visibility: true, opacity: 1 }]));
+  });
+  it("on a phone, opens the sheet on its close button and gives focus back on Escape", async () => {
+    render(
+      <MantineProvider>
+        <NuqsTestingAdapter searchParams={{ layers: JSON.stringify([{ id: "signals", visibility: true, opacity: 1 }]) }}>
+          <Legend />
+        </NuqsTestingAdapter>
+      </MantineProvider>,
+    );
+    const legendButton = screen.getByRole("button", { name: "controls.legend" });
+    const sheet = screen.getByRole("region", { name: "controls.legend", hidden: true });
+    expect(sheet).toHaveAttribute("inert");
+
+    fireEvent.click(legendButton);
+    const close = screen.getByRole("button", { name: "controls.closeLegend" });
+    await waitFor(() => expect(close).toHaveFocus());
+    expect(sheet).not.toHaveAttribute("inert");
+
+    fireEvent.keyDown(close, { key: "Escape" });
+    expect(sheet).toHaveAttribute("inert");
+    expect(legendButton).toHaveFocus();
+  });
+  it("on a phone, keeps focus in the open sheet when a row is removed", async () => {
+    render(
+      <MantineProvider>
+        <NuqsTestingAdapter
+          searchParams={{
+            layers: JSON.stringify([
+              { id: "signals", visibility: true, opacity: 1 },
+              { id: "alerts", visibility: true, opacity: 1 },
+            ]),
+          }}
+        >
+          <Legend />
+        </NuqsTestingAdapter>
+      </MantineProvider>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "controls.legend" }));
+    const close = screen.getByRole("button", { name: "controls.closeLegend" });
+    await waitFor(() => expect(close).toHaveFocus());
+
+    fireEvent.click(screen.getAllByRole("button", { name: "controls.removeLayer" })[0]);
+    await waitFor(() => expect(screen.getAllByRole("button", { name: "controls.removeLayer" })).toHaveLength(1));
+    expect(screen.getByRole("region", { name: "controls.legend" })).not.toHaveAttribute("inert");
+    expect(close).toHaveFocus();
+  });
+
+  it("on a phone, brings the sheet back closed after its last layer was removed", async () => {
+    render(
+      <MantineProvider>
+        <NuqsTestingAdapter searchParams={{ layers: JSON.stringify([{ id: "signals", visibility: true, opacity: 1 }]) }}>
+          <AddSignals />
+          <Legend />
+        </NuqsTestingAdapter>
+      </MantineProvider>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "controls.legend" }));
+    fireEvent.click(screen.getByRole("button", { name: "controls.removeLayer" }));
+    await waitFor(() => expect(screen.queryByRole("button", { name: "controls.legend" })).not.toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole("button", { name: "add signals" }));
+    const legendButton = await screen.findByRole("button", { name: "controls.legend" });
+    expect(legendButton).toHaveAttribute("aria-expanded", "false");
+    expect(screen.getByRole("region", { name: "controls.legend", hidden: true })).toHaveAttribute("inert");
   });
 });

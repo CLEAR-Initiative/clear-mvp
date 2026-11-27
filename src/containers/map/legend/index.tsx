@@ -1,78 +1,93 @@
 "use client";
 
-import { Fragment, useId, useRef, useState } from "react";
+import { useEffect, useId, useRef } from "react";
 import { UnstyledButton } from "@mantine/core";
-import { IconStack2, IconX } from "@tabler/icons-react";
+import { useMediaQuery, useUncontrolled } from "@mantine/hooks";
+import { IconStack2 } from "@tabler/icons-react";
 import { useTranslations } from "next-intl";
 import { useActiveLayers } from "../hooks/use-active-layers";
-import { LAYERS, type LayerId } from "../layers/registry";
-import { LayerControls } from "./layer-controls";
+import { MapSheet, WIDE_QUERY } from "../sheet/map-sheet";
+import { LegendRows } from "./legend-rows";
 import classes from "./legend.module.css";
 
-const OPEN_BY_DEFAULT_QUERY = "(min-width: 48em)";
+type LegendProps = {
+  opened?: boolean;
+  onOpenedChange?: (opened: boolean) => void;
+};
 
-export function Legend() {
+export function Legend({ opened: openedProp, onOpenedChange }: LegendProps) {
   const t = useTranslations("mapV2");
-  const [activeLayers, { setLayers, updateLayer }] = useActiveLayers();
-  const [opened, setOpened] = useState(() => window.matchMedia(OPEN_BY_DEFAULT_QUERY).matches);
+  const [activeLayers] = useActiveLayers();
+  const wide = useMediaQuery(WIDE_QUERY, undefined, { getInitialValueInEffect: false }) ?? false;
+  const [opened, setOpened] = useUncontrolled({
+    value: openedProp,
+    defaultValue: window.matchMedia(WIDE_QUERY).matches,
+    onChange: onOpenedChange,
+  });
   const buttonRef = useRef<HTMLButtonElement>(null);
+  const closeRef = useRef<HTMLButtonElement>(null);
+  const openedByClickRef = useRef(false);
   const cardId = useId();
+
+  useEffect(() => {
+    if (!opened || !openedByClickRef.current) return;
+    openedByClickRef.current = false;
+    if (!wide) closeRef.current?.focus();
+  }, [opened, wide]);
 
   if (activeLayers.length === 0) return null;
 
+  const focusButton = () => buttonRef.current?.focus();
+
   const close = () => {
     setOpened(false);
-    buttonRef.current?.focus();
+    focusButton();
   };
 
-  const removeLayer = (id: LayerId) => {
-    void setLayers((layers) => layers.filter((layer) => layer.id !== id));
-    buttonRef.current?.focus();
+  const onSheetRowRemoved = () => {
+    if (activeLayers.length === 1) setOpened(false);
+    else closeRef.current?.focus();
   };
 
   return (
     <div className={classes.root}>
-      {opened && (
-        <section
+      {wide ? (
+        opened && (
+          <section
+            id={cardId}
+            aria-label={t("controls.legend")}
+            className={classes.card}
+            onKeyDown={(event) => {
+              if (event.key === "Escape") close();
+            }}
+          >
+            <LegendRows onRemoved={focusButton} />
+          </section>
+        )
+      ) : (
+        <MapSheet
           id={cardId}
-          aria-label={t("controls.legend")}
-          className={classes.card}
-          onKeyDown={(event) => {
-            if (event.key === "Escape") close();
-          }}
+          title={t("controls.legend")}
+          icon={<IconStack2 size={20} aria-hidden />}
+          closeLabel={t("controls.closeLegend")}
+          opened={opened}
+          onClose={close}
+          closeRef={closeRef}
         >
-          {activeLayers.map((layer) => {
-            const { id } = layer;
-            const { Legend: LayerLegend } = LAYERS[id];
-            const title = t(`layers.${id}.title`);
-            return (
-              <Fragment key={id}>
-                <div className={classes.header}>
-                  <h2 className={classes.title}>{title}</h2>
-                  <LayerControls layer={layer} onChange={(patch) => updateLayer(id, patch)} />
-                  <span className={classes.divider} aria-hidden />
-                  <UnstyledButton
-                    aria-label={t("controls.removeLayer", { layer: title })}
-                    className={classes.icon}
-                    onClick={() => removeLayer(id)}
-                  >
-                    <IconX size={16} />
-                  </UnstyledButton>
-                </div>
-                <LayerLegend id={id} settings={layer.settings} onSettingsChange={(settings) => updateLayer(id, { settings })} />
-              </Fragment>
-            );
-          })}
-        </section>
+          <LegendRows onRemoved={onSheetRowRemoved} />
+        </MapSheet>
       )}
       <UnstyledButton
         ref={buttonRef}
         aria-label={t("controls.legend")}
         aria-expanded={opened}
-        aria-controls={opened ? cardId : undefined}
+        aria-controls={opened || !wide ? cardId : undefined}
         data-active={opened}
         className={classes.button}
-        onClick={() => setOpened((value) => !value)}
+        onClick={() => {
+          openedByClickRef.current = !opened;
+          setOpened(!opened);
+        }}
       >
         <IconStack2 size={16} />
       </UnstyledButton>
