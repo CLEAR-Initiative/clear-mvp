@@ -19,7 +19,7 @@ function ShowOnMapButton({ point }: { point: LngLatPoint }) {
   const sheet = useMapSheet();
   const onClick = () => {
     setView({ center: point, zoom });
-    sheet?.onShowOnMap();
+    sheet?.lower();
   };
 
   if (sheet) {

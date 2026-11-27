@@ -12,7 +12,7 @@ afterEach(() => {
   cleanup();
 });
 
-type Sheet = { close: () => void; onShowOnMap: () => void };
+type Sheet = { close: () => void; lower: () => void };
 
 function renderNav(point: [number, number] | null, sheet?: Sheet) {
   const onUrlUpdate = vi.fn<(event: UrlUpdateEvent) => void>();
@@ -61,7 +61,7 @@ describe("PanelNav", () => {
   });
 
   it("closes the view from the sheet's close button", () => {
-    const sheet = { close: vi.fn(), onShowOnMap: vi.fn() };
+    const sheet = { close: vi.fn(), lower: vi.fn() };
     renderNav([33.31666, 19.53333], sheet);
 
     fireEvent.click(screen.getByRole("button", { name: "close" }));
@@ -70,11 +70,11 @@ describe("PanelNav", () => {
   });
 
   it("tells the sheet once it has moved the map to the selection", () => {
-    const sheet = { close: vi.fn(), onShowOnMap: vi.fn() };
+    const sheet = { close: vi.fn(), lower: vi.fn() };
     renderNav([33.31666, 19.53333], sheet);
 
     fireEvent.click(screen.getByRole("button", { name: "showOnMap" }));
 
-    expect(sheet.onShowOnMap).toHaveBeenCalledOnce();
+    expect(sheet.lower).toHaveBeenCalledOnce();
   });
 });

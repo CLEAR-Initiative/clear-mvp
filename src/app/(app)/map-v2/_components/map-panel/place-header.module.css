@@ -51,6 +51,12 @@
   outline-offset: 2px;
 }
 
+.titleRow .close {
+  flex-shrink: 0;
+  margin-block: -1px 0;
+  color: var(--color-text-primary);
+}
+
 .inputRoot {
   width: 100%;
   margin-top: 16px;
@@ -126,7 +132,7 @@
 }
 
 .options {
-  max-height: 320px;
+  max-height: min(320px, calc(var(--place-dropdown-room, 320px) - 9px));
   overflow-y: auto;
 }
 

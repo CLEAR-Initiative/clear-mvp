@@ -98,6 +98,8 @@ export function MapLayout({ initialPanelCollapsed }: { initialPanelCollapsed: bo
         <CrisisLayer onLevelChange={clear} />
       </>
     );
+  } else {
+    panelContent = <PlaceHeader onPlaceChange={clear} />;
   }
 
   const contentKey = `${kind ?? ""}|${selection.stackKey ?? ""}|${selection.detailId ?? ""}`;

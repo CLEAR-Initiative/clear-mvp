@@ -8,6 +8,8 @@ import { useMapPlace, type PlaceOption } from "~/containers/map/hooks/use-map-pl
 import { GLOBAL_PLACE, placeLocationId, type MapPlace } from "~/containers/map/place/model";
 import { GlobeIcon } from "./globe-icon";
 import classes from "./place-header.module.css";
+import viewClasses from "./panel-views.module.css";
+import { useMapSheet, usePeekTitle } from "./sheet-context";
 
 const ALL = "__all";
 
@@ -23,6 +25,8 @@ function matches(label: string, search: string) {
 
 export function PlaceHeader({ onPlaceChange }: { onPlaceChange: () => void }) {
   const t = useTranslations("mapV2.place");
+  const tPanel = useTranslations("mapV2.panel");
+  const sheet = useMapSheet();
   const { status, place, countryOptions, stateOptions, setPlace } = useMapPlace();
   const [search, setSearch] = useState("");
   const combobox = useCombobox({
@@ -35,9 +39,12 @@ export function PlaceHeader({ onPlaceChange }: { onPlaceChange: () => void }) {
   const pick = (next: MapPlace) => {
     setPlace(next);
     onPlaceChange();
+    sheet?.lower();
   };
 
   const country = place.kind === "global" ? null : place.kind === "country" ? place : place.country;
+  const title = country ? country.name : t("global");
+  usePeekTitle(title);
   const picking = country ? "region" : "country";
   const options: PlaceOption[] = country ? stateOptions : countryOptions;
   const placeId = placeLocationId(place);
@@ -73,17 +80,44 @@ export function PlaceHeader({ onPlaceChange }: { onPlaceChange: () => void }) {
 
   return (
     <header className={classes.root}>
-      <div className={classes.titleRow}>
-        <h2 className={classes.title}>{country ? country.name : t("global")}</h2>
+      <div
+        className={sheet ? `${classes.titleRow} ${viewClasses.dragHandle}` : classes.titleRow}
+        {...sheet?.dragHandle}
+      >
+        <h2 className={classes.title}>{title}</h2>
         {country && (
           <UnstyledButton className={classes.chip} onClick={() => pick(GLOBAL_PLACE)}>
             <span>{t("globalView")}</span>
             <GlobeIcon />
           </UnstyledButton>
         )}
+        {sheet && (
+          <UnstyledButton
+            className={`${viewClasses.iconButton} ${classes.close}`}
+            onClick={sheet.close}
+            aria-label={tPanel("close")}
+            title={tPanel("close")}
+          >
+            <IconX size={20} aria-hidden />
+          </UnstyledButton>
+        )}
       </div>
       {showPicker && (
-        <Combobox store={combobox} onOptionSubmit={submit} position="bottom-start" offset={4} width="target">
+        <Combobox
+          store={combobox}
+          onOptionSubmit={submit}
+          position="bottom-start"
+          offset={4}
+          width="target"
+          middlewares={{
+            flip: true,
+            shift: true,
+            size: {
+              apply: ({ availableHeight, elements }) =>
+                elements.floating.style.setProperty("--place-dropdown-room", `${availableHeight}px`),
+            },
+          }}
+        >
           <Combobox.Target>
             <InputBase
               value={open ? search : pickedState}
