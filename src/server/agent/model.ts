@@ -15,8 +15,26 @@
  */
 
 import "server-only";
-import type { MastraModelConfig } from "@mastra/core/llm";
+import { ModelRouterLanguageModel, type MastraModelConfig } from "@mastra/core/llm";
 import { createScriptedModel, SCRIPTED_MODEL_ID } from "~/server/agent/scripted-model";
+import { systemFirst } from "~/server/agent/system-first";
+
+type RouterCall = Parameters<ModelRouterLanguageModel["doStream"]>[0];
+
+/**
+ * The self-hosted endpoint's model: Mastra's own OpenAI-compatible client,
+ * with every system message joined into one at the start of the prompt
+ * (see system-first.ts for why).
+ */
+class SystemFirstEndpointModel extends ModelRouterLanguageModel {
+  override doGenerate(options: RouterCall) {
+    return super.doGenerate({ ...options, prompt: systemFirst(options.prompt) });
+  }
+
+  override doStream(options: RouterCall) {
+    return super.doStream({ ...options, prompt: systemFirst(options.prompt) });
+  }
+}
 
 export function clearAgentModelId(): string {
   const id = process.env.CLEAR_AGENT_MODEL?.trim();
@@ -38,5 +56,5 @@ export function resolveClearAgentModel(): MastraModelConfig {
     throw new Error("CLEAR_AGENT_MODEL must be `provider/model` when CLEAR_AGENT_MODEL_URL is set.");
   }
   const apiKey = process.env.CLEAR_AGENT_MODEL_API_KEY?.trim();
-  return { id: id as `${string}/${string}`, url, ...(apiKey ? { apiKey } : {}) };
+  return new SystemFirstEndpointModel({ id: id as `${string}/${string}`, url, ...(apiKey ? { apiKey } : {}) });
 }

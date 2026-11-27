@@ -15,6 +15,8 @@ interface Seen {
   url?: string;
   authorization?: string;
   model?: unknown;
+  roles?: string[];
+  system?: unknown;
 }
 
 let server: Server;
@@ -34,7 +36,10 @@ beforeEach(async () => {
     void body(req).then((raw) => {
       seen.url = req.url;
       seen.authorization = req.headers.authorization;
-      seen.model = (JSON.parse(raw) as { model?: unknown }).model;
+      const sent = JSON.parse(raw) as { model?: unknown; messages?: Array<{ role: string; content: unknown }> };
+      seen.model = sent.model;
+      seen.roles = sent.messages?.map((m) => m.role);
+      seen.system = sent.messages?.find((m) => m.role === "system")?.content;
       res.writeHead(200, { "Content-Type": "application/json" });
       res.end(
         JSON.stringify({
@@ -79,5 +84,22 @@ describe("CLEAR Agent on an OpenAI-compatible endpoint", () => {
     await ask();
     expect(seen.url).toBe("/llm/v1/chat/completions");
     expect(seen.authorization).toBeUndefined();
+  });
+
+  it("joins every system message into one at the start of the prompt", async () => {
+    // Qwen's chat template rejects a system message after the first turn,
+    // and Mastra appends some (working memory, the Current view).
+    const model = resolveClearAgentModel() as unknown as {
+      doGenerate: (options: unknown) => Promise<unknown>;
+    };
+    await model.doGenerate({
+      prompt: [
+        { role: "system", content: "Instructions." },
+        { role: "user", content: [{ type: "text", text: "Hi" }] },
+        { role: "system", content: "Working memory." },
+      ],
+    });
+    expect(seen.roles).toEqual(["system", "user"]);
+    expect(seen.system).toBe("Instructions.\n\nWorking memory.");
   });
 });

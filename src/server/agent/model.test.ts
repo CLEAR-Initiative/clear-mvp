@@ -13,22 +13,13 @@ describe("CLEAR Agent model from configuration", () => {
     expect(resolveClearAgentModel()).toBe("anthropic/claude-opus-5-5");
   });
 
-  it("points at an OpenAI-compatible endpoint when a URL is configured", () => {
+  it("builds the endpoint's own model when a URL is configured", () => {
     vi.stubEnv("CLEAR_AGENT_MODEL", "nrc-find/qwen3.5-9b");
     vi.stubEnv("CLEAR_AGENT_MODEL_URL", "https://find.example/llm/v1");
     vi.stubEnv("CLEAR_AGENT_MODEL_API_KEY", "llm-key");
-    expect(resolveClearAgentModel()).toEqual({
-      id: "nrc-find/qwen3.5-9b",
-      url: "https://find.example/llm/v1",
-      apiKey: "llm-key",
-    });
-  });
-
-  it("sends no key to an endpoint that was configured without one", () => {
-    vi.stubEnv("CLEAR_AGENT_MODEL", "nrc-find/qwen3.5-9b");
-    vi.stubEnv("CLEAR_AGENT_MODEL_URL", "https://find.example/llm/v1");
-    vi.stubEnv("CLEAR_AGENT_MODEL_API_KEY", "");
-    expect(resolveClearAgentModel()).toEqual({ id: "nrc-find/qwen3.5-9b", url: "https://find.example/llm/v1" });
+    // What it sends (URL, model name, key, system message order) is checked
+    // against a fake server in model.endpoint.test.ts.
+    expect(resolveClearAgentModel()).toMatchObject({ modelId: "qwen3.5-9b" });
   });
 
   it("refuses an endpoint model id that is not provider/model", () => {
