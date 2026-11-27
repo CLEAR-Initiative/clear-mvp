@@ -98,6 +98,16 @@ describe("CrisisLayer", () => {
     expect(screen.getByPlaceholderText("panel.crisisLayer.placeholder")).toHaveValue("");
   });
 
+  it("moves focus to the level input after ×", async () => {
+    renderSection({ layers: JSON.stringify([layer("alerts")]) });
+
+    fireEvent.click(screen.getByRole("button", { name: "panel.crisisLayer.clear" }));
+
+    const input = screen.getByPlaceholderText("panel.crisisLayer.placeholder");
+    await waitFor(() => expect(input).toHaveFocus());
+    expect(screen.queryByRole("option")).not.toBeInTheDocument();
+  });
+
   it("removes the detection layer and its count with the Disasters toggle", async () => {
     const { onUrlUpdate, lastLayers } = renderSection({ layers: JSON.stringify([layer("alerts"), layer("roads")]) });
     expect(screen.getByText("panel.crisisLayer.activeCount")).toBeInTheDocument();

@@ -15,6 +15,7 @@ export function CrisisLayer({ onLevelChange }: { onLevelChange: () => void }) {
   const t = useTranslations("mapV2");
   const { level, setLevel } = useDetectionLevel();
   const lastLevel = useRef<DetectionKind>(level ?? "alert");
+  const inputRef = useRef<HTMLInputElement>(null);
   if (level) lastLevel.current = level;
   const [open, setOpen] = useState(true);
   const bodyId = useId();
@@ -60,6 +61,7 @@ export function CrisisLayer({ onLevelChange }: { onLevelChange: () => void }) {
           />
         </div>
         <Select
+          ref={inputRef}
           value={level}
           onChange={(value) => changeLevel(isDetectionKind(value) ? value : null)}
           data={LEVEL_ORDER.map((kind) => ({ value: kind, label: t(`layers.${DETECTION_LAYER_IDS[kind]}.title`) }))}
@@ -73,7 +75,10 @@ export function CrisisLayer({ onLevelChange }: { onLevelChange: () => void }) {
               <UnstyledButton
                 className={classes.clear}
                 aria-label={t("panel.crisisLayer.clear")}
-                onClick={() => changeLevel(null)}
+                onClick={() => {
+                  changeLevel(null);
+                  inputRef.current?.focus();
+                }}
               >
                 <IconX size={16} />
               </UnstyledButton>
