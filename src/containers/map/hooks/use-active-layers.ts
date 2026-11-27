@@ -14,7 +14,7 @@ const activeLayerSchema = z.object({
   settings: z.record(z.string(), z.unknown()).optional(),
 });
 
-export const DEFAULT_LAYERS: ActiveLayer[] = [{ id: "signals", visibility: true, opacity: 1 }];
+export const DEFAULT_LAYERS: ActiveLayer[] = [{ id: "alerts", visibility: true, opacity: 1 }];
 
 export function parseLayers(value: string): ActiveLayer[] | null {
   let raw: unknown;

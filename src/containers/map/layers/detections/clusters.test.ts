@@ -8,9 +8,9 @@ import {
   viewClusters,
   worldPoints,
 } from "./clusters";
-import type { SeverityBucket, SignalFeature, SignalFeatureCollection } from "./to-features";
+import type { SeverityBucket, DetectionFeature, DetectionFeatureCollection } from "./to-features";
 
-function signal(id: string, lng: number, lat: number, severity: SeverityBucket = "high"): SignalFeature {
+function signal(id: string, lng: number, lat: number, severity: SeverityBucket = "high"): DetectionFeature {
   return {
     type: "Feature",
     geometry: { type: "Point", coordinates: [lng, lat] },
@@ -18,7 +18,7 @@ function signal(id: string, lng: number, lat: number, severity: SeverityBucket =
   };
 }
 
-function collection(features: SignalFeature[]): SignalFeatureCollection {
+function collection(features: DetectionFeature[]): DetectionFeatureCollection {
   return { type: "FeatureCollection", features };
 }
 

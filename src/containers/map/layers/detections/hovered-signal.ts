@@ -2,7 +2,7 @@ import type { GeoJSONFeature } from "mapbox-gl";
 import { SEVERITY_BUCKETS } from "./severity-tokens";
 import type { SeverityBucket } from "./to-features";
 
-export type HoveredSignal = {
+export type HoveredDetection = {
   id: string;
   title: string | null;
   severity: SeverityBucket;
@@ -13,7 +13,7 @@ function isSeverityBucket(value: unknown): value is SeverityBucket {
   return SEVERITY_BUCKETS.includes(value as SeverityBucket);
 }
 
-export function toHoveredSignal(feature: GeoJSONFeature | undefined): HoveredSignal | null {
+export function toHoveredDetection(feature: GeoJSONFeature | undefined): HoveredDetection | null {
   if (feature?.geometry.type !== "Point") return null;
   const { id, title, severity } = feature.properties ?? {};
   const [lng, lat] = feature.geometry.coordinates;

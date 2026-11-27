@@ -36,7 +36,7 @@ export function LegendRows({ onRemoved }: { onRemoved: () => void }) {
             <IconX size={16} />
           </UnstyledButton>
         </div>
-        <LayerLegend settings={layer.settings} onSettingsChange={(settings) => updateLayer(id, { settings })} />
+        <LayerLegend id={id} settings={layer.settings} onSettingsChange={(settings) => updateLayer(id, { settings })} />
       </Fragment>
     );
   });

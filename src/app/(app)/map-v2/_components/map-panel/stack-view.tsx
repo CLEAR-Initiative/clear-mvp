@@ -3,8 +3,8 @@
 import { Box, Group, Stack, Text, Title, UnstyledButton } from "@mantine/core";
 import { useFormatter, useNow, useTranslations } from "next-intl";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { SeverityTag } from "~/containers/map/layers/signals/severity-tag";
-import { SEVERITY_TOKENS } from "~/containers/map/layers/signals/severity-tokens";
+import { SeverityTag } from "~/containers/map/layers/detections/severity-tag";
+import { SEVERITY_TOKENS } from "~/containers/map/layers/detections/severity-tokens";
 import { useDetectionsForMap } from "~/containers/map/hooks/use-detections-for-map";
 import { useTimeframeQuery } from "~/containers/map/hooks/use-timeframe";
 import type { DetectionKind, LngLatPoint } from "~/containers/map/selection";

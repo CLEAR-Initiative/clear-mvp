@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import type { GqlAlert, GqlEvent, GqlLocation, GqlSignal } from "~/lib/types/graphql";
 import { api } from "~/trpc/react";
-import { locationPoint, signalPoint } from "../layers/signals/to-features";
+import { locationPoint, signalPoint } from "../layers/detections/to-features";
 import type { DetectionKind, LngLatPoint } from "../selection";
 import { useTimeframeQuery } from "./use-timeframe";
 
@@ -63,23 +63,43 @@ export function alertDetection(alert: MapAlert): MapDetection {
   };
 }
 
+export function detectionsQueryInput(kind: DetectionKind, range: { from: string; to?: string }) {
+  const input = { ...range, includeDummy: true as const };
+  return kind === "alert" ? { ...input, status: "published" as const } : input;
+}
+
 /**
  * The detections of `kind` the map shows for the timeline's range. Only the query for `kind` runs; the
- * signals one shares its cache with the signals layer.
+ * signals one shares its cache with the Map panel.
  */
-export function useDetectionsForMap(kind: DetectionKind) {
+export function useDetectionsForMap(kind: DetectionKind | null) {
   const range = useTimeframeQuery();
-  const input = { ...range, includeDummy: true };
-  const signals = api.signals.forMap.useQuery(input, { placeholderData: (prev) => prev, enabled: kind === "signal" });
-  const events = api.alerts.eventsForMap.useQuery(input, { placeholderData: (prev) => prev, enabled: kind === "event" });
-  const alerts = api.alerts.alertsForMap.useQuery(input, { placeholderData: (prev) => prev, enabled: kind === "alert" });
+  const signals = api.signals.forMap.useQuery(detectionsQueryInput("signal", range), {
+    placeholderData: (prev) => prev,
+    enabled: kind === "signal",
+  });
+  const events = api.alerts.eventsForMap.useQuery(detectionsQueryInput("event", range), {
+    placeholderData: (prev) => prev,
+    enabled: kind === "event",
+  });
+  const alerts = api.alerts.alertsForMap.useQuery(detectionsQueryInput("alert", range), {
+    placeholderData: (prev) => prev,
+    enabled: kind === "alert",
+  });
 
-  const query = { signal: signals, event: events, alert: alerts }[kind];
+  const query = kind ? { signal: signals, event: events, alert: alerts }[kind] : null;
   const data = useMemo(() => {
     if (kind === "signal") return signals.data?.map(signalDetection);
     if (kind === "event") return events.data?.events.map(eventDetection);
-    return alerts.data?.alerts.map(alertDetection);
+    if (kind === "alert") return alerts.data?.alerts.map(alertDetection);
+    return undefined;
   }, [kind, signals.data, events.data, alerts.data]);
 
-  return { data, isPending: query.isPending, isError: query.isError, error: query.error };
+  return {
+    data,
+    isPending: query?.isPending ?? false,
+    isError: query?.isError ?? false,
+    error: query?.error ?? null,
+    isPlaceholderData: query?.isPlaceholderData ?? false,
+  };
 }

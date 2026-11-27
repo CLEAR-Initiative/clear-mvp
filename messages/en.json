@@ -4614,23 +4614,41 @@
     "loading": "Loading the map",
     "loadingLayers": "Loading {layers}",
     "layers": {
+      "alerts": {
+        "title": "Alerts",
+        "inSentence": "alerts",
+        "item": "Alert",
+        "untitled": "Untitled alert",
+        "cluster": {
+          "zoom": "{count} alerts, zoom in",
+          "stacked": "{count} alerts at this location"
+        },
+        "fewer": "Fewer alerts",
+        "more": "More alerts"
+      },
+      "events": {
+        "title": "Events",
+        "inSentence": "events",
+        "item": "Event",
+        "untitled": "Untitled event",
+        "cluster": {
+          "zoom": "{count} events, zoom in",
+          "stacked": "{count} events at this location"
+        },
+        "fewer": "Fewer events",
+        "more": "More events"
+      },
       "signals": {
         "title": "Signals",
         "inSentence": "signals",
-        "severity": "Severity",
+        "item": "Signal",
+        "untitled": "Untitled signal",
         "cluster": {
           "zoom": "{count} signals, zoom in",
           "stacked": "{count} signals at this location"
         },
-        "density": "Density",
-        "showing": "Showing:",
-        "densityDisplay": "Density display",
-        "clusters": "Clusters",
-        "heatmap": "Heatmap",
-        "fewerSignals": "Fewer signals",
-        "moreSignals": "More signals",
-        "low": "Low",
-        "high": "High"
+        "fewer": "Fewer signals",
+        "more": "More signals"
       }
     },
     "errors": {
@@ -4768,7 +4786,17 @@
           "takeAction": "Take an action"
         }
       },
-      "showOnMap": "Show on map"
+      "showOnMap": "Show on map",
+      "crisisLayer": {
+        "title": "Crisis layer",
+        "activeCount": "{count, plural, one {# active layer} other {# active layers}}",
+        "collapse": "Hide crisis layer",
+        "expand": "Show crisis layer",
+        "disasters": "Disasters",
+        "showDisasters": "Show disasters",
+        "placeholder": "Select detections",
+        "clear": "Clear detections"
+      }
     },
     "mapSettings": {
       "title": "Map settings",
@@ -4782,7 +4810,6 @@
       }
     },
     "signalTooltip": {
-      "signal": "Signal",
       "severity": "Severity",
       "untitled": "Untitled signal"
     },
@@ -4796,13 +4823,32 @@
       },
       "last24h": "Last 24 hours",
       "lastDays": "Last {count} days",
-      "count": "{total, plural, one {<b>#</b> signal} other {<b>#</b> signals}}",
-      "countPending": "<b>—</b> signals",
+      "count": {
+        "alert": "{total, plural, one {<b>#</b> alert} other {<b>#</b> alerts}}",
+        "event": "{total, plural, one {<b>#</b> event} other {<b>#</b> events}}",
+        "signal": "{total, plural, one {<b>#</b> signal} other {<b>#</b> signals}}"
+      },
+      "countPending": {
+        "alert": "<b>—</b> alerts",
+        "event": "<b>—</b> events",
+        "signal": "<b>—</b> signals"
+      },
+      "countNone": "<b>—</b>",
       "today": "Today",
       "show": "Show timeline",
       "hide": "Hide timeline",
       "startHandle": "Start date",
       "endHandle": "End date"
+    },
+    "detectionLegend": {
+      "severity": "Severity",
+      "density": "Density",
+      "showing": "Showing:",
+      "densityDisplay": "Density display",
+      "clusters": "Clusters",
+      "heatmap": "Heatmap",
+      "low": "Low",
+      "high": "High"
     }
   }
 }

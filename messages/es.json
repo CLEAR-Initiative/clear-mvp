@@ -4614,23 +4614,41 @@
     "loading": "Cargando el mapa",
     "loadingLayers": "Cargando {layers}",
     "layers": {
+      "alerts": {
+        "title": "Alertas",
+        "inSentence": "alertas",
+        "item": "Alerta",
+        "untitled": "Alerta sin título",
+        "cluster": {
+          "zoom": "{count} alertas, acercar",
+          "stacked": "{count} alertas en esta ubicación"
+        },
+        "fewer": "Menos alertas",
+        "more": "Más alertas"
+      },
+      "events": {
+        "title": "Eventos",
+        "inSentence": "eventos",
+        "item": "Evento",
+        "untitled": "Evento sin título",
+        "cluster": {
+          "zoom": "{count} eventos, acercar",
+          "stacked": "{count} eventos en esta ubicación"
+        },
+        "fewer": "Menos eventos",
+        "more": "Más eventos"
+      },
       "signals": {
         "title": "Señales",
         "inSentence": "señales",
-        "severity": "Severidad",
+        "item": "Señal",
+        "untitled": "Señal sin título",
         "cluster": {
           "zoom": "{count} señales, acercar",
           "stacked": "{count} señales en esta ubicación"
         },
-        "density": "Densidad",
-        "showing": "Mostrando:",
-        "densityDisplay": "Visualización de densidad",
-        "clusters": "Agrupaciones",
-        "heatmap": "Mapa de calor",
-        "fewerSignals": "Menos señales",
-        "moreSignals": "Más señales",
-        "low": "Baja",
-        "high": "Alta"
+        "fewer": "Menos señales",
+        "more": "Más señales"
       }
     },
     "errors": {
@@ -4768,7 +4786,17 @@
           "takeAction": "Actuar"
         }
       },
-      "showOnMap": "Mostrar en el mapa"
+      "showOnMap": "Mostrar en el mapa",
+      "crisisLayer": {
+        "title": "Capa de crisis",
+        "activeCount": "{count, plural, one {# capa activa} other {# capas activas}}",
+        "collapse": "Ocultar capa de crisis",
+        "expand": "Mostrar capa de crisis",
+        "disasters": "Desastres",
+        "showDisasters": "Mostrar desastres",
+        "placeholder": "Seleccionar detecciones",
+        "clear": "Borrar detecciones"
+      }
     },
     "mapSettings": {
       "title": "Ajustes del mapa",
@@ -4782,7 +4810,6 @@
       }
     },
     "signalTooltip": {
-      "signal": "Señal",
       "severity": "Severidad",
       "untitled": "Señal sin título"
     },
@@ -4796,13 +4823,32 @@
       },
       "last24h": "Últimas 24 horas",
       "lastDays": "Últimos {count} días",
-      "count": "{total, plural, one {<b>#</b> señal} other {<b>#</b> señales}}",
-      "countPending": "<b>—</b> señales",
+      "count": {
+        "alert": "{total, plural, one {<b>#</b> alerta} other {<b>#</b> alertas}}",
+        "event": "{total, plural, one {<b>#</b> evento} other {<b>#</b> eventos}}",
+        "signal": "{total, plural, one {<b>#</b> señal} other {<b>#</b> señales}}"
+      },
+      "countPending": {
+        "alert": "<b>—</b> alertas",
+        "event": "<b>—</b> eventos",
+        "signal": "<b>—</b> señales"
+      },
+      "countNone": "<b>—</b>",
       "today": "Hoy",
       "show": "Mostrar línea de tiempo",
       "hide": "Ocultar línea de tiempo",
       "startHandle": "Fecha de inicio",
       "endHandle": "Fecha de fin"
+    },
+    "detectionLegend": {
+      "severity": "Severidad",
+      "density": "Densidad",
+      "showing": "Mostrando:",
+      "densityDisplay": "Visualización de densidad",
+      "clusters": "Agrupaciones",
+      "heatmap": "Mapa de calor",
+      "low": "Baja",
+      "high": "Alta"
     }
   }
 }

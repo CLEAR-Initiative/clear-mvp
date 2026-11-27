@@ -10,7 +10,7 @@ vi.mock("next-intl", () => ({
 
 vi.mock("../layers/registry", async () => ({
   LAYERS: {
-    signals: { Legend: (await import("../layers/signals/legend")).SignalsLegend },
+    signals: { Legend: (await import("../layers/detections/legend")).DetectionsLegend },
   },
   isLayerId: (id: string) => id === "signals",
 }));

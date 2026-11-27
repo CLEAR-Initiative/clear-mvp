@@ -10,7 +10,7 @@ vi.mock("react-map-gl/mapbox", () => ({
   useMap: () => ({ current: { flyTo } }),
 }));
 
-const { SignalClusterMarker } = await import("./cluster-marker");
+const { DetectionClusterMarker } = await import("./cluster-marker");
 
 const cluster = (stacked: boolean): ClusterMarker => ({
   key: "1",
@@ -27,10 +27,10 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-describe("SignalClusterMarker", () => {
+describe("DetectionClusterMarker", () => {
   it("selects a stacked cluster instead of zooming", () => {
     const onSelectStack = vi.fn();
-    render(<SignalClusterMarker cluster={cluster(true)} opacity={1} selected={false} onSelectStack={onSelectStack} />);
+    render(<DetectionClusterMarker layerId="signals" cluster={cluster(true)} opacity={1} selected={false} onSelectStack={onSelectStack} />);
 
     fireEvent.click(screen.getByRole("button", { name: "stacked" }));
 
@@ -40,7 +40,7 @@ describe("SignalClusterMarker", () => {
 
   it("zooms into a cluster that can still split", () => {
     const onSelectStack = vi.fn();
-    render(<SignalClusterMarker cluster={cluster(false)} opacity={1} selected={false} onSelectStack={onSelectStack} />);
+    render(<DetectionClusterMarker layerId="signals" cluster={cluster(false)} opacity={1} selected={false} onSelectStack={onSelectStack} />);
 
     fireEvent.click(screen.getByRole("button", { name: "zoom" }));
 
@@ -49,7 +49,7 @@ describe("SignalClusterMarker", () => {
   });
 
   it("marks the selected stack", () => {
-    render(<SignalClusterMarker cluster={cluster(true)} opacity={1} selected onSelectStack={vi.fn()} />);
+    render(<DetectionClusterMarker layerId="signals" cluster={cluster(true)} opacity={1} selected onSelectStack={vi.fn()} />);
 
     const button = screen.getByRole("button", { name: "stacked" });
     expect(button).toHaveAttribute("aria-pressed", "true");
@@ -57,7 +57,7 @@ describe("SignalClusterMarker", () => {
   });
 
   it("draws the cluster as a severity donut", () => {
-    render(<SignalClusterMarker cluster={cluster(false)} opacity={1} selected={false} onSelectStack={vi.fn()} />);
+    render(<DetectionClusterMarker layerId="signals" cluster={cluster(false)} opacity={1} selected={false} onSelectStack={vi.fn()} />);
     const ring = screen.getByRole("button", { name: "zoom" }).querySelector<HTMLElement>(".map-v2-cluster-ring");
     expect(ring?.style.background).toContain("conic-gradient");
   });

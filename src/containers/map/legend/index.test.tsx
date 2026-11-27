@@ -10,7 +10,7 @@ vi.mock("next-intl", () => ({
 
 vi.mock("../layers/registry", async () => ({
   LAYERS: {
-    signals: { Legend: (await import("../layers/signals/legend")).SignalsLegend },
+    signals: { Legend: (await import("../layers/detections/legend")).DetectionsLegend },
     alerts: { Legend: () => null },
   },
   isLayerId: (id: string) => id === "signals" || id === "alerts",
@@ -47,7 +47,7 @@ describe("Legend", () => {
     );
 
     fireEvent.click(screen.getByRole("button", { name: "controls.legend" }));
-    expect(screen.getByText("mapV2.layers.signals.severity")).toBeInTheDocument();
+    expect(screen.getByText("mapV2.detectionLegend.severity")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "showLayer" }));
     await waitFor(() => expect(onUrlUpdate).toHaveBeenCalled());
@@ -71,7 +71,7 @@ describe("Legend", () => {
 
     fireEvent.keyDown(opacityButton, { key: "Escape" });
     await waitFor(() => expect(screen.queryByRole("slider")).not.toBeInTheDocument());
-    expect(screen.getByText("mapV2.layers.signals.severity")).toBeInTheDocument();
+    expect(screen.getByText("mapV2.detectionLegend.severity")).toBeInTheDocument();
   });
 
   it("switches the density display in ?layers and writes nothing for the default", async () => {
@@ -89,17 +89,17 @@ describe("Legend", () => {
     );
 
     fireEvent.click(screen.getByRole("button", { name: "controls.legend" }));
-    expect(screen.getByText("mapV2.layers.signals.fewerSignals").closest('[aria-hidden="true"]')).toBeNull();
-    expect(screen.getByText("mapV2.layers.signals.high").closest('[aria-hidden="true"]')).not.toBeNull();
+    expect(screen.getByText("mapV2.layers.signals.fewer").closest('[aria-hidden="true"]')).toBeNull();
+    expect(screen.getByText("mapV2.detectionLegend.high").closest('[aria-hidden="true"]')).not.toBeNull();
 
-    fireEvent.click(screen.getByRole("radio", { name: "mapV2.layers.signals.heatmap" }));
+    fireEvent.click(screen.getByRole("radio", { name: "mapV2.detectionLegend.heatmap" }));
     await waitFor(() =>
       expect(lastLayers()).toEqual([{ id: "signals", visibility: true, opacity: 1, settings: { density: "heatmap" } }]),
     );
-    expect(screen.getByText("mapV2.layers.signals.high").closest('[aria-hidden="true"]')).toBeNull();
-    expect(screen.getByText("mapV2.layers.signals.fewerSignals").closest('[aria-hidden="true"]')).not.toBeNull();
+    expect(screen.getByText("mapV2.detectionLegend.high").closest('[aria-hidden="true"]')).toBeNull();
+    expect(screen.getByText("mapV2.layers.signals.fewer").closest('[aria-hidden="true"]')).not.toBeNull();
 
-    fireEvent.click(screen.getByRole("radio", { name: "mapV2.layers.signals.clusters" }));
+    fireEvent.click(screen.getByRole("radio", { name: "mapV2.detectionLegend.clusters" }));
     await waitFor(() => expect(lastLayers()).toStrictEqual([{ id: "signals", visibility: true, opacity: 1 }]));
   });
   it("on a phone, opens the sheet on its close button and gives focus back on Escape", async () => {

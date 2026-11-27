@@ -4614,23 +4614,41 @@
     "loading": "Chargement de la carte",
     "loadingLayers": "Chargement : {layers}",
     "layers": {
+      "alerts": {
+        "title": "Alertes",
+        "inSentence": "alertes",
+        "item": "Alerte",
+        "untitled": "Alerte sans titre",
+        "cluster": {
+          "zoom": "{count} alertes, zoomer",
+          "stacked": "{count} alertes à cet emplacement"
+        },
+        "fewer": "Moins d’alertes",
+        "more": "Plus d’alertes"
+      },
+      "events": {
+        "title": "Événements",
+        "inSentence": "événements",
+        "item": "Événement",
+        "untitled": "Événement sans titre",
+        "cluster": {
+          "zoom": "{count} événements, zoomer",
+          "stacked": "{count} événements à cet emplacement"
+        },
+        "fewer": "Moins d’événements",
+        "more": "Plus d’événements"
+      },
       "signals": {
         "title": "Signaux",
         "inSentence": "signaux",
-        "severity": "Gravité",
+        "item": "Signal",
+        "untitled": "Signal sans titre",
         "cluster": {
           "zoom": "{count} signaux, zoomer",
           "stacked": "{count} signaux à cet emplacement"
         },
-        "density": "Densité",
-        "showing": "Affichage :",
-        "densityDisplay": "Affichage de la densité",
-        "clusters": "Groupes",
-        "heatmap": "Carte de chaleur",
-        "fewerSignals": "Moins de signaux",
-        "moreSignals": "Plus de signaux",
-        "low": "Faible",
-        "high": "Élevée"
+        "fewer": "Moins de signaux",
+        "more": "Plus de signaux"
       }
     },
     "errors": {
@@ -4768,7 +4786,17 @@
           "takeAction": "Agir"
         }
       },
-      "showOnMap": "Afficher sur la carte"
+      "showOnMap": "Afficher sur la carte",
+      "crisisLayer": {
+        "title": "Couche de crise",
+        "activeCount": "{count, plural, one {# couche active} other {# couches actives}}",
+        "collapse": "Masquer la couche de crise",
+        "expand": "Afficher la couche de crise",
+        "disasters": "Catastrophes",
+        "showDisasters": "Afficher les catastrophes",
+        "placeholder": "Sélectionner des détections",
+        "clear": "Effacer les détections"
+      }
     },
     "mapSettings": {
       "title": "Paramètres de la carte",
@@ -4782,7 +4810,6 @@
       }
     },
     "signalTooltip": {
-      "signal": "Signal",
       "severity": "Gravité",
       "untitled": "Signal sans titre"
     },
@@ -4796,13 +4823,32 @@
       },
       "last24h": "Dernières 24 heures",
       "lastDays": "{count} derniers jours",
-      "count": "{total, plural, one {<b>#</b> signal} other {<b>#</b> signaux}}",
-      "countPending": "<b>—</b> signaux",
+      "count": {
+        "alert": "{total, plural, one {<b>#</b> alerte} other {<b>#</b> alertes}}",
+        "event": "{total, plural, one {<b>#</b> événement} other {<b>#</b> événements}}",
+        "signal": "{total, plural, one {<b>#</b> signal} other {<b>#</b> signaux}}"
+      },
+      "countPending": {
+        "alert": "<b>—</b> alertes",
+        "event": "<b>—</b> événements",
+        "signal": "<b>—</b> signaux"
+      },
+      "countNone": "<b>—</b>",
       "today": "Aujourd'hui",
       "show": "Afficher la frise",
       "hide": "Masquer la frise",
       "startHandle": "Date de début",
       "endHandle": "Date de fin"
+    },
+    "detectionLegend": {
+      "severity": "Gravité",
+      "density": "Densité",
+      "showing": "Affichage :",
+      "densityDisplay": "Affichage de la densité",
+      "clusters": "Groupes",
+      "heatmap": "Carte de chaleur",
+      "low": "Faible",
+      "high": "Élevée"
     }
   }
 }
