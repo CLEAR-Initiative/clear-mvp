@@ -426,8 +426,8 @@ _Avoid_: "disaster type" (that is a flood, a conflict…); "data view" (the old 
 
 **Map panel**:
 The panel on `/map-v2` that sits next to the app nav and floats over the map, on screens
-992px or wider. With nothing selected it shows the Crisis layer section, where the user picks
-the **Detection level**. With a **Map selection** it shows the **Stack list** or the
+992px or wider. With nothing selected it shows the place header, where the user picks the
+**Map place**, above the Crisis layer section, where the user picks the **Detection level**. With a **Map selection** it shows the **Stack list** or the
 detail (**Signal detail**, **Event detail**) of that selection.
 A signal, event or alert without a title reads "Untitled signal" or "Untitled event" (an
 alert reads as its event) everywhere in the panel: not its type, description or id. The type
@@ -652,6 +652,20 @@ every country. Local to the page: it never changes the **Working country** or it
 Back to world or Escape clears it.
 _Avoid_: setting the **Working country** from a world-map click (a team may not even be
 bound to that country).
+
+**Map place** (map v2):
+What the map v2 Map panel header frames: Global, one country, or one state (admin-1) in that
+country. The header calls the state a "region". The countries to pick from are the team's
+**Country scope**, or every country for an unscoped team. Global frames the world and filters
+nothing.
+It frames the camera and the boundaries, and the map shows only the detections in the place
+(timeline counts included). It is local to the map and
+kept in the map's URL, so a link shares it. Until the user picks one in the header, it follows
+the **Working country**, including changes made in the nav. Picking the **Working country**
+itself goes back to following it. Picking a place, including Global, never changes the **Working country** or its
+cookie.
+_Avoid_: calling it the **Working country** (that one frames the other pages too); "focus
+country" (that is the paint).
 
 **Focus country** (map paint):
 The visual mask/tint treatment of the **Working country** (or, on the Overview world

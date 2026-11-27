@@ -4796,6 +4796,18 @@
         "clear": "Clear detections"
       }
     },
+    "place": {
+      "global": "Global",
+      "searchCountry": "Search countries",
+      "searchRegion": "Search regions",
+      "noResults": "No results",
+      "globalView": "Global view",
+      "allCountries": "All countries",
+      "allRegions": "All regions",
+      "clearRegion": "Clear region",
+      "countryLabel": "Map country",
+      "regionLabel": "Map region"
+    },
     "mapSettings": {
       "title": "Map settings",
       "roads": "Roads",

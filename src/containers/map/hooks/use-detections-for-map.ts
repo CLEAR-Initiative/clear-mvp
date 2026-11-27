@@ -2,7 +2,9 @@ import { useMemo } from "react";
 import type { GqlAlert, GqlEvent, GqlLocation, GqlSignal } from "~/lib/types/graphql";
 import { api } from "~/trpc/react";
 import { locationPoint, signalPoint } from "../layers/detections/to-features";
+import { placeLocationId } from "../place/model";
 import type { DetectionKind, LngLatPoint } from "../selection";
+import { useMapPlace } from "./use-map-place";
 import { useTimeframeQuery } from "./use-timeframe";
 
 /** A signal, event or alert as the map places it: what a stack list and Show on map need. */
@@ -63,8 +65,12 @@ export function alertDetection(alert: MapAlert): MapDetection {
   };
 }
 
-export function detectionsQueryInput(kind: DetectionKind, range: { from: string; to?: string }) {
-  const input = { ...range, includeDummy: true as const };
+export function detectionsQueryInput(
+  kind: DetectionKind,
+  range: { from: string; to?: string },
+  locationId: string | null,
+) {
+  const input = { ...range, includeDummy: true as const, ...(locationId ? { locationId } : {}) };
   return kind === "alert" ? { ...input, status: "published" as const } : input;
 }
 
@@ -74,17 +80,20 @@ export function detectionsQueryInput(kind: DetectionKind, range: { from: string;
  */
 export function useDetectionsForMap(kind: DetectionKind | null) {
   const range = useTimeframeQuery();
-  const signals = api.signals.forMap.useQuery(detectionsQueryInput("signal", range), {
+  const { status, place } = useMapPlace();
+  const locationId = placeLocationId(place);
+  const placeReady = status !== "loading";
+  const signals = api.signals.forMap.useQuery(detectionsQueryInput("signal", range, locationId), {
     placeholderData: (prev) => prev,
-    enabled: kind === "signal",
+    enabled: kind === "signal" && placeReady,
   });
-  const events = api.alerts.eventsForMap.useQuery(detectionsQueryInput("event", range), {
+  const events = api.alerts.eventsForMap.useQuery(detectionsQueryInput("event", range, locationId), {
     placeholderData: (prev) => prev,
-    enabled: kind === "event",
+    enabled: kind === "event" && placeReady,
   });
-  const alerts = api.alerts.alertsForMap.useQuery(detectionsQueryInput("alert", range), {
+  const alerts = api.alerts.alertsForMap.useQuery(detectionsQueryInput("alert", range, locationId), {
     placeholderData: (prev) => prev,
-    enabled: kind === "alert",
+    enabled: kind === "alert" && placeReady,
   });
 
   const query = kind ? { signal: signals, event: events, alert: alerts }[kind] : null;

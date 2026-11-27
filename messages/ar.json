@@ -4796,6 +4796,18 @@
         "clear": "مسح عمليات الرصد"
       }
     },
+    "place": {
+      "global": "العالم",
+      "searchCountry": "ابحث عن بلد",
+      "searchRegion": "ابحث عن منطقة",
+      "noResults": "لا توجد نتائج",
+      "globalView": "عرض عالمي",
+      "allCountries": "كل البلدان",
+      "allRegions": "كل المناطق",
+      "clearRegion": "مسح المنطقة",
+      "countryLabel": "بلد الخريطة",
+      "regionLabel": "منطقة الخريطة"
+    },
     "mapSettings": {
       "title": "إعدادات الخريطة",
       "roads": "الطرق",

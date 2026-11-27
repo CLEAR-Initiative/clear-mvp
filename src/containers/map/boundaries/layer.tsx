@@ -4,6 +4,7 @@ import { Layer, Source } from "react-map-gl/mapbox";
 import { useWorkingCountry } from "~/providers/working-country-provider";
 import type { BasemapId } from "../constants";
 import { useActiveLayers } from "../hooks/use-active-layers";
+import { useMapPlace } from "../hooks/use-map-place";
 import { useMapSettings } from "../hooks/use-map-settings";
 import { useThemeColors } from "../hooks/use-theme-color";
 import { boundariesBeforeId } from "../layer-manager/order";
@@ -27,9 +28,10 @@ type AdminBoundariesProps = {
 export function AdminBoundaries({ basemap, labelAnchorId }: AdminBoundariesProps) {
   const [{ boundaries: level }] = useMapSettings();
   const scope = useWorkingCountry();
+  const { status, place } = useMapPlace();
   const [activeLayers] = useActiveLayers();
   const colors = useThemeColors(BOUNDARY_TOKENS);
-  const data = useAdminBoundaries(level, scope);
+  const data = useAdminBoundaries(level, scope, status === "loading" ? null : place);
 
   if (!data) return null;
 

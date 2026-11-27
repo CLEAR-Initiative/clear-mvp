@@ -2,22 +2,32 @@ import { skipToken } from "@tanstack/react-query";
 import { useEffect, useMemo } from "react";
 import { reportHandledError } from "~/lib/report-handled-error";
 import { api } from "~/trpc/react";
+import { useMapPlace } from "../hooks/use-map-place";
+import { placeLocationId } from "../place/model";
 import type { DetectionKind } from "../selection";
 import { TIMELINE_DAYS, barOfDay, type TimelineExtent } from "../timeframe/model";
 
 export type DailyCountsStatus = "loading" | "error" | "ready" | "none";
 
-export function dailyCountsInput(kind: DetectionKind | null, extent: TimelineExtent) {
+export function dailyCountsInput(kind: DetectionKind | null, extent: TimelineExtent, locationId: string | null) {
   if (!kind) return null;
-  return { entity: kind, groupBy: "day" as const, from: extent.from, to: extent.to, includeDummy: true };
+  return {
+    entity: kind,
+    groupBy: "day" as const,
+    from: extent.from,
+    to: extent.to,
+    includeDummy: true,
+    ...(locationId ? { locationId } : {}),
+  };
 }
 
 export function useDailyCounts(
   extent: TimelineExtent,
   kind: DetectionKind | null,
 ): { counts: number[]; status: DailyCountsStatus } {
-  const input = dailyCountsInput(kind, extent);
-  const query = api.alerts.entityStats.useQuery(input ?? skipToken, {
+  const { status: placeStatus, place } = useMapPlace();
+  const input = dailyCountsInput(kind, extent, placeLocationId(place));
+  const query = api.alerts.entityStats.useQuery(input && placeStatus !== "loading" ? input : skipToken, {
     staleTime: 60_000,
     refetchOnWindowFocus: false,
     retry: false,

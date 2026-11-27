@@ -70,10 +70,10 @@ describe("map detections", () => {
 describe("detectionsQueryInput", () => {
   const range = { from: "2026-10-27T00:00:00.000Z" };
   it("asks for published alerts only", () => {
-    expect(detectionsQueryInput("alert", range)).toEqual({ ...range, includeDummy: true, status: "published" });
+    expect(detectionsQueryInput("alert", range, null)).toEqual({ ...range, includeDummy: true, status: "published" });
   });
   it("sends no status for events and signals", () => {
-    expect(detectionsQueryInput("event", range)).not.toHaveProperty("status");
-    expect(detectionsQueryInput("signal", range)).not.toHaveProperty("status");
+    expect(detectionsQueryInput("event", range, null)).not.toHaveProperty("status");
+    expect(detectionsQueryInput("signal", range, null)).not.toHaveProperty("status");
   });
 });

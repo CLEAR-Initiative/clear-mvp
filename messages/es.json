@@ -4796,6 +4796,18 @@
         "clear": "Borrar detecciones"
       }
     },
+    "place": {
+      "global": "Global",
+      "searchCountry": "Buscar países",
+      "searchRegion": "Buscar regiones",
+      "noResults": "Sin resultados",
+      "globalView": "Vista global",
+      "allCountries": "Todos los países",
+      "allRegions": "Todas las regiones",
+      "clearRegion": "Borrar región",
+      "countryLabel": "País del mapa",
+      "regionLabel": "Región del mapa"
+    },
     "mapSettings": {
       "title": "Ajustes del mapa",
       "roads": "Carreteras",
