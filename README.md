@@ -92,6 +92,7 @@ on specific features. [`.env.example`](./.env.example) documents each one.
 | `GRAPHQL_URL` | — | Override the GraphQL endpoint. Defaults to `${API_URL}/graphql`. |
 | `NEXT_PUBLIC_MAPBOX_TOKEN` | Maps | Mapbox public token. |
 | `CLEAR_AGENT_MODEL`, `ANTHROPIC_API_KEY`, `CLEAR_AGENT_API_KEY` | CLEAR Agent | Model string (e.g. `anthropic/...`), its provider key, and the Agent's clear-api key. |
+| `CLEAR_AGENT_MODEL_URL`, `CLEAR_AGENT_MODEL_API_KEY` | CLEAR Agent | Optional. An OpenAI-compatible endpoint (base URL including `/v1`) and its key, for a self-hosted open-weight model. Replaces the provider key. |
 | `NRC_FIND_API_URL`, `NRC_FIND_API_TOKEN` | CLEAR Agent | NRC Find, NRC's internal knowledge base. |
 | `NEXT_PUBLIC_LOGIE_BLOCKAGES_URL` | Map access-constraints layer | See [`docs/clear-api-logie-ingest.md`](./docs/clear-api-logie-ingest.md). |
 | `NOTION_TOKEN`, `NOTION_FEEDBACK_DB_ID` | Feedback form | `/api/feedback` writes to this Notion database. |
