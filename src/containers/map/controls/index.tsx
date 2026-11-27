@@ -27,7 +27,7 @@ export function MapControls({ selection }: { selection: MapSelection | null }) {
 
   const onBasemapOpenedChange = (opened: boolean) => {
     setBasemapOpened(opened);
-    if (opened && !isWide()) setLegendOpened(false);
+    if (opened) setLegendOpened(false);
   };
 
   return (

@@ -20,8 +20,11 @@ vi.mock("./ask-ai", () => ({ AskAiButton: () => null }));
 
 const { MapControls } = await import("./index");
 
+const realMatchMedia = window.matchMedia;
+
 afterEach(() => {
   cleanup();
+  window.matchMedia = realMatchMedia;
 });
 
 describe("MapControls", () => {
@@ -48,5 +51,22 @@ describe("MapControls", () => {
     expect(dialog).toHaveAttribute("inert");
     expect(basemapButton).toHaveFocus();
     expect(legendSheet).toHaveAttribute("inert");
+  });
+
+  it("on a wide screen, opening the basemap popover closes the legend", () => {
+    window.matchMedia = (query: string) => ({ ...realMatchMedia(query), matches: true });
+    render(
+      <MantineProvider>
+        <NuqsTestingAdapter searchParams={{ layers: JSON.stringify([{ id: "signals", visibility: true, opacity: 1 }]) }}>
+          <MapControls selection={null} />
+        </NuqsTestingAdapter>
+      </MantineProvider>,
+    );
+    expect(screen.getByRole("region", { name: "controls.legend" })).toBeInTheDocument();
+
+    const basemapButton = screen.getByRole("button", { name: "button" });
+    fireEvent.click(basemapButton);
+    expect(basemapButton).toHaveAttribute("aria-expanded", "true");
+    expect(screen.queryByRole("region", { name: "controls.legend" })).not.toBeInTheDocument();
   });
 });
