@@ -6,6 +6,12 @@
  * is hard-coded anywhere else, so the model can change — including to a
  * self-hosted open-weight one, pending NRC's data-handling answer — without
  * touching the Agent's code.
+ *
+ * `CLEAR_AGENT_MODEL_URL` points the Agent at an OpenAI-compatible endpoint
+ * instead (a self-hosted llama.cpp or vLLM server: the base URL up to and
+ * including `/v1`). `CLEAR_AGENT_MODEL` is then the id the endpoint is asked
+ * for, still `provider/model`, and `CLEAR_AGENT_MODEL_API_KEY` is its bearer
+ * key. No provider key (`ANTHROPIC_API_KEY`) is read or needed.
  */
 
 import "server-only";
@@ -26,5 +32,11 @@ export function resolveClearAgentModel(): MastraModelConfig {
     }
     return createScriptedModel() as unknown as MastraModelConfig;
   }
-  return id;
+  const url = process.env.CLEAR_AGENT_MODEL_URL?.trim();
+  if (!url) return id;
+  if (!/^[^/]+\/.+$/.test(id)) {
+    throw new Error("CLEAR_AGENT_MODEL must be `provider/model` when CLEAR_AGENT_MODEL_URL is set.");
+  }
+  const apiKey = process.env.CLEAR_AGENT_MODEL_API_KEY?.trim();
+  return { id: id as `${string}/${string}`, url, ...(apiKey ? { apiKey } : {}) };
 }

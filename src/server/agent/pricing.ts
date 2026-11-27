@@ -25,6 +25,9 @@ export const MODEL_PRICES: Readonly<Record<string, ModelPrice>> = {
   "anthropic/claude-sonnet-5-5": { inputPerMTok: 2, outputPerMTok: 10 },
   "anthropic/claude-sonnet-5": { inputPerMTok: 2, outputPerMTok: 10 },
   "anthropic/claude-haiku-4-5": { inputPerMTok: 1, outputPerMTok: 5 },
+  // Self-hosted open-weight model on NRC Find's GPU (CLEAR_AGENT_MODEL_URL):
+  // a fixed cost, nothing per token, so the daily Agent budget does not limit it.
+  "nrc-find/qwen3.5-9b": { inputPerMTok: 0, outputPerMTok: 0 },
   // The deterministic e2e stand-in costs nothing.
   [SCRIPTED_MODEL_ID]: { inputPerMTok: 0, outputPerMTok: 0 },
 };
