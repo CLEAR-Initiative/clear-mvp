@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { createSignalIndex, viewClusters, worldPoints } from "./clusters";
 import { selectionHighlight } from "./selection-highlight";
-import type { SignalFeature, SignalFeatureCollection } from "./to-features";
+import type { DetectionFeature, DetectionFeatureCollection } from "./to-features";
 
-function signal(id: string, lng: number, lat: number): SignalFeature {
+function signal(id: string, lng: number, lat: number): DetectionFeature {
   return {
     type: "Feature",
     geometry: { type: "Point", coordinates: [lng, lat] },
@@ -12,7 +12,7 @@ function signal(id: string, lng: number, lat: number): SignalFeature {
 }
 
 // a and b are stacked at one point, c sits close by, d is alone far away.
-const data: SignalFeatureCollection = {
+const data: DetectionFeatureCollection = {
   type: "FeatureCollection",
   features: [signal("a", 30, 15), signal("b", 30, 15), signal("c", 30.01, 15.01), signal("d", -70, -10)],
 };
@@ -22,6 +22,7 @@ const world = { west: -180, south: -85, east: 180, north: 85 };
 function at(zoom: number) {
   const points = worldPoints(index, zoom);
   return {
+    kind: "signal" as const,
     data,
     index,
     clusters: viewClusters(index, world, zoom),
@@ -62,13 +63,21 @@ describe("selectionHighlight", () => {
     expect(highlight.clusterKey).not.toBeNull();
   });
 
-  it("rings nothing for an event or alert, even with a signal's id", () => {
+  it("rings an alert on the alerts layer", () => {
+    expect(
+      selectionHighlight({ ...at(3), kind: "alert", selection: { type: "detection", kind: "alert", id: "d" } }),
+    ).toEqual({ pointId: "d", clusterKey: null });
+  });
+
+  it("rings nothing for a selection of another kind, even with one of the layer's ids", () => {
     const none = { pointId: null, clusterKey: null };
 
-    expect(selectionHighlight({ ...at(3), selection: { type: "detection", kind: "event", id: "d" } })).toEqual(none);
-    expect(selectionHighlight({ ...at(22), selection: { type: "stack", kind: "alert", coordinates: [30, 15] } })).toEqual(
-      none,
-    );
+    expect(
+      selectionHighlight({ ...at(3), kind: "alert", selection: { type: "detection", kind: "event", id: "d" } }),
+    ).toEqual(none);
+    expect(
+      selectionHighlight({ ...at(22), kind: "signal", selection: { type: "stack", kind: "alert", coordinates: [30, 15] } }),
+    ).toEqual(none);
   });
 
   it("shows nothing for a selection that is not in the data", () => {

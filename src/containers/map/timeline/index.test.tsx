@@ -24,6 +24,8 @@ vi.mock("~/trpc/react", () => ({
       entityStats: {
         useQuery: () => ({ data: { buckets: queries.buckets }, isPending: false, isError: false, error: null }),
       },
+      alertsForMap: { useQuery: () => ({ data: undefined, isPending: false, isError: false, error: null }) },
+      eventsForMap: { useQuery: () => ({ data: undefined, isPending: false, isError: false, error: null }) },
     },
     signals: {
       forMap: {
@@ -42,6 +44,8 @@ vi.mock("~/trpc/react", () => ({
 const { Timeline } = await import("./index");
 const { TimeframeQueryProvider } = await import("../hooks/use-timeframe");
 
+const SIGNALS_LAYER = JSON.stringify([{ id: "signals", visibility: true, opacity: 1 }]);
+
 function renderTimeline(
   onUrlUpdate: (event: UrlUpdateEvent) => void,
   onHeightChange = vi.fn(),
@@ -49,7 +53,7 @@ function renderTimeline(
 ) {
   return render(
     <MantineProvider>
-      <NuqsTestingAdapter searchParams={searchParams} onUrlUpdate={onUrlUpdate}>
+      <NuqsTestingAdapter searchParams={{ layers: SIGNALS_LAYER, ...searchParams }} onUrlUpdate={onUrlUpdate}>
         <TimeframeQueryProvider>
           <Timeline onHeightChange={onHeightChange} />
         </TimeframeQueryProvider>
@@ -105,7 +109,7 @@ describe("Timeline", () => {
     queries.mapSignals = [{ id: "a" }, { id: "b" }, { id: "c" }];
     renderTimeline(vi.fn(), vi.fn(), { time: "24h" });
 
-    expect(screen.getByText("count:3")).toBeTruthy();
+    expect(screen.getByText("count.signal:3")).toBeTruthy();
   });
 
   it("counts a fixed range from the bars", () => {
@@ -118,7 +122,7 @@ describe("Timeline", () => {
     queries.mapSignals = [{ id: "a" }];
     renderTimeline(vi.fn(), vi.fn(), { time: "2026-11-01..2026-11-02" });
 
-    expect(screen.getByText("count:7")).toBeTruthy();
+    expect(screen.getByText("count.signal:7")).toBeTruthy();
   });
 
   it("keeps the range when a handle's knob is pressed and released without a drag", () => {

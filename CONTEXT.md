@@ -418,10 +418,17 @@ names, points of interest, stations and airports, water and natural features. Tu
 off both **Roads** and Labels leaves a clean basemap; rail lines, water and land stay.
 _Avoid_: treating road or path names as Labels; hiding rail lines with Labels.
 
+**Detection level**:
+Which **Detections** the map shows: Alerts, Events or Signals, one at a time, or none. It is
+chosen in the Crisis layer section of the **Map panel**. The default is Alerts. The map shows
+published alerts only.
+_Avoid_: "disaster type" (that is a flood, a conflict…); "data view" (the old map's word).
+
 **Map panel**:
 The panel on `/map-v2` that sits next to the app nav and floats over the map, on screens
-992px or wider. It shows the **Stack list** or the
-detail (**Signal detail**, **Event detail**) of the **Map selection**, and nothing else yet.
+992px or wider. With nothing selected it shows the Crisis layer section, where the user picks
+the **Detection level**. With a **Map selection** it shows the **Stack list** or the
+detail (**Signal detail**, **Event detail**) of that selection.
 A signal, event or alert without a title reads "Untitled signal" or "Untitled event" (an
 alert reads as its event) everywhere in the panel: not its type, description or id. The type
 shows as its pill, not in place of the title.
@@ -445,7 +452,7 @@ _Avoid_: "sidebar" (ambiguous with app navigation); confusing it with **Map sett
 which opens from the basemap control.
 
 **Timeframe**:
-The date range that scopes the **Detections** shown on the map (today, **Signals**). It is
+The date range that scopes the **Detections** of the **Detection level** shown on the map. It is
 either a **preset** (the last 24 hours, 7 days, 30 days or 90 days) or a **custom range**
 set with the handles on the **Timeline**. A timeframe that ends today is counted back from
 now, so it moves with time; a preset is one of these. A custom range that ends before today
@@ -455,9 +462,10 @@ _Avoid_: "window" (taken by **Brief window** and the Situation Analysis window);
 filter".
 
 **Timeline**:
-The bar at the bottom of the map that shows how many **Signals** there are for each day of the
-last 90 days, and where the user sets the **Timeframe**. Its count includes **Signals** that
-have no location, so it can be higher than the number of dots on the map. Open on wide
+The bar at the bottom of the map that shows how many **Detections** of the **Detection level**
+there are for each day of the last 90 days, and where the user sets the **Timeframe**. Its count
+includes **Detections** that have no location, so it can be higher than the number of dots on
+the map. With no Detection level it shows no bars and no count. Open on wide
 screens; on narrow screens only its collapsed summary shows, and the Timeframe cannot be
 changed there.
 _Avoid_: "timeline playback" (not designed); confusing it with a **Detection**'s own
@@ -556,10 +564,9 @@ label says "Disaster name"; the app labels the value "Signal", because it is the
 
 **Detection kind** (map v2):
 Whether a **Detection** on the map is a **Signal**, an **Event** or an **Alert**. Each kind
-gets its own layer, and a filter will show one of them at a time, or none (signals will
-eventually be dropped). A click reports the kind of the layer it hit, and the **Map selection**
-keeps it, so the **Map panel** knows what the id means. Until the events and alerts layers
-exist, only signals can be clicked; the panel opens events and alerts from the URL.
+gets its own layer, and the **Detection level** shows one of them at a time, or none (signals
+will eventually be dropped). A click reports the kind of the layer it hit, and the **Map
+selection** keeps it, so the **Map panel** knows what the id means.
 _Avoid_: reading the kind from the layers shown (none may be, and the selection outlives them).
 
 **Map selection** (map v2):

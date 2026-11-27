@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useId, useState } from "react";
 import { BidiTitle } from "~/components/ui/bidi-title";
-import { SeverityTag } from "~/containers/map/layers/signals/severity-tag";
+import { SeverityTag } from "~/containers/map/layers/detections/severity-tag";
 import type { LngLatPoint } from "~/containers/map/selection";
 import { mapSeverity } from "~/lib/types/graphql";
 import type { PanelBack } from "./back-link";

@@ -1,14 +1,15 @@
 import { mapSeverity, type GqlLocation, type GqlSignal } from "~/lib/types/graphql";
+import type { MapDetection } from "../../hooks/use-detections-for-map";
 
 export type SeverityBucket = ReturnType<typeof mapSeverity>;
 
-export type SignalFeature = {
+export type DetectionFeature = {
   type: "Feature";
   geometry: { type: "Point"; coordinates: [number, number] };
   properties: { id: string; title: string | null; severity: SeverityBucket };
 };
 
-export type SignalFeatureCollection = { type: "FeatureCollection"; features: SignalFeature[] };
+export type DetectionFeatureCollection = { type: "FeatureCollection"; features: DetectionFeature[] };
 
 /** A location's coordinates when its geometry is a valid point. */
 export function locationPoint(location: GqlLocation | null | undefined): [number, number] | null {
@@ -31,15 +32,14 @@ export function signalPoint(signal: SignalLocations): [number, number] | null {
   );
 }
 
-export function signalsToFeatures(signals: GqlSignal[]): SignalFeatureCollection {
-  const features: SignalFeature[] = [];
-  for (const signal of signals) {
-    const coordinates = signalPoint(signal);
-    if (!coordinates) continue;
+export function detectionsToFeatures(detections: MapDetection[]): DetectionFeatureCollection {
+  const features: DetectionFeature[] = [];
+  for (const detection of detections) {
+    if (!detection.point) continue;
     features.push({
       type: "Feature",
-      geometry: { type: "Point", coordinates },
-      properties: { id: signal.id, title: signal.title, severity: mapSeverity(signal.severity) },
+      geometry: { type: "Point", coordinates: detection.point },
+      properties: { id: detection.id, title: detection.title, severity: mapSeverity(detection.severity) },
     });
   }
   return { type: "FeatureCollection", features };

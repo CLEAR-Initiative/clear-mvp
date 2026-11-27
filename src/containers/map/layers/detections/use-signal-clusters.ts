@@ -12,9 +12,9 @@ import {
   type ViewBounds,
 } from "./clusters";
 import { HEAT_POINTS_MIN_ZOOM } from "./density-fade";
-import type { SignalFeatureCollection } from "./to-features";
+import type { DetectionFeatureCollection } from "./to-features";
 
-type ClusterView = { clusters: ClusterMarker[]; points: SignalFeatureCollection; index: SignalIndex };
+type ClusterView = { clusters: ClusterMarker[]; points: DetectionFeatureCollection; index: SignalIndex };
 type Camera = { bounds: ViewBounds; zoom: number };
 export type SignalGrouping = "none" | "clusters" | "stacked";
 
@@ -32,7 +32,7 @@ function paddedBounds(west: number, south: number, east: number, north: number):
   };
 }
 
-export function useSignalClusters(collection: SignalFeatureCollection, grouping: SignalGrouping): ClusterView {
+export function useSignalClusters(collection: DetectionFeatureCollection, grouping: SignalGrouping): ClusterView {
   const { current: mapRef } = useMap();
   const index = useMemo(() => createSignalIndex(collection), [collection]);
   const [camera, setCamera] = useState<Camera | null>(null);

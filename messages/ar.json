@@ -4614,23 +4614,41 @@
     "loading": "جارٍ تحميل الخريطة",
     "loadingLayers": "جارٍ تحميل {layers}",
     "layers": {
+      "alerts": {
+        "title": "التنبيهات",
+        "inSentence": "التنبيهات",
+        "item": "تنبيه",
+        "untitled": "تنبيه بلا عنوان",
+        "cluster": {
+          "zoom": "{count, plural, two {تنبيهان} few {# تنبيهات} many {# تنبيهًا} other {# تنبيه}}، تكبير",
+          "stacked": "{count, plural, two {تنبيهان} few {# تنبيهات} many {# تنبيهًا} other {# تنبيه}} في هذا الموقع"
+        },
+        "fewer": "تنبيهات أقل",
+        "more": "تنبيهات أكثر"
+      },
+      "events": {
+        "title": "الأحداث",
+        "inSentence": "الأحداث",
+        "item": "حدث",
+        "untitled": "حدث بلا عنوان",
+        "cluster": {
+          "zoom": "{count, plural, two {حدثان} few {# أحداث} many {# حدثًا} other {# حدث}}، تكبير",
+          "stacked": "{count, plural, two {حدثان} few {# أحداث} many {# حدثًا} other {# حدث}} في هذا الموقع"
+        },
+        "fewer": "أحداث أقل",
+        "more": "أحداث أكثر"
+      },
       "signals": {
         "title": "الإشارات",
         "inSentence": "الإشارات",
-        "severity": "الخطورة",
+        "item": "إشارة",
+        "untitled": "إشارة بلا عنوان",
         "cluster": {
           "zoom": "{count, plural, two {إشارتان} few {# إشارات} many {# إشارة} other {# إشارة}}، تكبير",
           "stacked": "{count, plural, two {إشارتان} few {# إشارات} many {# إشارة} other {# إشارة}} في هذا الموقع"
         },
-        "density": "الكثافة",
-        "showing": "العرض:",
-        "densityDisplay": "طريقة عرض الكثافة",
-        "clusters": "مجموعات",
-        "heatmap": "خريطة حرارية",
-        "fewerSignals": "إشارات أقل",
-        "moreSignals": "إشارات أكثر",
-        "low": "منخفضة",
-        "high": "مرتفعة"
+        "fewer": "إشارات أقل",
+        "more": "إشارات أكثر"
       }
     },
     "errors": {
@@ -4766,7 +4784,17 @@
           "takeAction": "اتخاذ إجراء"
         }
       },
-      "showOnMap": "إظهار على الخريطة"
+      "showOnMap": "إظهار على الخريطة",
+      "crisisLayer": {
+        "title": "طبقة الأزمات",
+        "activeCount": "{count, plural, zero {لا طبقات نشطة} one {طبقة نشطة واحدة} two {طبقتان نشطتان} few {# طبقات نشطة} many {# طبقة نشطة} other {# طبقة نشطة}}",
+        "collapse": "إخفاء طبقة الأزمات",
+        "expand": "إظهار طبقة الأزمات",
+        "disasters": "الكوارث",
+        "showDisasters": "إظهار الكوارث",
+        "placeholder": "اختر عمليات الرصد",
+        "clear": "مسح عمليات الرصد"
+      }
     },
     "mapSettings": {
       "title": "إعدادات الخريطة",
@@ -4780,7 +4808,6 @@
       }
     },
     "signalTooltip": {
-      "signal": "إشارة",
       "severity": "الخطورة",
       "untitled": "إشارة بلا عنوان"
     },
@@ -4794,13 +4821,32 @@
       },
       "last24h": "آخر 24 ساعة",
       "lastDays": "آخر {count} يومًا",
-      "count": "{total, plural, zero {<b>#</b> إشارة} one {<b>#</b> إشارة} two {<b>#</b> إشارتان} few {<b>#</b> إشارات} many {<b>#</b> إشارة} other {<b>#</b> إشارة}}",
-      "countPending": "<b>—</b> إشارات",
+      "count": {
+        "alert": "{total, plural, zero {<b>#</b> تنبيه} one {<b>#</b> تنبيه} two {<b>#</b> تنبيهان} few {<b>#</b> تنبيهات} many {<b>#</b> تنبيهًا} other {<b>#</b> تنبيه}}",
+        "event": "{total, plural, zero {<b>#</b> حدث} one {<b>#</b> حدث} two {<b>#</b> حدثان} few {<b>#</b> أحداث} many {<b>#</b> حدثًا} other {<b>#</b> حدث}}",
+        "signal": "{total, plural, zero {<b>#</b> إشارة} one {<b>#</b> إشارة} two {<b>#</b> إشارتان} few {<b>#</b> إشارات} many {<b>#</b> إشارة} other {<b>#</b> إشارة}}"
+      },
+      "countPending": {
+        "alert": "<b>—</b> تنبيهات",
+        "event": "<b>—</b> أحداث",
+        "signal": "<b>—</b> إشارات"
+      },
+      "countNone": "<b>—</b>",
       "today": "اليوم",
       "show": "إظهار الخط الزمني",
       "hide": "إخفاء الخط الزمني",
       "startHandle": "تاريخ البدء",
       "endHandle": "تاريخ الانتهاء"
+    },
+    "detectionLegend": {
+      "severity": "الخطورة",
+      "density": "الكثافة",
+      "showing": "العرض:",
+      "densityDisplay": "طريقة عرض الكثافة",
+      "clusters": "مجموعات",
+      "heatmap": "خريطة حرارية",
+      "low": "منخفضة",
+      "high": "مرتفعة"
     }
   }
 }

@@ -1,7 +1,17 @@
 import { describe, expect, it } from "vitest";
-import { parseLayers } from "./use-active-layers";
+import { DEFAULT_LAYERS, parseLayers } from "./use-active-layers";
 
 describe("layers param", () => {
+  it("defaults to the alerts layer", () => {
+    expect(DEFAULT_LAYERS).toEqual([{ id: "alerts", visibility: true, opacity: 1 }]);
+  });
+
+  it("keeps a signals layer from an old link", () => {
+    expect(parseLayers('[{"id":"signals","visibility":true,"opacity":1}]')).toEqual([
+      { id: "signals", visibility: true, opacity: 1 },
+    ]);
+  });
+
   it("drops a layer id the registry no longer has", () => {
     const value = JSON.stringify([
       { id: "signals", visibility: true, opacity: 1 },

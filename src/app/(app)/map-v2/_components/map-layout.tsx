@@ -10,6 +10,7 @@ import type { DetectionKind } from "~/containers/map/selection";
 import { MapPanel } from "./map-panel";
 import { AlertDetailView } from "./map-panel/alert-detail-view";
 import { backToList, type PanelBack } from "./map-panel/back-link";
+import { CrisisLayer } from "./map-panel/crisis-layer";
 import { EventDetailView } from "./map-panel/event-detail-view";
 import { MapSheet } from "./map-panel/map-sheet";
 import { SignalDetailView } from "./map-panel/signal-detail-view";
@@ -85,6 +86,8 @@ export function MapLayout({ initialPanelCollapsed }: { initialPanelCollapsed: bo
         onBack={clear}
       />
     );
+  } else if (layout === "panel") {
+    panelContent = <CrisisLayer onLevelChange={clear} />;
   }
 
   const contentKey = `${kind ?? ""}|${selection.stackKey ?? ""}|${selection.detailId ?? ""}`;

@@ -1,0 +1,155 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 24px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 24px;
+  color: var(--color-text-primary);
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding-inline: 5px;
+  border-radius: 9px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--map-on-accent);
+  background: var(--map-accent);
+}
+
+.chevron {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  margin-inline-start: auto;
+  margin-inline-end: -4px;
+  color: var(--color-text-primary);
+  transition: transform 150ms ease;
+}
+
+.chevron:not([data-open]) {
+  transform: rotate(-90deg);
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.body[hidden] {
+  display: none;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.rowLabel {
+  font-size: 14px;
+  line-height: 18px;
+  color: var(--color-text-primary);
+}
+
+.switchTrack {
+  cursor: pointer;
+  background: var(--map-toggle-off);
+  border-color: transparent;
+}
+
+input:checked + .switchTrack {
+  background: var(--map-accent);
+}
+
+.selectInput {
+  height: 40px;
+  border: 1px solid var(--map-control-border);
+  border-radius: 4px;
+  font-size: 14px;
+  color: var(--color-text-primary);
+  background: var(--color-bg-white);
+  cursor: pointer;
+}
+
+.selectInput::placeholder {
+  color: var(--color-text-primary);
+  opacity: 1;
+}
+
+.selectInput:focus,
+.selectInput[data-expanded] {
+  border-color: var(--map-accent);
+}
+
+.selectSection {
+  color: var(--color-text-primary);
+}
+
+.selected .selectInput {
+  border-color: var(--map-accent);
+  font-weight: 600;
+  color: var(--map-on-accent);
+  background: var(--map-accent);
+}
+
+.selected .selectSection {
+  color: var(--map-on-accent);
+}
+
+.clear {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  color: inherit;
+}
+
+.clear:focus-visible {
+  outline: 2px solid var(--map-on-accent);
+  outline-offset: -2px;
+}
+
+.dropdown {
+  padding: 8px;
+  border: 0.5px solid var(--map-accent);
+  border-radius: 4px;
+  background: var(--color-bg-white);
+}
+
+.option {
+  padding: 4px 8px;
+  border-radius: 0;
+  font-size: 14px;
+  line-height: 18px;
+  color: var(--color-text-primary);
+}
+
+.option[data-checked] {
+  font-weight: 500;
+  color: var(--map-on-accent);
+  background: var(--map-accent);
+}

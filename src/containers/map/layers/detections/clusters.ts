@@ -1,7 +1,7 @@
 import Supercluster from "supercluster";
 import { emptySeverityCounts, type SeverityCounts } from "./donut";
 import { SEVERITY_BUCKETS } from "./severity-tokens";
-import type { SignalFeature, SignalFeatureCollection } from "./to-features";
+import type { DetectionFeature, DetectionFeatureCollection } from "./to-features";
 
 export const CLUSTER_MAX_ZOOM = 22;
 const CLUSTER_RADIUS_PX = 60;
@@ -19,7 +19,7 @@ export function isSamePoint(a: [number, number], b: [number, number]): boolean {
   return Math.abs(a[0] - b[0]) <= STACK_TOLERANCE_DEG && Math.abs(a[1] - b[1]) <= STACK_TOLERANCE_DEG;
 }
 
-export type SignalIndex = Supercluster<SignalFeature["properties"], SeverityCounts>;
+export type SignalIndex = Supercluster<DetectionFeature["properties"], SeverityCounts>;
 
 export type ViewBounds = { west: number; south: number; east: number; north: number };
 
@@ -33,7 +33,7 @@ export type ClusterMarker = {
   severity: SeverityCounts;
 };
 
-export function createSignalIndex(collection: SignalFeatureCollection): SignalIndex {
+export function createSignalIndex(collection: DetectionFeatureCollection): SignalIndex {
   const index: SignalIndex = new Supercluster({
     radius: CLUSTER_RADIUS_PX,
     extent: CLUSTER_EXTENT,
@@ -54,10 +54,10 @@ function inLngRange(lng: number, west: number, east: number): boolean {
 
 const WORLD_BBOX: [number, number, number, number] = [-180, -90, 180, 90];
 
-export function worldPoints(index: SignalIndex, zoom: number): SignalFeatureCollection {
+export function worldPoints(index: SignalIndex, zoom: number): DetectionFeatureCollection {
   const points = index
     .getClusters(WORLD_BBOX, zoom)
-    .filter((feature) => !("cluster" in feature.properties) || !feature.properties.cluster) as SignalFeature[];
+    .filter((feature) => !("cluster" in feature.properties) || !feature.properties.cluster) as DetectionFeature[];
   return { type: "FeatureCollection", features: points };
 }
 

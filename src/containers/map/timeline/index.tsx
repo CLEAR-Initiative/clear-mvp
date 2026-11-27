@@ -7,7 +7,8 @@ import { IconChevronDown, IconChevronUp } from "@tabler/icons-react";
 import { useLocale, useTranslations } from "next-intl";
 import { reportHandledError } from "~/lib/report-handled-error";
 import { useTimeframe } from "../hooks/use-timeframe";
-import { useSignalsForMap } from "../hooks/use-signals-for-map";
+import { useDetectionLevel } from "../hooks/use-detection-level";
+import { useDetectionsForMap } from "../hooks/use-detections-for-map";
 import {
   PRESETS,
   TIMELINE_DAYS,
@@ -43,16 +44,21 @@ export function Timeline({ onHeightChange, insetStart = 0 }: TimelineProps) {
   const [extent] = useState(() => timelineExtent(new Date()));
   const [timeframe, setTimeframe] = useTimeframe();
   const range = useMemo(() => timeframeBars(timeframe, extent), [timeframe, extent]);
-  const { counts, status } = useDailyCounts(extent);
-  const mapSignals = useSignalsForMap();
-  const mapStatus = mapSignals.isError
-    ? "error"
-    : mapSignals.isPending || mapSignals.isPlaceholderData
-      ? "loading"
-      : "ready";
+  const { level } = useDetectionLevel();
+  const { counts, status } = useDailyCounts(extent, level);
+  const mapDetections = useDetectionsForMap(level);
+  const mapStatus = !level
+    ? "none"
+    : mapDetections.isError
+      ? "error"
+      : mapDetections.isPending || mapDetections.isPlaceholderData
+        ? "loading"
+        : "ready";
   useEffect(() => {
-    if (mapSignals.error) reportHandledError(mapSignals.error, { feature: "map-v2-timeframe", stage: "map-count" });
-  }, [mapSignals.error]);
+    if (mapDetections.error) {
+      reportHandledError(mapDetections.error, { feature: "map-v2-timeframe", stage: "map-count" });
+    }
+  }, [mapDetections.error]);
 
   const [draft, setDraftState] = useState<BarRange | null>(null);
   const draftRef = useRef<BarRange | null>(null);
@@ -84,12 +90,15 @@ export function Timeline({ onHeightChange, insetStart = 0 }: TimelineProps) {
 
   const fromMap = !draft && timeframe.kind === "rolling";
   const total = fromMap
-    ? (mapSignals.data?.length ?? 0)
+    ? (mapDetections.data?.length ?? 0)
     : counts.slice(shown[0], shown[1] + 1).reduce((sum, count) => sum + count, 0);
   const countStatus = fromMap ? mapStatus : status;
   const insetStyle = { "--map-timeline-inset-start": `${insetStart}px` } as CSSProperties;
-  const count =
-    countStatus === "ready" ? t.rich("count", { total, b: bold }) : t.rich("countPending", { b: bold });
+  const count = !level
+    ? t.rich("countNone", { b: bold })
+    : countStatus === "ready"
+      ? t.rich(`count.${level}`, { total, b: bold })
+      : t.rich(`countPending.${level}`, { b: bold });
 
   const rootRef = useRef<HTMLElement>(null);
   const onHeightChangeRef = useRef(onHeightChange);
