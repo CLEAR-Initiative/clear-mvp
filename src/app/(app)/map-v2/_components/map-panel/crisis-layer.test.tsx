@@ -100,13 +100,13 @@ describe("CrisisLayer", () => {
 
   it("removes the detection layer and its count with the Disasters toggle", async () => {
     const { onUrlUpdate, lastLayers } = renderSection({ layers: JSON.stringify([layer("alerts"), layer("roads")]) });
-    expect(screen.getByLabelText("panel.crisisLayer.activeCount")).toBeInTheDocument();
+    expect(screen.getByText("panel.crisisLayer.activeCount")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("switch", { name: "panel.crisisLayer.showDisasters" }));
 
     await waitFor(() => expect(onUrlUpdate).toHaveBeenCalled());
     expect(lastLayers()).toEqual([layer("roads")]);
-    await waitFor(() => expect(screen.queryByLabelText("panel.crisisLayer.activeCount")).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByText("panel.crisisLayer.activeCount")).not.toBeInTheDocument());
   });
 
   it("brings back the last level when the toggle turns on again", async () => {

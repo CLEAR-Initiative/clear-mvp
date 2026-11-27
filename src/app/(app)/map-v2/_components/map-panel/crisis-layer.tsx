@@ -1,7 +1,7 @@
 "use client";
 
 import { useId, useRef, useState } from "react";
-import { Select, Switch, UnstyledButton } from "@mantine/core";
+import { Select, Switch, UnstyledButton, VisuallyHidden } from "@mantine/core";
 import { IconBulb, IconChevronDown, IconChevronsDown, IconX } from "@tabler/icons-react";
 import { useTranslations } from "next-intl";
 import { useDetectionLevel } from "~/containers/map/hooks/use-detection-level";
@@ -32,8 +32,9 @@ export function CrisisLayer({ onLevelChange }: { onLevelChange: () => void }) {
           {t("panel.crisisLayer.title")}
         </h2>
         {activeCount > 0 && (
-          <span className={classes.badge} aria-label={t("panel.crisisLayer.activeCount", { count: activeCount })}>
-            {activeCount}
+          <span className={classes.badge}>
+            <span aria-hidden>{activeCount}</span>
+            <VisuallyHidden>{t("panel.crisisLayer.activeCount", { count: activeCount })}</VisuallyHidden>
           </span>
         )}
         <UnstyledButton
