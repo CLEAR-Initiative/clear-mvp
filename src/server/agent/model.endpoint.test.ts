@@ -15,6 +15,8 @@ interface Seen {
   url?: string;
   authorization?: string;
   model?: unknown;
+  roles?: string[];
+  system?: unknown;
 }
 
 let server: Server;
@@ -34,14 +36,30 @@ beforeEach(async () => {
     void body(req).then((raw) => {
       seen.url = req.url;
       seen.authorization = req.headers.authorization;
-      seen.model = (JSON.parse(raw) as { model?: unknown }).model;
+      const sent = JSON.parse(raw) as { model?: unknown; stream?: boolean; messages?: Array<{ role: string; content: unknown }> };
+      seen.model = sent.model;
+      seen.roles = sent.messages?.map((m) => m.role);
+      seen.system = sent.messages?.find((m) => m.role === "system")?.content;
+      const completion = {
+        id: "chatcmpl-1",
+        created: 0,
+        model: "qwen3.5-9b",
+      };
+      if (sent.stream) {
+        // Server-sent events, as llama.cpp streams a chat completion.
+        res.writeHead(200, { "Content-Type": "text/event-stream" });
+        const chunk = (delta: object, finish: string | null) =>
+          `data: ${JSON.stringify({ ...completion, object: "chat.completion.chunk", choices: [{ index: 0, delta, finish_reason: finish }] })}\n\n`;
+        res.write(chunk({ role: "assistant", content: "ready" }, null));
+        res.write(chunk({}, "stop"));
+        res.end("data: [DONE]\n\n");
+        return;
+      }
       res.writeHead(200, { "Content-Type": "application/json" });
       res.end(
         JSON.stringify({
-          id: "chatcmpl-1",
+          ...completion,
           object: "chat.completion",
-          created: 0,
-          model: "qwen3.5-9b",
           choices: [{ index: 0, finish_reason: "stop", message: { role: "assistant", content: "ready" } }],
           usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 },
         }),
@@ -79,5 +97,45 @@ describe("CLEAR Agent on an OpenAI-compatible endpoint", () => {
     await ask();
     expect(seen.url).toBe("/llm/v1/chat/completions");
     expect(seen.authorization).toBeUndefined();
+  });
+
+  it("joins every system message into one at the start of the prompt", async () => {
+    // Qwen's chat template rejects a system message after the first turn,
+    // and Mastra appends some (working memory, the Current view).
+    const model = resolveClearAgentModel() as unknown as {
+      doGenerate: (options: unknown) => Promise<unknown>;
+    };
+    await model.doGenerate({
+      prompt: [
+        { role: "system", content: "Instructions." },
+        { role: "user", content: [{ type: "text", text: "Hi" }] },
+        { role: "system", content: "Working memory." },
+      ],
+    });
+    expect(seen.roles).toEqual(["system", "user"]);
+    expect(seen.system).toBe("Instructions.\n\nWorking memory.");
+  });
+
+  it("does the same on a streamed turn, the path the chat box uses", async () => {
+    const model = resolveClearAgentModel() as unknown as {
+      doStream: (options: unknown) => Promise<{ stream: ReadableStream<{ type: string; delta?: string }> }>;
+    };
+    const { stream } = await model.doStream({
+      prompt: [
+        { role: "system", content: "Instructions." },
+        { role: "user", content: [{ type: "text", text: "Hi" }] },
+        { role: "assistant", content: [{ type: "text", text: "Hello." }] },
+        { role: "system", content: "Current view." },
+        { role: "user", content: [{ type: "text", text: "And now?" }] },
+        { role: "system", content: "Working memory." },
+      ],
+    });
+    let text = "";
+    for await (const part of stream as unknown as AsyncIterable<{ type: string; delta?: string }>) {
+      if (part.type === "text-delta") text += part.delta ?? "";
+    }
+    expect(text).toBe("ready");
+    expect(seen.roles).toEqual(["system", "user", "assistant", "user"]);
+    expect(seen.system).toBe("Instructions.\n\nCurrent view.\n\nWorking memory.");
   });
 });
