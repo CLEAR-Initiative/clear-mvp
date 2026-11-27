@@ -129,6 +129,16 @@ describe("CrisisLayer", () => {
     expect(lastLayers()).toEqual([layer("events")]);
   });
 
+  it("keeps opacity and density display when the level changes", async () => {
+    const alerts = { id: "alerts", visibility: false, opacity: 0.5, settings: { density: "heatmap" } };
+    const { onUrlUpdate, lastLayers } = renderSection({ layers: JSON.stringify([alerts]) });
+
+    await pick("layers.events.title");
+
+    await waitFor(() => expect(onUrlUpdate).toHaveBeenCalled());
+    expect(lastLayers()).toEqual([{ id: "events", visibility: true, opacity: 0.5, settings: { density: "heatmap" } }]);
+  });
+
   it("adds alerts when the toggle turns on with no level", async () => {
     const { onUrlUpdate, lastLayers } = renderSection({ layers: JSON.stringify([]) });
 

@@ -7,8 +7,11 @@ function withLevel(layers: ActiveLayer[], kind: DetectionKind | null): ActiveLay
   const firstIndex = layers.findIndex((layer) => detectionKindOf(layer.id) !== null);
   const rest = layers.filter((layer) => detectionKindOf(layer.id) === null);
   if (!kind) return rest;
+  const previous = layers[firstIndex];
+  const layer: ActiveLayer = { id: DETECTION_LAYER_IDS[kind], visibility: true, opacity: previous?.opacity ?? 1 };
+  if (previous?.settings !== undefined) layer.settings = previous.settings;
   const next = [...rest];
-  next.splice(Math.max(firstIndex, 0), 0, { id: DETECTION_LAYER_IDS[kind], visibility: true, opacity: 1 });
+  next.splice(Math.max(firstIndex, 0), 0, layer);
   return next;
 }
 
