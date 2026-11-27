@@ -30,6 +30,7 @@ export function usePlaceFit(status: MapPlaceStatus, place: MapPlace): FitTo | nu
     if (first && (urlHasView || placeId === null)) return;
 
     if (placeId === null) {
+      setFitTo(null);
       setView(WORLD_VIEW);
       return;
     }
