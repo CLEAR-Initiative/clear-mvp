@@ -17,6 +17,7 @@ interface Seen {
   model?: unknown;
   roles?: string[];
   system?: unknown;
+  streamOptions?: unknown;
 }
 
 let server: Server;
@@ -36,8 +37,9 @@ beforeEach(async () => {
     void body(req).then((raw) => {
       seen.url = req.url;
       seen.authorization = req.headers.authorization;
-      const sent = JSON.parse(raw) as { model?: unknown; stream?: boolean; messages?: Array<{ role: string; content: unknown }> };
+      const sent = JSON.parse(raw) as { model?: unknown; stream?: boolean; stream_options?: unknown; messages?: Array<{ role: string; content: unknown }> };
       seen.model = sent.model;
+      seen.streamOptions = sent.stream_options;
       seen.roles = sent.messages?.map((m) => m.role);
       seen.system = sent.messages?.find((m) => m.role === "system")?.content;
       const completion = {
@@ -52,6 +54,12 @@ beforeEach(async () => {
           `data: ${JSON.stringify({ ...completion, object: "chat.completion.chunk", choices: [{ index: 0, delta, finish_reason: finish }] })}\n\n`;
         res.write(chunk({ role: "assistant", content: "ready" }, null));
         res.write(chunk({}, "stop"));
+        // Like llama.cpp: token usage only when the request asked for it.
+        if ((sent.stream_options as { include_usage?: boolean } | undefined)?.include_usage) {
+          res.write(
+            `data: ${JSON.stringify({ ...completion, object: "chat.completion.chunk", choices: [], usage: { prompt_tokens: 21, completion_tokens: 6, total_tokens: 27 } })}\n\n`,
+          );
+        }
         res.end("data: [DONE]\n\n");
         return;
       }
@@ -137,5 +145,15 @@ describe("CLEAR Agent on an OpenAI-compatible endpoint", () => {
     expect(text).toBe("ready");
     expect(seen.roles).toEqual(["system", "user", "assistant", "user"]);
     expect(seen.system).toBe("Instructions.\n\nCurrent view.\n\nWorking memory.");
+  });
+
+  it("asks for token usage on a streamed turn and reports it", async () => {
+    // llama.cpp sends usage on a stream only when asked; without it every
+    // turn was recorded with 0 tokens.
+    const agent = new Agent({ id: "t", name: "t", instructions: "Answer.", model: resolveClearAgentModel() });
+    const out = await agent.stream("Say ready.");
+    await out.consumeStream();
+    expect(seen.streamOptions).toEqual({ include_usage: true });
+    expect(await out.totalUsage).toMatchObject({ inputTokens: 21, outputTokens: 6 });
   });
 });
