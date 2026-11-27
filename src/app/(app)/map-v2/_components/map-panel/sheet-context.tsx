@@ -6,8 +6,8 @@ import type { SheetDragHandle } from "./use-sheet-drag";
 type MapSheetContextValue = {
   /** Clears the selection and lowers the sheet to its peek. */
   close: () => void;
-  /** Lowers the sheet once a view has moved the map to its selection, so the selection is in sight. */
-  onShowOnMap: () => void;
+  /** Lowers the sheet to its peek. */
+  lower: () => void;
   setPeekTitle: (title: string | null) => void;
   /** Spread on the parts of a view that drag the sheet up and down. */
   dragHandle: SheetDragHandle;

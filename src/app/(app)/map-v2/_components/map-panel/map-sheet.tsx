@@ -41,10 +41,10 @@ export function MapSheet({ expanded, onExpandedChange, onClose, contentKey, chil
     onClose();
     onExpandedChange(false);
   }, [onClose, onExpandedChange]);
-  const onShowOnMap = useCallback(() => onExpandedChange(false), [onExpandedChange]);
+  const lower = useCallback(() => onExpandedChange(false), [onExpandedChange]);
   const context = useMemo(
-    () => ({ close, onShowOnMap, setPeekTitle, dragHandle }),
-    [close, onShowOnMap, dragHandle],
+    () => ({ close, lower, setPeekTitle, dragHandle }),
+    [close, lower, dragHandle],
   );
   const barLabel = expanded ? t("collapse") : t("expand");
 

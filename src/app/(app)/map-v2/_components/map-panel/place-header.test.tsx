@@ -39,6 +39,9 @@ vi.mock("~/providers/working-country-provider", () => ({
 }));
 
 const { PlaceHeader } = await import("./place-header");
+const { MapSheetContext } = await import("./sheet-context");
+
+type Sheet = NonNullable<Parameters<typeof MapSheetContext.Provider>[0]["value"]>;
 
 // jsdom has no scrollIntoView, and the open Combobox dropdown calls it.
 Element.prototype.scrollIntoView = () => undefined;
@@ -47,13 +50,14 @@ afterEach(() => {
   cleanup();
 });
 
-function renderHeader(searchParams: Record<string, string> = {}) {
+function renderHeader(searchParams: Record<string, string> = {}, sheet?: Sheet) {
   const onUrlUpdate = vi.fn<(event: UrlUpdateEvent) => void>();
   const onPlaceChange = vi.fn();
+  const header = <PlaceHeader onPlaceChange={onPlaceChange} />;
   render(
     <MantineProvider>
       <NuqsTestingAdapter searchParams={searchParams} onUrlUpdate={onUrlUpdate}>
-        <PlaceHeader onPlaceChange={onPlaceChange} />
+        {sheet ? <MapSheetContext.Provider value={sheet}>{header}</MapSheetContext.Provider> : header}
       </NuqsTestingAdapter>
     </MantineProvider>,
   );
@@ -93,5 +97,20 @@ describe("PlaceHeader", () => {
     await pick("countryLabel", "Sudan");
 
     await waitFor(() => expect(lastParams()?.has("place")).toBe(false));
+  });
+
+  it("in the sheet, names the country in the peek and lowers the sheet after a pick", async () => {
+    const sheet = {
+      close: vi.fn(),
+      lower: vi.fn(),
+      setPeekTitle: vi.fn(),
+      dragHandle: { onPointerDown: vi.fn(), onClickCapture: vi.fn() },
+    };
+    renderHeader({}, sheet);
+
+    await pick("regionLabel", "Khartoum");
+
+    await waitFor(() => expect(sheet.lower).toHaveBeenCalledOnce());
+    expect(sheet.setPeekTitle).toHaveBeenLastCalledWith("Sudan");
   });
 });
