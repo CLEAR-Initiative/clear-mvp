@@ -4705,8 +4705,8 @@
           "titlePending": "Signals in the selected location",
           "title": "{count, plural, one {# signal} other {# signals}} in the selected location",
           "intro": {
-            "lastDays": "Published in the last {days, plural, one {day} other {# days}} at {location}.",
-            "lastDaysNoLocation": "Published in the last {days, plural, one {day} other {# days}}.",
+            "lastDays": "Published in the last {days, plural, one {24 hours} other {# days}} at {location}.",
+            "lastDaysNoLocation": "Published in the last {days, plural, one {24 hours} other {# days}}.",
             "range": "Published between {from} and {to} at {location}.",
             "rangeNoLocation": "Published between {from} and {to}."
           },
@@ -4719,8 +4719,8 @@
           "titlePending": "Events in the selected location",
           "title": "{count, plural, one {# event} other {# events}} in the selected location",
           "intro": {
-            "lastDays": "Detected in the last {days, plural, one {day} other {# days}} at {location}.",
-            "lastDaysNoLocation": "Detected in the last {days, plural, one {day} other {# days}}.",
+            "lastDays": "Detected in the last {days, plural, one {24 hours} other {# days}} at {location}.",
+            "lastDaysNoLocation": "Detected in the last {days, plural, one {24 hours} other {# days}}.",
             "range": "Detected between {from} and {to} at {location}.",
             "rangeNoLocation": "Detected between {from} and {to}."
           },
@@ -4733,8 +4733,8 @@
           "titlePending": "Alerts in the selected location",
           "title": "{count, plural, one {# alert} other {# alerts}} in the selected location",
           "intro": {
-            "lastDays": "Detected in the last {days, plural, one {day} other {# days}} at {location}.",
-            "lastDaysNoLocation": "Detected in the last {days, plural, one {day} other {# days}}.",
+            "lastDays": "Detected in the last {days, plural, one {24 hours} other {# days}} at {location}.",
+            "lastDaysNoLocation": "Detected in the last {days, plural, one {24 hours} other {# days}}.",
             "range": "Detected between {from} and {to} at {location}.",
             "rangeNoLocation": "Detected between {from} and {to}."
           },

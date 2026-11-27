@@ -1,12 +1,12 @@
 "use client";
 
 import { Box, Group, Stack, Text, Title, UnstyledButton } from "@mantine/core";
-import { useFormatter, useNow, useTranslations } from "next-intl";
+import { useFormatter, useTranslations } from "next-intl";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { SeverityTag } from "~/containers/map/layers/detections/severity-tag";
 import { SEVERITY_TOKENS } from "~/containers/map/layers/detections/severity-tokens";
 import { useDetectionsForMap } from "~/containers/map/hooks/use-detections-for-map";
-import { useTimeframeQuery } from "~/containers/map/hooks/use-timeframe";
+import { useTimeframe } from "~/containers/map/hooks/use-timeframe";
 import type { DetectionKind, LngLatPoint } from "~/containers/map/selection";
 import { useLocations } from "~/hooks/use-locations";
 import { BidiTitle } from "~/components/ui/bidi-title";
@@ -102,15 +102,14 @@ export function StackView({ kind, point, onOpen, onBack }: StackViewProps) {
   const tDetail = useTranslations("mapV2.panel.detail");
   const tSignal = useTranslations("mapV2.signalTooltip");
   const format = useFormatter();
-  const now = useNow();
-  const range = useTimeframeQuery();
+  const [timeframe] = useTimeframe();
   const query = useDetectionsForMap(kind);
   const { locationById } = useLocations();
 
   const items = useMemo(() => sortStackItems(detectionsAtPoint(query.data ?? [], point)), [query.data, point]);
   const counts = useMemo(() => severityCounts(items), [items]);
   const location = useMemo(() => commonLocationName(items, locationById), [items, locationById]);
-  const period = stackPeriod(range, now);
+  const period = stackPeriod(timeframe);
   const untitled = kind === "signal" ? tSignal("untitled") : tDetail("untitledEvent");
   const title = query.isPending ? tKind("titlePending") : tKind("title", { count: items.length });
   usePeekTitle(title);
@@ -122,8 +121,8 @@ export function StackView({ kind, point, onOpen, onBack }: StackViewProps) {
   const dates =
     period.kind === "range"
       ? {
-          from: format.dateTime(period.from, { dateStyle: "medium" }),
-          to: format.dateTime(period.to, { dateStyle: "medium" }),
+          from: format.dateTime(period.from, { dateStyle: "medium", timeZone: "UTC" }),
+          to: format.dateTime(period.to, { dateStyle: "medium", timeZone: "UTC" }),
         }
       : null;
   let intro: string;

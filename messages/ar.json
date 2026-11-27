@@ -4705,8 +4705,8 @@
           "titlePending": "الإشارات في الموقع المحدد",
           "title": "{count, plural, zero {لا إشارات} one {إشارة واحدة} two {إشارتان} few {# إشارات} many {# إشارة} other {# إشارة}} في الموقع المحدد",
           "intro": {
-            "lastDays": "نُشرت {days, plural, one {خلال اليوم الأخير} two {خلال اليومين الأخيرين} few {خلال آخر # أيام} other {خلال آخر # يومًا}} في {location}.",
-            "lastDaysNoLocation": "نُشرت {days, plural, one {خلال اليوم الأخير} two {خلال اليومين الأخيرين} few {خلال آخر # أيام} other {خلال آخر # يومًا}}.",
+            "lastDays": "نُشرت {days, plural, one {خلال آخر 24 ساعة} two {خلال اليومين الأخيرين} few {خلال آخر # أيام} other {خلال آخر # يومًا}} في {location}.",
+            "lastDaysNoLocation": "نُشرت {days, plural, one {خلال آخر 24 ساعة} two {خلال اليومين الأخيرين} few {خلال آخر # أيام} other {خلال آخر # يومًا}}.",
             "range": "نُشرت بين {from} و{to} في {location}.",
             "rangeNoLocation": "نُشرت بين {from} و{to}."
           },
@@ -4719,8 +4719,8 @@
           "titlePending": "الأحداث في الموقع المحدد",
           "title": "{count, plural, zero {لا أحداث} one {حدث واحد} two {حدثان} few {# أحداث} many {# حدثًا} other {# حدث}} في الموقع المحدد",
           "intro": {
-            "lastDays": "رُصدت {days, plural, one {خلال اليوم الأخير} two {خلال اليومين الأخيرين} few {خلال آخر # أيام} other {خلال آخر # يومًا}} في {location}.",
-            "lastDaysNoLocation": "رُصدت {days, plural, one {خلال اليوم الأخير} two {خلال اليومين الأخيرين} few {خلال آخر # أيام} other {خلال آخر # يومًا}}.",
+            "lastDays": "رُصدت {days, plural, one {خلال آخر 24 ساعة} two {خلال اليومين الأخيرين} few {خلال آخر # أيام} other {خلال آخر # يومًا}} في {location}.",
+            "lastDaysNoLocation": "رُصدت {days, plural, one {خلال آخر 24 ساعة} two {خلال اليومين الأخيرين} few {خلال آخر # أيام} other {خلال آخر # يومًا}}.",
             "range": "رُصدت بين {from} و{to} في {location}.",
             "rangeNoLocation": "رُصدت بين {from} و{to}."
           },
@@ -4733,8 +4733,8 @@
           "titlePending": "التنبيهات في الموقع المحدد",
           "title": "{count, plural, zero {لا تنبيهات} one {تنبيه واحد} two {تنبيهان} few {# تنبيهات} many {# تنبيهًا} other {# تنبيه}} في الموقع المحدد",
           "intro": {
-            "lastDays": "رُصدت {days, plural, one {خلال اليوم الأخير} two {خلال اليومين الأخيرين} few {خلال آخر # أيام} other {خلال آخر # يومًا}} في {location}.",
-            "lastDaysNoLocation": "رُصدت {days, plural, one {خلال اليوم الأخير} two {خلال اليومين الأخيرين} few {خلال آخر # أيام} other {خلال آخر # يومًا}}.",
+            "lastDays": "رُصدت {days, plural, one {خلال آخر 24 ساعة} two {خلال اليومين الأخيرين} few {خلال آخر # أيام} other {خلال آخر # يومًا}} في {location}.",
+            "lastDaysNoLocation": "رُصدت {days, plural, one {خلال آخر 24 ساعة} two {خلال اليومين الأخيرين} few {خلال آخر # أيام} other {خلال آخر # يومًا}}.",
             "range": "رُصدت بين {from} و{to} في {location}.",
             "rangeNoLocation": "رُصدت بين {from} و{to}."
           },
