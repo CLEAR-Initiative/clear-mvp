@@ -4796,6 +4796,17 @@
         "clear": "Effacer les détections"
       }
     },
+    "place": {
+      "global": "Monde",
+      "selectCountry": "Sélectionner un pays",
+      "selectRegion": "Sélectionner une région",
+      "globalView": "Vue mondiale",
+      "allCountries": "Tous les pays",
+      "allRegions": "Toutes les régions",
+      "clearRegion": "Effacer la région",
+      "countryLabel": "Pays de la carte",
+      "regionLabel": "Région de la carte"
+    },
     "mapSettings": {
       "title": "Paramètres de la carte",
       "roads": "Routes",

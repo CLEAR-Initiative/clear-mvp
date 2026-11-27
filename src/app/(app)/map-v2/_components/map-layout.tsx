@@ -4,6 +4,7 @@ import { useCallback, useRef, useState, type CSSProperties } from "react";
 import { MapV2 } from "~/containers/map/lazy";
 import { Timeline } from "~/containers/map/timeline";
 import { TimeframeQueryProvider } from "~/containers/map/hooks/use-timeframe";
+import { useMapPlace } from "~/containers/map/hooks/use-map-place";
 import type { MapSelectTarget } from "~/containers/map/selection";
 import { setMapPanelCollapsedCookie } from "~/lib/map-panel-collapsed-cookie";
 import type { DetectionKind } from "~/containers/map/selection";
@@ -11,6 +12,7 @@ import { MapPanel } from "./map-panel";
 import { AlertDetailView } from "./map-panel/alert-detail-view";
 import { backToList, type PanelBack } from "./map-panel/back-link";
 import { CrisisLayer } from "./map-panel/crisis-layer";
+import { PlaceHeader } from "./map-panel/place-header";
 import { EventDetailView } from "./map-panel/event-detail-view";
 import { MapSheet } from "./map-panel/map-sheet";
 import { SignalDetailView } from "./map-panel/signal-detail-view";
@@ -18,6 +20,7 @@ import { StackView } from "./map-panel/stack-view";
 import { usePanelLayout } from "./map-panel/use-panel-layout";
 import { useInsetLeft } from "./use-inset-left";
 import { usePanelSelection } from "./use-panel-selection";
+import { usePlaceFit } from "./use-place-fit";
 
 const PANEL_TOGGLE_CLEARANCE = 48;
 
@@ -45,6 +48,8 @@ export function MapLayout({ initialPanelCollapsed }: { initialPanelCollapsed: bo
   const selection = usePanelSelection();
   const { selectDetail, selectStack, clear } = selection;
   const layout = usePanelLayout();
+  const { status: placeStatus, place } = useMapPlace();
+  const fitTo = usePlaceFit(placeStatus, place);
   // A link to a selection opens the sheet on it; otherwise the sheet starts lowered to its peek.
   const [sheetExpanded, setSheetExpanded] = useState(() => Boolean(selection.kind));
 
@@ -87,7 +92,12 @@ export function MapLayout({ initialPanelCollapsed }: { initialPanelCollapsed: bo
       />
     );
   } else if (layout === "panel") {
-    panelContent = <CrisisLayer onLevelChange={clear} />;
+    panelContent = (
+      <>
+        <PlaceHeader onPlaceChange={clear} />
+        <CrisisLayer onLevelChange={clear} />
+      </>
+    );
   }
 
   const contentKey = `${kind ?? ""}|${selection.stackKey ?? ""}|${selection.detailId ?? ""}`;
@@ -112,6 +122,7 @@ export function MapLayout({ initialPanelCollapsed }: { initialPanelCollapsed: bo
             offset={{ left: insetLeft, bottom: timeline.open ? timeline.height : 0 }}
             selection={selection.mapSelection}
             onSelect={onSelect}
+            fitTo={fitTo}
           >
             <Timeline onHeightChange={onTimelineHeightChange} insetStart={panelCollapsed ? PANEL_TOGGLE_CLEARANCE : 0} />
           </MapV2>

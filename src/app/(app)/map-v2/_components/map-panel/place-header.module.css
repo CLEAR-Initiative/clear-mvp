@@ -1,0 +1,141 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  padding: 24px 24px 0;
+}
+
+.titleRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.title {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font-size: 24px;
+  font-weight: 600;
+  line-height: 30px;
+  color: var(--color-text-primary);
+  overflow-wrap: anywhere;
+}
+
+.chip {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 10px;
+  margin-top: 3px;
+  padding: 2px 4px 2px 8px;
+  border-radius: 27px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 14px;
+  text-transform: uppercase;
+  color: var(--map-accent);
+  background: var(--map-control-border);
+  transition:
+    color 120ms ease,
+    background-color 120ms ease;
+}
+
+.chip:hover {
+  color: var(--map-on-accent);
+  background: var(--map-accent);
+}
+
+.chip:focus-visible {
+  outline: 2px solid var(--map-accent);
+  outline-offset: 2px;
+}
+
+.inputRoot {
+  width: 100%;
+}
+
+.input {
+  --input-padding-inline-start: 0;
+  height: auto;
+  min-height: 0;
+  padding-block: 0;
+  border: 0;
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 24px;
+  color: var(--color-text-primary);
+  background: transparent;
+  cursor: pointer;
+}
+
+.input::placeholder {
+  color: var(--color-text-muted);
+  opacity: 1;
+}
+
+.input:disabled {
+  cursor: default;
+  background: transparent;
+  opacity: 1;
+}
+
+.input:focus-visible {
+  outline: 2px solid var(--map-accent);
+  outline-offset: 2px;
+}
+
+.section {
+  color: var(--color-text-primary);
+}
+
+.clear {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  color: inherit;
+}
+
+.clear:focus-visible {
+  outline: 2px solid var(--map-accent);
+  outline-offset: -2px;
+}
+
+.dropdown {
+  padding: 4px;
+  border: 0.5px solid var(--map-accent);
+  border-radius: 4px;
+  background: var(--color-bg-white);
+  box-shadow: var(--map-element-shadow);
+}
+
+.options {
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 0;
+  font-size: 14px;
+  line-height: 20px;
+  letter-spacing: 0.25px;
+  color: var(--color-text-primary);
+}
+
+.option:hover,
+.option[data-combobox-selected] {
+  color: var(--map-accent);
+  background: transparent;
+}
+
+.option[data-combobox-active] {
+  color: var(--map-on-accent);
+  background: var(--map-accent);
+}

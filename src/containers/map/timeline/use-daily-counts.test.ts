@@ -10,10 +10,10 @@ describe("dailyCountsInput", () => {
   };
 
   it("counts the selected level", () => {
-    expect(dailyCountsInput("alert", extent)).toMatchObject({ entity: "alert", groupBy: "day" });
+    expect(dailyCountsInput("alert", extent, null)).toMatchObject({ entity: "alert", groupBy: "day" });
   });
 
   it("asks for nothing with no level", () => {
-    expect(dailyCountsInput(null, extent)).toBeNull();
+    expect(dailyCountsInput(null, extent, null)).toBeNull();
   });
 });

@@ -22,6 +22,11 @@ import type { MapSelection, MapSelectTarget } from "./selection";
 
 import "mapbox-gl/dist/mapbox-gl.css";
 
+export type FitTo = { bounds: [number, number, number, number]; key: string };
+
+const FIT_DURATION_MS = 900;
+const FIT_MARGIN = 24;
+
 export type MapV2Props = {
   /** The part of the map covered by surrounding UI, per side, in pixels. */
   offset?: Partial<MapOffset>;
@@ -29,6 +34,8 @@ export type MapV2Props = {
   selection?: MapSelection | null;
   /** A click picked a target, or `null` for a click on empty map. */
   onSelect?: (target: MapSelectTarget | null) => void;
+  /** Frames the camera on `bounds` whenever `key` changes. */
+  fitTo?: FitTo | null;
   children?: ReactNode;
 };
 
@@ -36,6 +43,7 @@ export default function MapV2({
   offset: offsetProp,
   selection = null,
   onSelect,
+  fitTo = null,
   children,
 }: MapV2Props) {
   const isDark = useIsDark();
@@ -80,6 +88,17 @@ export default function MapV2({
   }, [center, zoom, loaded]);
 
   useEaseToOffset(mapRef, offset, loaded);
+
+  const fitKey = fitTo?.key;
+  const fitBounds = fitTo?.bounds;
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !loaded || !fitBounds) return;
+    // Mapbox fits to the inset of the map's own padding; a padding passed to flyTo would replace it.
+    const camera = map.cameraForBounds(fitBounds, { padding: FIT_MARGIN });
+    if (camera) map.flyTo({ center: camera.center, zoom: camera.zoom, duration: FIT_DURATION_MS });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- a new key is a new fit; the bounds come with it
+  }, [fitKey, loaded]);
 
   return (
     <TimeframeQueryProvider>

@@ -41,6 +41,10 @@ vi.mock("~/trpc/react", () => ({
   },
 }));
 
+vi.mock("../hooks/use-map-place", () => ({
+  useMapPlace: () => ({ status: "ready", place: { kind: "global" } }),
+}));
+
 const { Timeline } = await import("./index");
 const { TimeframeQueryProvider } = await import("../hooks/use-timeframe");
 
