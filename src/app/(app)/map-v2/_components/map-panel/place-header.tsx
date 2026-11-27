@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Combobox, InputBase, UnstyledButton, useCombobox } from "@mantine/core";
-import { IconCheck, IconX } from "@tabler/icons-react";
+import { IconCheck, IconSearch, IconX } from "@tabler/icons-react";
 import { useTranslations } from "next-intl";
 import { useMapPlace, type PlaceOption } from "~/containers/map/hooks/use-map-place";
 import { GLOBAL_PLACE, placeLocationId, type MapPlace } from "~/containers/map/place/model";
@@ -83,7 +83,7 @@ export function PlaceHeader({ onPlaceChange }: { onPlaceChange: () => void }) {
         )}
       </div>
       {showPicker && (
-        <Combobox store={combobox} onOptionSubmit={submit} position="bottom-start" offset={4} width={292}>
+        <Combobox store={combobox} onOptionSubmit={submit} position="bottom-start" offset={4} width="target">
           <Combobox.Target>
             <InputBase
               value={open ? search : pickedState}
@@ -95,9 +95,10 @@ export function PlaceHeader({ onPlaceChange }: { onPlaceChange: () => void }) {
               onClick={() => combobox.openDropdown()}
               onFocus={() => combobox.openDropdown()}
               onBlur={() => combobox.closeDropdown()}
-              placeholder={t(picking === "region" ? "selectRegion" : "selectCountry")}
+              placeholder={t(picking === "region" ? "searchRegion" : "searchCountry")}
               aria-label={t(picking === "region" ? "regionLabel" : "countryLabel")}
               disabled={disabled}
+              leftSection={<IconSearch size={16} aria-hidden />}
               rightSection={
                 pickedState && !open && !disabled ? (
                   <UnstyledButton
@@ -105,7 +106,7 @@ export function PlaceHeader({ onPlaceChange }: { onPlaceChange: () => void }) {
                     aria-label={t("clearRegion")}
                     onClick={() => country && pick({ kind: "country", id: country.id, name: country.name })}
                   >
-                    <IconX size={20} />
+                    <IconX size={16} />
                   </UnstyledButton>
                 ) : null
               }
@@ -122,6 +123,7 @@ export function PlaceHeader({ onPlaceChange }: { onPlaceChange: () => void }) {
                   {row.label}
                 </Combobox.Option>
               ))}
+              {rows.length === 0 && <Combobox.Empty className={classes.empty}>{t("noResults")}</Combobox.Empty>}
             </Combobox.Options>
           </Combobox.Dropdown>
         </Combobox>

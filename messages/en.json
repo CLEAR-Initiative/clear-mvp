@@ -4798,8 +4798,9 @@
     },
     "place": {
       "global": "Global",
-      "selectCountry": "Select country",
-      "selectRegion": "Select a region",
+      "searchCountry": "Search countries",
+      "searchRegion": "Search regions",
+      "noResults": "No results",
       "globalView": "Global view",
       "allCountries": "All countries",
       "allRegions": "All regions",

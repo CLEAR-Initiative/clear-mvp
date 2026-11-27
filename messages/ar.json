@@ -4798,8 +4798,9 @@
     },
     "place": {
       "global": "العالم",
-      "selectCountry": "اختر بلدًا",
-      "selectRegion": "اختر منطقة",
+      "searchCountry": "ابحث عن بلد",
+      "searchRegion": "ابحث عن منطقة",
+      "noResults": "لا توجد نتائج",
       "globalView": "عرض عالمي",
       "allCountries": "كل البلدان",
       "allRegions": "كل المناطق",
