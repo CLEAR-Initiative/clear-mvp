@@ -91,15 +91,13 @@ export function MapLayout({ initialPanelCollapsed }: { initialPanelCollapsed: bo
         onBack={clear}
       />
     );
-  } else if (layout === "panel") {
+  } else {
     panelContent = (
       <>
         <PlaceHeader onPlaceChange={clear} />
         <CrisisLayer onLevelChange={clear} />
       </>
     );
-  } else {
-    panelContent = <PlaceHeader onPlaceChange={clear} />;
   }
 
   const contentKey = `${kind ?? ""}|${selection.stackKey ?? ""}|${selection.detailId ?? ""}`;

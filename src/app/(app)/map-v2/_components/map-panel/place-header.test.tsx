@@ -99,7 +99,7 @@ describe("PlaceHeader", () => {
     await waitFor(() => expect(lastParams()?.has("place")).toBe(false));
   });
 
-  it("in the sheet, names the country in the peek and lowers the sheet after a pick", async () => {
+  it("in the sheet, names the country in the peek and keeps the sheet raised after a pick", async () => {
     const sheet = {
       close: vi.fn(),
       lower: vi.fn(),
@@ -110,7 +110,7 @@ describe("PlaceHeader", () => {
 
     await pick("regionLabel", "Khartoum");
 
-    await waitFor(() => expect(sheet.lower).toHaveBeenCalledOnce());
-    expect(sheet.setPeekTitle).toHaveBeenLastCalledWith("Sudan");
+    await waitFor(() => expect(sheet.setPeekTitle).toHaveBeenLastCalledWith("Sudan"));
+    expect(sheet.lower).not.toHaveBeenCalled();
   });
 });
