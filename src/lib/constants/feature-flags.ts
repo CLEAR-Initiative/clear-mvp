@@ -147,6 +147,14 @@ export const FEATURE_FLAGS: FeatureFlagDefinition[] = [
     defaultEnabled: false,
   },
   {
+    key: "place_research",
+    label: "Place research",
+    description:
+      "In the Inbox Places pane: the Research this place button, the research state, and the researched suggestion with its sources. A Worker researches the name; a person still decides. Needs a place research Worker on the environment (clear-api kind place_name.locate.web). UI-only gate.",
+    tier: 4,
+    defaultEnabled: false,
+  },
+  {
     key: "map_v2",
     label: "Map v2",
     description:

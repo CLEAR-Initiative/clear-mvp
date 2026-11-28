@@ -3,17 +3,25 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useFormatter, useLocale, useTranslations } from "next-intl";
-import { IconArrowLeft, IconCircleX, IconExternalLink, IconHelpCircle, IconMapPin } from "@tabler/icons-react";
+import { IconArrowLeft, IconCircleX, IconExternalLink, IconHelpCircle, IconMapPin, IconSearch } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
 import { track } from "~/lib/analytics/track";
+import { reportHandledError } from "~/lib/report-handled-error";
 import type { PlaceNameEntry } from "~/lib/hotline-inbox";
+import { useFeatureEnabled } from "~/components/feature-flags-provider";
 import {
   placeErrorKey,
   placeLookupLinks,
   placeLookupQuery,
   placeLookupView,
   placeNameHomeArea,
+  placeResearchErrorKey,
+  placeResearchIsOpen,
+  placeResearchState,
+  proposalKey,
+  resolutionForProposal,
   resolutionForSuggestion,
+  safeSourceHref,
   signalExcerpt,
   suggestionKey,
   type PlaceNameResolution,
@@ -24,6 +32,9 @@ import { LocationChallengeMap, type MapOutline } from "~/components/location-cha
 import { LocationPointFields, useLocationPointPicker } from "~/components/location-challenge/location-point-picker";
 import { InboxEntryPills } from "./classification-pill";
 import styles from "../inbox.module.css";
+
+/** How often the pane asks for the research of a row while a Task is open. */
+const RESEARCH_POLL_MS = 10_000;
 
 /** How many areas besides the state get an outline: the pane shows 5 posts. */
 const AREA_OUTLINES_MAX = 3;
@@ -38,6 +49,12 @@ const AREA_OUTLINES_MAX = 3;
  * alias, and the Signals that wait on the name move. The suggestions are
  * optional help: nothing forces the decider to pick one. clear-api checks the
  * decider and the place again on each answer.
+ *
+ * Behind the `place_research` flag the decider can also ask a Worker to
+ * research the name (clear-api D-0296). The pane shows that research waits
+ * or runs, and then the Worker's proposal: a researched suggestion with its
+ * sources and a pin, or the reason it found nothing. The Worker never
+ * resolves a name: the decider uses the proposal, corrects it or ignores it.
  */
 export function PlaceNamePane({
   entry,
@@ -114,11 +131,67 @@ export function PlaceNamePane({
   const [error, setError] = useState<string | null>(null);
   const busy = resolve.isPending;
 
+  // Place research. The query runs only with the flag on, and asks again
+  // every few seconds while a Task waits or runs, so the state and then the
+  // proposal appear with no reload.
+  const researchEnabled = useFeatureEnabled("place_research");
+  const utils = api.useUtils();
+  const researchQuery = api.placeNames.research.useQuery(
+    { id: row.id },
+    {
+      enabled: researchEnabled,
+      refetchInterval: (query) => (placeResearchIsOpen(query.state.data) ? RESEARCH_POLL_MS : false),
+    },
+  );
+  const research = researchEnabled ? (researchQuery.data ?? null) : null;
+  const researchState = placeResearchState(research);
+  const proposal = research?.proposal ?? null;
+  // The proposal shows while no newer Task is open or failed.
+  const shownProposal =
+    proposal && (researchState === "found" || researchState === "not_found" || researchState === "not_a_place")
+      ? proposal
+      : null;
+  const foundProposal = shownProposal?.outcome === "found" && shownProposal.latitude != null && shownProposal.longitude != null ? shownProposal : null;
+  const requestResearch = api.placeNames.requestResearch.useMutation();
+  const [researchError, setResearchError] = useState<string | null>(null);
+
+  function askForResearch() {
+    if (requestResearch.isPending) return;
+    setResearchError(null);
+    requestResearch.mutate(
+      { id: row.id },
+      {
+        onSuccess: (task) => {
+          // Whether it is the first request or a repeat: never the name.
+          track("place_name.research_requested", { again: proposal != null || researchState === "failed" ? "true" : "false" });
+          // The accepted request is the state: the pane shows it and starts
+          // to poll from it, also when the read that follows fails.
+          utils.placeNames.research.setData({ id: row.id }, (previous) => ({
+            taskStatus: task.status === "LEASED" ? "LEASED" : "PENDING",
+            latestTask: { id: task.id, status: task.status, createdAt: new Date().toISOString() },
+            proposal: previous?.proposal ?? null,
+          }));
+          void utils.placeNames.research.invalidate({ id: row.id });
+        },
+        onError: (err) => {
+          const code = err.data?.code;
+          // The cap, a closed row and a missing right are answers, not
+          // faults. Anything else is reported.
+          if (code !== "TOO_MANY_REQUESTS" && code !== "FORBIDDEN" && code !== "CONFLICT" && code !== "NOT_FOUND") {
+            reportHandledError(err, { feature: "place_research", stage: "request" });
+          }
+          setResearchError(t(placeResearchErrorKey(code)));
+        },
+      },
+    );
+  }
+
   function send(resolution: PlaceNameResolution) {
     if (busy) return;
     setError(null);
+    const { proposalId, ...answer } = resolution.kind === "POINT" ? resolution : { ...resolution, proposalId: undefined };
     resolve.mutate(
-      { id: row.id, resolution },
+      { id: row.id, resolution: answer, ...(proposalId ? { proposalId } : {}) },
       {
         onSuccess: (resolved) => {
           // The kind only: never the name (see src/lib/analytics/events.ts).
@@ -132,6 +205,11 @@ export function PlaceNamePane({
 
   function chooseSuggestion(suggestion: GqlPlaceNameSuggestion) {
     const resolution = resolutionForSuggestion(suggestion);
+    if (resolution) send(resolution);
+  }
+
+  function chooseProposal() {
+    const resolution = foundProposal ? resolutionForProposal(foundProposal) : null;
     if (resolution) send(resolution);
   }
 
@@ -199,12 +277,25 @@ export function PlaceNamePane({
           placed={placing ? picker.point : null}
           picking={placing}
           onPick={picker.placeAt}
-          suggestions={suggestions.map((s) => ({
-            lat: s.latitude,
-            lng: s.longitude,
-            id: suggestionKey(s),
-            label: s.name,
-          }))}
+          suggestions={[
+            // The researched place has a pin like the other suggestions.
+            ...(foundProposal
+              ? [
+                  {
+                    lat: foundProposal.latitude!,
+                    lng: foundProposal.longitude!,
+                    id: proposalKey(foundProposal),
+                    label: foundProposal.nameFound ?? row.nameAsWritten,
+                  },
+                ]
+              : []),
+            ...suggestions.map((s) => ({
+              lat: s.latitude,
+              lng: s.longitude,
+              id: suggestionKey(s),
+              label: s.name,
+            })),
+          ]}
           highlightedId={highlighted}
           onHighlight={setHovered}
           refitKey={scope}
@@ -233,6 +324,122 @@ export function PlaceNamePane({
             );
           })}
         </div>
+
+        {researchEnabled && (
+          <div data-testid="inbox-place-research" data-state={researchState}>
+            <div className={styles.placeSuggestionsHead}>
+              <div className={styles.sectionLabel}>{t("place.research.title")}</div>
+              {researchState !== "waiting" && researchState !== "running" && !researchQuery.isLoading && !(researchQuery.isError && !research) && (
+                <button
+                  type="button"
+                  className={styles.btn}
+                  disabled={requestResearch.isPending || busy}
+                  onClick={askForResearch}
+                  data-testid="inbox-place-research-request"
+                >
+                  <IconSearch size={15} />
+                  {t(researchState === "none" ? "place.research.request" : "place.research.again")}
+                </button>
+              )}
+            </div>
+            {researchState === "none" && !researchQuery.isError && <p className={styles.placeMeta}>{t("place.research.hint")}</p>}
+            {(researchState === "waiting" || researchState === "running" || researchState === "failed") && (
+              <p className={styles.placeMeta} role="status" data-testid="inbox-place-research-status">
+                {t(`place.research.status.${researchState}`)}
+              </p>
+            )}
+            {shownProposal && (
+              <div
+                className={`${styles.narrative} ${styles.placeSuggestion}`}
+                data-testid="inbox-place-proposal"
+                data-outcome={shownProposal.outcome}
+                data-highlighted={(foundProposal && highlighted === proposalKey(foundProposal)) || undefined}
+                onMouseEnter={() => foundProposal && setHovered(proposalKey(foundProposal))}
+                onMouseLeave={() => setHovered(null)}
+                onFocus={() => foundProposal && setFocused(proposalKey(foundProposal))}
+                onBlur={() => setFocused(null)}
+              >
+                {foundProposal ? (
+                  <>
+                    <bdi>{foundProposal.nameFound}</bdi>
+                    <span className={styles.placeMeta}>
+                      {t("place.research.researched")}
+                      {foundProposal.confidence && (
+                        <>
+                          {" · "}
+                          {t(`place.research.confidence.${foundProposal.confidence}`)}
+                        </>
+                      )}
+                    </span>
+                  </>
+                ) : (
+                  <span>{t(`place.research.outcome.${shownProposal.outcome === "not_a_place" ? "not_a_place" : "not_found"}`)}</span>
+                )}
+                {/* The Worker's words: its own direction, never markup. */}
+                <span className={styles.placeMeta} dir="auto" data-testid="inbox-place-proposal-reason">
+                  {shownProposal.reason}
+                </span>
+                {shownProposal.sources.length > 0 && (
+                  <ul className={styles.placeSources} data-testid="inbox-place-proposal-sources">
+                    {shownProposal.sources.map((source, i) => {
+                      const href = safeSourceHref(source.url);
+                      return (
+                        <li key={`${i}:${source.url}`}>
+                          <q dir="auto">{source.quote}</q>{" "}
+                          {href ? (
+                            <a href={href} target="_blank" rel="noopener noreferrer" data-testid="inbox-place-proposal-source">
+                              {t("place.research.source", { n: i + 1 })}
+                              <IconExternalLink size={12} aria-hidden />
+                              <span className="sr-only">{t("place.lookup.newTab")}</span>
+                            </a>
+                          ) : (
+                            <span>{source.url}</span>
+                          )}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+                {foundProposal && (
+                  <button
+                    type="button"
+                    className={styles.btn}
+                    disabled={busy || placing}
+                    onClick={chooseProposal}
+                    data-testid="inbox-place-proposal-use"
+                  >
+                    {t("place.actions.use")}
+                  </button>
+                )}
+                {shownProposal.outcome === "not_a_place" && (
+                  <button
+                    type="button"
+                    className={styles.btnDanger}
+                    disabled={busy || placing}
+                    onClick={() => send({ kind: "NOT_A_PLACE" })}
+                    data-testid="inbox-place-proposal-not-a-place"
+                  >
+                    <IconCircleX size={15} />
+                    {t("place.actions.notAPlace")}
+                  </button>
+                )}
+              </div>
+            )}
+            {researchQuery.isError && !research && (
+              <p className={styles.placeMeta} role="status" data-testid="inbox-place-research-read-error">
+                {t("place.research.errors.read")}{" "}
+                <button type="button" className={styles.btn} onClick={() => void researchQuery.refetch()}>
+                  {t("place.research.retry")}
+                </button>
+              </p>
+            )}
+            {researchError && (
+              <p className={styles.actionError} role="alert" data-testid="inbox-place-research-error">
+                {researchError}
+              </p>
+            )}
+          </div>
+        )}
 
         <div data-testid="inbox-place-suggestions">
           <div className={styles.placeSuggestionsHead}>

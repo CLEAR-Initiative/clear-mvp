@@ -3,7 +3,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { MantineProvider } from "@mantine/core";
 import { buildPlaceNameEntries } from "~/lib/hotline-inbox";
-import type { GqlPlaceNameSuggestion, GqlUnresolvedPlaceName } from "~/lib/types/graphql";
+import type {
+  GqlPlaceNameProposal,
+  GqlPlaceNameResearch,
+  GqlPlaceNameSuggestion,
+  GqlUnresolvedPlaceName,
+} from "~/lib/types/graphql";
 
 /**
  * Resolving an unresolved place name from its Inbox pane. The four actions:
@@ -23,16 +28,25 @@ vi.mock("next/link", () => ({
     <a href={href} {...rest}>{children}</a>
   ),
 }));
+const reportHandledError = vi.fn();
+vi.mock("~/lib/report-handled-error", () => ({ reportHandledError: (...args: unknown[]) => reportHandledError(...args) }));
 const track = vi.fn();
 vi.mock("~/lib/analytics/track", () => ({ track: (...args: unknown[]) => track(...args) }));
+
+let researchFlag = false;
+vi.mock("~/components/feature-flags-provider", () => ({
+  useFeatureEnabled: (key: string) => key === "place_research" && researchFlag,
+}));
 
 /** The map: a click on it places the decider's point while picking. */
 vi.mock("~/components/location-challenge/location-challenge-map", () => ({
   LocationChallengeMap: (props: {
     picking: boolean;
     placed: { lat: number; lng: number } | null;
-    suggestions: { lat: number; lng: number }[];
+    suggestions: { lat: number; lng: number; id: string }[];
+    highlightedId: string | null;
     outlines: unknown[];
+    refitKey: string;
     onPick: (at: { lat: number; lng: number }) => void;
   }) => (
     <button
@@ -41,7 +55,10 @@ vi.mock("~/components/location-challenge/location-challenge-map", () => ({
       data-picking={props.picking}
       data-placed={props.placed ? `${props.placed.lat},${props.placed.lng}` : ""}
       data-suggestions={props.suggestions.map((s) => `${s.lat},${s.lng}`).join("|")}
+      data-suggestion-ids={props.suggestions.map((s) => s.id).join("|")}
+      data-highlighted={props.highlightedId ?? ""}
       data-outlines={props.outlines.length}
+      data-refit={props.refitKey}
       onClick={() => props.onPick({ lat: 11.2, lng: 29.9 })}
     />
   ),
@@ -66,10 +83,20 @@ let suggestions: GqlPlaceNameSuggestion[] = [];
 let suggestionsLoading = false;
 let resolveError: { message: string; data?: { code?: string } } | null = null;
 const resolveMutate = vi.fn();
+let research: GqlPlaceNameResearch | null = null;
+let researchLoading = false;
+const researchOptions = vi.fn();
+const researchRefetch = vi.fn();
+let researchReadError = false;
+const researchSetData = vi.fn();
+const researchInvalidate = vi.fn();
+const requestResearchMutate = vi.fn();
+let requestResearchError: { message: string; data?: { code?: string } } | null = null;
 const suggestionsInput = vi.fn();
 const outlineIds = vi.fn();
 vi.mock("~/trpc/react", () => ({
   api: {
+    useUtils: () => ({ placeNames: { research: { setData: researchSetData, invalidate: researchInvalidate } } }),
     useQueries: (build: (q: unknown) => unknown[]) => {
       const q = { locations: { getById: (input: { id: string }) => input.id } };
       const ids = build(q) as string[];
@@ -85,6 +112,33 @@ vi.mock("~/trpc/react", () => ({
           suggestionsInput(input);
           return { data: suggestionsLoading ? undefined : suggestions, isLoading: suggestionsLoading };
         },
+      },
+      research: {
+        useQuery: (
+          input: unknown,
+          opts: { enabled: boolean; refetchInterval: (q: { state: { data: unknown } }) => number | false },
+        ) => {
+          researchOptions(input, { enabled: opts.enabled, interval: opts.refetchInterval({ state: { data: research } }) });
+          return {
+            data: researchLoading || researchReadError ? undefined : research,
+            isLoading: researchLoading,
+            isError: researchReadError,
+            refetch: researchRefetch,
+          };
+        },
+      },
+      requestResearch: {
+        useMutation: () => ({
+          mutate: (
+            input: unknown,
+            opts: { onSuccess?: (task: { id: string; status: string }) => void; onError?: (err: unknown) => void },
+          ) => {
+            requestResearchMutate(input);
+            if (requestResearchError) opts.onError?.(requestResearchError);
+            else opts.onSuccess?.({ id: "task-9", status: "PENDING" });
+          },
+          isPending: false,
+        }),
       },
       resolve: {
         useMutation: () => ({
@@ -175,6 +229,11 @@ beforeEach(() => {
   suggestions = [GEONAMES, LANDMARK];
   suggestionsLoading = false;
   resolveError = null;
+  researchFlag = false;
+  research = null;
+  researchLoading = false;
+  researchReadError = false;
+  requestResearchError = null;
   vi.clearAllMocks();
 });
 afterEach(cleanup);
@@ -496,5 +555,217 @@ describe("PlaceNamePane", () => {
     expect(suggestionsInput).toHaveBeenCalledWith(expect.objectContaining({ withinLocationId: "C1" }));
     expect(outlineIds).toHaveBeenLastCalledWith(["C1"]);
     expect(screen.getByTestId("inbox-place-posts")).toHaveTextContent("place.noPosts");
+  });
+
+  describe("place research (flag place_research)", () => {
+    const FOUND: GqlPlaceNameProposal = {
+      id: "prop-1",
+      outcome: "found",
+      latitude: 11.7891,
+      longitude: 34.3592,
+      nameFound: "Umm Dabakir village",
+      confidence: "medium",
+      reason: "The OCHA settlement list gives a village of this name south of Kadugli.",
+      sources: [
+        { url: "https://data.humdata.org/dataset/sudan-settlements", quote: "Umm Dabakir, Kadugli locality" },
+        { url: "javascript:alert(1)", quote: "a bad link" },
+      ],
+      createdAt: "2026-11-28T10:00:00Z",
+    };
+    const done = (proposal: GqlPlaceNameProposal | null, latestStatus = "COMPLETED"): GqlPlaceNameResearch => ({
+      taskStatus: null,
+      latestTask: { id: "task-1", status: latestStatus, createdAt: "2026-11-28T09:55:00Z" },
+      proposal,
+    });
+    const section = () => screen.getByTestId("inbox-place-research");
+
+    it("shows nothing and reads nothing with the flag off", () => {
+      renderPane();
+      expect(screen.queryByTestId("inbox-place-research")).toBeNull();
+      expect(researchOptions).toHaveBeenCalledWith({ id: "pn-1" }, { enabled: false, interval: false });
+    });
+
+    it("a row with no Task and no proposal offers Research this place, and the button requests the Task", () => {
+      researchFlag = true;
+      renderPane();
+      expect(section()).toHaveAttribute("data-state", "none");
+      expect(section()).toHaveTextContent("place.research.hint");
+      const button = screen.getByTestId("inbox-place-research-request");
+      expect(button).toHaveTextContent("place.research.request");
+      fireEvent.click(button);
+      expect(requestResearchMutate).toHaveBeenCalledWith({ id: "pn-1" });
+      // The accepted request is the state at once, so the pane polls from
+      // it also when the read that follows fails. Then clear-api is read again.
+      const [input, update] = researchSetData.mock.calls[0] as [unknown, (p: GqlPlaceNameResearch | null) => GqlPlaceNameResearch];
+      expect(input).toEqual({ id: "pn-1" });
+      expect(update(null)).toMatchObject({ taskStatus: "PENDING", latestTask: { id: "task-9", status: "PENDING" }, proposal: null });
+      expect(researchInvalidate).toHaveBeenCalledWith({ id: "pn-1" });
+      // Never the name.
+      expect(track).toHaveBeenCalledWith("place_name.research_requested", { again: "false" });
+    });
+
+    it("a PENDING Task shows Research is waiting, a LEASED one Research is running; both are polled and hide the button", () => {
+      researchFlag = true;
+      research = { taskStatus: "PENDING", latestTask: { id: "t", status: "PENDING", createdAt: "2026-11-28T10:00:00Z" }, proposal: null };
+      renderPane();
+      expect(section()).toHaveAttribute("data-state", "waiting");
+      expect(screen.getByTestId("inbox-place-research-status")).toHaveTextContent("place.research.status.waiting");
+      expect(screen.queryByTestId("inbox-place-research-request")).toBeNull();
+      expect(researchOptions).toHaveBeenLastCalledWith({ id: "pn-1" }, { enabled: true, interval: 10_000 });
+      cleanup();
+
+      // An older proposal stays out while a new Task runs.
+      research = { taskStatus: "LEASED", latestTask: { id: "t", status: "LEASED", createdAt: "2026-11-28T11:00:00Z" }, proposal: FOUND };
+      renderPane();
+      expect(section()).toHaveAttribute("data-state", "running");
+      expect(screen.getByTestId("inbox-place-research-status")).toHaveTextContent("place.research.status.running");
+      expect(screen.queryByTestId("inbox-place-research-request")).toBeNull();
+      expect(screen.queryByTestId("inbox-place-proposal")).toBeNull();
+    });
+
+    it("a found proposal is a researched suggestion: name, confidence, reason, sources as new-tab links, and a pin", () => {
+      researchFlag = true;
+      research = done(FOUND);
+      renderPane();
+      expect(section()).toHaveAttribute("data-state", "found");
+      // A finished Task is not polled.
+      expect(researchOptions).toHaveBeenLastCalledWith({ id: "pn-1" }, { enabled: true, interval: false });
+      const proposal = screen.getByTestId("inbox-place-proposal");
+      expect(proposal).toHaveAttribute("data-outcome", "found");
+      expect(proposal).toHaveTextContent("Umm Dabakir village");
+      expect(proposal).toHaveTextContent("place.research.researched");
+      expect(proposal).toHaveTextContent("place.research.confidence.medium");
+      expect(screen.getByTestId("inbox-place-proposal-reason")).toHaveTextContent(FOUND.reason);
+
+      const sources = within(screen.getByTestId("inbox-place-proposal-sources")).getAllByRole("listitem");
+      expect(sources).toHaveLength(2);
+      expect(sources[0]).toHaveTextContent("Umm Dabakir, Kadugli locality");
+      const links = screen.getAllByTestId("inbox-place-proposal-source");
+      // Only an http(s) URL becomes a link.
+      expect(links).toHaveLength(1);
+      expect(links[0]).toHaveAttribute("href", "https://data.humdata.org/dataset/sudan-settlements");
+      expect(links[0]).toHaveAttribute("target", "_blank");
+      expect(links[0]).toHaveAttribute("rel", "noopener noreferrer");
+      expect(sources[1]).toHaveTextContent("javascript:alert(1)");
+
+      // The request that follows keeps the proposal until the new result arrives.
+      // The pin comes first on the map, and the row and the pin highlight together.
+      const map = screen.getByTestId("map");
+      expect(map.getAttribute("data-suggestions")).toMatch(/^11\.7891,34\.3592\|/);
+      expect(map.getAttribute("data-suggestion-ids")).toMatch(/^r:prop-1\|/);
+      fireEvent.mouseEnter(proposal);
+      expect(screen.getByTestId("map")).toHaveAttribute("data-highlighted", "r:prop-1");
+      expect(proposal).toHaveAttribute("data-highlighted", "true");
+      fireEvent.mouseLeave(proposal);
+      expect(screen.getByTestId("map")).toHaveAttribute("data-highlighted", "");
+
+      // A row with a proposal offers Research again.
+      expect(screen.getByTestId("inbox-place-research-request")).toHaveTextContent("place.research.again");
+      fireEvent.click(screen.getByTestId("inbox-place-research-request"));
+      expect(track).toHaveBeenCalledWith("place_name.research_requested", { again: "true" });
+    });
+
+    it("Use this place resolves with a POINT answer and the proposal's id", () => {
+      researchFlag = true;
+      research = done(FOUND);
+      const entry = renderPane();
+      fireEvent.click(screen.getByTestId("inbox-place-proposal-use"));
+      expect(resolveMutate).toHaveBeenCalledWith({
+        id: "pn-1",
+        resolution: { kind: "POINT", point: { lat: 11.7891, lng: 34.3592, name: "Umm Dabakir village" } },
+        proposalId: "prop-1",
+      });
+      expect(onResolved).toHaveBeenCalledWith(entry, "POINT", 4);
+      expect(track).toHaveBeenCalledWith("place_name.resolved", { kind: "POINT" });
+    });
+
+    it("a gazetteer suggestion and a hand-placed point send no proposal id", () => {
+      researchFlag = true;
+      research = done(FOUND);
+      renderPane();
+      fireEvent.click(screen.getAllByTestId("inbox-place-use")[0]!);
+      expect(resolveMutate).toHaveBeenCalledWith({ id: "pn-1", resolution: { kind: "GEONAMES", geonamesId: 371760 } });
+    });
+
+    it("a not_found proposal shows its reason, with no pin and no Use button", () => {
+      researchFlag = true;
+      research = done({ ...FOUND, outcome: "not_found", latitude: null, longitude: null, nameFound: null, confidence: null, reason: "No map or report names it.", sources: [] });
+      renderPane();
+      expect(section()).toHaveAttribute("data-state", "not_found");
+      const proposal = screen.getByTestId("inbox-place-proposal");
+      expect(proposal).toHaveTextContent("place.research.outcome.not_found");
+      expect(proposal).toHaveTextContent("No map or report names it.");
+      expect(screen.queryByTestId("inbox-place-proposal-use")).toBeNull();
+      expect(screen.queryByTestId("inbox-place-proposal-not-a-place")).toBeNull();
+      expect(screen.getByTestId("map").getAttribute("data-suggestion-ids")).not.toContain("r:");
+      expect(screen.getByTestId("inbox-place-research-request")).toHaveTextContent("place.research.again");
+    });
+
+    it("a not_a_place proposal shows its reason beside the Not a place answer", () => {
+      researchFlag = true;
+      research = done({ ...FOUND, outcome: "not_a_place", latitude: null, longitude: null, nameFound: null, confidence: null, reason: "It is the name of a militia." });
+      renderPane();
+      const proposal = screen.getByTestId("inbox-place-proposal");
+      expect(proposal).toHaveTextContent("place.research.outcome.not_a_place");
+      expect(proposal).toHaveTextContent("It is the name of a militia.");
+      fireEvent.click(screen.getByTestId("inbox-place-proposal-not-a-place"));
+      // The decider's own answer: no proposal id goes with it.
+      expect(resolveMutate).toHaveBeenCalledWith({ id: "pn-1", resolution: { kind: "NOT_A_PLACE" } });
+    });
+
+    it("a failed Task shows Research failed and offers the button again", () => {
+      researchFlag = true;
+      research = done(null, "FAILED");
+      renderPane();
+      expect(section()).toHaveAttribute("data-state", "failed");
+      expect(screen.getByTestId("inbox-place-research-status")).toHaveTextContent("place.research.status.failed");
+      expect(screen.getByTestId("inbox-place-research-request")).toHaveTextContent("place.research.again");
+    });
+
+    it("the cap error and the other request errors show as readable messages", () => {
+      researchFlag = true;
+      renderPane();
+      for (const [code, key] of [
+        ["TOO_MANY_REQUESTS", "place.research.errors.cap"],
+        ["FORBIDDEN", "place.research.errors.forbidden"],
+        ["CONFLICT", "place.research.errors.closed"],
+        [undefined, "place.research.errors.failed"],
+      ] as const) {
+        requestResearchError = { message: "raw clear-api text", data: { code } };
+        fireEvent.click(screen.getByTestId("inbox-place-research-request"));
+        expect(screen.getByTestId("inbox-place-research-error")).toHaveTextContent(key);
+        expect(screen.getByTestId("inbox-place-research-error")).not.toHaveTextContent("raw clear-api text");
+      }
+      expect(researchSetData).not.toHaveBeenCalled();
+      // Only the unexpected failure is reported: the cap, a closed row and a
+      // missing right are answers.
+      expect(reportHandledError).toHaveBeenCalledTimes(1);
+      expect(reportHandledError).toHaveBeenCalledWith(expect.anything(), { feature: "place_research", stage: "request" });
+    });
+
+    it("a failed read says so and offers a retry, with no request button", () => {
+      researchFlag = true;
+      researchReadError = true;
+      renderPane();
+      const error = screen.getByTestId("inbox-place-research-read-error");
+      expect(error).toHaveTextContent("place.research.errors.read");
+      expect(screen.queryByTestId("inbox-place-research-request")).toBeNull();
+      fireEvent.click(within(error).getByRole("button"));
+      expect(researchRefetch).toHaveBeenCalled();
+    });
+
+    it("a new result does not reset the map view: the map is refitted by the scope only", () => {
+      researchFlag = true;
+      research = done(FOUND);
+      renderPane();
+      expect(screen.getByTestId("map").getAttribute("data-refit")).toMatch(/^(area|country)$/);
+    });
+
+    it("no button shows while the research of the row is loading", () => {
+      researchFlag = true;
+      researchLoading = true;
+      renderPane();
+      expect(screen.queryByTestId("inbox-place-research-request")).toBeNull();
+    });
   });
 });

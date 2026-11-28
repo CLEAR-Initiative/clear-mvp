@@ -55,6 +55,9 @@ describe("analytics event allowlist", () => {
   });
 
   it("takes a place-name lookup by its provider only, never the name", () => {
+    expect(isAllowedEvent("place_name.research_requested", { again: "false" })).toBe(true);
+    expect(isAllowedEvent("place_name.research_requested", { again: "true" })).toBe(true);
+    expect(isAllowedEvent("place_name.research_requested", { again: "true", name: "Bakouri" })).toBe(false);
     expect(isAllowedEvent("place_name.lookup_opened", { provider: "google_maps" })).toBe(true);
     expect(isAllowedEvent("place_name.lookup_opened", { provider: "openstreetmap" })).toBe(true);
     expect(isAllowedEvent("place_name.lookup_opened", { provider: "web_search" })).toBe(true);

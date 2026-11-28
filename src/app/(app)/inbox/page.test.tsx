@@ -192,6 +192,8 @@ vi.mock("~/trpc/react", () => ({
       queue: { useQuery: (input: unknown, opts: { enabled: boolean }) => placesQuery(input, opts) },
       suggestions: { useQuery: () => ({ data: [], isLoading: false }) },
       resolve: { useMutation: () => ({ mutate: resolvePlaceMutate, isPending: false }) },
+      research: { useQuery: () => ({ data: null, isLoading: false, refetch: vi.fn() }) },
+      requestResearch: { useMutation: () => ({ mutate: vi.fn(), isPending: false }) },
     },
     subscriptions: {
       disasterTypes: { useQuery: () => ({ isLoading: false, data: [] }) },

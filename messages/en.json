@@ -3235,6 +3235,36 @@
         "badPlace": "That place is outside the country, or outside the areas CLEAR covers.",
         "conflict": "This place name was already resolved, or its spelling already has an alias.",
         "failed": "Could not save the answer. Try again."
+      },
+      "research": {
+        "title": "Research",
+        "hint": "A research agent can look for this place on the web and in open datasets. You still decide.",
+        "request": "Research this place",
+        "again": "Research again",
+        "status": {
+          "waiting": "Research is waiting.",
+          "running": "Research is running.",
+          "failed": "Research failed. You can request it again."
+        },
+        "researched": "Researched suggestion",
+        "confidence": {
+          "high": "High confidence",
+          "medium": "Medium confidence",
+          "low": "Low confidence"
+        },
+        "outcome": {
+          "not_found": "Research did not find this place.",
+          "not_a_place": "Research says this is not a place."
+        },
+        "source": "Source {n}",
+        "errors": {
+          "cap": "You have reached today's limit of research requests. Try again tomorrow.",
+          "forbidden": "You can't request research for this place name.",
+          "closed": "This place name was already resolved.",
+          "failed": "Could not request research. Try again.",
+          "read": "Could not read the research of this place name."
+        },
+        "retry": "Try again"
       }
     },
     "placesView": {

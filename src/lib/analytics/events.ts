@@ -50,6 +50,8 @@ export const ANALYTICS_EVENTS = {
 
   /** An unresolved place name was resolved in the Inbox. The kind only: never the name. */
   "place_name.resolved": { kind: ["LOCATION", "GEONAMES", "POINT", "NOT_A_PLACE", "AMBIGUOUS"] },
+  /** Place research was requested for an unresolved place name. Whether it is a repeat only: never the name. */
+  "place_name.research_requested": { again: ["true", "false"] },
   /** A lookup link for an unresolved place name was opened. The provider only: never the name. */
   "place_name.lookup_opened": { provider: PLACE_LOOKUP_PROVIDERS },
 
