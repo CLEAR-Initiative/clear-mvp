@@ -1715,18 +1715,24 @@ export function CrisisMap({
 
   // Fit bounds to a specific geometry (e.g. selected region).
   useEffect(() => {
-    if (!map.current || !loaded || !fitBoundsGeometry) return;
-    const regionBounds = geometryBounds(fitBoundsGeometry as never);
-    if (!regionBounds) return;
-    const bounds = fitMarkerKey
-      ? extendBounds(
-          regionBounds,
-          fitMarkerKey.split(";").map((p) => {
-            const [lng, lat] = p.split(",").map(Number);
-            return { lng: lng!, lat: lat! };
-          }),
-        )
-      : regionBounds;
+    if (!map.current || !loaded) return;
+    const fitPoints = fitMarkerKey
+      ? fitMarkerKey.split(";").map((p) => {
+          const [lng, lat] = p.split(",").map(Number);
+          return { lng: lng!, lat: lat! };
+        })
+      : [];
+    const regionBounds = fitBoundsGeometry ? geometryBounds(fitBoundsGeometry as never) : null;
+    let bounds: [number, number, number, number] | null = null;
+    if (regionBounds) {
+      bounds = fitPoints.length ? extendBounds(regionBounds, fitPoints) : regionBounds;
+    } else if (fitPoints.length >= 2) {
+      // No region shape (a point location, or no state found): fit the
+      // markers alone, so a distant site is still on screen.
+      const [first, ...rest] = fitPoints;
+      bounds = extendBounds([first!.lng, first!.lat, first!.lng, first!.lat], rest);
+    }
+    if (!bounds) return;
     map.current.fitBounds(
       [[bounds[0], bounds[1]], [bounds[2], bounds[3]]],
       fitBoundsCameraOptions({
@@ -1734,6 +1740,8 @@ export function CrisisMap({
         currentBearing: map.current.getBearing?.() ?? 0,
         padding: 60,
         duration: 800,
+        // Markers alone can sit a few hundred metres apart: do not zoom to street level.
+        ...(regionBounds ? {} : { maxZoom: 11 }),
       }),
     );
   }, [fitBoundsGeometry, fitMarkerKey, loaded]);
