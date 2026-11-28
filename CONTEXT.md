@@ -222,6 +222,15 @@ and no second pin. Once it is decided, the Signal has one pin again.
 _Avoid_: hiding the Signal until resolved; silently replacing the source pin; showing
 a ghost pin when no correction was submitted.
 
+**Other site**:
+A place a Signal's text names beside its primary location (`generalLocation`), that the
+pipeline resolved (clear-api `Signal.otherSites`, ADR-0025). The signal and event minimaps
+show each one as a **site pin**: a small ring with the place name beside it, so the
+primary pin stays the solid one. One place gets one pin, even when several Signals of an
+Event name it. Grouping reads the primary location only. The large maps (`/map`, the
+detection map) do not show other sites.
+_Avoid_: calling an other site a second location; treating it as a **Location correction**.
+
 **Consideration**:
 The open state of a **Location challenge** (clear-api status `consideration`) until the
 admin of the team it was filed for, or a platform admin, decides it in the **Inbox**:
