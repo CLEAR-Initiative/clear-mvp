@@ -18,13 +18,13 @@ describe("mapFocusHref", () => {
 });
 
 describe("entityDetailHref", () => {
-  it("links back to the detail page for each entity kind", () => {
-    expect(entityDetailHref("event", "evt-1")).toBe("/event/evt-1");
-    expect(entityDetailHref("signal", "sig-1")).toBe("/signal/sig-1");
-    expect(entityDetailHref("crisis", "cri-1")).toBe("/crisis/cri-1");
+  it("links to the detail page for each entity kind, with Back returning to the map", () => {
+    expect(entityDetailHref("event", "evt-1")).toBe("/event/evt-1?from=map");
+    expect(entityDetailHref("signal", "sig-1")).toBe("/signal/sig-1?from=map");
+    expect(entityDetailHref("crisis", "cri-1")).toBe("/crisis/cri-1?from=map");
   });
 
   it("encodes ids", () => {
-    expect(entityDetailHref("signal", "a/b")).toBe("/signal/a%2Fb");
+    expect(entityDetailHref("signal", "a/b")).toBe("/signal/a%2Fb?from=map");
   });
 });

@@ -9,9 +9,13 @@ export function mapFocusHref(kind: MapFocusKind, id: string): string {
   return `/map?${kind}=${encodeURIComponent(id)}`;
 }
 
-/** The detail page a focused map marker came from (the focus chip links back to it). */
+/**
+ * The detail page for a focused map marker (the focus chip links back to it).
+ * `from=map` makes the detail page's Back return to the map, as other
+ * map-to-detail links do.
+ */
 export function entityDetailHref(kind: MapFocusKind, id: string): string {
-  return `/${kind}/${encodeURIComponent(id)}`;
+  return `/${kind}/${encodeURIComponent(id)}?from=map`;
 }
 
 /**
