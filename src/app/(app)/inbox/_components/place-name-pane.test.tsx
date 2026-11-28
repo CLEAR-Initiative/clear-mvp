@@ -20,8 +20,9 @@ import type {
 vi.mock("next-intl", () => ({
   useTranslations: () => (key: string, vars?: Record<string, unknown>) =>
     vars ? `${key}:${JSON.stringify(vars)}` : key,
-  useFormatter: () => ({ dateTime: () => "2 Nov 2026" }),
+  useFormatter: () => ({ dateTime: () => "2 Nov 2026", relativeTime: () => "2 weeks ago" }),
   useLocale: () => "en",
+  useNow: () => new Date("2026-11-16T00:00:00Z"),
 }));
 vi.mock("next/link", () => ({
   default: ({ children, href, ...rest }: { children: React.ReactNode; href: string }) => (
