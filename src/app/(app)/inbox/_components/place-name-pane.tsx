@@ -92,7 +92,11 @@ export function PlaceNamePane({
 
   // The suggestion the decider points at, in the list or on the map: its row
   // and its pin highlight together.
-  const [highlighted, setHighlighted] = useState<string | null>(null);
+  // The pointer wins; when it leaves, the suggestion with keyboard focus keeps
+  // its highlight.
+  const [hovered, setHovered] = useState<string | null>(null);
+  const [focused, setFocused] = useState<string | null>(null);
+  const highlighted = hovered ?? focused;
 
   const [placing, setPlacing] = useState(false);
   const picker = useLocationPointPicker({
@@ -188,7 +192,7 @@ export function PlaceNamePane({
             label: s.name,
           }))}
           highlightedId={highlighted}
-          onHighlight={setHighlighted}
+          onHighlight={setHovered}
           refitKey={scope}
           outlines={outlines}
         />
@@ -248,10 +252,10 @@ export function PlaceNamePane({
                 data-testid="inbox-place-suggestion"
                 data-kind={s.kind}
                 data-highlighted={highlighted === suggestionKey(s) || undefined}
-                onMouseEnter={() => setHighlighted(suggestionKey(s))}
-                onMouseLeave={() => setHighlighted(null)}
-                onFocus={() => setHighlighted(suggestionKey(s))}
-                onBlur={() => setHighlighted(null)}
+                onMouseEnter={() => setHovered(suggestionKey(s))}
+                onMouseLeave={() => setHovered(null)}
+                onFocus={() => setFocused(suggestionKey(s))}
+                onBlur={() => setFocused(null)}
               >
                 <bdi>{s.name}</bdi>
                 <span className={styles.placeMeta}>

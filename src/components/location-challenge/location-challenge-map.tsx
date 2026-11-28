@@ -154,7 +154,7 @@ export function LocationChallengeMap({
   });
 
   const pins = challengeMapPins({ source, proposed, suggestions, placed });
-  const pinsKey = pins.map((p) => `${p.kind}:${p.lat},${p.lng}:${p.id ?? ""}`).join("|");
+  const pinsKey = pins.map((p) => `${p.kind}:${p.lat},${p.lng}:${p.id ?? ""}:${p.label ?? ""}`).join("|");
   const areas = outlines ?? [];
   // The outlines arrive after the map (a query): their count and size stand for them.
   const outlinesKey = areas.map((o) => `${o.type}:${JSON.stringify(o.coordinates).length}`).join("|");

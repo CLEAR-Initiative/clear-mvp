@@ -221,6 +221,17 @@ describe("PlaceNamePane", () => {
     expect(rows[1]).toHaveTextContent('place.where.outside:{"km":104,"area":"South Kordofan"}');
   });
 
+  it("keeps the highlight of the focused suggestion when the pointer leaves", () => {
+    renderPane();
+    const row = screen.getAllByTestId("inbox-place-suggestion")[0]!;
+    fireEvent.focus(within(row).getByTestId("inbox-place-use"));
+    fireEvent.mouseEnter(row);
+    fireEvent.mouseLeave(row);
+    expect(row).toHaveAttribute("data-highlighted", "true");
+    fireEvent.blur(within(row).getByTestId("inbox-place-use"));
+    expect(row).not.toHaveAttribute("data-highlighted");
+  });
+
   it("uses a GeoNames suggestion", () => {
     const entry = renderPane();
     fireEvent.click(within(screen.getAllByTestId("inbox-place-suggestion")[0]!).getByTestId("inbox-place-use"));
