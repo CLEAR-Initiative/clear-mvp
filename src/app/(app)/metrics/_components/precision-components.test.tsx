@@ -46,6 +46,10 @@ const RAW: GqlLocationPrecisionMetrics = {
     { isoWeek: "2026-W44", weekStart: "2026-10-26T00:00:00.000Z", source: "dataminr", total: 120, noLocation: 0, country: 4, state: 0, district: 0, point: 116, isPartial: true },
   ],
   corrections: { open: 2, accepted: 1, corrected: 1, declined: 0, superseded: 0 },
+  correctionsByOrigin: {
+    person: { open: 2, accepted: 0, corrected: 1, declined: 0, superseded: 0 },
+    pipeline: { open: 0, accepted: 1, corrected: 0, declined: 0, superseded: 0 },
+  },
 };
 
 describe("PrecisionTiles", () => {
@@ -58,7 +62,7 @@ describe("PrecisionTiles", () => {
     expect(screen.getByText("sudan-war-x at district or finer")).toBeInTheDocument();
     expect(screen.getByText("26%")).toBeInTheDocument();
     expect(screen.getByText("Location challenges")).toBeInTheDocument();
-    expect(screen.getByText("2 open · 2 decided")).toBeInTheDocument();
+    expect(screen.getByText("2 open · 2 decided · 3 from people · 1 from the pipeline")).toBeInTheDocument();
   });
 
   it("shows — with nothing in range", () => {

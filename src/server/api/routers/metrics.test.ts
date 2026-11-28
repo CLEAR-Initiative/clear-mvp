@@ -194,6 +194,10 @@ const PRECISION = {
     { isoWeek: "2026-W44", weekStart: "2026-10-26T00:00:00.000Z", source: "dataminr", total: 10, noLocation: 0, country: 1, state: 0, district: 0, point: 9, isPartial: false },
   ],
   corrections: { open: 2, accepted: 1, corrected: 0, declined: 1, superseded: 0 },
+  correctionsByOrigin: {
+    person: { open: 1, accepted: 1, corrected: 0, declined: 0, superseded: 0 },
+    pipeline: { open: 1, accepted: 0, corrected: 0, declined: 1, superseded: 0 },
+  },
 };
 
 describe("metrics.locationPrecision", () => {
@@ -240,7 +244,7 @@ describe("metrics.locationPrecision", () => {
     if (result.status !== "ok") throw new Error("expected ok");
     expect(result.metrics.totals).toMatchObject({ total: 30, fine: 17 });
     expect(result.metrics.bySource[0]).toMatchObject({ source: "sudan-war-x", fineShare: 0.4 });
-    expect(result.metrics.corrections).toMatchObject({ decided: 2, total: 4 });
+    expect(result.metrics.corrections).toMatchObject({ decided: 2, total: 4, byOrigin: { person: 2, pipeline: 2 } });
   });
 
   it("rejects a non-admin without calling clear-api", async () => {

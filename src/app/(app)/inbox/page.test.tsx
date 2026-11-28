@@ -300,6 +300,7 @@ function locationChallenge(id: string): GqlLocationChallengeToDecide {
     proposedLng: 24.95,
     proposedName: "Kalma",
     createdBy: "u-analyst",
+    origin: "PERSON",
     createdByName: "Amira",
     createdAt: "2026-10-28T09:00:00Z",
     updatedAt: "2026-10-28T09:00:00Z",
@@ -534,6 +535,30 @@ describe("InboxPage Location challenges", () => {
     ]);
     expect(screen.getByTestId("inbox-pane")).toHaveAttribute("data-kind", "location_challenge");
     expect(screen.getByText("Signal lc-1", { selector: "[class*=paneTitle]" })).toBeInTheDocument();
+  });
+
+  it("filters the challenges by who filed them", () => {
+    role = "team_admin";
+    locationsData = [
+      locationChallenge("lc-1"),
+      { ...locationChallenge("lc-2"), origin: "PIPELINE", createdByName: "svc-pipeline" },
+    ];
+    renderPage();
+    fireEvent.click(screen.getByTestId("inbox-tab-locations"));
+    expect(screen.getAllByTestId("inbox-entry")).toHaveLength(2);
+
+    fireEvent.click(screen.getByTestId("inbox-filter-locationsPipeline"));
+    const rows = screen.getAllByTestId("inbox-entry");
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toHaveTextContent("Signal lc-2");
+    expect(rows[0]).toHaveTextContent("location.pipelineFiler");
+
+    fireEvent.click(screen.getByTestId("inbox-filter-locationsPerson"));
+    expect(screen.getAllByTestId("inbox-entry")).toHaveLength(1);
+    expect(screen.getByTestId("inbox-entry")).toHaveTextContent("Signal lc-1");
+
+    fireEvent.click(screen.getByTestId("inbox-filter-locations"));
+    expect(screen.getAllByTestId("inbox-entry")).toHaveLength(2);
   });
 
   it("hides them from an analyst, who files them", () => {

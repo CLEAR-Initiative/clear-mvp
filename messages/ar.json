@@ -2998,7 +2998,9 @@
       "unclassified": "غير مصنّف",
       "chatter": "دردشة",
       "proposals": "الإشارات المقترحة",
-      "locations": "تغييرات المواقع",
+      "locations": "الكل",
+      "locationsPerson": "من الأشخاص",
+      "locationsPipeline": "من النظام الآلي",
       "places": "الأماكن"
     },
     "search": "بحث في النص ومراجع الاستقبال",
@@ -3140,6 +3142,7 @@
         "bare": "دبوس مُبلَّغ عنه كخاطئ، دون نقطة مقترحة"
       },
       "filedBy": "قدّمه {name} · {date}",
+      "pipelineFiler": "نظام CLEAR الآلي",
       "filed": "قُدّم في {date}",
       "openSignal": "فتح الإشارة",
       "now": "الموقع الحالي",
@@ -4180,7 +4183,7 @@
         },
         "corrections": {
           "label": "اعتراضات على الموقع",
-          "sub": "{open, number} مفتوحة · {decided, number} مبتوت فيها"
+          "sub": "{open, number} مفتوحة · {decided, number} مبتوت فيها · {person, number} من الأشخاص · {pipeline, number} من النظام الآلي"
         },
         "ofSignals": "{n, number} من {total, number} إشارة",
         "none": "لا شيء في النطاق"

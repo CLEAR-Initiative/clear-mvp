@@ -27,7 +27,18 @@ export interface GqlLocationPrecisionMetrics {
   signalsInRange: number;
   bySource: Array<{ source: string } & GqlLevelCounts>;
   weekly: Array<{ isoWeek: string; weekStart: string; source: string; isPartial: boolean } & GqlLevelCounts>;
-  corrections: { open: number; accepted: number; corrected: number; declined: number; superseded: number };
+  corrections: GqlCorrectionCounts;
+  /** The same challenges by who filed them: a person, or the pipeline. */
+  correctionsByOrigin: { person: GqlCorrectionCounts; pipeline: GqlCorrectionCounts };
+}
+
+/** Location challenges filed in range, by status. */
+export interface GqlCorrectionCounts {
+  open: number;
+  accepted: number;
+  corrected: number;
+  declined: number;
+  superseded: number;
 }
 
 export interface LevelShares extends GqlLevelCounts {
@@ -60,7 +71,12 @@ export interface LocationPrecisionMetrics {
   bySource: SourcePrecision[];
   /** Flat, one row per source and ISO week, zero-filled by clear-api. */
   weekly: WeekPrecision[];
-  corrections: GqlLocationPrecisionMetrics["corrections"] & { total: number; decided: number };
+  /** `byOrigin` counts every challenge filed in range, whatever its status. */
+  corrections: GqlCorrectionCounts & {
+    total: number;
+    decided: number;
+    byOrigin: { person: number; pipeline: number };
+  };
 }
 
 /** `metrics.locationPrecision`'s result: the metrics, or clear-api not serving them yet. */
@@ -99,6 +115,7 @@ export function withShares(raw: GqlLocationPrecisionMetrics): LocationPrecisionM
     point: sum("point"),
   });
   const decided = raw.corrections.accepted + raw.corrections.corrected + raw.corrections.declined;
+  const filed = (c: GqlCorrectionCounts) => c.open + c.accepted + c.corrected + c.declined + c.superseded;
   return {
     from: raw.from,
     to: raw.to,
@@ -112,7 +129,15 @@ export function withShares(raw: GqlLocationPrecisionMetrics): LocationPrecisionM
       isPartial: row.isPartial,
       ...levelShares(row),
     })),
-    corrections: { ...raw.corrections, decided, total: decided + raw.corrections.open + raw.corrections.superseded },
+    corrections: {
+      ...raw.corrections,
+      decided,
+      total: filed(raw.corrections),
+      byOrigin: {
+        person: filed(raw.correctionsByOrigin.person),
+        pipeline: filed(raw.correctionsByOrigin.pipeline),
+      },
+    },
   };
 }
 

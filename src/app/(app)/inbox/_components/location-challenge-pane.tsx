@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useFormatter, useTranslations } from "next-intl";
 import { IconArrowLeft, IconCircleCheck, IconCircleX, IconMapPin } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
-import type { LocationChallengeEntry } from "~/lib/hotline-inbox";
+import { challengeFiler, type LocationChallengeEntry } from "~/lib/hotline-inbox";
 import {
   decisionErrorKey,
   locationChain,
@@ -88,7 +88,7 @@ export function LocationChallengePane({
     setError(null);
   }
 
-  const filer = challenge.createdByName?.trim();
+  const filer = challengeFiler(challenge, t("location.pipelineFiler"));
   const filedAt = format.dateTime(new Date(challenge.createdAt), "short");
   const proposedPlace = locationChain(challenge.proposedPlacement);
 

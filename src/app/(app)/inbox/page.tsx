@@ -194,15 +194,16 @@ export default function InboxPage() {
    * on the old total. */
   const [dismissedIds, setDismissedIds] = useState<ReadonlySet<string>>(() => new Set());
 
+  const pipelineFiler = t("location.pipelineFiler");
   const entries = useMemo<InboxEntry[]>(() => {
     const built: InboxEntry[] = [
       ...(inboxQuery.data ? buildInboxEntries(inboxQuery.data) : []),
       ...(casesQuery.data ? buildCaseGroupEntries(casesQuery.data, decidedCases) : []),
-      ...(locationsQuery.data ? buildLocationChallengeEntries(locationsQuery.data) : []),
+      ...(locationsQuery.data ? buildLocationChallengeEntries(locationsQuery.data, pipelineFiler) : []),
       ...(placesQuery.data ? buildPlaceNameEntries(placesQuery.data.items) : []),
     ];
     return dismissedIds.size === 0 ? built : built.filter((entry) => !dismissedIds.has(entry.id));
-  }, [inboxQuery.data, casesQuery.data, locationsQuery.data, placesQuery.data, decidedCases, dismissedIds]);
+  }, [inboxQuery.data, casesQuery.data, locationsQuery.data, placesQuery.data, decidedCases, dismissedIds, pipelineFiler]);
   const sourceById = useMemo(() => {
     const m = new Map<string, string[]>();
     for (const s of inboxQuery.data?.sources ?? []) m.set(s.id, s.reviewerRoles);

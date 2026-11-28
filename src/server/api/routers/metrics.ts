@@ -72,6 +72,10 @@ export const LOCATION_PRECISION_QUERY = `
       bySource { source total noLocation country state district point }
       weekly { isoWeek weekStart source total noLocation country state district point isPartial }
       corrections { open accepted corrected declined superseded }
+      correctionsByOrigin {
+        person { open accepted corrected declined superseded }
+        pipeline { open accepted corrected declined superseded }
+      }
     }
   }
 `;

@@ -50,13 +50,24 @@ export const INBOX_TABS = ["community", "proposals", "locations", "places"] as c
 export type InboxTab = (typeof INBOX_TABS)[number];
 
 /** The filters inside the tabs: every hotline thread ("community"), the
- * three hotline classifications, the proposed signals and the Location
- * challenges. */
-export const INBOX_FILTERS = ["community", "reports", "unclassified", "chatter", "proposals", "locations", "places"] as const;
+ * three hotline classifications, the proposed signals, the Location
+ * challenges, and those by origin (a person's, or the pipeline's). */
+export const INBOX_FILTERS = [
+  "community",
+  "reports",
+  "unclassified",
+  "chatter",
+  "proposals",
+  "locations",
+  "locationsPerson",
+  "locationsPipeline",
+  "places",
+] as const;
 export type InboxFilter = (typeof INBOX_FILTERS)[number];
 
 /** The tab a filter belongs to. */
 export function tabOf(filter: InboxFilter): InboxTab {
+  if (filter === "locationsPerson" || filter === "locationsPipeline") return "locations";
   return filter === "proposals" || filter === "locations" || filter === "places" ? filter : "community";
 }
 
@@ -270,6 +281,26 @@ export function buildPlaceNameEntries(rows: GqlUnresolvedPlaceName[]): PlaceName
   }));
 }
 
+/** True when the pipeline filed the challenge, not a person. */
+export function isPipelineChallenge(challenge: Pick<GqlLocationChallengeToDecide, "origin">): boolean {
+  return challenge.origin === "PIPELINE";
+}
+
+/** The pipeline's English name as a filer, always in search text beside the
+ * reader's own-language label (`inbox.location.pipelineFiler`). */
+const PIPELINE_FILER = "CLEAR pipeline";
+
+/** Who filed a Location challenge, as the Inbox names them: the person, or
+ * `pipelineLabel` for one the pipeline filed (its service user's name is not
+ * shown). Null when a person's name is not known. */
+export function challengeFiler(
+  challenge: Pick<GqlLocationChallengeToDecide, "origin" | "createdByName">,
+  pipelineLabel: string,
+): string | null {
+  if (isPipelineChallenge(challenge)) return pipelineLabel;
+  return challenge.createdByName?.trim() || null;
+}
+
 /** The id of a Location challenge's entry. */
 export function locationChallengeEntryId(challengeId: string): string {
   return `location:${challengeId}`;
@@ -281,7 +312,12 @@ export function locationChallengeEntryId(challengeId: string): string {
  * Signal's place, the proposed place, the note and the filer, so search finds
  * a challenge by any of them.
  */
-export function buildLocationChallengeEntries(challenges: GqlLocationChallengeToDecide[]): LocationChallengeEntry[] {
+export function buildLocationChallengeEntries(
+  challenges: GqlLocationChallengeToDecide[],
+  /** The pipeline's name as a filer in the reader's language, so search
+   * finds a pipeline challenge by the label the reader sees. */
+  pipelineLabel: string = PIPELINE_FILER,
+): LocationChallengeEntry[] {
   return challenges.map((challenge) => {
     const signalTitle = challenge.signal.title?.trim() || null;
     return {
@@ -295,7 +331,8 @@ export function buildLocationChallengeEntries(challenges: GqlLocationChallengeTo
         challenge.proposedName,
         locationChain(challenge.proposedPlacement),
         challenge.note,
-        challenge.createdByName,
+        challengeFiler(challenge, pipelineLabel),
+        isPipelineChallenge(challenge) && pipelineLabel !== PIPELINE_FILER ? PIPELINE_FILER : null,
         challenge.team?.name,
       ]
         .filter((part): part is string => !!part)
@@ -551,6 +588,10 @@ export function matchesFilter(entry: InboxEntry, filter: InboxFilter): boolean {
       return isCaseGroupEntry(entry);
     case "locations":
       return isLocationChallengeEntry(entry);
+    case "locationsPerson":
+      return isLocationChallengeEntry(entry) && !isPipelineChallenge(entry.challenge);
+    case "locationsPipeline":
+      return isLocationChallengeEntry(entry) && isPipelineChallenge(entry.challenge);
     case "places":
       return isPlaceNameEntry(entry);
   }
@@ -601,8 +642,12 @@ export function entryWeight(entry: InboxEntry): number {
   return isCaseGroupEntry(entry) ? entry.undecided : 1;
 }
 
+function emptyFilterCounts(): Record<InboxFilter, number> {
+  return Object.fromEntries(INBOX_FILTERS.map((f) => [f, 0])) as Record<InboxFilter, number>;
+}
+
 export function countByFilter(entries: InboxEntry[]): Record<InboxFilter, number> {
-  const counts: Record<InboxFilter, number> = { community: 0, reports: 0, unclassified: 0, chatter: 0, proposals: 0, locations: 0, places: 0 };
+  const counts: Record<InboxFilter, number> = emptyFilterCounts();
   for (const e of entries) {
     for (const f of INBOX_FILTERS) if (matchesFilter(e, f)) counts[f] += entryWeight(e);
   }
@@ -616,7 +661,7 @@ export function countByFilter(entries: InboxEntry[]): Record<InboxFilter, number
  * `countByFilter`: work still waiting after it has been opened.
  */
 export function countUnreadByFilter(entries: InboxEntry[], readIds: ReadonlySet<string>): Record<InboxFilter, number> {
-  const counts: Record<InboxFilter, number> = { community: 0, reports: 0, unclassified: 0, chatter: 0, proposals: 0, locations: 0, places: 0 };
+  const counts: Record<InboxFilter, number> = emptyFilterCounts();
   for (const e of entries) {
     const weight = unreadWeight(e, readIds);
     for (const f of INBOX_FILTERS) if (matchesFilter(e, f)) counts[f] += weight;

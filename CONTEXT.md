@@ -206,6 +206,14 @@ _Avoid_: “top‑3 locations” as a required step; "challenge" in product copy
 Event/Alert pins; map-only or detail-only entry; a challenge that moves the Signal by
 itself.
 
+**Origin (of a Location challenge)**:
+Who filed it: a person, or the pipeline. The pipeline files one when it places a
+**Signal** by its text in another state than the point the source sent; that point is the
+proposed one. The **Inbox** names the filer of a pipeline challenge "CLEAR pipeline", never
+its service user, and filters "Location changes" by origin. `/metrics` counts challenges by
+origin. clear-api field `origin` (`PERSON`, `PIPELINE`).
+_Avoid_: a separate Inbox kind for pipeline flags; "automatic challenge".
+
 **Location correction**:
 The proposed new **point** (lat/lng) for a challenged **Signal**, submitted for
 **consideration**: a place search, a click on the map (in the form, or on the Map page's

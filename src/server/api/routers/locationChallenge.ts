@@ -75,6 +75,7 @@ const TO_DECIDE_QUERY = `
     signalLocationChallengesToDecide {
       ${CHALLENGE_FIELDS}
       teamId
+      origin
       createdByName
       team { id name locations { id } }
       signal {
