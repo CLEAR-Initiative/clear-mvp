@@ -11,7 +11,7 @@ import {
 import { createPortal } from "react-dom";
 import { useLocale, useTranslations } from "next-intl";
 import { api } from "~/trpc/react";
-import { geometryBounds, isPaintableBoundaryGeometry } from "~/lib/geo/country-mask";
+import { extendBounds, geometryBounds, isPaintableBoundaryGeometry } from "~/lib/geo/country-mask";
 import {
   addPresenceMap,
   createPresenceMemory,
@@ -244,6 +244,9 @@ interface CrisisMapProps {
   adminBoundaryLevel?: 0 | 1 | 2;
   /** GeoJSON geometry to fit the map bounds to (e.g. a selected region). */
   fitBoundsGeometry?: unknown;
+  /** Also fit every marker inside the view when fitting to `fitBoundsGeometry`
+   *  (the detail minimaps: a site can sit outside the primary location's state). */
+  fitBoundsIncludeMarkers?: boolean;
   /** Our own L0 geometry for the focus country highlight (overrides Mapbox tileset). */
   focusCountryGeometry?: unknown;
   /** A2 district boundaries with population for choropleth layer. */
@@ -709,6 +712,7 @@ export function CrisisMap({
   adminBoundaries,
   adminBoundaryLevel,
   fitBoundsGeometry,
+  fitBoundsIncludeMarkers = false,
   focusCountryGeometry,
   populationBoundaries,
   hoveredMarkerId,
@@ -1674,11 +1678,26 @@ export function CrisisMap({
     countryFitNonce,
   ]);
 
+  // Points the fit must keep on screen. A string key, so a new markers array
+  // with the same points does not refit the map.
+  const fitMarkerKey = fitBoundsIncludeMarkers
+    ? markers.map((m) => `${m.lng},${m.lat}`).join(";")
+    : "";
+
   // Fit bounds to a specific geometry (e.g. selected region).
   useEffect(() => {
     if (!map.current || !loaded || !fitBoundsGeometry) return;
-    const bounds = geometryBounds(fitBoundsGeometry as never);
-    if (!bounds) return;
+    const regionBounds = geometryBounds(fitBoundsGeometry as never);
+    if (!regionBounds) return;
+    const bounds = fitMarkerKey
+      ? extendBounds(
+          regionBounds,
+          fitMarkerKey.split(";").map((p) => {
+            const [lng, lat] = p.split(",").map(Number);
+            return { lng: lng!, lat: lat! };
+          }),
+        )
+      : regionBounds;
     map.current.fitBounds(
       [[bounds[0], bounds[1]], [bounds[2], bounds[3]]],
       fitBoundsCameraOptions({
@@ -1688,7 +1707,7 @@ export function CrisisMap({
         duration: 800,
       }),
     );
-  }, [fitBoundsGeometry, loaded]);
+  }, [fitBoundsGeometry, fitMarkerKey, loaded]);
 
   // ── Region highlight: show selected region geometry, hide country fill ──
   useEffect(() => {

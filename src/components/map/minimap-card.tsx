@@ -57,9 +57,12 @@ interface MinimapCardProps {
    * instead of the `location`'s state.
    */
   scopeAreas?: { id: string; name: string; geometry: unknown }[];
+  /** Zoom out so every marker is in view, not only the location's state
+   *  (signal and event pages: a site can sit in a neighbouring state). */
+  fitToMarkers?: boolean;
 }
 
-export function MinimapCard({ markers, center, countryGeometry, countryId, countryName, countryPCode, location, locationName, fullMapHref = "/map", holdRegionFit = false, flyDuration, scopeAreas }: MinimapCardProps) {
+export function MinimapCard({ markers, center, countryGeometry, countryId, countryName, countryPCode, location, locationName, fullMapHref = "/map", holdRegionFit = false, flyDuration, scopeAreas, fitToMarkers = false }: MinimapCardProps) {
   const t = useTranslations("map");
   const [layersOpen, setLayersOpen] = useState(false);
   const [boundaryLevel, setBoundaryLevel] = useState<BoundaryLevel>("A2");
@@ -170,6 +173,7 @@ export function MinimapCard({ markers, center, countryGeometry, countryId, count
           focusCountryGeometry={countryGeometry}
           fitBoundsOnFocus={false}
           fitBoundsGeometry={displayFitBoundsGeometry}
+          fitBoundsIncludeMarkers={fitToMarkers}
           adminBoundaries={adminBoundaries}
           adminBoundaryLevel={adminBoundaryLevel as 1 | 2 | undefined}
           populationBoundaries={populationBoundaries}

@@ -845,6 +845,7 @@ export function SignalDetailContent({
           <Box style={{ width: isMobile ? "100%" : 300, flexShrink: 0 }}>
             <Stack gap={20}>
               <MinimapCard
+                fitToMarkers
                 markers={mapDisplayMarkers}
                 center={mapDisplayCenter}
                 countryGeometry={focusCountryGeometry}
