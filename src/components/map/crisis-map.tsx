@@ -310,6 +310,9 @@ interface CrisisMapProps {
    * pass false to keep donuts/points at every zoom.
    */
   showDensityHeatmap?: boolean;
+  /** Group nearby pins into numbered clusters. Default on. The detail
+   *  minimaps turn it off so each named site keeps its own pin. */
+  clusterPins?: boolean;
   /** Show/hide roads overlay (applies to all basemap types) */
   showRoads?: boolean;
   /**
@@ -758,6 +761,7 @@ export function CrisisMap({
   showBoundaries = true,
   showMarkers = true,
   showDensityHeatmap = true,
+  clusterPins = true,
   showRoads = true,
   showNrcLocations = false,
   operatingCountries,
@@ -2017,7 +2021,7 @@ export function CrisisMap({
       geometry: { type: "Point" as const, coordinates: [mk.lng, mk.lat] },
     }));
 
-    const clusterMarkers = appearance !== "analysis";
+    const clusterMarkers = appearance !== "analysis" && clusterPins;
     m.addSource(SOURCE, {
       type: "geojson",
       data: { type: "FeatureCollection", features },
@@ -2448,7 +2452,7 @@ export function CrisisMap({
       m.off("idle", restoreMissingMarkers);
       m.off("sourcedata", onSourceData);
     };
-  }, [markers, loaded, showMarkers, showDensityHeatmap, baseMapType, appearance, onSelectedMarkerElement]);
+  }, [markers, loaded, showMarkers, showDensityHeatmap, clusterPins, baseMapType, appearance, onSelectedMarkerElement]);
 
   // ── Marker hover pulse (synced from list) ────────────────────────────────
   useEffect(() => {

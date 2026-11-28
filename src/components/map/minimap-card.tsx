@@ -174,6 +174,10 @@ export function MinimapCard({ markers, center, countryGeometry, countryId, count
           fitBoundsOnFocus={false}
           fitBoundsGeometry={displayFitBoundsGeometry}
           fitBoundsIncludeMarkers={fitToMarkers}
+          // A fitted view can zoom out into the heat or cluster band; keep
+          // every named site as its own pin on the detail minimaps.
+          showDensityHeatmap={!fitToMarkers}
+          clusterPins={!fitToMarkers}
           adminBoundaries={adminBoundaries}
           adminBoundaryLevel={adminBoundaryLevel as 1 | 2 | undefined}
           populationBoundaries={populationBoundaries}
