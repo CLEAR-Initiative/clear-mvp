@@ -2946,8 +2946,11 @@
       "sessionOnlyTitle": "Visible pour cette session seulement",
       "sessionOnlyCorrection": "Les épingles source et proposée s’affichent sur la carte pour cette session. L’enregistrement pour examen nécessite le support clear-api (encore en attente).",
       "searchLabel": "Rechercher le lieu",
-      "searchPlaceholder": "Village, ville ou point de repère",
+      "searchPlaceholder": "Nom du lieu, coordonnées ou lien de carte",
       "noResults": "Aucun lieu trouvé. Essayez une autre orthographe.",
+      "useCoordinates": "Placer le point à {coordinates}",
+      "pasteShortLink": "Un lien de carte court ne contient pas de coordonnées. Ouvrez le lien, puis copiez l’adresse complète depuis le navigateur, ou copiez les coordonnées.",
+      "pasteNoCoordinates": "CLEAR n’a trouvé aucune coordonnée dans ce texte. Collez un lien Google Maps ou OpenStreetMap complet, ou des coordonnées comme 11.78, 34.36.",
       "placing": "Recherche de l’emplacement dans CLEAR…",
       "landsIn": "Dans CLEAR : {chain}",
       "outsideCoverage": "Ce lieu est hors des zones couvertes par CLEAR.",
@@ -3155,7 +3158,7 @@
       "note": "Note de l’analyste",
       "team": "Équipe",
       "placeTitle": "Placer le point",
-      "placeHint": "Cliquez sur la carte là où le Signal devrait être, ou recherchez le lieu. Vous pouvez aussi saisir ses coordonnées.",
+      "placeHint": "Cliquez sur la carte là où le Signal devrait être, ou recherchez le lieu. Vous pouvez aussi saisir ses coordonnées. Vous pouvez aussi coller des coordonnées ou un lien de carte.",
       "actions": {
         "accept": "Accepter le point proposé",
         "placeOther": "Placer un autre point",
@@ -3188,6 +3191,13 @@
         "OUTSIDE_AREA": "Un lieu de ce nom existe en dehors de {area}"
       },
       "suggestions": "Lieux possibles",
+      "lookup": {
+        "label": "Rechercher le nom dans",
+        "google_maps": "Google Maps",
+        "openstreetmap": "OpenStreetMap",
+        "web_search": "Recherche web",
+        "newTab": "(s’ouvre dans un nouvel onglet)"
+      },
       "scope": {
         "label": "Afficher les lieux dans",
         "area": "{area} ({count})",
@@ -3206,7 +3216,7 @@
         "unknown": "Distance inconnue"
       },
       "placeTitle": "Placer le point",
-      "placeHint": "Cliquez sur la carte à l’endroit où se trouve {name}, ou recherchez le lieu. Vous pouvez aussi saisir ses coordonnées.",
+      "placeHint": "Cliquez sur la carte à l’endroit où se trouve {name}, ou recherchez le lieu. Vous pouvez aussi saisir ses coordonnées. Vous pouvez aussi coller des coordonnées ou un lien de carte.",
       "actions": {
         "use": "Utiliser ce lieu",
         "place": "Placer sur la carte",

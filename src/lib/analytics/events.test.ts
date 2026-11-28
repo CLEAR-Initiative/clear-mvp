@@ -54,6 +54,14 @@ describe("analytics event allowlist", () => {
     expect(isAllowedEvent("place_name.resolved", { kind: "POINT", name: "Um Dabakir" })).toBe(false);
   });
 
+  it("takes a place-name lookup by its provider only, never the name", () => {
+    expect(isAllowedEvent("place_name.lookup_opened", { provider: "google_maps" })).toBe(true);
+    expect(isAllowedEvent("place_name.lookup_opened", { provider: "openstreetmap" })).toBe(true);
+    expect(isAllowedEvent("place_name.lookup_opened", { provider: "web_search" })).toBe(true);
+    expect(isAllowedEvent("place_name.lookup_opened", { provider: "bing" })).toBe(false);
+    expect(isAllowedEvent("place_name.lookup_opened", { provider: "google_maps", name: "Bakouri" })).toBe(false);
+  });
+
   it("rejects missing, extra and non-string properties", () => {
     expect(isAllowedEvent("privacy_notice.viewed", {})).toBe(false);
     expect(isAllowedEvent("privacy_notice.viewed", { from: "profile", email: "a@b.c" })).toBe(false);

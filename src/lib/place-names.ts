@@ -44,6 +44,81 @@ export function placeNameHomeArea(row: Pick<GqlUnresolvedPlaceName, "stateLocati
   return home ? [{ id: home }] : [];
 }
 
+/* ─── Looking a name up outside CLEAR ─── */
+
+/** Where the pane's lookup links go. */
+export const PLACE_LOOKUP_PROVIDERS = ["google_maps", "openstreetmap", "web_search"] as const;
+export type PlaceLookupProvider = (typeof PLACE_LOOKUP_PROVIDERS)[number];
+
+/** Where a map lookup opens: the middle of the row's area and a zoom that
+ *  shows it. */
+export type PlaceLookupView = { lat: number; lng: number; zoom: number };
+
+/** What the lookup links search for: the Arabic spelling when the row has
+ *  one, else the name as written, with the area's name (the row's state, or
+ *  its country for a row with no state). */
+export function placeLookupQuery(
+  row: Pick<GqlUnresolvedPlaceName, "nameAsWritten" | "nameAr">,
+  area: string,
+): string {
+  const name = row.nameAr?.trim() || row.nameAsWritten.trim();
+  return [name, area.trim()].filter(Boolean).join(", ");
+}
+
+/** The view that shows an area, from its outline (a GeoJSON Polygon or
+ *  MultiPolygon): the middle of its bounding box, and a web-map zoom that
+ *  fits it. Null for an outline with no position. */
+export function placeLookupView(outline: { coordinates: unknown } | null | undefined): PlaceLookupView | null {
+  let south = Infinity;
+  let north = -Infinity;
+  let west = Infinity;
+  let east = -Infinity;
+  // Every [lng, lat] position in the coordinates tree.
+  const walk = (node: unknown) => {
+    if (!Array.isArray(node)) return;
+    const [lng, lat] = node as unknown[];
+    if (typeof lng === "number" && typeof lat === "number") {
+      if (!Number.isFinite(lng) || !Number.isFinite(lat)) return;
+      south = Math.min(south, lat);
+      north = Math.max(north, lat);
+      west = Math.min(west, lng);
+      east = Math.max(east, lng);
+      return;
+    }
+    for (const child of node) walk(child);
+  };
+  walk(outline?.coordinates);
+  if (south > north) return null;
+  // A zoom-z map is 360/2^z degrees wide per 256 px; a window is about four
+  // tiles wide and half as tall in degrees of latitude.
+  const span = Math.max(east - west, (north - south) * 2, 0.01);
+  const zoom = Math.min(12, Math.max(3, Math.floor(Math.log2(360 / span)) + 1));
+  const round = (n: number) => Math.round(n * 1e4) / 1e4;
+  return { lat: round((south + north) / 2), lng: round((west + east) / 2), zoom };
+}
+
+/** The lookup links for a query. With a view, the two maps open on it, so
+ *  results near the row's area come first. */
+export function placeLookupLinks(
+  query: string,
+  view: PlaceLookupView | null,
+): { provider: PlaceLookupProvider; href: string }[] {
+  const q = encodeURIComponent(query);
+  return [
+    {
+      provider: "google_maps",
+      href: view
+        ? `https://www.google.com/maps/search/${q}/@${view.lat},${view.lng},${view.zoom}z`
+        : `https://www.google.com/maps/search/?api=1&query=${q}`,
+    },
+    {
+      provider: "openstreetmap",
+      href: `https://www.openstreetmap.org/search?query=${q}${view ? `#map=${view.zoom}/${view.lat}/${view.lng}` : ""}`,
+    },
+    { provider: "web_search", href: `https://www.google.com/search?q=${q}` },
+  ];
+}
+
 /** The toast after a row is resolved, by kind. */
 export type PlaceResolvedToastKey = "place.toast.resolved" | "place.toast.notAPlace" | "place.toast.ambiguous";
 export function placeResolvedToastKey(kind: PlaceNameResolutionKind): PlaceResolvedToastKey {

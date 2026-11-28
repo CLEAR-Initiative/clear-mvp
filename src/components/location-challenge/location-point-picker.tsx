@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Box, Group, Loader, NumberInput, Stack, Text, TextInput, UnstyledButton } from "@mantine/core";
 import { useLocale, useTranslations } from "next-intl";
 import { IconMapPin, IconSearch } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
 import { geocodePlaceQuery, type GeocodeHit } from "~/lib/map/geocode-lookup";
+import { parsePastedPoint } from "~/lib/map/pasted-point";
 import {
   locationChain,
   movedFromSource,
@@ -40,8 +41,8 @@ export const fieldLabelStyles = {
 
 /**
  * The corrected-point controls a Location challenge is filed and decided
- * with: a place search, a point placed on a map, or typed coordinates, and
- * where the point lands in CLEAR. A point outside every loaded area is
+ * with: a place search, a point placed on a map, pasted coordinates or a
+ * pasted map link, or typed coordinates, and where the point lands in CLEAR. A point outside every loaded area is
  * `blocked` (clear-api refuses it), and so is one outside the team's area
  * unless the reader may place a Signal anywhere (a platform admin).
  */
@@ -73,12 +74,17 @@ export function useLocationPointPicker({
   const [lng, setLng] = useState<number | string>(sourceLng ?? "");
   const [name, setName] = useState("");
 
+  // Coordinates or a map link in the search box are read as a point, not
+  // searched for as a place name.
+  const pasted = useMemo(() => parsePastedPoint(query), [query]);
+  const isPlaceQuery = pasted.kind === "none";
+
   // Look the place up once typing pauses; a newer keystroke cancels the last.
   useEffect(() => {
     if (!active || picked) return;
     const text = query.trim();
     abortRef.current?.abort();
-    if (text.length < 2) {
+    if (text.length < 2 || !isPlaceQuery) {
       setHits([]);
       setSearching(false);
       return;
@@ -99,7 +105,7 @@ export function useLocationPointPicker({
       window.clearTimeout(timer);
       ac.abort();
     };
-  }, [query, active, picked, locale]);
+  }, [query, active, picked, locale, isPlaceQuery]);
 
   const latNum = typeof lat === "number" ? lat : Number(lat);
   const lngNum = typeof lng === "number" ? lng : Number(lng);
@@ -141,7 +147,9 @@ export function useLocationPointPicker({
 
   function setQuery(value: string) {
     setQueryText(value);
-    if (picked) setPicked(null);
+    // A new place search replaces the picked point. Coordinates or a link in
+    // the box do not: the point stays until the new one is placed.
+    if (picked && parsePastedPoint(value).kind === "none") setPicked(null);
   }
 
   function pick(hit: GeocodeHit) {
@@ -155,10 +163,29 @@ export function useLocationPointPicker({
   /** A point placed on a map. It has no name, so the Signal shows its admin
    *  area's. */
   function placeAt(at: { lat: number; lng: number }) {
+    abortRef.current?.abort();
+    setSearching(false);
     setPicked(pickedAt(at.lat, at.lng));
     setQueryText("");
     setHits([]);
     setManualEntry(false);
+  }
+
+  /** Pasted text. True tells the field not to take the text itself. A point
+   *  in it (coordinates or a map link) is placed. A link or coordinates with
+   *  no point become the search box's text, which says so, and the point
+   *  placed before stays. A place name is left to the field. */
+  function paste(text: string): boolean {
+    const found = parsePastedPoint(text);
+    if (found.kind === "none") return false;
+    if (found.kind === "point") placeAt(found);
+    else setQueryText(text.trim());
+    return true;
+  }
+
+  /** Place the point the search box holds as typed coordinates or a link. */
+  function placeQueryPoint() {
+    if (pasted.kind === "point") placeAt(pasted);
   }
 
   function clearPick() {
@@ -186,6 +213,13 @@ export function useLocationPointPicker({
     picked,
     pick,
     placeAt,
+    paste,
+    /** The point the search box holds, when its text is coordinates or a map
+     *  link; the reason it holds none, for such text without a point. */
+    queryPoint: pasted.kind === "point" ? { lat: pasted.lat, lng: pasted.lng } : null,
+    queryProblem: pasted.kind === "short_link" || pasted.kind === "no_coordinates" ? pasted.kind : null,
+    isPlaceQuery,
+    placeQueryPoint,
     clearPick,
     manualEntry,
     toggleManualEntry,
@@ -228,6 +262,16 @@ export function LocationPointFields({
         <TextInput
           value={picker.query}
           onChange={(e) => picker.setQuery(e.currentTarget.value)}
+          onPaste={(e) => {
+            if (picker.paste(e.clipboardData.getData("text"))) e.preventDefault();
+          }}
+          onKeyDown={(e) => {
+            // Enter that confirms an input-method composition is not a command.
+            if (e.key === "Enter" && !e.nativeEvent.isComposing && picker.queryPoint) {
+              e.preventDefault();
+              picker.placeQueryPoint();
+            }
+          }}
           placeholder={t("modal.searchPlaceholder")}
           aria-label={t("modal.searchLabel")}
           leftSection={<IconSearch size={14} />}
@@ -261,11 +305,41 @@ export function LocationPointFields({
             ))}
           </Stack>
         )}
-        {!picker.searching && !picked && picker.query.trim().length >= 2 && picker.hits.length === 0 && (
-          <Text size="xs" c="var(--color-text-muted)" mt={6}>
-            {t("modal.noResults")}
+        {picker.queryPoint && (
+          <UnstyledButton
+            type="button"
+            onClick={picker.placeQueryPoint}
+            mt={4}
+            px={10}
+            py={8}
+            className="hover:bg-[var(--color-bg-muted)] transition-colors"
+            style={{ border: "1px solid var(--color-border)", borderRadius: 6, width: "100%" }}
+            data-testid="location-challenge-use-coordinates"
+          >
+            <Group gap={8} wrap="nowrap">
+              <IconMapPin size={14} color="var(--color-text-muted)" style={{ flexShrink: 0 }} />
+              <Text size="sm" c="var(--color-text-primary)">
+                {t("modal.useCoordinates", {
+                  coordinates: `${picker.queryPoint.lat.toFixed(5)}, ${picker.queryPoint.lng.toFixed(5)}`,
+                })}
+              </Text>
+            </Group>
+          </UnstyledButton>
+        )}
+        {picker.queryProblem && (
+          <Text size="xs" c="var(--color-warning)" mt={6} role="status" data-testid="location-challenge-paste-problem">
+            {t(picker.queryProblem === "short_link" ? "modal.pasteShortLink" : "modal.pasteNoCoordinates")}
           </Text>
         )}
+        {picker.isPlaceQuery &&
+          !picker.searching &&
+          !picked &&
+          picker.query.trim().length >= 2 &&
+          picker.hits.length === 0 && (
+            <Text size="xs" c="var(--color-text-muted)" mt={6}>
+              {t("modal.noResults")}
+            </Text>
+          )}
       </Box>
 
       {extra}
