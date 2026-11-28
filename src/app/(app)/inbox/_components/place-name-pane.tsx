@@ -36,6 +36,11 @@ import styles from "../inbox.module.css";
 /** How often the pane asks for the research of a row while a Task is open. */
 const RESEARCH_POLL_MS = 10_000;
 
+/** The same text once whitespace is collapsed. */
+function sameWords(a: string, b: string): boolean {
+  return a.replace(/\s+/g, " ") === b.replace(/\s+/g, " ");
+}
+
 /** How many areas besides the state get an outline: the pane shows 5 posts. */
 const AREA_OUTLINES_MAX = 3;
 
@@ -311,9 +316,13 @@ export function PlaceNamePane({
             <ul className={styles.placeList}>
               {row.signals.map((s) => {
                 const title = s.signal?.title?.trim() || null;
-                const excerpt = signalExcerpt(s.signal);
-                // The excerpt falls back to the title: don't print it twice.
-                const body = excerpt && excerpt !== title ? excerpt : null;
+                // The body is the description only, and only when it says more
+                // than the title: compared before it is shortened.
+                const description = s.signal?.description?.trim() || null;
+                const body =
+                  description && !(title && sameWords(title, description))
+                    ? signalExcerpt({ title: null, description })
+                    : null;
                 const when = s.signal?.publishedAt ?? s.seenAt;
                 return (
                   <li key={s.signalId} data-testid="inbox-place-post">
@@ -321,7 +330,7 @@ export function PlaceNamePane({
                       href={`/signal/${encodeURIComponent(s.signalId)}`}
                       className={styles.placePost}
                       data-testid="inbox-place-signal-link"
-                      aria-label={`${t("place.openSignal")}: ${title ?? excerpt ?? t("place.postHidden")}`}
+                      aria-label={`${t("place.openSignal")}: ${title ?? body ?? t("place.postHidden")}`}
                     >
                       <span className={styles.placePostAside}>
                         <time dateTime={when}>{format.relativeTime(new Date(when), now)}</time>
@@ -381,81 +390,87 @@ export function PlaceNamePane({
               </p>
             )}
             {shownProposal && (
-              <div
-                className={`${styles.narrative} ${styles.placeSuggestion}`}
-                data-testid="inbox-place-proposal"
-                data-outcome={shownProposal.outcome}
-                data-highlighted={(foundProposal && highlighted === proposalKey(foundProposal)) || undefined}
-                onMouseEnter={() => foundProposal && setHovered(proposalKey(foundProposal))}
-                onMouseLeave={() => setHovered(null)}
-                onFocus={() => foundProposal && setFocused(proposalKey(foundProposal))}
-                onBlur={() => setFocused(null)}
-              >
-                {foundProposal ? (
-                  <>
-                    <bdi>{foundProposal.nameFound}</bdi>
-                    <span className={styles.placeMeta}>
-                      {t("place.research.researched")}
-                      {foundProposal.confidence && (
-                        <>
-                          {" · "}
-                          {t(`place.research.confidence.${foundProposal.confidence}`)}
-                        </>
-                      )}
-                    </span>
-                  </>
-                ) : (
-                  <span>{t(`place.research.outcome.${shownProposal.outcome === "not_a_place" ? "not_a_place" : "not_found"}`)}</span>
-                )}
-                {/* The Worker's words: its own direction, never markup. */}
-                <span className={styles.placeMeta} dir="auto" data-testid="inbox-place-proposal-reason">
-                  {shownProposal.reason}
-                </span>
-                {shownProposal.sources.length > 0 && (
-                  <ul className={styles.placeSources} data-testid="inbox-place-proposal-sources">
-                    {shownProposal.sources.map((source, i) => {
-                      const href = safeSourceHref(source.url);
-                      return (
-                        <li key={`${i}:${source.url}`}>
-                          <q dir="auto">{source.quote}</q>{" "}
-                          {href ? (
-                            <a href={href} target="_blank" rel="noopener noreferrer" data-testid="inbox-place-proposal-source">
-                              {t("place.research.source", { n: i + 1 })}
-                              <IconExternalLink size={12} aria-hidden />
-                              <span className="sr-only">{t("place.lookup.newTab")}</span>
-                            </a>
-                          ) : (
-                            <span>{source.url}</span>
+              <ul className={styles.placeList}>
+                <li
+                  className={`${styles.placeCandidate} ${styles.placeProposal}`}
+                  data-testid="inbox-place-proposal"
+                  data-outcome={shownProposal.outcome}
+                  data-highlighted={(foundProposal && highlighted === proposalKey(foundProposal)) || undefined}
+                  onMouseEnter={() => foundProposal && setHovered(proposalKey(foundProposal))}
+                  onMouseLeave={() => setHovered(null)}
+                  onFocus={() => foundProposal && setFocused(proposalKey(foundProposal))}
+                  onBlur={() => setFocused(null)}
+                >
+                  <span className={styles.placeCandidateMain}>
+                    {foundProposal ? (
+                      <>
+                        <bdi className={styles.placeCandidateName}>{foundProposal.nameFound}</bdi>
+                        <span className={styles.placeMeta}>
+                          {t("place.research.researched")}
+                          {foundProposal.confidence && (
+                            <>
+                              {" · "}
+                              {t(`place.research.confidence.${foundProposal.confidence}`)}
+                            </>
                           )}
-                        </li>
-                      );
-                    })}
-                  </ul>
-                )}
-                {foundProposal && (
-                  <button
-                    type="button"
-                    className={styles.btn}
-                    disabled={busy || placing}
-                    onClick={chooseProposal}
-                    data-testid="inbox-place-proposal-use"
-                  >
-                    {t("place.actions.use")}
-                  </button>
-                )}
-                {shownProposal.outcome === "not_a_place" && (
-                  <button
-                    type="button"
-                    className={styles.btnDanger}
-                    disabled={busy || placing}
-                    onClick={() => send({ kind: "NOT_A_PLACE" })}
-                    data-testid="inbox-place-proposal-not-a-place"
-                  >
-                    <IconCircleX size={15} />
-                    {t("place.actions.notAPlace")}
-                  </button>
-                )}
-              </div>
+                        </span>
+                      </>
+                    ) : (
+                      <span className={styles.placeCandidateName}>
+                        {t(`place.research.outcome.${shownProposal.outcome === "not_a_place" ? "not_a_place" : "not_found"}`)}
+                      </span>
+                    )}
+                    {/* The Worker's words: its own direction, never markup. */}
+                    <span className={styles.placeProposalReason} dir="auto" data-testid="inbox-place-proposal-reason">
+                      {shownProposal.reason}
+                    </span>
+                    {shownProposal.sources.length > 0 && (
+                      <ul className={styles.placeSources} data-testid="inbox-place-proposal-sources">
+                        {shownProposal.sources.map((source, i) => {
+                          const href = safeSourceHref(source.url);
+                          return (
+                            <li key={`${i}:${source.url}`}>
+                              <q dir="auto">{source.quote}</q>{" "}
+                              {href ? (
+                                <a href={href} target="_blank" rel="noopener noreferrer" data-testid="inbox-place-proposal-source">
+                                  {t("place.research.source", { n: i + 1 })}
+                                  <IconExternalLink size={12} aria-hidden />
+                                  <span className="sr-only">{t("place.lookup.newTab")}</span>
+                                </a>
+                              ) : (
+                                <span>{source.url}</span>
+                              )}
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    )}
+                  </span>
+                  {foundProposal && (
+                    <button
+                      type="button"
+                      className={`${styles.btn} ${styles.btnSm}`}
+                      disabled={busy || placing}
+                      onClick={chooseProposal}
+                      data-testid="inbox-place-proposal-use"
+                    >
+                      {t("place.actions.use")}
+                    </button>
+                  )}
+                  {shownProposal.outcome === "not_a_place" && (
+                    <button
+                      type="button"
+                      className={`${styles.btnDanger} ${styles.btnSm}`}
+                      disabled={busy || placing}
+                      onClick={() => send({ kind: "NOT_A_PLACE" })}
+                      data-testid="inbox-place-proposal-not-a-place"
+                    >
+                      <IconCircleX size={14} />
+                      {t("place.actions.notAPlace")}
+                    </button>
+                  )}
+                </li>
+              </ul>
             )}
             {researchQuery.isError && !research && (
               <p className={styles.placeMeta} role="status" data-testid="inbox-place-research-read-error">

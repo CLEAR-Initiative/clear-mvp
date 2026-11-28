@@ -809,6 +809,9 @@
   border-radius: 8px;
   background: var(--color-bg-white);
   overflow: hidden;
+  /* Rows stack on the list's own width: the pane narrows with the sidebar
+     and the inbox list, not only with the window. */
+  container-type: inline-size;
 }
 .placeList > li + li {
   border-top: 1px solid var(--color-border);
@@ -890,12 +893,28 @@
   font-weight: 600;
   color: var(--color-text-primary);
 }
+/* The researched place: a candidate row whose reason and sources run to
+   several lines, so its buttons sit at the top beside the name. */
+.placeProposal {
+  align-items: flex-start;
+  padding-top: 12px;
+  padding-bottom: 12px;
+}
+.placeProposalReason {
+  margin-top: 4px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--color-text-secondary);
+}
+.placeProposal .placeSources {
+  margin-bottom: 0;
+}
 .btnSm {
   height: 28px;
   padding: 0 10px;
   font-size: 12px;
 }
-@media (max-width: 640px) {
+@container (max-width: 480px) {
   .placePost {
     flex-direction: column;
     gap: 4px;

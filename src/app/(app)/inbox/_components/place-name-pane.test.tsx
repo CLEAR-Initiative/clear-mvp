@@ -240,6 +240,34 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe("PlaceNamePane", () => {
+  it("prints a post's text once: no body that only repeats the title, however it is spaced or shortened", () => {
+    const post = (signalId: string, title: string | null, description: string | null) => ({
+      ...ROW.signals[0]!,
+      signalId,
+      signal: { id: signalId, title, description, publishedAt: "2026-11-02T08:00:00Z" },
+    });
+    const long = `Shelling near the market. ${"More detail follows. ".repeat(20)}`.trim();
+    renderPane({
+      row: {
+        ...ROW,
+        signals: [
+          post("title-only", "Shelling near\nthe market", null),
+          post("same-words", "Shelling near the market", "Shelling  near\nthe market"),
+          post("long-same", long, long),
+          post("says-more", "عاجل", long),
+        ],
+      },
+    });
+    const [titleOnly, sameWords, longSame, saysMore] = screen.getAllByTestId("inbox-place-post");
+    expect(titleOnly!.querySelectorAll("[dir=auto]")).toHaveLength(1);
+    expect(sameWords!.querySelectorAll("[dir=auto]")).toHaveLength(1);
+    expect(longSame!.querySelectorAll("[dir=auto]")).toHaveLength(1);
+    // A description that says more than the title shows, shortened.
+    const lines = saysMore!.querySelectorAll("[dir=auto]");
+    expect(lines).toHaveLength(2);
+    expect(lines[1]!.textContent).toMatch(/…$/);
+  });
+
   it("shows the name with its Arabic spelling, the posts and why each missed", () => {
     renderPane();
     const name = screen.getByTestId("inbox-place-name");
