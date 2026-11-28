@@ -4,6 +4,8 @@ import { graphqlFetch, cookieHeaders } from "~/server/api/graphql";
 import type { GqlSignal, GqlSignalDetail } from "~/lib/types/graphql";
 import { sanitizeLocationGeometry, sanitizeSignalListGeometry } from "~/lib/geo/to-map-point";
 
+/** Other sites only need a point and a name for the minimap. */
+const SITE_LOCATION_FIELDS = `id name level geometry`;
 const LOCATION_FIELDS = `id name level geoId ancestorIds geometry pointType parent { id name } ancestors { id name level }`;
 
 // Slim location fields for map views — drops the recursive ancestors
@@ -88,6 +90,7 @@ const SIGNAL_GET_QUERY = `
       generalLocation { ${LOCATION_FIELDS} }
       originLocation { ${LOCATION_FIELDS} }
       destinationLocation { ${LOCATION_FIELDS} }
+      otherSites { name kind location { ${SITE_LOCATION_FIELDS} } }
       events {
         id
         title
@@ -293,6 +296,8 @@ export const signalsRouter = createTRPCRouter({
         { id: input.id },
         { ...cookieHeaders(ctx), "x-force-locale": "en" },
       );
+      // A site can be an admin area: ship its centre point, not the polygon.
+      for (const site of data.signal?.otherSites ?? []) sanitizeLocationGeometry(site.location);
       return data.signal;
     }),
 

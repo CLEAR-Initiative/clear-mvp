@@ -54,6 +54,7 @@ import { api } from "~/trpc/react";
 import { useTeamCountry } from "~/hooks/use-team-country";
 import { resolveCountryConfig } from "~/lib/constants/country-config";
 import { MinimapCard } from "~/components/map/minimap-card";
+import { siteMarkers } from "~/lib/geo/signal-sites";
 import { SkeletonSlot } from "~/components/ui/skeleton-slot";
 import { useNavigationMapDisplay } from "~/hooks/use-navigation-map-display";
 import {
@@ -213,6 +214,7 @@ export function SignalDetailContent({
         description: loc.name,
       });
     }
+    markers.push(...siteMarkers(signal.otherSites, idx, markers));
     return markers;
   }, [signal]);
 
