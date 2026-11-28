@@ -1724,13 +1724,14 @@ export function CrisisMap({
       : [];
     const regionBounds = fitBoundsGeometry ? geometryBounds(fitBoundsGeometry as never) : null;
     let bounds: [number, number, number, number] | null = null;
-    if (regionBounds) {
-      bounds = fitPoints.length ? extendBounds(regionBounds, fitPoints) : regionBounds;
-    } else if (fitPoints.length >= 2) {
-      // No region shape (a point location, or no state found): fit the
-      // markers alone, so a distant site is still on screen.
+    const fitToPins = fitPoints.length >= 2;
+    if (fitToPins) {
+      // Two or more pins: fit the pins alone. A state polygon is far larger
+      // than the sites, so fitting it leaves the pins in a corner.
       const [first, ...rest] = fitPoints;
       bounds = extendBounds([first!.lng, first!.lat, first!.lng, first!.lat], rest);
+    } else if (regionBounds) {
+      bounds = fitPoints.length ? extendBounds(regionBounds, fitPoints) : regionBounds;
     }
     if (!bounds) return;
     map.current.fitBounds(
@@ -1741,7 +1742,7 @@ export function CrisisMap({
         padding: 60,
         duration: 800,
         // Markers alone can sit a few hundred metres apart: do not zoom to street level.
-        ...(regionBounds ? {} : { maxZoom: 11 }),
+        ...(fitToPins ? { maxZoom: 11 } : {}),
       }),
     );
   }, [fitBoundsGeometry, fitMarkerKey, loaded]);
