@@ -241,6 +241,7 @@ describe("PlaceNamePane", () => {
     const entry = renderPane();
     expect(screen.getByTestId("map")).toHaveAttribute("data-picking", "false");
     fireEvent.click(screen.getByTestId("inbox-place-place"));
+    expect(screen.getByTestId("inbox-place-scope")).toBeDisabled();
     expect(screen.getByTestId("inbox-place-placing")).toBeInTheDocument();
     expect(screen.getByTestId("inbox-place-save")).toBeDisabled();
 

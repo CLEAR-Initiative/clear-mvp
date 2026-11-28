@@ -224,6 +224,9 @@ export function PlaceNamePane({
                 {t("place.scope.label")}
                 <select
                   value={scope}
+                  // Not while a point is being placed: the map is the decider's
+                  // then, and it would not frame the pins a wider area adds.
+                  disabled={placing}
                   onChange={(e) => setWidened(e.currentTarget.value === "country")}
                   data-testid="inbox-place-scope"
                 >
