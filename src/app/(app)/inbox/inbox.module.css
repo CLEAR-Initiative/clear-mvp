@@ -812,6 +812,28 @@
   margin-bottom: 0;
 }
 
+/* The sources of a researched place: a quote and a link each. */
+.placeSources {
+  margin: 4px 0 6px;
+  padding-inline-start: 18px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--color-text-muted);
+}
+
+.placeSources a {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--color-accent);
+  text-decoration: none;
+}
+
+.placeSources a:hover,
+.placeSources a:focus-visible {
+  text-decoration: underline;
+}
+
 /* Links that search for the name outside CLEAR. */
 .placeLookup {
   display: flex;

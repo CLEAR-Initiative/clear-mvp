@@ -132,6 +132,10 @@ pick a gazetteer name (ADR-0003 is about challenges, and stays as it is).
 _Avoid_: "failed geocode" (the Signal still has a location: its state or country); "synonym"
 for a place alias in code.
 
+**Place research** (Inbox Places pane, flag `place_research`):
+A decider asks a Worker to research an unresolved place name with **Research this place**. The pane shows "Research is waiting" (the Task is PENDING) or "Research is running" (LEASED), and asks clear-api again every 10 seconds while a Task is open. The Worker's **place proposal** then shows as a researched suggestion with its confidence, its reason, its sources and a pin, or as "not found" / "not a place" with the reason. **Use this place** resolves the name with a `POINT` answer and the proposal's id. The Worker never resolves a name. Defined in clear-api's CONTEXT.md and ADR-0019.
+_Avoid_: AI suggestion, auto-resolve
+
 **Place alias** (clear-api `PlaceAlias`, clear-api ADR-0019):
 A spelling that CLEAR maps to one of its own locations, used before GeoNames when a Signal
 is placed. The Places tab's **Aliases** view is the list of them: spelling, the place it

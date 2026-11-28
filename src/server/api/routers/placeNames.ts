@@ -5,6 +5,7 @@ import { isGraphqlSchemaUnavailable } from "~/server/api/graphql-schema-unavaila
 import { toTrpcError } from "~/server/api/routers/tasks";
 import type {
   GqlPlaceAlias,
+  GqlPlaceNameResearch,
   GqlPlaceNameSuggestion,
   GqlUnresolvedPlaceName,
   PlaceAliasCountry,
@@ -76,6 +77,54 @@ const SUGGESTIONS_QUERY = `
       score
       insideArea
       distanceKm
+    }
+  }
+`;
+
+const RESEARCH_FIELDS = `
+  taskStatus
+  latestTask { id status createdAt }
+  proposal {
+    id
+    outcome
+    latitude
+    longitude
+    nameFound
+    confidence
+    reason
+    sources { url quote }
+    createdAt
+  }
+`;
+
+const RESEARCH_QUERY = `
+  query PlaceNameResearch($id: String!) {
+    unresolvedPlaceName(id: $id) {
+      id
+      research { ${RESEARCH_FIELDS} }
+    }
+  }
+`;
+
+const REQUEST_RESEARCH_MUTATION = `
+  mutation RequestPlaceNameResearch($id: String!) {
+    requestPlaceNameResearch(id: $id) { id status }
+  }
+`;
+
+// Two documents: clear-api rejects a document that declares an argument it
+// does not have, and \`proposalId\` is newer than the resolve mutation.
+const RESOLVE_WITH_PROPOSAL_MUTATION = `
+  mutation ResolveUnresolvedPlaceNameWithProposal(
+    $id: String!
+    $resolution: UnresolvedPlaceNameResolutionInput!
+    $note: String
+    $proposalId: String
+  ) {
+    resolveUnresolvedPlaceName(id: $id, resolution: $resolution, note: $note, proposalId: $proposalId) {
+      id
+      status
+      signalsMoved
     }
   }
 `;
@@ -265,6 +314,8 @@ export const placeNamesRouter = createTRPCRouter({
         id: z.string().min(1),
         resolution: resolutionInput,
         note: z.string().trim().max(2000).optional(),
+        /** With a POINT answer: the place proposal whose point this is. */
+        proposalId: z.string().min(1).optional(),
       }),
     )
     .mutation(async ({ ctx, input }): Promise<{ id: string; status: string; signalsMoved: number }> => {
@@ -273,8 +324,9 @@ export const placeNamesRouter = createTRPCRouter({
         const data = await graphqlFetch<{
           resolveUnresolvedPlaceName: { id: string; status: string; signalsMoved: number };
         }>(
-          RESOLVE_MUTATION,
+          input.proposalId ? RESOLVE_WITH_PROPOSAL_MUTATION : RESOLVE_MUTATION,
           {
+            ...(input.proposalId ? { proposalId: input.proposalId } : {}),
             id: input.id,
             resolution: {
               kind,
@@ -287,6 +339,43 @@ export const placeNamesRouter = createTRPCRouter({
           cookieHeaders(ctx),
         );
         return data.resolveUnresolvedPlaceName;
+      } catch (err) {
+        toTrpcError(err);
+      }
+    }),
+
+  /** Place research on one row: the open Task, the newest Task and the
+   * newest proposal. The pane polls it while a Task is open. Null when
+   * clear-api does not have the field yet, or the row is gone. */
+  research: protectedProcedure
+    .input(z.object({ id: z.string().min(1) }))
+    .query(async ({ ctx, input }): Promise<GqlPlaceNameResearch | null> => {
+      try {
+        const data = await graphqlFetch<{ unresolvedPlaceName: { research: GqlPlaceNameResearch } | null }>(
+          RESEARCH_QUERY,
+          { id: input.id },
+          cookieHeaders(ctx),
+        );
+        return data.unresolvedPlaceName?.research ?? null;
+      } catch (err) {
+        if (isGraphqlSchemaUnavailable(err)) return null;
+        toTrpcError(err);
+      }
+    }),
+
+  /** Ask a Worker to research a row. clear-api checks the decider, the row
+   * and the daily cap (TOO_MANY_REQUESTS). A row with an open Task gets that
+   * Task back. */
+  requestResearch: protectedProcedure
+    .input(z.object({ id: z.string().min(1) }))
+    .mutation(async ({ ctx, input }): Promise<{ id: string; status: string }> => {
+      try {
+        const data = await graphqlFetch<{ requestPlaceNameResearch: { id: string; status: string } }>(
+          REQUEST_RESEARCH_MUTATION,
+          { id: input.id },
+          cookieHeaders(ctx),
+        );
+        return data.requestPlaceNameResearch;
       } catch (err) {
         toTrpcError(err);
       }

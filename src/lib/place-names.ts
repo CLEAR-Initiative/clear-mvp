@@ -1,5 +1,7 @@
 import type {
   GqlPlaceAlias,
+  GqlPlaceNameProposal,
+  GqlPlaceNameResearch,
   GqlPlaceNameSuggestion,
   GqlUnresolvedPlaceName,
   PlaceAliasCountry,
@@ -20,7 +22,7 @@ export type PlaceNameResolutionKind = (typeof PLACE_NAME_RESOLUTION_KINDS)[numbe
 export type PlaceNameResolution =
   | { kind: "LOCATION"; locationId: string }
   | { kind: "GEONAMES"; geonamesId: number }
-  | { kind: "POINT"; point: { lat: number; lng: number; name?: string } }
+  | { kind: "POINT"; point: { lat: number; lng: number; name?: string }; proposalId?: string }
   | { kind: "NOT_A_PLACE" }
   | { kind: "AMBIGUOUS" };
 
@@ -30,6 +32,91 @@ export function resolutionForSuggestion(s: GqlPlaceNameSuggestion): PlaceNameRes
   if (s.kind === "LOCATION" && s.locationId) return { kind: "LOCATION", locationId: s.locationId };
   if (s.kind === "GEONAMES" && s.geonamesId != null) return { kind: "GEONAMES", geonamesId: s.geonamesId };
   return null;
+}
+
+/* ─── Place research (clear-api D-0296) ─── */
+
+/** Where the research of a row stands, as the pane shows it. */
+export type PlaceResearchState =
+  /** No Task and no proposal: the decider can request research. */
+  | "none"
+  /** A Task waits for a Worker. */
+  | "waiting"
+  /** A Worker has the Task. */
+  | "running"
+  /** The last Task failed, and no proposal is newer than it. */
+  | "failed"
+  | "found"
+  | "not_found"
+  | "not_a_place";
+
+/** The state of a row's research. An open Task comes first: a decider who
+ *  asked again waits for the new result. A failed Task counts only while no
+ *  proposal is newer than it. */
+export function placeResearchState(research: GqlPlaceNameResearch | null | undefined): PlaceResearchState {
+  if (!research) return "none";
+  if (research.taskStatus === "PENDING") return "waiting";
+  if (research.taskStatus === "LEASED") return "running";
+  const { latestTask, proposal } = research;
+  const failed =
+    latestTask?.status === "FAILED" &&
+    (!proposal || new Date(latestTask.createdAt).getTime() > new Date(proposal.createdAt).getTime());
+  if (failed) return "failed";
+  return proposal?.outcome ?? "none";
+}
+
+/** Whether the pane asks clear-api again for the research of a row. */
+export function placeResearchIsOpen(research: GqlPlaceNameResearch | null | undefined): boolean {
+  return research?.taskStatus === "PENDING" || research?.taskStatus === "LEASED";
+}
+
+/** The list and map key of a researched suggestion. */
+export function proposalKey(proposal: Pick<GqlPlaceNameProposal, "id">): string {
+  return `r:${proposal.id}`;
+}
+
+/** The answer that uses a `found` proposal: its own point, with its id, so
+ *  clear-api records who used it. Null for a proposal with no point. */
+export function resolutionForProposal(proposal: GqlPlaceNameProposal): PlaceNameResolution | null {
+  if (proposal.outcome !== "found" || proposal.latitude == null || proposal.longitude == null) return null;
+  return {
+    kind: "POINT",
+    point: { lat: proposal.latitude, lng: proposal.longitude, name: proposal.nameFound ?? undefined },
+    proposalId: proposal.id,
+  };
+}
+
+/** A source link opens only when it is http(s): the URL comes from a Worker
+ *  that read the open web. */
+export function safeSourceHref(url: string): string | null {
+  try {
+    const { protocol } = new URL(url);
+    return protocol === "http:" || protocol === "https:" ? url : null;
+  } catch {
+    return null;
+  }
+}
+
+export type PlaceResearchErrorKey =
+  | "place.research.errors.cap"
+  | "place.research.errors.forbidden"
+  | "place.research.errors.closed"
+  | "place.research.errors.failed";
+
+/** The `inbox` message for a failed research request, by tRPC code.
+ *  TOO_MANY_REQUESTS is clear-api's per-person daily cap. */
+export function placeResearchErrorKey(code: string | null | undefined): PlaceResearchErrorKey {
+  switch (code) {
+    case "TOO_MANY_REQUESTS":
+      return "place.research.errors.cap";
+    case "FORBIDDEN":
+      return "place.research.errors.forbidden";
+    case "CONFLICT":
+    case "NOT_FOUND":
+      return "place.research.errors.closed";
+    default:
+      return "place.research.errors.failed";
+  }
 }
 
 /** A stable key for a suggestion in a list. */

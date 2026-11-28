@@ -220,3 +220,70 @@ describe("placeLookupLinks", () => {
     expect(new URL(web!.href).searchParams.get("q")).toBe("بكوري/../?x=1&y#z, Blue Nile");
   });
 });
+
+describe("place research", () => {
+  const proposal = {
+    id: "prop-1",
+    outcome: "found" as const,
+    latitude: 11.7,
+    longitude: 34.3,
+    nameFound: "Umm Dabakir",
+    confidence: "high" as const,
+    reason: "r",
+    sources: [],
+    createdAt: "2026-11-28T10:00:00Z",
+  };
+  const task = (status: string, createdAt: string) => ({ id: "t", status, createdAt });
+
+  it("reads the state of a row's research", async () => {
+    const { placeResearchState, placeResearchIsOpen } = await import("./place-names");
+    expect(placeResearchState(null)).toBe("none");
+    expect(placeResearchState({ taskStatus: null, latestTask: null, proposal: null })).toBe("none");
+    const waiting = { taskStatus: "PENDING" as const, latestTask: task("PENDING", "2026-11-28T11:00:00Z"), proposal };
+    expect(placeResearchState(waiting)).toBe("waiting");
+    expect(placeResearchIsOpen(waiting)).toBe(true);
+    expect(placeResearchState({ ...waiting, taskStatus: "LEASED" })).toBe("running");
+    const done = { taskStatus: null, latestTask: task("COMPLETED", "2026-11-28T09:00:00Z"), proposal };
+    expect(placeResearchState(done)).toBe("found");
+    expect(placeResearchIsOpen(done)).toBe(false);
+    expect(placeResearchState({ ...done, proposal: { ...proposal, outcome: "not_found" } })).toBe("not_found");
+    expect(placeResearchState({ ...done, proposal: { ...proposal, outcome: "not_a_place" } })).toBe("not_a_place");
+    // A failed Task counts only while no proposal is newer than it.
+    expect(placeResearchState({ taskStatus: null, latestTask: task("FAILED", "2026-11-28T09:00:00Z"), proposal: null })).toBe("failed");
+    expect(placeResearchState({ taskStatus: null, latestTask: task("FAILED", "2026-11-28T11:00:00Z"), proposal })).toBe("failed");
+    expect(placeResearchState({ taskStatus: null, latestTask: task("FAILED", "2026-11-28T09:00:00Z"), proposal })).toBe("found");
+    // A cancelled Task leaves the row as it was.
+    expect(placeResearchState({ taskStatus: null, latestTask: task("CANCELLED", "2026-11-28T11:00:00Z"), proposal: null })).toBe("none");
+  });
+
+  it("answers with a found proposal's own point and its id, and with nothing for the other outcomes", async () => {
+    const { resolutionForProposal, proposalKey } = await import("./place-names");
+    expect(resolutionForProposal(proposal)).toEqual({
+      kind: "POINT",
+      point: { lat: 11.7, lng: 34.3, name: "Umm Dabakir" },
+      proposalId: "prop-1",
+    });
+    expect(resolutionForProposal({ ...proposal, outcome: "not_found", latitude: null, longitude: null })).toBeNull();
+    expect(resolutionForProposal({ ...proposal, latitude: null })).toBeNull();
+    expect(proposalKey(proposal)).toBe("r:prop-1");
+  });
+
+  it("links only an http(s) source", async () => {
+    const { safeSourceHref } = await import("./place-names");
+    expect(safeSourceHref("https://reliefweb.int/x")).toBe("https://reliefweb.int/x");
+    expect(safeSourceHref("http://example.org/x")).toBe("http://example.org/x");
+    expect(safeSourceHref("javascript:alert(1)")).toBeNull();
+    expect(safeSourceHref("data:text/html,x")).toBeNull();
+    expect(safeSourceHref("not a url")).toBeNull();
+  });
+
+  it("maps a failed request to a message key, the daily cap on its own", async () => {
+    const { placeResearchErrorKey } = await import("./place-names");
+    expect(placeResearchErrorKey("TOO_MANY_REQUESTS")).toBe("place.research.errors.cap");
+    expect(placeResearchErrorKey("FORBIDDEN")).toBe("place.research.errors.forbidden");
+    expect(placeResearchErrorKey("CONFLICT")).toBe("place.research.errors.closed");
+    expect(placeResearchErrorKey("NOT_FOUND")).toBe("place.research.errors.closed");
+    expect(placeResearchErrorKey(undefined)).toBe("place.research.errors.failed");
+  });
+});
+

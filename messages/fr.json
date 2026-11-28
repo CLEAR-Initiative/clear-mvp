@@ -3235,6 +3235,34 @@
         "badPlace": "Ce lieu est en dehors du pays, ou en dehors des zones couvertes par CLEAR.",
         "conflict": "Ce nom de lieu a déjà été résolu, ou son orthographe a déjà un alias.",
         "failed": "Impossible d’enregistrer la réponse. Réessayez."
+      },
+      "research": {
+        "title": "Recherche",
+        "hint": "Un agent de recherche peut chercher ce lieu sur le web et dans des jeux de données ouverts. La décision reste la vôtre.",
+        "request": "Rechercher ce lieu",
+        "again": "Relancer la recherche",
+        "status": {
+          "waiting": "La recherche est en attente.",
+          "running": "La recherche est en cours.",
+          "failed": "La recherche a échoué. Vous pouvez la relancer."
+        },
+        "researched": "Suggestion issue de la recherche",
+        "confidence": {
+          "high": "Confiance élevée",
+          "medium": "Confiance moyenne",
+          "low": "Confiance faible"
+        },
+        "outcome": {
+          "not_found": "La recherche n'a pas trouvé ce lieu.",
+          "not_a_place": "Selon la recherche, ce n'est pas un lieu."
+        },
+        "source": "Source {n}",
+        "errors": {
+          "cap": "Vous avez atteint la limite quotidienne de demandes de recherche. Réessayez demain.",
+          "forbidden": "Vous ne pouvez pas demander de recherche pour ce nom de lieu.",
+          "closed": "Ce nom de lieu a déjà été résolu.",
+          "failed": "Impossible de demander la recherche. Réessayez."
+        }
       }
     },
     "placesView": {

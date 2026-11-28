@@ -177,6 +177,33 @@ export interface GqlUnresolvedPlaceName {
   signals: GqlUnresolvedPlaceNameSignal[];
 }
 
+/** The typed result of one place research Task (clear-api
+ *  `PlaceNameProposal`, ADR-0019): where a Worker says the name is. A person
+ *  decides; the Worker never resolves a name. */
+export interface GqlPlaceNameProposal {
+  id: string;
+  outcome: "found" | "not_found" | "not_a_place";
+  /** Null unless the outcome is `found`. */
+  latitude: number | null;
+  longitude: number | null;
+  nameFound: string | null;
+  confidence: "high" | "medium" | "low" | null;
+  reason: string;
+  sources: { url: string; quote: string }[];
+  createdAt: string;
+}
+
+/** Place research on one queue row (clear-api `PlaceNameResearch`). */
+export interface GqlPlaceNameResearch {
+  /** PENDING (waits for a Worker) or LEASED (a Worker has it). Null when no
+   *  Task is open. */
+  taskStatus: "PENDING" | "LEASED" | null;
+  /** The newest Task of the row in any status. */
+  latestTask: { id: string; status: string; createdAt: string } | null;
+  /** The newest proposal of the row. */
+  proposal: GqlPlaceNameProposal | null;
+}
+
 /** A spelling that CLEAR maps to one of its own locations (clear-api
  *  `PlaceAlias`, ADR-0019). */
 export interface GqlPlaceAlias {

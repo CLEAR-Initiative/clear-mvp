@@ -235,3 +235,59 @@ describe("placeNames aliases", () => {
     await expect(caller().placeNames.deleteAlias({ id: "a1" })).rejects.toMatchObject({ code: "FORBIDDEN" });
   });
 });
+
+describe("placeNames research", () => {
+  const RESEARCH = {
+    taskStatus: "PENDING",
+    latestTask: { id: "t-1", status: "PENDING", createdAt: "2026-11-28T10:00:00Z" },
+    proposal: null,
+  };
+
+  it("reads the research of one row by id", async () => {
+    graphqlFetch.mockResolvedValueOnce({ unresolvedPlaceName: { id: "pn-1", research: RESEARCH } });
+    expect(await caller().placeNames.research({ id: "pn-1" })).toEqual(RESEARCH);
+    const [query, variables] = graphqlFetch.mock.calls[0] as [string, Record<string, unknown>];
+    expect(query).toContain("unresolvedPlaceName(id: $id)");
+    expect(query).toContain("sources { url quote }");
+    expect(variables).toEqual({ id: "pn-1" });
+  });
+
+  it("reads as null when the row is gone, or clear-api does not have the field yet", async () => {
+    graphqlFetch.mockResolvedValueOnce({ unresolvedPlaceName: null });
+    expect(await caller().placeNames.research({ id: "pn-1" })).toBeNull();
+    graphqlFetch.mockRejectedValueOnce(new Error('Cannot query field "unresolvedPlaceName" on type "Query".'));
+    expect(await caller().placeNames.research({ id: "pn-1" })).toBeNull();
+  });
+
+  it("requests research and returns the Task", async () => {
+    graphqlFetch.mockResolvedValueOnce({ requestPlaceNameResearch: { id: "t-1", status: "PENDING" } });
+    expect(await caller().placeNames.requestResearch({ id: "pn-1" })).toEqual({ id: "t-1", status: "PENDING" });
+    const [query, variables] = graphqlFetch.mock.calls[0] as [string, Record<string, unknown>];
+    expect(query).toContain("requestPlaceNameResearch(id: $id)");
+    expect(variables).toEqual({ id: "pn-1" });
+  });
+
+  it("the daily cap comes back as TOO_MANY_REQUESTS, a closed row as CONFLICT", async () => {
+    graphqlFetch.mockRejectedValueOnce(new GraphQLRequestError("Daily request cap reached", "FORBIDDEN", "DAILY_CAP"));
+    await expect(caller().placeNames.requestResearch({ id: "pn-1" })).rejects.toMatchObject({ code: "TOO_MANY_REQUESTS" });
+    graphqlFetch.mockRejectedValueOnce(new GraphQLRequestError("This place name is already resolved", "CONFLICT"));
+    await expect(caller().placeNames.requestResearch({ id: "pn-1" })).rejects.toMatchObject({ code: "CONFLICT" });
+  });
+
+  it("a resolution with a proposal sends its id in a document of its own; one without never declares it", async () => {
+    const resolved = { resolveUnresolvedPlaceName: { id: "pn-1", status: "RESOLVED", signalsMoved: 2 } };
+    graphqlFetch.mockResolvedValueOnce(resolved);
+    const point = { lat: 11.7, lng: 34.3, name: "Umm Dabakir" };
+    await caller().placeNames.resolve({ id: "pn-1", resolution: { kind: "POINT", point }, proposalId: "prop-1" });
+    let [query, variables] = graphqlFetch.mock.calls[0] as [string, Record<string, unknown>];
+    expect(query).toContain("$proposalId: String");
+    expect(variables).toMatchObject({ id: "pn-1", proposalId: "prop-1", resolution: { kind: "POINT", point } });
+
+    graphqlFetch.mockResolvedValueOnce(resolved);
+    await caller().placeNames.resolve({ id: "pn-1", resolution: { kind: "POINT", point } });
+    [query, variables] = graphqlFetch.mock.calls[1] as [string, Record<string, unknown>];
+    expect(query).not.toContain("proposalId");
+    expect(variables).not.toHaveProperty("proposalId");
+  });
+});
+
