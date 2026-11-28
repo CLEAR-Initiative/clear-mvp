@@ -28,6 +28,8 @@ vi.mock("next/link", () => ({
     <a href={href} {...rest}>{children}</a>
   ),
 }));
+const reportHandledError = vi.fn();
+vi.mock("~/lib/report-handled-error", () => ({ reportHandledError: (...args: unknown[]) => reportHandledError(...args) }));
 const track = vi.fn();
 vi.mock("~/lib/analytics/track", () => ({ track: (...args: unknown[]) => track(...args) }));
 
@@ -44,6 +46,7 @@ vi.mock("~/components/location-challenge/location-challenge-map", () => ({
     suggestions: { lat: number; lng: number; id: string }[];
     highlightedId: string | null;
     outlines: unknown[];
+    refitKey: string;
     onPick: (at: { lat: number; lng: number }) => void;
   }) => (
     <button
@@ -55,6 +58,7 @@ vi.mock("~/components/location-challenge/location-challenge-map", () => ({
       data-suggestion-ids={props.suggestions.map((s) => s.id).join("|")}
       data-highlighted={props.highlightedId ?? ""}
       data-outlines={props.outlines.length}
+      data-refit={props.refitKey}
       onClick={() => props.onPick({ lat: 11.2, lng: 29.9 })}
     />
   ),
@@ -83,12 +87,16 @@ let research: GqlPlaceNameResearch | null = null;
 let researchLoading = false;
 const researchOptions = vi.fn();
 const researchRefetch = vi.fn();
+let researchReadError = false;
+const researchSetData = vi.fn();
+const researchInvalidate = vi.fn();
 const requestResearchMutate = vi.fn();
 let requestResearchError: { message: string; data?: { code?: string } } | null = null;
 const suggestionsInput = vi.fn();
 const outlineIds = vi.fn();
 vi.mock("~/trpc/react", () => ({
   api: {
+    useUtils: () => ({ placeNames: { research: { setData: researchSetData, invalidate: researchInvalidate } } }),
     useQueries: (build: (q: unknown) => unknown[]) => {
       const q = { locations: { getById: (input: { id: string }) => input.id } };
       const ids = build(q) as string[];
@@ -111,15 +119,23 @@ vi.mock("~/trpc/react", () => ({
           opts: { enabled: boolean; refetchInterval: (q: { state: { data: unknown } }) => number | false },
         ) => {
           researchOptions(input, { enabled: opts.enabled, interval: opts.refetchInterval({ state: { data: research } }) });
-          return { data: researchLoading ? undefined : research, isLoading: researchLoading, refetch: researchRefetch };
+          return {
+            data: researchLoading || researchReadError ? undefined : research,
+            isLoading: researchLoading,
+            isError: researchReadError,
+            refetch: researchRefetch,
+          };
         },
       },
       requestResearch: {
         useMutation: () => ({
-          mutate: (input: unknown, opts: { onSuccess?: () => void; onError?: (err: unknown) => void }) => {
+          mutate: (
+            input: unknown,
+            opts: { onSuccess?: (task: { id: string; status: string }) => void; onError?: (err: unknown) => void },
+          ) => {
             requestResearchMutate(input);
             if (requestResearchError) opts.onError?.(requestResearchError);
-            else opts.onSuccess?.();
+            else opts.onSuccess?.({ id: "task-9", status: "PENDING" });
           },
           isPending: false,
         }),
@@ -216,6 +232,7 @@ beforeEach(() => {
   researchFlag = false;
   research = null;
   researchLoading = false;
+  researchReadError = false;
   requestResearchError = null;
   vi.clearAllMocks();
 });
@@ -577,8 +594,12 @@ describe("PlaceNamePane", () => {
       expect(button).toHaveTextContent("place.research.request");
       fireEvent.click(button);
       expect(requestResearchMutate).toHaveBeenCalledWith({ id: "pn-1" });
-      // The state comes from clear-api again, with no reload.
-      expect(researchRefetch).toHaveBeenCalled();
+      // The accepted request is the state at once, so the pane polls from
+      // it also when the read that follows fails. Then clear-api is read again.
+      const [input, update] = researchSetData.mock.calls[0] as [unknown, (p: GqlPlaceNameResearch | null) => GqlPlaceNameResearch];
+      expect(input).toEqual({ id: "pn-1" });
+      expect(update(null)).toMatchObject({ taskStatus: "PENDING", latestTask: { id: "task-9", status: "PENDING" }, proposal: null });
+      expect(researchInvalidate).toHaveBeenCalledWith({ id: "pn-1" });
       // Never the name.
       expect(track).toHaveBeenCalledWith("place_name.research_requested", { again: "false" });
     });
@@ -627,6 +648,7 @@ describe("PlaceNamePane", () => {
       expect(links[0]).toHaveAttribute("rel", "noopener noreferrer");
       expect(sources[1]).toHaveTextContent("javascript:alert(1)");
 
+      // The request that follows keeps the proposal until the new result arrives.
       // The pin comes first on the map, and the row and the pin highlight together.
       const map = screen.getByTestId("map");
       expect(map.getAttribute("data-suggestions")).toMatch(/^11\.7891,34\.3592\|/);
@@ -714,7 +736,29 @@ describe("PlaceNamePane", () => {
         expect(screen.getByTestId("inbox-place-research-error")).toHaveTextContent(key);
         expect(screen.getByTestId("inbox-place-research-error")).not.toHaveTextContent("raw clear-api text");
       }
-      expect(researchRefetch).not.toHaveBeenCalled();
+      expect(researchSetData).not.toHaveBeenCalled();
+      // Only the unexpected failure is reported: the cap, a closed row and a
+      // missing right are answers.
+      expect(reportHandledError).toHaveBeenCalledTimes(1);
+      expect(reportHandledError).toHaveBeenCalledWith(expect.anything(), { feature: "place_research", stage: "request" });
+    });
+
+    it("a failed read says so and offers a retry, with no request button", () => {
+      researchFlag = true;
+      researchReadError = true;
+      renderPane();
+      const error = screen.getByTestId("inbox-place-research-read-error");
+      expect(error).toHaveTextContent("place.research.errors.read");
+      expect(screen.queryByTestId("inbox-place-research-request")).toBeNull();
+      fireEvent.click(within(error).getByRole("button"));
+      expect(researchRefetch).toHaveBeenCalled();
+    });
+
+    it("a new result does not reset the map view: the map is refitted by the scope only", () => {
+      researchFlag = true;
+      research = done(FOUND);
+      renderPane();
+      expect(screen.getByTestId("map").getAttribute("data-refit")).toMatch(/^(area|country)$/);
     });
 
     it("no button shows while the research of the row is loading", () => {

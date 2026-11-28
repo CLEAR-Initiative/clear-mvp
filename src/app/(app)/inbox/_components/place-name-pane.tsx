@@ -6,6 +6,7 @@ import { useFormatter, useLocale, useTranslations } from "next-intl";
 import { IconArrowLeft, IconCircleX, IconExternalLink, IconHelpCircle, IconMapPin, IconSearch } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
 import { track } from "~/lib/analytics/track";
+import { reportHandledError } from "~/lib/report-handled-error";
 import type { PlaceNameEntry } from "~/lib/hotline-inbox";
 import { useFeatureEnabled } from "~/components/feature-flags-provider";
 import {
@@ -134,6 +135,7 @@ export function PlaceNamePane({
   // every few seconds while a Task waits or runs, so the state and then the
   // proposal appear with no reload.
   const researchEnabled = useFeatureEnabled("place_research");
+  const utils = api.useUtils();
   const researchQuery = api.placeNames.research.useQuery(
     { id: row.id },
     {
@@ -159,12 +161,27 @@ export function PlaceNamePane({
     requestResearch.mutate(
       { id: row.id },
       {
-        onSuccess: () => {
+        onSuccess: (task) => {
           // Whether it is the first request or a repeat: never the name.
           track("place_name.research_requested", { again: proposal != null || researchState === "failed" ? "true" : "false" });
-          void researchQuery.refetch();
+          // The accepted request is the state: the pane shows it and starts
+          // to poll from it, also when the read that follows fails.
+          utils.placeNames.research.setData({ id: row.id }, (previous) => ({
+            taskStatus: task.status === "LEASED" ? "LEASED" : "PENDING",
+            latestTask: { id: task.id, status: task.status, createdAt: new Date().toISOString() },
+            proposal: previous?.proposal ?? null,
+          }));
+          void utils.placeNames.research.invalidate({ id: row.id });
         },
-        onError: (err) => setResearchError(t(placeResearchErrorKey(err.data?.code))),
+        onError: (err) => {
+          const code = err.data?.code;
+          // The cap, a closed row and a missing right are answers, not
+          // faults. Anything else is reported.
+          if (code !== "TOO_MANY_REQUESTS" && code !== "FORBIDDEN" && code !== "CONFLICT" && code !== "NOT_FOUND") {
+            reportHandledError(err, { feature: "place_research", stage: "request" });
+          }
+          setResearchError(t(placeResearchErrorKey(code)));
+        },
       },
     );
   }
@@ -281,7 +298,7 @@ export function PlaceNamePane({
           ]}
           highlightedId={highlighted}
           onHighlight={setHovered}
-          refitKey={foundProposal ? `${scope}:${foundProposal.id}` : scope}
+          refitKey={scope}
           outlines={outlines}
         />
 
@@ -312,7 +329,7 @@ export function PlaceNamePane({
           <div data-testid="inbox-place-research" data-state={researchState}>
             <div className={styles.placeSuggestionsHead}>
               <div className={styles.sectionLabel}>{t("place.research.title")}</div>
-              {researchState !== "waiting" && researchState !== "running" && !researchQuery.isLoading && (
+              {researchState !== "waiting" && researchState !== "running" && !researchQuery.isLoading && !(researchQuery.isError && !research) && (
                 <button
                   type="button"
                   className={styles.btn}
@@ -325,7 +342,7 @@ export function PlaceNamePane({
                 </button>
               )}
             </div>
-            {researchState === "none" && <p className={styles.placeMeta}>{t("place.research.hint")}</p>}
+            {researchState === "none" && !researchQuery.isError && <p className={styles.placeMeta}>{t("place.research.hint")}</p>}
             {(researchState === "waiting" || researchState === "running" || researchState === "failed") && (
               <p className={styles.placeMeta} role="status" data-testid="inbox-place-research-status">
                 {t(`place.research.status.${researchState}`)}
@@ -407,6 +424,14 @@ export function PlaceNamePane({
                   </button>
                 )}
               </div>
+            )}
+            {researchQuery.isError && !research && (
+              <p className={styles.placeMeta} role="status" data-testid="inbox-place-research-read-error">
+                {t("place.research.errors.read")}{" "}
+                <button type="button" className={styles.btn} onClick={() => void researchQuery.refetch()}>
+                  {t("place.research.retry")}
+                </button>
+              </p>
             )}
             {researchError && (
               <p className={styles.actionError} role="alert" data-testid="inbox-place-research-error">

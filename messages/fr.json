@@ -3261,8 +3261,10 @@
           "cap": "Vous avez atteint la limite quotidienne de demandes de recherche. Réessayez demain.",
           "forbidden": "Vous ne pouvez pas demander de recherche pour ce nom de lieu.",
           "closed": "Ce nom de lieu a déjà été résolu.",
-          "failed": "Impossible de demander la recherche. Réessayez."
-        }
+          "failed": "Impossible de demander la recherche. Réessayez.",
+          "read": "Impossible de lire la recherche pour ce nom de lieu."
+        },
+        "retry": "Réessayer"
       }
     },
     "placesView": {

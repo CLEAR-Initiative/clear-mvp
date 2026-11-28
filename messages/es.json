@@ -3261,8 +3261,10 @@
           "cap": "Ha alcanzado el límite diario de solicitudes de investigación. Inténtelo mañana.",
           "forbidden": "No puede solicitar una investigación para este nombre de lugar.",
           "closed": "Este nombre de lugar ya fue resuelto.",
-          "failed": "No se pudo solicitar la investigación. Inténtelo de nuevo."
-        }
+          "failed": "No se pudo solicitar la investigación. Inténtelo de nuevo.",
+          "read": "No se pudo leer la investigación de este nombre de lugar."
+        },
+        "retry": "Reintentar"
       }
     },
     "placesView": {
