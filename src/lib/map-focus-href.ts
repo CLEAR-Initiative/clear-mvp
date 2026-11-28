@@ -9,6 +9,11 @@ export function mapFocusHref(kind: MapFocusKind, id: string): string {
   return `/map?${kind}=${encodeURIComponent(id)}`;
 }
 
+/** The detail page a focused map marker came from (the focus chip links back to it). */
+export function entityDetailHref(kind: MapFocusKind, id: string): string {
+  return `/${kind}/${encodeURIComponent(id)}`;
+}
+
 /**
  * Marker zoom when returning from a detail page via Back / Full Map.
  * Country overview is ~5–6; 14 is street/neighborhood — pin-dominant framing.

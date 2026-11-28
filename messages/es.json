@@ -2188,7 +2188,10 @@
       "clearFocus": "Quitar el enfoque y mostrar todos los marcadores del mapa",
       "focusFallbackEvent": "Evento enfocado",
       "focusFallbackSignal": "Señal enfocada",
-      "focusFallbackCrisis": "Crisis enfocada"
+      "focusFallbackCrisis": "Crisis enfocada",
+      "openFocusEvent": "Abrir la página del evento",
+      "openFocusSignal": "Abrir la página de la señal",
+      "openFocusCrisis": "Abrir la página de la crisis"
     },
     "placeSearch": {
       "open": "Buscar lugares o coordenadas",

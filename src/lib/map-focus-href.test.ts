@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mapFocusHref, MAP_FOCUS_ZOOM } from "./map-focus-href";
+import { entityDetailHref, mapFocusHref, MAP_FOCUS_ZOOM } from "./map-focus-href";
 
 describe("mapFocusHref", () => {
   it("builds focused deep-links for each entity kind", () => {
@@ -14,5 +14,17 @@ describe("mapFocusHref", () => {
 
   it("exports a marker-level focus zoom (much tighter than country overview)", () => {
     expect(MAP_FOCUS_ZOOM).toBeGreaterThanOrEqual(13);
+  });
+});
+
+describe("entityDetailHref", () => {
+  it("links back to the detail page for each entity kind", () => {
+    expect(entityDetailHref("event", "evt-1")).toBe("/event/evt-1");
+    expect(entityDetailHref("signal", "sig-1")).toBe("/signal/sig-1");
+    expect(entityDetailHref("crisis", "cri-1")).toBe("/crisis/cri-1");
+  });
+
+  it("encodes ids", () => {
+    expect(entityDetailHref("signal", "a/b")).toBe("/signal/a%2Fb");
   });
 });

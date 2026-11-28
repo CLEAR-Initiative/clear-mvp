@@ -2188,7 +2188,10 @@
       "clearFocus": "إزالة التركيز وعرض جميع علامات الخريطة",
       "focusFallbackEvent": "حدث مركّز",
       "focusFallbackSignal": "إشارة مركّزة",
-      "focusFallbackCrisis": "أزمة مركّزة"
+      "focusFallbackCrisis": "أزمة مركّزة",
+      "openFocusEvent": "فتح صفحة الحدث",
+      "openFocusSignal": "فتح صفحة الإشارة",
+      "openFocusCrisis": "فتح صفحة الأزمة"
     },
     "placeSearch": {
       "open": "البحث عن أماكن أو إحداثيات",

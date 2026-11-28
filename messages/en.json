@@ -2188,7 +2188,10 @@
       "clearFocus": "Clear focus and show all map markers",
       "focusFallbackEvent": "Focused event",
       "focusFallbackSignal": "Focused signal",
-      "focusFallbackCrisis": "Focused crisis"
+      "focusFallbackCrisis": "Focused crisis",
+      "openFocusEvent": "Open the event page",
+      "openFocusSignal": "Open the signal page",
+      "openFocusCrisis": "Open the crisis page"
     },
     "placeSearch": {
       "open": "Search places or coordinates",

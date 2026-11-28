@@ -2188,7 +2188,10 @@
       "clearFocus": "Effacer le focus et afficher tous les marqueurs",
       "focusFallbackEvent": "Événement ciblé",
       "focusFallbackSignal": "Signal ciblé",
-      "focusFallbackCrisis": "Crise ciblée"
+      "focusFallbackCrisis": "Crise ciblée",
+      "openFocusEvent": "Ouvrir la page de l’événement",
+      "openFocusSignal": "Ouvrir la page du signal",
+      "openFocusCrisis": "Ouvrir la page de la crise"
     },
     "placeSearch": {
       "open": "Rechercher un lieu ou des coordonnées",
