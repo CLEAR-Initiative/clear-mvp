@@ -4795,7 +4795,13 @@
         "disasters": "Catastrophes",
         "showDisasters": "Afficher les catastrophes",
         "placeholder": "Sélectionner des détections",
-        "clear": "Effacer les détections"
+        "clear": "Effacer les détections",
+        "allCategories": "Toutes les catégories",
+        "allCrisisTypes": "Tous les types de crise",
+        "clearCategory": "Effacer la catégorie",
+        "clearCrisisType": "Effacer le type de crise",
+        "signalsNote": "Les signaux ne peuvent pas encore être filtrés par catégorie ou type de crise.",
+        "noOptions": "Aucune option"
       }
     },
     "place": {

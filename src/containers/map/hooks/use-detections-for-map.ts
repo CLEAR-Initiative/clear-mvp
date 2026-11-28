@@ -4,6 +4,7 @@ import { api } from "~/trpc/react";
 import { locationPoint, signalPoint } from "../layers/detections/to-features";
 import { placeLocationId } from "../place/model";
 import type { DetectionKind, LngLatPoint } from "../selection";
+import { useMapFilters } from "./use-map-filters";
 import { useMapPlace } from "./use-map-place";
 import { useTimeframeQuery } from "./use-timeframe";
 
@@ -69,9 +70,12 @@ export function detectionsQueryInput(
   kind: DetectionKind,
   range: { from: string; to?: string },
   locationId: string | null,
+  eventTypes?: string[],
 ) {
   const input = { ...range, includeDummy: true as const, ...(locationId ? { locationId } : {}) };
-  return kind === "alert" ? { ...input, status: "published" as const } : input;
+  if (kind === "signal") return input;
+  const filtered = eventTypes?.length ? { ...input, eventTypes } : input;
+  return kind === "alert" ? { ...filtered, status: "published" as const } : filtered;
 }
 
 /**
@@ -82,18 +86,20 @@ export function useDetectionsForMap(kind: DetectionKind | null) {
   const range = useTimeframeQuery();
   const { status, place } = useMapPlace();
   const locationId = placeLocationId(place);
+  const { eventTypes, held } = useMapFilters();
   const placeReady = status !== "loading";
+  const filtersReady = !held;
   const signals = api.signals.forMap.useQuery(detectionsQueryInput("signal", range, locationId), {
     placeholderData: (prev) => prev,
     enabled: kind === "signal" && placeReady,
   });
-  const events = api.alerts.eventsForMap.useQuery(detectionsQueryInput("event", range, locationId), {
+  const events = api.alerts.eventsForMap.useQuery(detectionsQueryInput("event", range, locationId, eventTypes), {
     placeholderData: (prev) => prev,
-    enabled: kind === "event" && placeReady,
+    enabled: kind === "event" && placeReady && filtersReady,
   });
-  const alerts = api.alerts.alertsForMap.useQuery(detectionsQueryInput("alert", range, locationId), {
+  const alerts = api.alerts.alertsForMap.useQuery(detectionsQueryInput("alert", range, locationId, eventTypes), {
     placeholderData: (prev) => prev,
-    enabled: kind === "alert" && placeReady,
+    enabled: kind === "alert" && placeReady && filtersReady,
   });
 
   const query = kind ? { signal: signals, event: events, alert: alerts }[kind] : null;

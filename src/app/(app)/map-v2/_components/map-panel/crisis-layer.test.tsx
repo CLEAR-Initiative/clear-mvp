@@ -14,6 +14,32 @@ vi.mock("~/containers/map/layers/registry", () => ({
   isLayerId: (id: string) => MOCK_IDS.includes(id),
 }));
 
+const hierarchy = [
+  {
+    name: "natural hazard",
+    groups: [
+      { name: "flood", codes: ["fl", "ff"] },
+      { name: "drought", codes: ["dr"] },
+    ],
+  },
+  {
+    name: "conflict",
+    groups: [
+      { name: "battles", codes: ["ba", "bg", "bo"] },
+      { name: "riots", codes: ["rd", "ri"] },
+    ],
+  },
+];
+vi.mock("~/trpc/react", () => ({
+  api: {
+    alerts: {
+      getDisasterTypeHierarchy: {
+        useQuery: () => ({ data: hierarchy, isPending: false, isError: false, error: null }),
+      },
+    },
+  },
+}));
+
 const { CrisisLayer } = await import("./crisis-layer");
 
 // jsdom has no scrollIntoView, and the open Combobox dropdown calls it.
@@ -34,6 +60,7 @@ function Harness({ onLevelChange }: { onLevelChange: () => void }) {
         onLevelChange();
         clear();
       }}
+      onFilterChange={clear}
     />
   );
 }
@@ -156,5 +183,50 @@ describe("CrisisLayer", () => {
 
     await waitFor(() => expect(onUrlUpdate).toHaveBeenCalled());
     expect(detectionIds(lastLayers())).toEqual(["alerts"]);
+  });
+
+  it("drops a crisis type outside a newly picked category", async () => {
+    const { lastParams } = renderSection({
+      layers: JSON.stringify([layer("events")]),
+      category: "conflict",
+      crisisType: "battles",
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /Conflict/ }));
+    fireEvent.click(await screen.findByRole("option", { name: "Natural hazard" }));
+
+    await waitFor(() => expect(lastParams()?.get("category")).toBe("natural hazard"));
+    expect(lastParams()?.has("crisisType")).toBe(false);
+  });
+
+  it("disables both filters at Signals and says why", () => {
+    renderSection({ layers: JSON.stringify([layer("signals")]), category: "conflict" });
+
+    expect(screen.getByText("panel.crisisLayer.signalsNote")).toBeInTheDocument();
+    for (const name of ["panel.crisisLayer.allCrisisTypes", /Conflict/]) {
+      expect(screen.getByRole("button", { name })).toBeDisabled();
+    }
+  });
+
+  it("lets the keyboard clear a filter with ×", () => {
+    renderSection({ layers: JSON.stringify([layer("events")]), category: "conflict" });
+
+    const clear = screen.getByRole("button", { name: "panel.crisisLayer.clearCategory" });
+
+    expect(fireEvent.keyDown(clear, { key: "Enter", code: "Enter" })).toBe(true);
+    expect(fireEvent.keyDown(clear, { key: " ", code: "Space" })).toBe(true);
+  });
+
+  it("announces the highlighted option on the trigger", async () => {
+    renderSection({ layers: JSON.stringify([layer("events")]) });
+    const trigger = screen.getByRole("button", { name: "panel.crisisLayer.allCategories" });
+
+    fireEvent.click(trigger);
+    await screen.findByRole("option", { name: "Conflict" });
+    fireEvent.keyDown(trigger, { key: "ArrowDown", code: "ArrowDown" });
+
+    const id = trigger.getAttribute("aria-activedescendant");
+    expect(id).toBeTruthy();
+    expect(document.getElementById(id!)).toHaveAttribute("role", "option");
   });
 });

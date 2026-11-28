@@ -49,3 +49,18 @@ describe("place query inputs", () => {
     expect(boundaryRequest("districts", scope, khartoum)).toEqual({ level: 2, stateId: "sd-kh" });
   });
 });
+
+describe("filter query inputs", () => {
+  const range = { from: extent.from, to: extent.to };
+  const codes = ["ba", "bg", "bo"];
+
+  it("sends the crisis type to the event layer and its counts", () => {
+    expect(detectionsQueryInput("event", range, null, codes)).toHaveProperty("eventTypes", codes);
+    expect(dailyCountsInput("event", extent, null, codes)).toHaveProperty("eventTypes", codes);
+  });
+
+  it("never sends it for signals", () => {
+    expect(detectionsQueryInput("signal", range, null, codes)).not.toHaveProperty("eventTypes");
+    expect(dailyCountsInput("signal", extent, null, codes)).not.toHaveProperty("eventTypes");
+  });
+});

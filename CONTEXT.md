@@ -424,6 +424,21 @@ chosen in the Crisis layer section of the **Map panel**. The default is Alerts. 
 published alerts only.
 _Avoid_: "disaster type" (that is a flood, a conflict…); "data view" (the old map's word).
 
+**Crisis category**:
+The top level of the disaster-type taxonomy: natural hazard, conflict, economic crisis,
+epidemic, famine, technological disaster. Each **Crisis type** belongs to one. In the Crisis
+layer section it filters the Events or Alerts on the map, and the panel calls it "category".
+Signals cannot be filtered by it yet.
+_Avoid_: "category" alone outside the map panel; "tag".
+
+**Crisis type**:
+The second level of the disaster-type taxonomy, under one **Crisis category**: flood,
+drought, battles, riots… In the Crisis layer section it filters the Events or Alerts on the
+map, one type at a time. Picking a type also picks its category. Signals cannot be filtered by
+it yet.
+_Avoid_: "disaster type" for this level (that also names the specific type below it, such as
+"armed clash").
+
 **Map panel**:
 The panel on `/map-v2` that sits next to the app nav and floats over the map, on screens
 992px or wider. With nothing selected it shows the place header, where the user picks the
