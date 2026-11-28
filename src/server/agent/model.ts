@@ -15,25 +15,37 @@
  */
 
 import "server-only";
-import { ModelRouterLanguageModel, type MastraModelConfig } from "@mastra/core/llm";
+import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
+import type { MastraModelConfig } from "@mastra/core/llm";
+import { wrapLanguageModel } from "ai";
 import { createScriptedModel, SCRIPTED_MODEL_ID } from "~/server/agent/scripted-model";
 import { systemFirst } from "~/server/agent/system-first";
 
-type RouterCall = Parameters<ModelRouterLanguageModel["doStream"]>[0];
-
 /**
- * The self-hosted endpoint's model: Mastra's own OpenAI-compatible client,
- * with every system message joined into one at the start of the prompt
- * (see system-first.ts for why).
+ * The self-hosted endpoint's model. Built here, not by Mastra's model router,
+ * for two things the router's own OpenAI-compatible client cannot do:
+ *
+ *  - ask for token usage on a streamed reply (`includeUsage`). Without it
+ *    llama.cpp reports none, and every turn is recorded with 0 tokens;
+ *  - join every system message into one at the start of the prompt
+ *    (see system-first.ts for why).
  */
-class SystemFirstEndpointModel extends ModelRouterLanguageModel {
-  override doGenerate(options: RouterCall) {
-    return super.doGenerate({ ...options, prompt: systemFirst(options.prompt) });
-  }
-
-  override doStream(options: RouterCall) {
-    return super.doStream({ ...options, prompt: systemFirst(options.prompt) });
-  }
+function endpointModel(id: string, url: string, apiKey: string | undefined): MastraModelConfig {
+  const slash = id.indexOf("/");
+  const provider = createOpenAICompatible({
+    name: id.slice(0, slash),
+    baseURL: url,
+    ...(apiKey ? { apiKey } : {}),
+    includeUsage: true,
+    supportsStructuredOutputs: true,
+  });
+  return wrapLanguageModel({
+    model: provider.chatModel(id.slice(slash + 1)),
+    middleware: {
+      specificationVersion: "v4",
+      transformParams: async ({ params }) => ({ ...params, prompt: systemFirst(params.prompt) }),
+    },
+  }) as MastraModelConfig;
 }
 
 export function clearAgentModelId(): string {
@@ -56,5 +68,5 @@ export function resolveClearAgentModel(): MastraModelConfig {
     throw new Error("CLEAR_AGENT_MODEL must be `provider/model` when CLEAR_AGENT_MODEL_URL is set.");
   }
   const apiKey = process.env.CLEAR_AGENT_MODEL_API_KEY?.trim();
-  return new SystemFirstEndpointModel({ id: id as `${string}/${string}`, url, ...(apiKey ? { apiKey } : {}) });
+  return endpointModel(id, url, apiKey);
 }

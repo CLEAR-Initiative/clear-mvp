@@ -25,6 +25,7 @@
     "e2e:down": "docker compose -f docker-compose.e2e.yml down -v --remove-orphans"
   },
   "dependencies": {
+    "@ai-sdk/openai-compatible": "3.0.62",
     "@ai-sdk/react": "^4.0.129",
     "@clear-initiative/mcp": "0.2.0",
     "@ducanh2912/next-pwa": "^10.2.9",
