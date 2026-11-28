@@ -36,6 +36,11 @@ import styles from "../inbox.module.css";
 /** How often the pane asks for the research of a row while a Task is open. */
 const RESEARCH_POLL_MS = 10_000;
 
+/** The same text once whitespace is collapsed. */
+function sameWords(a: string, b: string): boolean {
+  return a.replace(/\s+/g, " ") === b.replace(/\s+/g, " ");
+}
+
 /** How many areas besides the state get an outline: the pane shows 5 posts. */
 const AREA_OUTLINES_MAX = 3;
 
@@ -311,9 +316,13 @@ export function PlaceNamePane({
             <ul className={styles.placeList}>
               {row.signals.map((s) => {
                 const title = s.signal?.title?.trim() || null;
-                const excerpt = signalExcerpt(s.signal);
-                // The excerpt falls back to the title: don't print it twice.
-                const body = excerpt && excerpt !== title ? excerpt : null;
+                // The body is the description only, and only when it says more
+                // than the title: compared before it is shortened.
+                const description = s.signal?.description?.trim() || null;
+                const body =
+                  description && !(title && sameWords(title, description))
+                    ? signalExcerpt({ title: null, description })
+                    : null;
                 const when = s.signal?.publishedAt ?? s.seenAt;
                 return (
                   <li key={s.signalId} data-testid="inbox-place-post">
@@ -321,7 +330,7 @@ export function PlaceNamePane({
                       href={`/signal/${encodeURIComponent(s.signalId)}`}
                       className={styles.placePost}
                       data-testid="inbox-place-signal-link"
-                      aria-label={`${t("place.openSignal")}: ${title ?? excerpt ?? t("place.postHidden")}`}
+                      aria-label={`${t("place.openSignal")}: ${title ?? body ?? t("place.postHidden")}`}
                     >
                       <span className={styles.placePostAside}>
                         <time dateTime={when}>{format.relativeTime(new Date(when), now)}</time>
