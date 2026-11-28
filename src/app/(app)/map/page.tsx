@@ -13,7 +13,6 @@ import {
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import { useMediaQuery } from "@mantine/hooks";
-import { IconX } from "@tabler/icons-react";
 import { DisasterTypePicker } from "~/components/disaster-type-picker";
 import type {
   CrisisMapApi,
@@ -65,9 +64,10 @@ import {
   MapPanelConnectors,
   type PanelGeometry,
 } from "./_components/map-panel-connectors";
+import { MapFocusChip } from "./_components/map-focus-chip";
 import type { DataView } from "./_components/map-layers-panel";
 import type { BoundaryLevel } from "./_components/map-settings-popover";
-import { MAP_FOCUS_ZOOM, mapFocusHref } from "~/lib/map-focus-href";
+import { entityDetailHref, MAP_FOCUS_ZOOM, mapFocusHref } from "~/lib/map-focus-href";
 import {
   clearMapFocusSession,
   readMapFocusSession,
@@ -425,6 +425,21 @@ function MapPageContent() {
     focusCrisisQuery.data,
     t,
   ]);
+
+  // Where the focus chip's label leads: back to the detail page the map was
+  // opened from (#1714). Place focus has no detail page.
+  const focusDetail = useMemo(() => {
+    if (focusEventId) {
+      return { href: entityDetailHref("event", focusEventId), linkLabel: t("timeline.openFocusEvent") };
+    }
+    if (focusSignalId) {
+      return { href: entityDetailHref("signal", focusSignalId), linkLabel: t("timeline.openFocusSignal") };
+    }
+    if (focusCrisisId) {
+      return { href: entityDetailHref("crisis", focusCrisisId), linkLabel: t("timeline.openFocusCrisis") };
+    }
+    return null;
+  }, [focusEventId, focusSignalId, focusCrisisId, t]);
 
   // Persist active focus so Map tab / Insights can round-trip without wiping.
   useEffect(() => {
@@ -2695,39 +2710,15 @@ function MapPageContent() {
             {/* Place / entity focus chip — not the timeline month strip.
                 Stacked search pills replace the single place chip. */}
             {(isFocusMode || (placeFocus && placeStackCount === 0)) && focusFilterLabel && (
-              <button
-                type="button"
-                onClick={clearSoloFocus}
-                aria-label={t("timeline.clearFocus")}
-                title={focusFilterLabel}
-                style={{
-                  flexShrink: 0,
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 6,
-                  maxWidth: 220,
-                  padding: "4px 10px 4px 12px",
-                  borderRadius: 999,
-                  fontSize: 12,
-                  fontWeight: 600,
-                  cursor: "pointer",
-                  border: "1px solid var(--color-accent)",
-                  background: "var(--color-accent)",
-                  color: "white",
-                  whiteSpace: "nowrap",
-                }}
-              >
-                <span
-                  style={{
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    minWidth: 0,
-                  }}
-                >
-                  {focusFilterLabel}
-                </span>
-                <IconX size={14} stroke={2.25} style={{ flexShrink: 0 }} aria-hidden />
-              </button>
+              <MapFocusChip
+                label={focusFilterLabel}
+                detailHref={focusDetail?.href ?? null}
+                detailLinkLabel={focusDetail?.linkLabel}
+                clearLabel={t("timeline.clearFocus")}
+                onClear={clearSoloFocus}
+                maxWidth={220}
+                flexShrink={0}
+              />
             )}
 
             {/* Month timeline — browse only; place lookup must not open this. */}
@@ -2834,38 +2825,14 @@ function MapPageContent() {
             onStackChange={handlePlaceStackChange}
           />
           {(isFocusMode || (placeFocus && placeStackCount === 0)) && focusFilterLabel && (
-            <button
-              type="button"
-              onClick={clearSoloFocus}
-              aria-label={t("timeline.clearFocus")}
-              title={focusFilterLabel}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 6,
-                maxWidth: "100%",
-                padding: "4px 10px 4px 12px",
-                borderRadius: 999,
-                fontSize: 12,
-                fontWeight: 600,
-                cursor: "pointer",
-                border: "1px solid var(--color-accent)",
-                background: "var(--color-accent)",
-                color: "white",
-                whiteSpace: "nowrap",
-              }}
-            >
-              <span
-                style={{
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  minWidth: 0,
-                }}
-              >
-                {focusFilterLabel}
-              </span>
-              <IconX size={14} stroke={2.25} style={{ flexShrink: 0 }} aria-hidden />
-            </button>
+            <MapFocusChip
+              label={focusFilterLabel}
+              detailHref={focusDetail?.href ?? null}
+              detailLinkLabel={focusDetail?.linkLabel}
+              clearLabel={t("timeline.clearFocus")}
+              onClear={clearSoloFocus}
+              maxWidth="100%"
+            />
           )}
         </Box>
       )}
