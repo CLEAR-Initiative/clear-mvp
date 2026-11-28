@@ -50,6 +50,7 @@ const DETAIL_SIGNAL_FIELDS = `
   generalLocation { id name }
   originLocation { id name }
   destinationLocation { id name }
+  otherSites { name kind location { id name level geometry } }
 `;
 
 // Kept for list/create mutations that still nest signal geometries.
@@ -244,6 +245,10 @@ export const eventsRouter = createTRPCRouter({
         { id: input.id },
         cookieHeaders(ctx),
       );
+      // Sites of the event's signals: ship centre points, not admin polygons.
+      for (const signal of data.event?.signals ?? []) {
+        for (const site of signal.otherSites ?? []) sanitizeLocationGeometry(site.location);
+      }
       return data.event;
     }),
 

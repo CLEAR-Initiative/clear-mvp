@@ -62,6 +62,9 @@ export interface GqlSignal {
   destinationLocation: GqlLocation | null;
   generalLocation: GqlLocation | null;
   events: Array<{ id: string }>;
+  /** Other sites the text names, beside the primary location (clear-api
+   *  ADR-0025). Only the signal and event detail queries ask for them. */
+  otherSites?: GqlSignalSite[];
 }
 
 /** Signal detail - richer events list returned by the `signal(id)` query */
@@ -83,6 +86,14 @@ export interface GqlSignalDetail extends Omit<GqlSignal, "events"> {
   }>;
   /** Open Location challenge when clear-api exposes Signal.locationChallenge. */
   locationChallenge?: GqlSignalLocationChallenge | null;
+}
+
+/** An other site of a signal. Grouping reads the primary location only. */
+export interface GqlSignalSite {
+  /** The name as the signal's text gives it. */
+  name: string | null;
+  kind: "NAMED_SITE";
+  location: Pick<GqlLocation, "id" | "name" | "level" | "geometry">;
 }
 
 /**

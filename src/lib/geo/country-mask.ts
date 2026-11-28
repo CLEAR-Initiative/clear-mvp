@@ -185,3 +185,22 @@ export function geometryBounds(
   if (!isFinite(minLng)) return null;
   return [minLng, minLat, maxLng, maxLat];
 }
+
+/**
+ * Grow `bounds` so every point is inside it. A point outside the region a map
+ * fits to (an other site in a neighbouring state, say) stays on screen.
+ */
+export function extendBounds(
+  bounds: [number, number, number, number],
+  points: readonly { lng: number; lat: number }[],
+): [number, number, number, number] {
+  let [minLng, minLat, maxLng, maxLat] = bounds;
+  for (const { lng, lat } of points) {
+    if (!Number.isFinite(lng) || !Number.isFinite(lat)) continue;
+    minLng = Math.min(minLng, lng);
+    minLat = Math.min(minLat, lat);
+    maxLng = Math.max(maxLng, lng);
+    maxLat = Math.max(maxLat, lat);
+  }
+  return [minLng, minLat, maxLng, maxLat];
+}

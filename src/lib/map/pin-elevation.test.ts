@@ -42,6 +42,7 @@ describe("parseLocationPinRole", () => {
   it("keeps source and proposed, drops empty and unknown", () => {
     expect(parseLocationPinRole("source")).toBe("source");
     expect(parseLocationPinRole("proposed")).toBe("proposed");
+    expect(parseLocationPinRole("site")).toBe("site");
     expect(parseLocationPinRole("")).toBeUndefined();
     expect(parseLocationPinRole("cluster")).toBeUndefined();
     expect(parseLocationPinRole(undefined)).toBeUndefined();
@@ -49,6 +50,10 @@ describe("parseLocationPinRole", () => {
 });
 
 describe("shouldElevatePointPin", () => {
+  it("keeps other-site pins flat", () => {
+    expect(shouldElevatePointPin({ locationPinRole: "site" })).toBe(false);
+  });
+
   it("elevates Event/Signal/Crisis pins on every basemap", () => {
     expect(shouldElevatePointPin({})).toBe(true);
     expect(shouldElevatePointPin({ locationPinRole: "source" })).toBe(true);

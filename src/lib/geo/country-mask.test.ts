@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  extendBounds,
   isBboxLikeGeometry,
   isPaintableBoundaryGeometry,
   scopeIsosMissingPaintableBoundaries,
@@ -86,5 +87,19 @@ describe("scopeIsosMissingPaintableBoundaries", () => {
         ],
       ),
     ).toEqual([]);
+  });
+});
+
+describe("extendBounds", () => {
+  it("keeps the bounds when every point is inside", () => {
+    expect(extendBounds([22, 10, 27, 14], [{ lng: 24.9, lat: 12.05 }])).toEqual([22, 10, 27, 14]);
+  });
+
+  it("grows the bounds to a point outside", () => {
+    expect(extendBounds([22, 10, 27, 14], [{ lng: 30, lat: 9 }])).toEqual([22, 9, 30, 14]);
+  });
+
+  it("ignores points that are not numbers", () => {
+    expect(extendBounds([22, 10, 27, 14], [{ lng: Number.NaN, lat: 50 }])).toEqual([22, 10, 27, 14]);
   });
 });

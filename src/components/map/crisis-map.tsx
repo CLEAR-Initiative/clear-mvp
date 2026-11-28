@@ -11,7 +11,7 @@ import {
 import { createPortal } from "react-dom";
 import { useLocale, useTranslations } from "next-intl";
 import { api } from "~/trpc/react";
-import { geometryBounds, isPaintableBoundaryGeometry } from "~/lib/geo/country-mask";
+import { extendBounds, geometryBounds, isPaintableBoundaryGeometry } from "~/lib/geo/country-mask";
 import {
   addPresenceMap,
   createPresenceMemory,
@@ -78,6 +78,7 @@ import {
   parseLocationPinRole,
   pinElevationFactor,
   shouldElevatePointPin,
+  type LocationPinRole,
 } from "~/lib/map/pin-elevation";
 import { bridgeMetaToCtrlForPitch } from "~/lib/map/meta-pitch-bridge";
 import { setMapCursor } from "~/lib/map/map-cursor";
@@ -127,8 +128,9 @@ export interface MapMarker {
   iconSlug?: string;
   /** Source pin challenged / correction queued (Location trust v1). */
   locationTrust?: "challenged" | "correction_queued";
-  /** Proposed correction pin vs source pin for dual location display. */
-  locationPinRole?: "source" | "proposed";
+  /** Proposed correction pin vs source pin for dual location display;
+   *  `"site"` for an other site of a signal (ring pin with a name label). */
+  locationPinRole?: LocationPinRole;
 }
 
 /** Pixel position of a marker inside the map container (from Mapbox `project`). */
@@ -244,6 +246,9 @@ interface CrisisMapProps {
   adminBoundaryLevel?: 0 | 1 | 2;
   /** GeoJSON geometry to fit the map bounds to (e.g. a selected region). */
   fitBoundsGeometry?: unknown;
+  /** Also fit every marker inside the view when fitting to `fitBoundsGeometry`
+   *  (the detail minimaps: a site can sit outside the primary location's state). */
+  fitBoundsIncludeMarkers?: boolean;
   /** Our own L0 geometry for the focus country highlight (overrides Mapbox tileset). */
   focusCountryGeometry?: unknown;
   /** A2 district boundaries with population for choropleth layer. */
@@ -305,6 +310,9 @@ interface CrisisMapProps {
    * pass false to keep donuts/points at every zoom.
    */
   showDensityHeatmap?: boolean;
+  /** Group nearby pins into numbered clusters. Default on. The detail
+   *  minimaps turn it off so each named site keeps its own pin. */
+  clusterPins?: boolean;
   /** Show/hide roads overlay (applies to all basemap types) */
   showRoads?: boolean;
   /**
@@ -543,7 +551,9 @@ function buildPointEl(
   severity: string,
   opts?: {
     locationTrust?: "challenged" | "correction_queued";
-    locationPinRole?: "source" | "proposed";
+    locationPinRole?: LocationPinRole;
+    /** Name shown beside a `"site"` pin. */
+    label?: string;
     iconSlug?: string;
     /**
      * Stem-capable pin (flat at low pitch; stem grows with tilt via
@@ -557,12 +567,15 @@ function buildPointEl(
 ): HTMLDivElement {
   const color = severityColors[severity] ?? "#737373";
   const proposed = opts?.locationPinRole === "proposed";
+  const site = opts?.locationPinRole === "site";
   const challenged =
     opts?.locationTrust === "challenged" || opts?.locationTrust === "correction_queued";
-  const withGlyph = Boolean(opts?.iconSlug) && !proposed;
-  const elevated = Boolean(opts?.elevated) && !proposed;
+  const withGlyph = Boolean(opts?.iconSlug) && !proposed && !site;
+  const elevated = Boolean(opts?.elevated) && !proposed && !site;
   // Glyph pins need a bit more surface; severity still drives size.
-  const size = withGlyph
+  const size = site
+    ? 12
+    : withGlyph
     ? severity === "critical"
       ? 28
       : severity === "high"
@@ -609,7 +622,12 @@ function buildPointEl(
   // Inner dot: the colored circle, safe to scale independently.
   const inner = document.createElement("div");
   inner.className = "marker-dot";
-  if (proposed) {
+  if (site) {
+    // Other site: a ring in the severity colour, so the primary pin stays the
+    // solid one. Its name sits beside it (below).
+    inner.style.cssText =
+      `width:100%;height:100%;border-radius:50%;background:white;border:3px solid ${color};box-shadow:0 1px 3px rgba(0,0,0,0.3);`;
+  } else if (proposed) {
     // Ghost proposed pin for dual location display.
     inner.style.cssText =
       `width:100%;height:100%;border-radius:50%;background:transparent;border:2.5px dashed ${color};box-shadow:none;opacity:0.85;`;
@@ -637,6 +655,19 @@ function buildPointEl(
   }
   head.appendChild(ring);
   head.appendChild(inner);
+  if (site && opts?.label) {
+    const label = document.createElement("div");
+    label.className = "marker-site-label";
+    label.textContent = opts.label;
+    label.style.cssText = [
+      "position:absolute;left:calc(100% + 4px);top:50%;transform:translateY(-50%);",
+      "white-space:nowrap;pointer-events:none;",
+      "font:600 11px system-ui,sans-serif;color:var(--color-text-primary);",
+      "text-shadow:0 0 2px var(--color-bg-white),0 0 2px var(--color-bg-white),0 0 3px var(--color-bg-white);",
+    ].join("");
+    head.style.position = head.style.position || "relative";
+    head.appendChild(label);
+  }
   outer.appendChild(head);
 
   if (elevated) {
@@ -709,6 +740,7 @@ export function CrisisMap({
   adminBoundaries,
   adminBoundaryLevel,
   fitBoundsGeometry,
+  fitBoundsIncludeMarkers = false,
   focusCountryGeometry,
   populationBoundaries,
   hoveredMarkerId,
@@ -729,6 +761,7 @@ export function CrisisMap({
   showBoundaries = true,
   showMarkers = true,
   showDensityHeatmap = true,
+  clusterPins = true,
   showRoads = true,
   showNrcLocations = false,
   operatingCountries,
@@ -1674,10 +1707,31 @@ export function CrisisMap({
     countryFitNonce,
   ]);
 
+  // Points the fit must keep on screen. A string key, so a new markers array
+  // with the same points does not refit the map.
+  const fitMarkerKey = fitBoundsIncludeMarkers
+    ? markers.map((m) => `${m.lng},${m.lat}`).join(";")
+    : "";
+
   // Fit bounds to a specific geometry (e.g. selected region).
   useEffect(() => {
-    if (!map.current || !loaded || !fitBoundsGeometry) return;
-    const bounds = geometryBounds(fitBoundsGeometry as never);
+    if (!map.current || !loaded) return;
+    const fitPoints = fitMarkerKey
+      ? fitMarkerKey.split(";").map((p) => {
+          const [lng, lat] = p.split(",").map(Number);
+          return { lng: lng!, lat: lat! };
+        })
+      : [];
+    const regionBounds = fitBoundsGeometry ? geometryBounds(fitBoundsGeometry as never) : null;
+    let bounds: [number, number, number, number] | null = null;
+    if (regionBounds) {
+      bounds = fitPoints.length ? extendBounds(regionBounds, fitPoints) : regionBounds;
+    } else if (fitPoints.length >= 2) {
+      // No region shape (a point location, or no state found): fit the
+      // markers alone, so a distant site is still on screen.
+      const [first, ...rest] = fitPoints;
+      bounds = extendBounds([first!.lng, first!.lat, first!.lng, first!.lat], rest);
+    }
     if (!bounds) return;
     map.current.fitBounds(
       [[bounds[0], bounds[1]], [bounds[2], bounds[3]]],
@@ -1686,9 +1740,11 @@ export function CrisisMap({
         currentBearing: map.current.getBearing?.() ?? 0,
         padding: 60,
         duration: 800,
+        // Markers alone can sit a few hundred metres apart: do not zoom to street level.
+        ...(regionBounds ? {} : { maxZoom: 11 }),
       }),
     );
-  }, [fitBoundsGeometry, loaded]);
+  }, [fitBoundsGeometry, fitMarkerKey, loaded]);
 
   // ── Region highlight: show selected region geometry, hide country fill ──
   useEffect(() => {
@@ -1973,7 +2029,7 @@ export function CrisisMap({
       geometry: { type: "Point" as const, coordinates: [mk.lng, mk.lat] },
     }));
 
-    const clusterMarkers = appearance !== "analysis";
+    const clusterMarkers = appearance !== "analysis" && clusterPins;
     m.addSource(SOURCE, {
       type: "geojson",
       data: { type: "FeatureCollection", features },
@@ -2226,6 +2282,7 @@ export function CrisisMap({
               ? trust
               : undefined,
           locationPinRole: parseLocationPinRole(pinRoleRaw),
+          label: pinRoleRaw === "site" ? String(props.title ?? "") : undefined,
           // Glyphs only in the point density band — Country/donut keeps severity discs.
           iconSlug:
             mode === "point" &&
@@ -2403,7 +2460,7 @@ export function CrisisMap({
       m.off("idle", restoreMissingMarkers);
       m.off("sourcedata", onSourceData);
     };
-  }, [markers, loaded, showMarkers, showDensityHeatmap, baseMapType, appearance, onSelectedMarkerElement]);
+  }, [markers, loaded, showMarkers, showDensityHeatmap, clusterPins, baseMapType, appearance, onSelectedMarkerElement]);
 
   // ── Marker hover pulse (synced from list) ────────────────────────────────
   useEffect(() => {

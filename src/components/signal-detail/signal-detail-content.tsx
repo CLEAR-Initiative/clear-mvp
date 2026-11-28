@@ -54,6 +54,7 @@ import { api } from "~/trpc/react";
 import { useTeamCountry } from "~/hooks/use-team-country";
 import { resolveCountryConfig } from "~/lib/constants/country-config";
 import { MinimapCard } from "~/components/map/minimap-card";
+import { siteMarkers } from "~/lib/geo/signal-sites";
 import { SkeletonSlot } from "~/components/ui/skeleton-slot";
 import { useNavigationMapDisplay } from "~/hooks/use-navigation-map-display";
 import {
@@ -213,8 +214,13 @@ export function SignalDetailContent({
         description: loc.name,
       });
     }
+    markers.push(...siteMarkers(signal.otherSites, idx, markers));
     return markers;
   }, [signal]);
+
+  // The signal's own pin. Other sites never stand in for it (the challenge
+  // modal compares a proposed point against this one).
+  const primaryPin = mapMarkers.find((m) => m.locationPinRole !== "site");
 
   const mapCenter = useMemo<[number, number]>(() => {
     if (!mapMarkers.length) return [30, 15];
@@ -843,6 +849,7 @@ export function SignalDetailContent({
           <Box style={{ width: isMobile ? "100%" : 300, flexShrink: 0 }}>
             <Stack gap={20}>
               <MinimapCard
+                fitToMarkers
                 markers={mapDisplayMarkers}
                 center={mapDisplayCenter}
                 countryGeometry={focusCountryGeometry}
@@ -976,8 +983,8 @@ export function SignalDetailContent({
         onClose={() => setChallengeOpen(false)}
         signalId={signal.id}
         currentPlace={signalPlaceLabel(locations[0])}
-        sourceLat={mapMarkers[0]?.lat}
-        sourceLng={mapMarkers[0]?.lng}
+        sourceLat={primaryPin?.lat}
+        sourceLng={primaryPin?.lng}
         existing={challengeQuery.data}
       />
     </Box>

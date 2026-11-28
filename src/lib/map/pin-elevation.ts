@@ -30,13 +30,15 @@ export function pinElevationFactor(pitch: number): number {
   );
 }
 
-export type LocationPinRole = "source" | "proposed";
+/** `"site"`: an other site of a signal (a place its text names, beside the
+ *  primary location). Small ring pin with a name label; stays flat. */
+export type LocationPinRole = "source" | "proposed" | "site";
 
 /** Narrow GeoJSON `location_pin_role` to the known union. Unknown/empty → undefined. */
 export function parseLocationPinRole(
   raw: unknown,
 ): LocationPinRole | undefined {
-  return raw === "source" || raw === "proposed" ? raw : undefined;
+  return raw === "source" || raw === "proposed" || raw === "site" ? raw : undefined;
 }
 
 /**

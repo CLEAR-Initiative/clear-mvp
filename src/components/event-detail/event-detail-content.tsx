@@ -47,6 +47,7 @@ import { useTeamCountry } from "~/hooks/use-team-country";
 import { resolveCountryConfig } from "~/lib/constants/country-config";
 import { canWriteCrisisEvents } from "~/lib/roles";
 import { MinimapCard } from "~/components/map/minimap-card";
+import { siteMarkers } from "~/lib/geo/signal-sites";
 import type { MapMarker } from "~/components/map/crisis-map";
 import { mapFocusHref } from "~/lib/map-focus-href";
 import { mapReturnHref } from "~/lib/map-view-state";
@@ -216,12 +217,15 @@ export function EventDetailContent({
 
     // Prefer API representativePoint (avoids nesting every signal geometry).
     pushPoint(event.representativePoint ?? null, event.title);
-    if (markers.length > 0) return markers;
-
-    // Fallback: any Point still present on the event's own locations.
-    for (const loc of eventLocations(event)) {
-      pushPoint(loc);
+    if (markers.length === 0) {
+      // Fallback: any Point still present on the event's own locations.
+      for (const loc of eventLocations(event)) {
+        pushPoint(loc);
+      }
     }
+    // The other sites of its signals. Two signals naming one site give one marker.
+    const sites = (event.signals ?? []).flatMap((s) => s.otherSites ?? []);
+    markers.push(...siteMarkers(sites, idx, markers, mapSeverity(event.severity)));
     return markers;
   }, [event]);
 
@@ -918,6 +922,7 @@ export function EventDetailContent({
           <Box style={{ width: isMobile ? "100%" : 300, flexShrink: 0 }}>
             <Stack gap={20}>
               <MinimapCard
+                fitToMarkers
                 markers={mapDisplayMarkers}
                 center={mapDisplayCenter}
                 countryGeometry={focusCountryGeometry}
