@@ -17,7 +17,7 @@ describe("siteMarkers", () => {
   it("gives one marker per site with a point, named as the text names it", () => {
     const markers = siteMarkers([site("Dumayyah camp", "Dumayah", [24.9, 12.05])], 1);
     expect(markers).toEqual([
-      expect.objectContaining({ id: 1, lng: 24.9, lat: 12.05, title: "Dumayyah camp", description: "Dumayah" }),
+      expect.objectContaining({ id: 1, lng: 24.9, lat: 12.05, title: "Dumayyah camp", description: "Dumayah", locationPinRole: "site" }),
     ]);
   });
 

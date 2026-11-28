@@ -78,6 +78,7 @@ import {
   parseLocationPinRole,
   pinElevationFactor,
   shouldElevatePointPin,
+  type LocationPinRole,
 } from "~/lib/map/pin-elevation";
 import { bridgeMetaToCtrlForPitch } from "~/lib/map/meta-pitch-bridge";
 import { setMapCursor } from "~/lib/map/map-cursor";
@@ -127,8 +128,9 @@ export interface MapMarker {
   iconSlug?: string;
   /** Source pin challenged / correction queued (Location trust v1). */
   locationTrust?: "challenged" | "correction_queued";
-  /** Proposed correction pin vs source pin for dual location display. */
-  locationPinRole?: "source" | "proposed";
+  /** Proposed correction pin vs source pin for dual location display;
+   *  `"site"` for an other site of a signal (ring pin with a name label). */
+  locationPinRole?: LocationPinRole;
 }
 
 /** Pixel position of a marker inside the map container (from Mapbox `project`). */
@@ -546,7 +548,9 @@ function buildPointEl(
   severity: string,
   opts?: {
     locationTrust?: "challenged" | "correction_queued";
-    locationPinRole?: "source" | "proposed";
+    locationPinRole?: LocationPinRole;
+    /** Name shown beside a `"site"` pin. */
+    label?: string;
     iconSlug?: string;
     /**
      * Stem-capable pin (flat at low pitch; stem grows with tilt via
@@ -560,12 +564,15 @@ function buildPointEl(
 ): HTMLDivElement {
   const color = severityColors[severity] ?? "#737373";
   const proposed = opts?.locationPinRole === "proposed";
+  const site = opts?.locationPinRole === "site";
   const challenged =
     opts?.locationTrust === "challenged" || opts?.locationTrust === "correction_queued";
-  const withGlyph = Boolean(opts?.iconSlug) && !proposed;
-  const elevated = Boolean(opts?.elevated) && !proposed;
+  const withGlyph = Boolean(opts?.iconSlug) && !proposed && !site;
+  const elevated = Boolean(opts?.elevated) && !proposed && !site;
   // Glyph pins need a bit more surface; severity still drives size.
-  const size = withGlyph
+  const size = site
+    ? 12
+    : withGlyph
     ? severity === "critical"
       ? 28
       : severity === "high"
@@ -612,7 +619,12 @@ function buildPointEl(
   // Inner dot: the colored circle, safe to scale independently.
   const inner = document.createElement("div");
   inner.className = "marker-dot";
-  if (proposed) {
+  if (site) {
+    // Other site: a ring in the severity colour, so the primary pin stays the
+    // solid one. Its name sits beside it (below).
+    inner.style.cssText =
+      `width:100%;height:100%;border-radius:50%;background:white;border:3px solid ${color};box-shadow:0 1px 3px rgba(0,0,0,0.3);`;
+  } else if (proposed) {
     // Ghost proposed pin for dual location display.
     inner.style.cssText =
       `width:100%;height:100%;border-radius:50%;background:transparent;border:2.5px dashed ${color};box-shadow:none;opacity:0.85;`;
@@ -640,6 +652,19 @@ function buildPointEl(
   }
   head.appendChild(ring);
   head.appendChild(inner);
+  if (site && opts?.label) {
+    const label = document.createElement("div");
+    label.className = "marker-site-label";
+    label.textContent = opts.label;
+    label.style.cssText = [
+      "position:absolute;left:calc(100% + 4px);top:50%;transform:translateY(-50%);",
+      "white-space:nowrap;pointer-events:none;",
+      "font:600 11px system-ui,sans-serif;color:var(--color-text-primary);",
+      "text-shadow:0 0 2px var(--color-bg-white),0 0 2px var(--color-bg-white),0 0 3px var(--color-bg-white);",
+    ].join("");
+    head.style.position = head.style.position || "relative";
+    head.appendChild(label);
+  }
   outer.appendChild(head);
 
   if (elevated) {
@@ -2245,6 +2270,7 @@ export function CrisisMap({
               ? trust
               : undefined,
           locationPinRole: parseLocationPinRole(pinRoleRaw),
+          label: pinRoleRaw === "site" ? String(props.title ?? "") : undefined,
           // Glyphs only in the point density band — Country/donut keeps severity discs.
           iconSlug:
             mode === "point" &&

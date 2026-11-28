@@ -24,7 +24,7 @@ export function siteMarkers(
     if (taken.has(key)) continue;
     taken.add(key);
     const title = site.name ?? site.location.name;
-    markers.push({ id: id++, lng, lat, title, severity: "medium", description: site.location.name });
+    markers.push({ id: id++, lng, lat, title, severity: "medium", description: site.location.name, locationPinRole: "site" });
   }
   return markers;
 }
