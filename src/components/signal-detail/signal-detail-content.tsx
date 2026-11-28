@@ -218,6 +218,10 @@ export function SignalDetailContent({
     return markers;
   }, [signal]);
 
+  // The signal's own pin. Other sites never stand in for it (the challenge
+  // modal compares a proposed point against this one).
+  const primaryPin = mapMarkers.find((m) => m.locationPinRole !== "site");
+
   const mapCenter = useMemo<[number, number]>(() => {
     if (!mapMarkers.length) return [30, 15];
     return [mapMarkers[0]!.lng, mapMarkers[0]!.lat];
@@ -979,8 +983,8 @@ export function SignalDetailContent({
         onClose={() => setChallengeOpen(false)}
         signalId={signal.id}
         currentPlace={signalPlaceLabel(locations[0])}
-        sourceLat={mapMarkers[0]?.lat}
-        sourceLng={mapMarkers[0]?.lng}
+        sourceLat={primaryPin?.lat}
+        sourceLng={primaryPin?.lng}
         existing={challengeQuery.data}
       />
     </Box>
