@@ -890,6 +890,22 @@
   font-weight: 600;
   color: var(--color-text-primary);
 }
+/* The researched place: a candidate row whose reason and sources run to
+   several lines, so its buttons sit at the top beside the name. */
+.placeProposal {
+  align-items: flex-start;
+  padding-top: 12px;
+  padding-bottom: 12px;
+}
+.placeProposalReason {
+  margin-top: 4px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--color-text-secondary);
+}
+.placeProposal .placeSources {
+  margin-bottom: 0;
+}
 .btnSm {
   height: 28px;
   padding: 0 10px;
