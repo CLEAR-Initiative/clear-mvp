@@ -2946,8 +2946,11 @@
       "sessionOnlyTitle": "Shown this session only",
       "sessionOnlyCorrection": "Source and proposed pins show on the map for this session. Saving for consideration needs clear-api support (still pending).",
       "searchLabel": "Search for the place",
-      "searchPlaceholder": "Village, town or landmark",
+      "searchPlaceholder": "Place name, coordinates or map link",
       "noResults": "No places found. Try another spelling.",
+      "useCoordinates": "Place the point at {coordinates}",
+      "pasteShortLink": "A short map link holds no coordinates. Open the link, then copy the full address from the browser, or copy the coordinates.",
+      "pasteNoCoordinates": "CLEAR found no coordinates in this text. Paste a full Google Maps or OpenStreetMap link, or coordinates such as 11.78, 34.36.",
       "placing": "Finding where this is in CLEAR…",
       "landsIn": "In CLEAR: {chain}",
       "outsideCoverage": "This place is outside the areas CLEAR covers.",
@@ -3155,7 +3158,7 @@
       "note": "Analyst's note",
       "team": "Team",
       "placeTitle": "Place the point",
-      "placeHint": "Click the map where the Signal should be, or search for the place. You can also enter its coordinates.",
+      "placeHint": "Click the map where the Signal should be, or search for the place. You can also enter its coordinates. Pasted coordinates or a pasted map link work too.",
       "actions": {
         "accept": "Accept proposed point",
         "placeOther": "Place a different point",
@@ -3188,6 +3191,13 @@
         "OUTSIDE_AREA": "A place with this name exists outside {area}"
       },
       "suggestions": "Places it could be",
+      "lookup": {
+        "label": "Look the name up in",
+        "google_maps": "Google Maps",
+        "openstreetmap": "OpenStreetMap",
+        "web_search": "Web search",
+        "newTab": "(opens in a new tab)"
+      },
       "scope": {
         "label": "Show places in",
         "area": "{area} ({count})",
@@ -3206,7 +3216,7 @@
         "unknown": "Distance not known"
       },
       "placeTitle": "Place the point",
-      "placeHint": "Click the map where {name} is, or search for the place. You can also enter its coordinates.",
+      "placeHint": "Click the map where {name} is, or search for the place. You can also enter its coordinates. Pasted coordinates or a pasted map link work too.",
       "actions": {
         "use": "Use this place",
         "place": "Place on map",

@@ -2946,8 +2946,11 @@
       "sessionOnlyTitle": "Visible solo en esta sesión",
       "sessionOnlyCorrection": "Los pines de origen y propuesto se muestran en el mapa en esta sesión. Guardar para consideración requiere soporte de clear-api (aún pendiente).",
       "searchLabel": "Buscar el lugar",
-      "searchPlaceholder": "Pueblo, ciudad o punto de referencia",
+      "searchPlaceholder": "Nombre del lugar, coordenadas o enlace de mapa",
       "noResults": "No se encontraron lugares. Pruebe otra ortografía.",
+      "useCoordinates": "Colocar el punto en {coordinates}",
+      "pasteShortLink": "Un enlace de mapa corto no contiene coordenadas. Abra el enlace y copie la dirección completa del navegador, o copie las coordenadas.",
+      "pasteNoCoordinates": "CLEAR no encontró coordenadas en este texto. Pegue un enlace completo de Google Maps u OpenStreetMap, o coordenadas como 11.78, 34.36.",
       "placing": "Buscando dónde queda en CLEAR…",
       "landsIn": "En CLEAR: {chain}",
       "outsideCoverage": "Este lugar está fuera de las zonas que cubre CLEAR.",
@@ -3155,7 +3158,7 @@
       "note": "Nota del analista",
       "team": "Equipo",
       "placeTitle": "Situar el punto",
-      "placeHint": "Haga clic en el mapa donde debería estar la señal, o busque el lugar. También puede introducir sus coordenadas.",
+      "placeHint": "Haga clic en el mapa donde debería estar la señal, o busque el lugar. También puede introducir sus coordenadas. También puede pegar coordenadas o un enlace de mapa.",
       "actions": {
         "accept": "Aceptar el punto propuesto",
         "placeOther": "Situar otro punto",
@@ -3188,6 +3191,13 @@
         "OUTSIDE_AREA": "Existe un lugar con este nombre fuera de {area}"
       },
       "suggestions": "Lugares posibles",
+      "lookup": {
+        "label": "Buscar el nombre en",
+        "google_maps": "Google Maps",
+        "openstreetmap": "OpenStreetMap",
+        "web_search": "Búsqueda web",
+        "newTab": "(se abre en una pestaña nueva)"
+      },
       "scope": {
         "label": "Mostrar lugares en",
         "area": "{area} ({count})",
@@ -3206,7 +3216,7 @@
         "unknown": "Distancia desconocida"
       },
       "placeTitle": "Colocar el punto",
-      "placeHint": "Haga clic en el mapa donde está {name}, o busque el lugar. También puede introducir sus coordenadas.",
+      "placeHint": "Haga clic en el mapa donde está {name}, o busque el lugar. También puede introducir sus coordenadas. También puede pegar coordenadas o un enlace de mapa.",
       "actions": {
         "use": "Usar este lugar",
         "place": "Colocar en el mapa",

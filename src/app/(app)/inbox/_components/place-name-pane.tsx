@@ -3,12 +3,15 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useFormatter, useLocale, useTranslations } from "next-intl";
-import { IconArrowLeft, IconCircleX, IconHelpCircle, IconMapPin } from "@tabler/icons-react";
+import { IconArrowLeft, IconCircleX, IconExternalLink, IconHelpCircle, IconMapPin } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
 import { track } from "~/lib/analytics/track";
 import type { PlaceNameEntry } from "~/lib/hotline-inbox";
 import {
   placeErrorKey,
+  placeLookupLinks,
+  placeLookupQuery,
+  placeLookupView,
   placeNameHomeArea,
   resolutionForSuggestion,
   signalExcerpt,
@@ -86,9 +89,12 @@ export function PlaceNamePane({
   const outlineQueries = api.useQueries((q) =>
     [...(homeId ? [homeId] : []), ...areaIds].map((id) => q.locations.getById({ id }, { staleTime: 10 * 60_000 })),
   );
-  const outlines = outlineQueries
-    .map((query) => query.data?.geometry as MapOutline | null | undefined)
-    .filter((g): g is MapOutline => !!g && (g.type === "Polygon" || g.type === "MultiPolygon"));
+  const isOutline = (g: MapOutline | null | undefined): g is MapOutline =>
+    !!g && (g.type === "Polygon" || g.type === "MultiPolygon");
+  const outlines = outlineQueries.map((query) => query.data?.geometry as MapOutline | null | undefined).filter(isOutline);
+  // The row's own area is the first outline asked for.
+  const homeGeometry = homeId ? (outlineQueries[0]?.data?.geometry as MapOutline | null | undefined) : null;
+  const homeOutline = isOutline(homeGeometry) ? homeGeometry : null;
 
   // The suggestion the decider points at, in the list or on the map: its row
   // and its pin highlight together.
@@ -156,6 +162,14 @@ export function PlaceNamePane({
   }, [locale, row.countryCode]);
   const area = row.stateLocation?.name ?? country;
   const lastSeen = format.dateTime(new Date(row.lastSeenAt), "short");
+
+  // Links that search for the name outside CLEAR. The maps open on the row's
+  // area once its outline has loaded; before that they search without a view.
+  const lookupLinks = useMemo(
+    () =>
+      placeLookupLinks(placeLookupQuery(row, area), placeLookupView(homeOutline)),
+    [row, area, homeOutline],
+  );
 
   return (
     <section className={styles.pane} data-testid="inbox-pane" data-kind="place_name">
@@ -240,6 +254,25 @@ export function PlaceNamePane({
               </label>
             )}
           </div>
+          <p className={styles.placeLookup} data-testid="inbox-place-lookup">
+            <span>{t("place.lookup.label")}</span>
+            {lookupLinks.map((link) => (
+              <a
+                key={link.provider}
+                href={link.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                // The provider only: never the name (see src/lib/analytics/events.ts).
+                onClick={() => track("place_name.lookup_opened", { provider: link.provider })}
+                data-testid="inbox-place-lookup-link"
+                data-provider={link.provider}
+              >
+                {t(`place.lookup.${link.provider}`)}
+                <IconExternalLink size={12} aria-hidden />
+                <span className="sr-only">{t("place.lookup.newTab")}</span>
+              </a>
+            ))}
+          </p>
           {suggestionsQuery.isLoading ? (
             <p className={styles.narrativeEmpty}>{t("place.suggestionsLoading")}</p>
           ) : suggestions.length === 0 ? (

@@ -11,6 +11,7 @@
  * literal calls, at compile time).
  */
 
+import { PLACE_LOOKUP_PROVIDERS } from "~/lib/place-names";
 import { PRODUCT_TOUR_STEP_IDS } from "~/lib/onboarding/product-tour-step-ids";
 import { EVENT_FROM_VALUES } from "./event-source";
 import { ROUTE, isRoutePattern } from "./route-pattern";
@@ -49,6 +50,8 @@ export const ANALYTICS_EVENTS = {
 
   /** An unresolved place name was resolved in the Inbox. The kind only: never the name. */
   "place_name.resolved": { kind: ["LOCATION", "GEONAMES", "POINT", "NOT_A_PLACE", "AMBIGUOUS"] },
+  /** A lookup link for an unresolved place name was opened. The provider only: never the name. */
+  "place_name.lookup_opened": { provider: PLACE_LOOKUP_PROVIDERS },
 
   /** The analysis summary was copied to the clipboard. */
   "analysis.summary_copied": {},

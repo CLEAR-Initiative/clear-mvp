@@ -46,7 +46,8 @@ vi.mock("~/components/location-challenge/location-challenge-map", () => ({
     />
   ),
 }));
-vi.mock("~/lib/map/geocode-lookup", () => ({ geocodePlaceQuery: vi.fn(async () => []) }));
+const geocodePlaceQuery = vi.fn(async () => []);
+vi.mock("~/lib/map/geocode-lookup", () => ({ geocodePlaceQuery: (...args: unknown[]) => geocodePlaceQuery(...(args as [])) }));
 
 type Placement = { data: unknown; isLoading: boolean; isSuccess: boolean };
 const IN_STATE: Placement = {
@@ -60,6 +61,7 @@ const IN_ANOTHER_STATE: Placement = {
   isSuccess: true,
 };
 let placement: Placement = IN_STATE;
+let homeGeometry: { type: string; coordinates: unknown } = { type: "MultiPolygon", coordinates: [] };
 let suggestions: GqlPlaceNameSuggestion[] = [];
 let suggestionsLoading = false;
 let resolveError: { message: string; data?: { code?: string } } | null = null;
@@ -72,7 +74,7 @@ vi.mock("~/trpc/react", () => ({
       const q = { locations: { getById: (input: { id: string }) => input.id } };
       const ids = build(q) as string[];
       outlineIds(ids);
-      return ids.map((id) => ({ data: { id, geometry: { type: "MultiPolygon", coordinates: [] } } }));
+      return ids.map((id) => ({ data: { id, geometry: homeGeometry } }));
     },
     locationChallenge: {
       placement: { useQuery: () => placement },
@@ -159,8 +161,17 @@ function renderPane(props: { canPlaceAnywhere?: boolean; row?: GqlUnresolvedPlac
   return entry!;
 }
 
+/** Paste into the place search, as a browser does: the text lands in the box
+ *  unless the picker took it as a point. */
+function paste(text: string) {
+  const search = screen.getByTestId("location-challenge-search");
+  const landed = fireEvent.paste(search, { clipboardData: { getData: () => text } });
+  if (landed) fireEvent.change(search, { target: { value: text } });
+}
+
 beforeEach(() => {
   placement = IN_STATE;
+  homeGeometry = { type: "MultiPolygon", coordinates: [] };
   suggestions = [GEONAMES, LANDMARK];
   suggestionsLoading = false;
   resolveError = null;
@@ -278,6 +289,133 @@ describe("PlaceNamePane", () => {
     fireEvent.click(screen.getByTestId("inbox-place-place"));
     fireEvent.click(screen.getByTestId("map"));
     expect(screen.getByTestId("inbox-place-save")).toBeEnabled();
+  });
+
+  it("links to a lookup of the Arabic spelling in the state, in a new tab", () => {
+    renderPane();
+    const links = screen.getAllByTestId("inbox-place-lookup-link");
+    expect(links.map((l) => l.getAttribute("data-provider"))).toEqual(["google_maps", "openstreetmap", "web_search"]);
+    const query = encodeURIComponent("أم دباكر, South Kordofan");
+    for (const link of links) {
+      expect(link).toHaveAttribute("target", "_blank");
+      expect(link).toHaveAttribute("rel", "noopener noreferrer");
+      expect(link.getAttribute("href")).toContain(query);
+    }
+    expect(links[2]).toHaveAttribute("href", `https://www.google.com/search?q=${query}`);
+  });
+
+  it("opens the map lookups on the row's state", () => {
+    homeGeometry = { type: "Polygon", coordinates: [[[28, 10], [32, 10], [32, 13], [28, 13], [28, 10]]] };
+    renderPane();
+    const [google, osm] = screen.getAllByTestId("inbox-place-lookup-link");
+    expect(google!.getAttribute("href")).toMatch(/\/@11\.5,30,6z$/);
+    expect(osm!.getAttribute("href")).toMatch(/#map=6\/11\.5\/30$/);
+  });
+
+  it("looks up the name as written with the country for a row with no Arabic spelling and no state", () => {
+    renderPane({ row: { ...ROW, nameAr: null, stateLocationId: null, stateLocation: null } });
+    expect(screen.getAllByTestId("inbox-place-lookup-link")[2]).toHaveAttribute(
+      "href",
+      `https://www.google.com/search?q=${encodeURIComponent("Um Dabakir, Sudan")}`,
+    );
+  });
+
+  it("tracks a lookup by its provider only, never the name", () => {
+    renderPane();
+    fireEvent.click(screen.getAllByTestId("inbox-place-lookup-link")[1]!);
+    expect(track).toHaveBeenCalledTimes(1);
+    expect(track).toHaveBeenCalledWith("place_name.lookup_opened", { provider: "openstreetmap" });
+  });
+
+  it("places the point from a pasted map link", () => {
+    const entry = renderPane();
+    fireEvent.click(screen.getByTestId("inbox-place-place"));
+    paste("https://www.google.com/maps/place/Um+Dabakir/@11.4,29.7,10z/data=!3d11.25!4d29.95");
+    expect(screen.getByTestId("map")).toHaveAttribute("data-placed", "11.25,29.95");
+    // The link does not stay in the search box.
+    expect(screen.getByTestId("location-challenge-search")).toHaveValue("");
+    fireEvent.click(screen.getByTestId("inbox-place-save"));
+    expect(resolveMutate).toHaveBeenCalledWith({
+      id: "pn-1",
+      resolution: { kind: "POINT", point: { lat: 11.25, lng: 29.95, name: undefined } },
+    });
+    expect(onResolved).toHaveBeenCalledWith(entry, "POINT", 4);
+  });
+
+  it.each([
+    ["11.25, 29.95", "11.25,29.95"],
+    ["11.25 29.95", "11.25,29.95"],
+    [`11°15'00"N 29°57'00"E`, "11.25,29.95"],
+    ["https://www.openstreetmap.org/?mlat=11.25&mlon=29.95#map=12/11.4/29.7", "11.25,29.95"],
+  ])("places the point from pasted %s", (text, placed) => {
+    renderPane();
+    fireEvent.click(screen.getByTestId("inbox-place-place"));
+    paste(text);
+    expect(screen.getByTestId("map")).toHaveAttribute("data-placed", placed);
+  });
+
+  it("places typed coordinates on Enter or from the offered point", () => {
+    renderPane();
+    fireEvent.click(screen.getByTestId("inbox-place-place"));
+    const search = screen.getByTestId("location-challenge-search");
+    fireEvent.change(search, { target: { value: "11.25, 29.95" } });
+    // Typing does not move the point by itself.
+    expect(screen.getByTestId("map")).toHaveAttribute("data-placed", "");
+    expect(screen.getByTestId("location-challenge-use-coordinates")).toHaveTextContent(
+      'modal.useCoordinates:{"coordinates":"11.25000, 29.95000"}',
+    );
+    fireEvent.keyDown(search, { key: "Enter" });
+    expect(screen.getByTestId("map")).toHaveAttribute("data-placed", "11.25,29.95");
+
+    fireEvent.change(search, { target: { value: "11.3 29.9" } });
+    fireEvent.click(screen.getByTestId("location-challenge-use-coordinates"));
+    expect(screen.getByTestId("map")).toHaveAttribute("data-placed", "11.3,29.9");
+  });
+
+  it.each([
+    ["https://maps.app.goo.gl/AbCdEf123", "modal.pasteShortLink"],
+    ["https://www.google.com/maps/place/Um+Dabakir", "modal.pasteNoCoordinates"],
+    ["95, 200", "modal.pasteNoCoordinates"],
+  ])("says so when pasted %s has no coordinates, and the point does not move", (text, key) => {
+    renderPane();
+    fireEvent.click(screen.getByTestId("inbox-place-place"));
+    fireEvent.click(screen.getByTestId("map"));
+    paste(text);
+    expect(screen.getByTestId("location-challenge-search")).toHaveValue(text);
+    expect(screen.getByTestId("location-challenge-paste-problem")).toHaveTextContent(key);
+    expect(screen.queryByTestId("location-challenge-use-coordinates")).toBeNull();
+    // The point placed before stays where it was, and can still be saved.
+    expect(screen.getByTestId("map")).toHaveAttribute("data-placed", "11.2,29.9");
+    expect(screen.getByTestId("inbox-place-save")).toBeEnabled();
+  });
+
+  it("does not search for a link or coordinates as a place name", async () => {
+    vi.useFakeTimers();
+    try {
+      renderPane();
+      fireEvent.click(screen.getByTestId("inbox-place-place"));
+      const search = screen.getByTestId("location-challenge-search");
+      for (const text of ["https://maps.app.goo.gl/AbCdEf123", "11.25, 29.95", "95, 200"]) {
+        fireEvent.change(search, { target: { value: text } });
+        await vi.advanceTimersByTimeAsync(1000);
+      }
+      expect(geocodePlaceQuery).not.toHaveBeenCalled();
+      fireEvent.change(search, { target: { value: "Um Dabakir" } });
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(geocodePlaceQuery).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("keeps a team admin's pasted point inside the row's state", () => {
+    placement = IN_ANOTHER_STATE;
+    renderPane();
+    fireEvent.click(screen.getByTestId("inbox-place-place"));
+    paste("12.05, 24.88");
+    expect(screen.getByTestId("map")).toHaveAttribute("data-placed", "12.05,24.88");
+    expect(screen.getByTestId("location-challenge-outside-team")).toBeInTheDocument();
+    expect(screen.getByTestId("inbox-place-save")).toBeDisabled();
   });
 
   it("marks the name not a place", () => {

@@ -4,6 +4,9 @@ import {
   aliasErrorKey,
   aliasTargetPath,
   placeErrorKey,
+  placeLookupLinks,
+  placeLookupQuery,
+  placeLookupView,
   placeNameHomeArea,
   placeResolvedToastKey,
   resolutionForSuggestion,
@@ -139,5 +142,81 @@ describe("aliasTargetPath and aliasErrorKey", () => {
     expect(aliasErrorKey("CONFLICT")).toBe("aliases.errors.conflict");
     expect(aliasErrorKey("NOT_FOUND")).toBe("aliases.errors.gone");
     expect(aliasErrorKey(null)).toBe("aliases.errors.failed");
+  });
+});
+
+describe("placeLookupQuery", () => {
+  it("searches the Arabic spelling when the row has one, with the area", () => {
+    expect(placeLookupQuery({ nameAsWritten: "Bakouri", nameAr: "بكوري" }, "Blue Nile")).toBe("بكوري, Blue Nile");
+  });
+
+  it("searches the name as written for a row with no Arabic spelling", () => {
+    expect(placeLookupQuery({ nameAsWritten: " Bakouri ", nameAr: null }, "Blue Nile")).toBe("Bakouri, Blue Nile");
+    expect(placeLookupQuery({ nameAsWritten: "Bakouri", nameAr: "  " }, "Sudan")).toBe("Bakouri, Sudan");
+  });
+});
+
+describe("placeLookupView", () => {
+  const box = (west: number, south: number, east: number, north: number) => ({
+    type: "Polygon",
+    coordinates: [[[west, south], [east, south], [east, north], [west, north], [west, south]]],
+  });
+
+  it("is the middle of the area, at a zoom that shows it", () => {
+    // About the size of Blue Nile state.
+    expect(placeLookupView(box(33.1, 9.5, 35.1, 12.7))).toEqual({ lat: 11.1, lng: 34.1, zoom: 6 });
+  });
+
+  it("reads every part of a MultiPolygon", () => {
+    const parts = { type: "MultiPolygon", coordinates: [box(33, 10, 34, 11).coordinates, box(35, 12, 36, 13).coordinates] };
+    expect(placeLookupView(parts)).toEqual({ lat: 11.5, lng: 34.5, zoom: 6 });
+  });
+
+  it("zooms out for a country and stops at a town's zoom for a small area", () => {
+    expect(placeLookupView(box(21.8, 8.7, 38.6, 22.2))?.zoom).toBe(4);
+    expect(placeLookupView({ coordinates: [34.36, 11.78] })).toEqual({ lat: 11.78, lng: 34.36, zoom: 12 });
+  });
+
+  it("is null with no usable position", () => {
+    expect(placeLookupView(null)).toBeNull();
+    expect(placeLookupView({ coordinates: [] })).toBeNull();
+    expect(placeLookupView({ coordinates: [[NaN, 1]] })).toBeNull();
+  });
+});
+
+describe("placeLookupLinks", () => {
+  const view = { lat: 11.1, lng: 34.1, zoom: 6 };
+
+  it("opens the two maps on the area and searches the web", () => {
+    expect(placeLookupLinks("Bakouri, Blue Nile", view)).toEqual([
+      { provider: "google_maps", href: "https://www.google.com/maps/search/Bakouri%2C%20Blue%20Nile/@11.1,34.1,6z" },
+      {
+        provider: "openstreetmap",
+        href: "https://www.openstreetmap.org/search?query=Bakouri%2C%20Blue%20Nile#map=6/11.1/34.1",
+      },
+      { provider: "web_search", href: "https://www.google.com/search?q=Bakouri%2C%20Blue%20Nile" },
+    ]);
+  });
+
+  it("searches without a view until the area is known", () => {
+    const links = placeLookupLinks("Bakouri, Sudan", null);
+    expect(links.map((l) => l.href)).toEqual([
+      "https://www.google.com/maps/search/?api=1&query=Bakouri%2C%20Sudan",
+      "https://www.openstreetmap.org/search?query=Bakouri%2C%20Sudan",
+      "https://www.google.com/search?q=Bakouri%2C%20Sudan",
+    ]);
+  });
+
+  it("encodes the name, so it cannot change the link", () => {
+    const [google, osm, web] = placeLookupLinks("بكوري/../?x=1&y#z, Blue Nile", view);
+    for (const link of [google!, osm!, web!]) {
+      const url = new URL(link.href);
+      expect(url.hostname).toMatch(/^www\.(google\.com|openstreetmap\.org)$/);
+      expect(link.href).toContain(encodeURIComponent("بكوري/../?x=1&y#z, Blue Nile"));
+    }
+    expect(new URL(google!.href).pathname.split("/")).toHaveLength(5);
+    expect(new URL(osm!.href).searchParams.get("query")).toBe("بكوري/../?x=1&y#z, Blue Nile");
+    expect(new URL(osm!.href).hash).toBe("#map=6/11.1/34.1");
+    expect(new URL(web!.href).searchParams.get("q")).toBe("بكوري/../?x=1&y#z, Blue Nile");
   });
 });
