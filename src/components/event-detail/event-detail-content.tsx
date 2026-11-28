@@ -225,7 +225,7 @@ export function EventDetailContent({
     }
     // The other sites of its signals. Two signals naming one site give one marker.
     const sites = (event.signals ?? []).flatMap((s) => s.otherSites ?? []);
-    markers.push(...siteMarkers(sites, idx, markers));
+    markers.push(...siteMarkers(sites, idx, markers, mapSeverity(event.severity)));
     return markers;
   }, [event]);
 

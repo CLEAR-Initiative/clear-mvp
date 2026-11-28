@@ -5,12 +5,14 @@ import type { GqlSignalSite } from "~/lib/types/graphql";
  * Minimap markers for a signal's other sites (the places its text names
  * beside the primary location). A site with no point is skipped. A site at the
  * same point as a marker already on the map is skipped, so one place gets one
- * marker. Ids continue from `firstId`.
+ * marker. Ids continue from `firstId`. Sites take the primary pin's severity.
  */
 export function siteMarkers(
   sites: readonly GqlSignalSite[] | null | undefined,
   firstId: number,
   existing: readonly Pick<MapMarker, "lng" | "lat">[] = [],
+  /** The primary pin's severity, so site rings share its colour. */
+  severity: MapMarker["severity"] = "medium",
 ): MapMarker[] {
   const taken = new Set(existing.map((m) => pointKey(m.lng, m.lat)));
   const markers: MapMarker[] = [];
@@ -24,7 +26,7 @@ export function siteMarkers(
     if (taken.has(key)) continue;
     taken.add(key);
     const title = site.name ?? site.location.name;
-    markers.push({ id: id++, lng, lat, title, severity: "medium", description: site.location.name, locationPinRole: "site" });
+    markers.push({ id: id++, lng, lat, title, severity, description: site.location.name, locationPinRole: "site" });
   }
   return markers;
 }

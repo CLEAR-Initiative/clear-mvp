@@ -34,6 +34,10 @@ describe("siteMarkers", () => {
     expect(markers.map((m) => [m.id, m.title])).toEqual([[5, "C"]]);
   });
 
+  it("gives sites the primary pin's severity", () => {
+    expect(siteMarkers([site("A", "A", [25, 13])], 0, [], "critical")[0]!.severity).toBe("critical");
+  });
+
   it("returns nothing for a signal with no other sites", () => {
     expect(siteMarkers(undefined, 0)).toEqual([]);
     expect(siteMarkers([], 0)).toEqual([]);
