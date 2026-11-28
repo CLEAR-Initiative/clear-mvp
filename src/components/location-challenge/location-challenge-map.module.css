@@ -1,5 +1,9 @@
 .frame {
   position: relative;
+  /* The frame hides its overflow, so as a flex item its minimum height is 0.
+     In a scrolling flex column (the inbox pane body) it would take all of the
+     shrink and collapse to its border. */
+  flex-shrink: 0;
   border: 1px solid var(--color-border);
   border-radius: 8px;
   overflow: hidden;
@@ -83,4 +87,16 @@
 .dot[data-kind="placed"],
 .pin[data-kind="placed"] {
   background: var(--color-info);
+}
+
+/* A suggestion the reader points at, in the list or on the map. Mapbox owns
+   the marker's transform, so the pin grows with an outline, not a scale. */
+.pin[data-pin-id] {
+  cursor: pointer;
+}
+
+.pin[data-highlighted] {
+  z-index: 1;
+  outline: 3px solid var(--color-warning);
+  outline-offset: 2px;
 }

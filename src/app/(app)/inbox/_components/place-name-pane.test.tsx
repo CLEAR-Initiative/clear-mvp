@@ -197,6 +197,17 @@ describe("PlaceNamePane", () => {
       withinLocationId: "S1",
     });
     const map = screen.getByTestId("map");
+    // It opens on the state: the place 104 km outside it is left out, so the
+    // map stays close enough to read.
+    expect(map).toHaveAttribute("data-suggestions", "11.1,29.8");
+    expect(screen.getAllByTestId("inbox-place-suggestion")).toHaveLength(1);
+    const scope = screen.getByTestId("inbox-place-scope");
+    expect(scope).toHaveValue("area");
+    expect(scope).toHaveTextContent('place.scope.area:{"area":"South Kordofan","count":1}');
+    expect(scope).toHaveTextContent('place.scope.country:{"country":"Sudan","count":2}');
+
+    // The decider widens to the whole country.
+    fireEvent.change(scope, { target: { value: "country" } });
     expect(map).toHaveAttribute("data-suggestions", "11.1,29.8|12.9,30.1");
     // The state, and the one district a post was placed in.
     expect(outlineIds).toHaveBeenLastCalledWith(["S1", "D1"]);
@@ -210,6 +221,17 @@ describe("PlaceNamePane", () => {
     expect(rows[1]).toHaveTextContent('place.where.outside:{"km":104,"area":"South Kordofan"}');
   });
 
+  it("keeps the highlight of the focused suggestion when the pointer leaves", () => {
+    renderPane();
+    const row = screen.getAllByTestId("inbox-place-suggestion")[0]!;
+    fireEvent.focus(within(row).getByTestId("inbox-place-use"));
+    fireEvent.mouseEnter(row);
+    fireEvent.mouseLeave(row);
+    expect(row).toHaveAttribute("data-highlighted", "true");
+    fireEvent.blur(within(row).getByTestId("inbox-place-use"));
+    expect(row).not.toHaveAttribute("data-highlighted");
+  });
+
   it("uses a GeoNames suggestion", () => {
     const entry = renderPane();
     fireEvent.click(within(screen.getAllByTestId("inbox-place-suggestion")[0]!).getByTestId("inbox-place-use"));
@@ -220,6 +242,7 @@ describe("PlaceNamePane", () => {
 
   it("uses an existing CLEAR place", () => {
     const entry = renderPane();
+    fireEvent.change(screen.getByTestId("inbox-place-scope"), { target: { value: "country" } });
     fireEvent.click(within(screen.getAllByTestId("inbox-place-suggestion")[1]!).getByTestId("inbox-place-use"));
     expect(resolveMutate).toHaveBeenCalledWith({ id: "pn-1", resolution: { kind: "LOCATION", locationId: "L4" } });
     expect(onResolved).toHaveBeenCalledWith(entry, "LOCATION", 4);
@@ -229,6 +252,7 @@ describe("PlaceNamePane", () => {
     const entry = renderPane();
     expect(screen.getByTestId("map")).toHaveAttribute("data-picking", "false");
     fireEvent.click(screen.getByTestId("inbox-place-place"));
+    expect(screen.getByTestId("inbox-place-scope")).toBeDisabled();
     expect(screen.getByTestId("inbox-place-placing")).toBeInTheDocument();
     expect(screen.getByTestId("inbox-place-save")).toBeDisabled();
 
@@ -294,6 +318,13 @@ describe("PlaceNamePane", () => {
     suggestionsLoading = true;
     renderPane();
     expect(screen.getByTestId("inbox-place-suggestions")).toHaveTextContent("place.suggestionsLoading");
+  });
+
+  it("opens on the whole country when no suggestion is inside the state, with nothing to choose", () => {
+    suggestions = [LANDMARK];
+    renderPane();
+    expect(screen.getAllByTestId("inbox-place-suggestion")).toHaveLength(1);
+    expect(screen.queryByTestId("inbox-place-scope")).toBeNull();
   });
 
   it("uses the country as the area of a row with no state", () => {

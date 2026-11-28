@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { useFormatter, useTranslations } from "next-intl";
+import { useFormatter, useLocale, useTranslations } from "next-intl";
 import { IconArrowLeft, IconCircleX, IconHelpCircle, IconMapPin } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
 import { track } from "~/lib/analytics/track";
@@ -62,7 +62,17 @@ export function PlaceNamePane({
     },
     { staleTime: 5 * 60_000 },
   );
-  const suggestions = suggestionsQuery.data ?? [];
+  const allSuggestions = suggestionsQuery.data ?? [];
+  // The list and the map open on the row's state: the posts were placed
+  // there, and a place far outside it zooms the map out until no pin can be
+  // read. The decider widens to the country. The suggestions never leave the
+  // row's country (clear-api searches one country). A state with no candidate
+  // opens on the country, so a lone far match is not hidden.
+  const insideCount = allSuggestions.filter((s) => s.insideArea !== false).length;
+  const canNarrow = !!row.stateLocationId && insideCount > 0 && insideCount < allSuggestions.length;
+  const [widened, setWidened] = useState(false);
+  const scope: "area" | "country" = canNarrow && !widened ? "area" : "country";
+  const suggestions = scope === "area" ? allSuggestions.filter((s) => s.insideArea !== false) : allSuggestions;
 
   // The state's outline, and the outlines of the areas the posts were placed
   // in when they are finer than the state (a district).
@@ -79,6 +89,14 @@ export function PlaceNamePane({
   const outlines = outlineQueries
     .map((query) => query.data?.geometry as MapOutline | null | undefined)
     .filter((g): g is MapOutline => !!g && (g.type === "Polygon" || g.type === "MultiPolygon"));
+
+  // The suggestion the decider points at, in the list or on the map: its row
+  // and its pin highlight together.
+  // The pointer wins; when it leaves, the suggestion with keyboard focus keeps
+  // its highlight.
+  const [hovered, setHovered] = useState<string | null>(null);
+  const [focused, setFocused] = useState<string | null>(null);
+  const highlighted = hovered ?? focused;
 
   const [placing, setPlacing] = useState(false);
   const picker = useLocationPointPicker({
@@ -128,7 +146,15 @@ export function PlaceNamePane({
     setError(null);
   }
 
-  const area = row.stateLocation?.name ?? row.countryCode;
+  const locale = useLocale();
+  const country = useMemo(() => {
+    try {
+      return new Intl.DisplayNames([locale], { type: "region" }).of(row.countryCode) ?? row.countryCode;
+    } catch {
+      return row.countryCode;
+    }
+  }, [locale, row.countryCode]);
+  const area = row.stateLocation?.name ?? country;
   const lastSeen = format.dateTime(new Date(row.lastSeenAt), "short");
 
   return (
@@ -159,7 +185,15 @@ export function PlaceNamePane({
           placed={placing ? picker.point : null}
           picking={placing}
           onPick={picker.placeAt}
-          suggestions={suggestions.map((s) => ({ lat: s.latitude, lng: s.longitude }))}
+          suggestions={suggestions.map((s) => ({
+            lat: s.latitude,
+            lng: s.longitude,
+            id: suggestionKey(s),
+            label: s.name,
+          }))}
+          highlightedId={highlighted}
+          onHighlight={setHovered}
+          refitKey={scope}
           outlines={outlines}
         />
 
@@ -187,14 +221,42 @@ export function PlaceNamePane({
         </div>
 
         <div data-testid="inbox-place-suggestions">
-          <div className={styles.sectionLabel}>{t("place.suggestions")}</div>
+          <div className={styles.placeSuggestionsHead}>
+            <div className={styles.sectionLabel}>{t("place.suggestions")}</div>
+            {canNarrow && (
+              <label className={styles.placeScope}>
+                {t("place.scope.label")}
+                <select
+                  value={scope}
+                  // Not while a point is being placed: the map is the decider's
+                  // then, and it would not frame the pins a wider area adds.
+                  disabled={placing}
+                  onChange={(e) => setWidened(e.currentTarget.value === "country")}
+                  data-testid="inbox-place-scope"
+                >
+                  <option value="area">{t("place.scope.area", { area, count: insideCount })}</option>
+                  <option value="country">{t("place.scope.country", { country, count: allSuggestions.length })}</option>
+                </select>
+              </label>
+            )}
+          </div>
           {suggestionsQuery.isLoading ? (
             <p className={styles.narrativeEmpty}>{t("place.suggestionsLoading")}</p>
           ) : suggestions.length === 0 ? (
             <p className={styles.narrativeEmpty}>{t("place.noSuggestions")}</p>
           ) : (
             suggestions.map((s) => (
-              <p key={suggestionKey(s)} className={styles.narrative} data-testid="inbox-place-suggestion" data-kind={s.kind}>
+              <p
+                key={suggestionKey(s)}
+                className={`${styles.narrative} ${styles.placeSuggestion}`}
+                data-testid="inbox-place-suggestion"
+                data-kind={s.kind}
+                data-highlighted={highlighted === suggestionKey(s) || undefined}
+                onMouseEnter={() => setHovered(suggestionKey(s))}
+                onMouseLeave={() => setHovered(null)}
+                onFocus={() => setFocused(suggestionKey(s))}
+                onBlur={() => setFocused(null)}
+              >
                 <bdi>{s.name}</bdi>
                 <span className={styles.placeMeta}>
                   {t(s.kind === "LOCATION" ? (s.level === 2 ? "place.kinds.district" : "place.kinds.landmark") : "place.kinds.geonames")}

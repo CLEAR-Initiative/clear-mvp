@@ -3188,6 +3188,11 @@
         "OUTSIDE_AREA": "يوجد مكان بهذا الاسم خارج {area}"
       },
       "suggestions": "أماكن محتملة",
+      "scope": {
+        "label": "عرض الأماكن في",
+        "area": "{area} ({count})",
+        "country": "كل {country} ({count})"
+      },
       "suggestionsLoading": "جارٍ البحث عن أماكن…",
       "noSuggestions": "لا يوجد مكان باسم مشابه. ضع نقطة على الخريطة.",
       "kinds": {
