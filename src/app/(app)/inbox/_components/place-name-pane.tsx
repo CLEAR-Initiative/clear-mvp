@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { useFormatter, useLocale, useTranslations } from "next-intl";
+import { useFormatter, useLocale, useNow, useTranslations } from "next-intl";
 import { IconArrowLeft, IconCircleX, IconExternalLink, IconHelpCircle, IconMapPin, IconSearch } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
 import { track } from "~/lib/analytics/track";
@@ -70,6 +70,7 @@ export function PlaceNamePane({
 }) {
   const t = useTranslations("inbox");
   const format = useFormatter();
+  const now = useNow({ updateInterval: 60_000 });
   const row = entry.row;
   const homeId = row.stateLocationId ?? row.countryLocationId;
 
@@ -304,25 +305,56 @@ export function PlaceNamePane({
 
         <div data-testid="inbox-place-posts">
           <div className={styles.sectionLabel}>{t("place.posts", { count: row.signalCount })}</div>
-          {row.signals.length === 0 && <p className={styles.narrativeEmpty}>{t("place.noPosts")}</p>}
-          {row.signals.map((s) => {
-            const excerpt = signalExcerpt(s.signal);
-            return (
-              <p key={s.signalId} className={styles.narrative} data-testid="inbox-place-post">
-                {/* Posts are mostly Arabic: each takes its own direction. */}
-                <span dir="auto" style={{ display: "block" }}>
-                  {excerpt ?? t("place.postHidden")}
-                </span>
-                <span className={styles.placeMeta}>
-                  {t(`place.reasons.${s.reason}`, { area: s.areaLocation?.name ?? area })}
-                  {" · "}
-                  <Link href={`/signal/${encodeURIComponent(s.signalId)}`} data-testid="inbox-place-signal-link">
-                    {t("place.openSignal")}
-                  </Link>
-                </span>
-              </p>
-            );
-          })}
+          {row.signals.length === 0 ? (
+            <p className={styles.narrativeEmpty}>{t("place.noPosts")}</p>
+          ) : (
+            <ul className={styles.placeList}>
+              {row.signals.map((s) => {
+                const title = s.signal?.title?.trim() || null;
+                const excerpt = signalExcerpt(s.signal);
+                // The excerpt falls back to the title: don't print it twice.
+                const body = excerpt && excerpt !== title ? excerpt : null;
+                const when = s.signal?.publishedAt ?? s.seenAt;
+                return (
+                  <li key={s.signalId} data-testid="inbox-place-post">
+                    <Link
+                      href={`/signal/${encodeURIComponent(s.signalId)}`}
+                      className={styles.placePost}
+                      data-testid="inbox-place-signal-link"
+                      aria-label={`${t("place.openSignal")}: ${title ?? excerpt ?? t("place.postHidden")}`}
+                    >
+                      <span className={styles.placePostAside}>
+                        <time dateTime={when}>{format.relativeTime(new Date(when), now)}</time>
+                        {s.areaLocation && <bdi className={styles.placePostArea}>{s.areaLocation.name}</bdi>}
+                      </span>
+                      <span className={styles.placePostMain}>
+                        {/* Posts are mostly Arabic: each line takes its own direction. */}
+                        {s.signal ? (
+                          <>
+                            {title && (
+                              <span className={styles.placePostTitle} dir="auto">
+                                {title}
+                              </span>
+                            )}
+                            {body && (
+                              <span className={styles.placePostBody} dir="auto">
+                                {body}
+                              </span>
+                            )}
+                          </>
+                        ) : (
+                          <span className={styles.placePostHidden}>{t("place.postHidden")}</span>
+                        )}
+                        <span className={styles.placeMeta}>
+                          {t(`place.reasons.${s.reason}`, { area: s.areaLocation?.name ?? area })}
+                        </span>
+                      </span>
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
         </div>
 
         {researchEnabled && (
@@ -485,39 +517,43 @@ export function PlaceNamePane({
           ) : suggestions.length === 0 ? (
             <p className={styles.narrativeEmpty}>{t("place.noSuggestions")}</p>
           ) : (
-            suggestions.map((s) => (
-              <p
-                key={suggestionKey(s)}
-                className={`${styles.narrative} ${styles.placeSuggestion}`}
-                data-testid="inbox-place-suggestion"
-                data-kind={s.kind}
-                data-highlighted={highlighted === suggestionKey(s) || undefined}
-                onMouseEnter={() => setHovered(suggestionKey(s))}
-                onMouseLeave={() => setHovered(null)}
-                onFocus={() => setFocused(suggestionKey(s))}
-                onBlur={() => setFocused(null)}
-              >
-                <bdi>{s.name}</bdi>
-                <span className={styles.placeMeta}>
-                  {t(s.kind === "LOCATION" ? (s.level === 2 ? "place.kinds.district" : "place.kinds.landmark") : "place.kinds.geonames")}
-                  {" · "}
-                  {s.insideArea == null
-                    ? t("place.where.unknown")
-                    : s.insideArea
-                      ? t("place.where.inside", { area })
-                      : t("place.where.outside", { km: Math.round(s.distanceKm ?? 0), area })}
-                </span>{" "}
-                <button
-                  type="button"
-                  className={styles.btn}
-                  disabled={busy || placing}
-                  onClick={() => chooseSuggestion(s)}
-                  data-testid="inbox-place-use"
+            <ul className={styles.placeList}>
+              {suggestions.map((s) => (
+                <li
+                  key={suggestionKey(s)}
+                  className={styles.placeCandidate}
+                  data-testid="inbox-place-suggestion"
+                  data-kind={s.kind}
+                  data-highlighted={highlighted === suggestionKey(s) || undefined}
+                  onMouseEnter={() => setHovered(suggestionKey(s))}
+                  onMouseLeave={() => setHovered(null)}
+                  onFocus={() => setFocused(suggestionKey(s))}
+                  onBlur={() => setFocused(null)}
                 >
-                  {t("place.actions.use")}
-                </button>
-              </p>
-            ))
+                  <span className={styles.placeCandidateMain}>
+                    <bdi className={styles.placeCandidateName}>{s.name}</bdi>
+                    <span className={styles.placeMeta}>
+                      {t(s.kind === "LOCATION" ? (s.level === 2 ? "place.kinds.district" : "place.kinds.landmark") : "place.kinds.geonames")}
+                      {" · "}
+                      {s.insideArea == null
+                        ? t("place.where.unknown")
+                        : s.insideArea
+                          ? t("place.where.inside", { area })
+                          : t("place.where.outside", { km: Math.round(s.distanceKm ?? 0), area })}
+                    </span>
+                  </span>
+                  <button
+                    type="button"
+                    className={`${styles.btn} ${styles.btnSm}`}
+                    disabled={busy || placing}
+                    onClick={() => chooseSuggestion(s)}
+                    data-testid="inbox-place-use"
+                  >
+                    {t("place.actions.use")}
+                  </button>
+                </li>
+              ))}
+            </ul>
           )}
         </div>
 
