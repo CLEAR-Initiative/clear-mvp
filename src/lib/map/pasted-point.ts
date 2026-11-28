@@ -17,17 +17,23 @@ export type PastedPoint =
 const NUM = String.raw`\d+(?:\.\d+)?`;
 const HEMI = "[NSEW]";
 
+/** Coordinates are short. Longer text is not parsed as a pair, which also
+ *  bounds the work of the patterns below on any clipboard content. */
+const COORDINATE_TEXT_MAX = 100;
+
+/** Between the two values: a comma or semicolon, or spaces alone. Each run of
+ *  spaces has one way to match, so a long run cannot make the match slow. */
+const PAIR_SEPARATOR = String.raw`(?:\s*[,;]\s*|\s+)`;
+
 /** Two decimal numbers, each with an optional hemisphere letter:
  *  `11.78, 34.36`, `11.78 34.36`, `11.78N 34.36E`, `N 11.78, E 34.36`. */
-const DECIMAL_PAIR = new RegExp(
-  String.raw`^(${HEMI})?\s*([+-]?${NUM})\s*(${HEMI})?\s*[,;\s]\s*(${HEMI})?\s*([+-]?${NUM})\s*(${HEMI})?$`,
-  "i",
-);
+const DECIMAL_PART = String.raw`(?:(${HEMI})\s*)?([+-]?${NUM})(?:\s*(${HEMI}))?`;
+const DECIMAL_PAIR = new RegExp(String.raw`^${DECIMAL_PART}${PAIR_SEPARATOR}${DECIMAL_PART}$`, "i");
 
 /** One coordinate in degrees with optional minutes and seconds:
  *  `11°46'48"N`, `11° 46.8' N`, `N 11.78°`. The degree sign is required. */
-const DMS_PART = String.raw`(${HEMI})?\s*([+-]?${NUM})\s*°\s*(?:(${NUM})\s*'\s*)?(?:(${NUM})\s*"\s*)?(${HEMI})?`;
-const DMS_PAIR = new RegExp(String.raw`^${DMS_PART}\s*[,;\s]\s*${DMS_PART}$`, "i");
+const DMS_PART = String.raw`(?:(${HEMI})\s*)?([+-]?${NUM})\s*°(?:\s*(${NUM})\s*')?(?:\s*(${NUM})\s*")?(?:\s*(${HEMI}))?`;
+const DMS_PAIR = new RegExp(String.raw`^${DMS_PART}${PAIR_SEPARATOR}${DMS_PART}$`, "i");
 
 /** Text made only of what coordinates are written with. */
 const COORDINATE_LIKE = /^[\d\s.,;:°'"NSEW+-]+$/i;
@@ -100,7 +106,7 @@ function dmsValue(deg: string, min: string | undefined, sec: string | undefined)
 /** Coordinates written as text, in decimal degrees or degrees-minutes-seconds. */
 export function parseCoordinateText(input: string): { lat: number; lng: number } | null {
   const text = plainMarks(input).trim();
-  if (!text) return null;
+  if (!text || text.length > COORDINATE_TEXT_MAX) return null;
 
   const decimal = DECIMAL_PAIR.exec(text);
   if (decimal) {
@@ -139,18 +145,22 @@ function decoded(text: string): string {
 const SIGNED = String.raw`-?\d+(?:\.\d+)?`;
 const GOOGLE_PIN = new RegExp(String.raw`!3d(${SIGNED})!4d(${SIGNED})`);
 const GOOGLE_VIEW = new RegExp(String.raw`@(${SIGNED}),(${SIGNED})`);
-const GOOGLE_PLACE_SEGMENT = /\/maps\/(?:place|search|dir)\/([^/@?#]+)/;
+const GOOGLE_PLACE_SEGMENT = /\/maps\/(?:place|search)\/([^/@?#]+)/;
 const OSM_HASH = new RegExp(String.raw`map=\d+(?:\.\d+)?/(${SIGNED})/(${SIGNED})`);
 
 /** A Google Maps link's point. The place's own pin comes before the middle of
  *  the view: `?q=lat,lng`, then `!3d<lat>!4d<lng>`, then coordinates in the
- *  path, then `@lat,lng`. */
+ *  path, then `@lat,lng`. A directions link holds a start, an end and the
+ *  middle of the route: only a destination it names (`destination`, `daddr`)
+ *  is a point, never its start or its view. */
 function googlePoint(url: URL): { lat: number; lng: number } | null {
-  for (const key of ["q", "query", "ll", "destination", "daddr", "center"]) {
+  const directions = /\/maps\/dir(?:\/|$)/.test(url.pathname) || url.searchParams.has("saddr") || url.searchParams.has("origin");
+  for (const key of directions ? ["destination", "daddr"] : ["q", "query", "ll", "destination", "daddr", "center"]) {
     const value = url.searchParams.get(key);
     const point = value ? parseCoordinateText(value) : null;
     if (point) return point;
   }
+  if (directions) return null;
   const rest = url.pathname + url.hash;
   const pin = GOOGLE_PIN.exec(rest);
   if (pin) {

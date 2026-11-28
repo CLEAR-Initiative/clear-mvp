@@ -389,6 +389,32 @@ describe("PlaceNamePane", () => {
     expect(screen.getByTestId("inbox-place-save")).toBeEnabled();
   });
 
+  it("keeps a place picked from the search when a paste after its name has no coordinates", async () => {
+    geocodePlaceQuery.mockResolvedValueOnce([{ id: "h1", label: "Kadugli, Sudan", center: [29.72, 11.01] }] as never);
+    renderPane();
+    fireEvent.click(screen.getByTestId("inbox-place-place"));
+    const search = screen.getByTestId("location-challenge-search");
+    fireEvent.change(search, { target: { value: "Kadugli" } });
+    fireEvent.click(await screen.findByText("Kadugli, Sudan"));
+    expect(screen.getByTestId("map")).toHaveAttribute("data-placed", "11.01,29.72");
+
+    paste("95, 200");
+    // The paste replaces the box's text: it does not join the place's name.
+    expect(search).toHaveValue("95, 200");
+    expect(screen.getByTestId("location-challenge-paste-problem")).toHaveTextContent("modal.pasteNoCoordinates");
+    expect(screen.getByTestId("map")).toHaveAttribute("data-placed", "11.01,29.72");
+  });
+
+  it("does not place the point on the Enter that confirms a composition", () => {
+    renderPane();
+    fireEvent.click(screen.getByTestId("inbox-place-place"));
+    const search = screen.getByTestId("location-challenge-search");
+    fireEvent.change(search, { target: { value: "11.25, 29.95" } });
+    fireEvent.keyDown(search, { key: "Enter", isComposing: true });
+    expect(screen.getByTestId("map")).toHaveAttribute("data-placed", "");
+    expect(search).toHaveValue("11.25, 29.95");
+  });
+
   it("does not search for a link or coordinates as a place name", async () => {
     vi.useFakeTimers();
     try {

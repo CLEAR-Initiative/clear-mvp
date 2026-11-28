@@ -105,6 +105,30 @@ describe("parsePastedPoint", () => {
     expect(parsePastedPoint(link)).toEqual(point(lat, lng));
   });
 
+  it("reads only the destination of a directions link, never its start or its view", () => {
+    expect(parsePastedPoint("https://www.google.com/maps/dir/?api=1&origin=11.5,34&destination=11.78,34.36")).toEqual(
+      point(11.78, 34.36),
+    );
+    expect(parsePastedPoint("https://maps.google.com/maps?saddr=11.5,34&daddr=11.78,34.36")).toEqual(point(11.78, 34.36));
+    for (const link of [
+      "https://www.google.com/maps/dir/11.5,34/11.78,34.36/",
+      "https://www.google.com/maps/dir/11.5,34/11.78,34.36/@11.6,34.2,10z/data=!4m2!1d34!2d11.5!3d11.5!4d34",
+      "https://www.google.com/maps/dir/?api=1&origin=11.5,34&destination=Bakouri",
+      "https://maps.google.com/maps?saddr=11.5,34&q=11.5,34",
+    ]) {
+      expect(parsePastedPoint(link)).toEqual({ kind: "no_coordinates" });
+    }
+  });
+
+  it("stays fast on a long run of spaces", () => {
+    const started = performance.now();
+    expect(parsePastedPoint(`1${" ".repeat(50_000)}x`)).toEqual({ kind: "none" });
+    expect(parsePastedPoint(`1,${" ".repeat(50_000)}N`)).toEqual({ kind: "no_coordinates" });
+    expect(parseCoordinateText(`11.78${" ".repeat(80)}x`)).toBeNull();
+    expect(parseCoordinateText(`11°46'${" ".repeat(80)}x`)).toBeNull();
+    expect(performance.now() - started).toBeLessThan(500);
+  });
+
   it("reads the link in shared text", () => {
     expect(parsePastedPoint("Bakouri\nhttps://www.google.com/maps/@11.78,34.36,12z")).toEqual(point(11.78, 34.36));
   });

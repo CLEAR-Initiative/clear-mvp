@@ -171,13 +171,15 @@ export function useLocationPointPicker({
     setManualEntry(false);
   }
 
-  /** Pasted text. A point in it (coordinates or a map link) is placed, and
-   *  true tells the field not to take the text. Any other text goes in the
-   *  search box, which says so when it is a link with no coordinates. */
+  /** Pasted text. True tells the field not to take the text itself. A point
+   *  in it (coordinates or a map link) is placed. A link or coordinates with
+   *  no point become the search box's text, which says so, and the point
+   *  placed before stays. A place name is left to the field. */
   function paste(text: string): boolean {
     const found = parsePastedPoint(text);
-    if (found.kind !== "point") return false;
-    placeAt(found);
+    if (found.kind === "none") return false;
+    if (found.kind === "point") placeAt(found);
+    else setQueryText(text.trim());
     return true;
   }
 
@@ -264,7 +266,8 @@ export function LocationPointFields({
             if (picker.paste(e.clipboardData.getData("text"))) e.preventDefault();
           }}
           onKeyDown={(e) => {
-            if (e.key === "Enter" && picker.queryPoint) {
+            // Enter that confirms an input-method composition is not a command.
+            if (e.key === "Enter" && !e.nativeEvent.isComposing && picker.queryPoint) {
               e.preventDefault();
               picker.placeQueryPoint();
             }
