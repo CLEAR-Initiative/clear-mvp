@@ -3188,6 +3188,11 @@
         "OUTSIDE_AREA": "Existe un lugar con este nombre fuera de {area}"
       },
       "suggestions": "Lugares posibles",
+      "scope": {
+        "label": "Mostrar lugares en",
+        "area": "{area} ({count})",
+        "country": "Todo {country} ({count})"
+      },
       "suggestionsLoading": "Buscando lugares…",
       "noSuggestions": "Ningún lugar con un nombre parecido. Coloque un punto en el mapa.",
       "kinds": {

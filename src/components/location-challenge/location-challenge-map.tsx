@@ -20,7 +20,16 @@ type LatLng = { lat: number; lng: number };
  *  (an unresolved place name's candidates), and the point being placed (by
  *  the analyst changing the location, or the admin deciding). */
 export type ChallengeMapPinKind = "source" | "proposed" | "suggestion" | "placed";
-export type ChallengeMapPin = LatLng & { kind: ChallengeMapPinKind };
+export type ChallengeMapPin = LatLng & {
+  kind: ChallengeMapPinKind;
+  /** Links the pin to a row outside the map: the two highlight together. */
+  id?: string;
+  /** The place's name, shown when the pointer rests on the pin. */
+  label?: string;
+};
+
+/** A suggested place. With an `id`, its pin and its row highlight together. */
+export type MapSuggestion = LatLng & { id?: string; label?: string };
 
 /** An area drawn as an outline: a GeoJSON Polygon or MultiPolygon. */
 export type MapOutline = { type: string; coordinates: unknown };
@@ -29,13 +38,21 @@ export type MapOutline = { type: string; coordinates: unknown };
 export function challengeMapPins(points: {
   source?: LatLng | null;
   proposed?: LatLng | null;
-  suggestions?: readonly LatLng[] | null;
+  suggestions?: readonly MapSuggestion[] | null;
   placed?: LatLng | null;
 }): ChallengeMapPin[] {
   const pins: ChallengeMapPin[] = [];
   if (points.source) pins.push({ ...points.source, kind: "source" });
   if (points.proposed) pins.push({ ...points.proposed, kind: "proposed" });
-  for (const s of points.suggestions ?? []) pins.push({ lat: s.lat, lng: s.lng, kind: "suggestion" });
+  for (const s of points.suggestions ?? []) {
+    pins.push({
+      lat: s.lat,
+      lng: s.lng,
+      kind: "suggestion",
+      ...(s.id ? { id: s.id } : {}),
+      ...(s.label ? { label: s.label } : {}),
+    });
+  }
   if (points.placed) pins.push({ ...points.placed, kind: "placed" });
   return pins;
 }
@@ -94,6 +111,9 @@ export function LocationChallengeMap({
   onPick,
   suggestions,
   outlines,
+  highlightedId,
+  onHighlight,
+  refitKey,
 }: {
   source: LatLng | null;
   proposed: LatLng | null;
@@ -101,7 +121,14 @@ export function LocationChallengeMap({
   picking: boolean;
   onPick: (at: LatLng) => void;
   /** Suggested places, drawn as their own pins. */
-  suggestions?: readonly LatLng[] | null;
+  suggestions?: readonly MapSuggestion[] | null;
+  /** The suggestion to highlight (its `id`): the row the reader points at. */
+  highlightedId?: string | null;
+  /** The reader points at a suggestion's pin, or leaves it (null). */
+  onHighlight?: (id: string | null) => void;
+  /** When this changes, the next pins frame the map again, even after the
+   *  reader has moved it: the reader asked for another set of pins. */
+  refitKey?: string;
   /** Areas drawn as a tinted outline under the pins (a state, a district).
    *  The first frame fits them. */
   outlines?: readonly MapOutline[] | null;
@@ -120,12 +147,14 @@ export function LocationChallengeMap({
   const [ready, setReady] = useState(false);
   const [failed, setFailed] = useState(!MAPBOX_TOKEN);
   const pickRef = useRef({ picking, onPick });
+  const highlightRef = useRef({ highlightedId, onHighlight });
   useEffect(() => {
     pickRef.current = { picking, onPick };
+    highlightRef.current = { highlightedId, onHighlight };
   });
 
   const pins = challengeMapPins({ source, proposed, suggestions, placed });
-  const pinsKey = pins.map((p) => `${p.kind}:${p.lat},${p.lng}`).join("|");
+  const pinsKey = pins.map((p) => `${p.kind}:${p.lat},${p.lng}:${p.id ?? ""}`).join("|");
   const areas = outlines ?? [];
   // The outlines arrive after the map (a query): their count and size stand for them.
   const outlinesKey = areas.map((o) => `${o.type}:${JSON.stringify(o.coordinates).length}`).join("|");
@@ -188,6 +217,14 @@ export function LocationChallengeMap({
     mapRef.current?.setStyle(mapStyle(isDark));
   }, [ready, isDark]);
 
+  // Declared before the pins' effect, so it runs first in the same commit.
+  const refitKeyRef = useRef(refitKey);
+  useEffect(() => {
+    if (refitKeyRef.current === refitKey) return;
+    refitKeyRef.current = refitKey;
+    interactedRef.current = false;
+  }, [refitKey]);
+
   useEffect(() => {
     const map = mapRef.current;
     const gl = glRef.current;
@@ -197,7 +234,15 @@ export function LocationChallengeMap({
       const el = document.createElement("div");
       el.className = styles.pin!;
       el.dataset.kind = pin.kind;
-      el.setAttribute("aria-label", t(`map.pins.${pin.kind}`));
+      el.setAttribute("aria-label", pin.label ?? t(`map.pins.${pin.kind}`));
+      if (pin.label) el.title = pin.label;
+      const id = pin.id;
+      if (id) {
+        el.dataset.pinId = id;
+        if (id === highlightRef.current.highlightedId) el.dataset.highlighted = "true";
+        el.addEventListener("mouseenter", () => highlightRef.current.onHighlight?.(id));
+        el.addEventListener("mouseleave", () => highlightRef.current.onHighlight?.(null));
+      }
       return new gl.Marker({ element: el }).setLngLat([pin.lng, pin.lat]).addTo(map);
     });
     if (!framedRef.current) {
@@ -216,6 +261,16 @@ export function LocationChallengeMap({
     // pinsKey stands for the pins.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, pinsKey]);
+
+  // The highlight moves without the pins being drawn again.
+  useEffect(() => {
+    for (const marker of markersRef.current) {
+      const el = marker.getElement?.() as HTMLElement | undefined;
+      if (!el?.dataset.pinId) continue;
+      if (el.dataset.pinId === highlightedId) el.dataset.highlighted = "true";
+      else delete el.dataset.highlighted;
+    }
+  }, [highlightedId, pinsKey, ready]);
 
   // The outlines: a tinted fill and a line under the pins. A style change
   // drops every layer, so they are drawn again when the new style has loaded.

@@ -27,6 +27,15 @@ describe("suggestions and outlines", () => {
     ).toEqual(["suggestion", "suggestion", "placed"]);
   });
 
+  it("keeps a suggestion's id and name on its pin, so the pin links to its row", () => {
+    expect(
+      challengeMapPins({ suggestions: [{ lat: 1, lng: 2, id: "g:42", label: "Bakkah" }, { lat: 3, lng: 4 }] }),
+    ).toEqual([
+      { lat: 1, lng: 2, kind: "suggestion", id: "g:42", label: "Bakkah" },
+      { lat: 3, lng: 4, kind: "suggestion" },
+    ]);
+  });
+
   it("reads every position of a polygon or a multipolygon, so the first frame fits the area", () => {
     const polygon = { type: "Polygon", coordinates: [[[29, 10], [31, 10], [31, 12], [29, 10]]] };
     const multi = { type: "MultiPolygon", coordinates: [[[[32, 13], [33, 14], [32, 13]]]] };

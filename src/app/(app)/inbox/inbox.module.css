@@ -784,3 +784,47 @@
 .placePicker .sectionLabel {
   margin-bottom: 0;
 }
+
+/* A suggested place: its row and its pin on the map highlight together. */
+.placeSuggestion {
+  margin: 0 -8px;
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+
+.placeSuggestion[data-highlighted] {
+  background: var(--color-bg-muted);
+  box-shadow: inset 3px 0 0 var(--color-warning);
+}
+
+/* The heading of the suggestions, with the select that widens them from the
+   row's state to its country. */
+.placeSuggestionsHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.placeSuggestionsHead .sectionLabel {
+  margin-bottom: 0;
+}
+
+.placeScope {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.placeScope select {
+  font: inherit;
+  color: var(--color-text-primary);
+  background: var(--color-bg-white);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  padding: 3px 6px;
+}
