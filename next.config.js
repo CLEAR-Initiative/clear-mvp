@@ -31,7 +31,7 @@ const nextConfig = {
   outputFileTracingIncludes: {
     "/": [
       "./node_modules/@sentry/**/*",
-      "./instrumentation.ts",
+      "./src/instrumentation.ts",
       "./instrumentation-client.ts",
       "./sentry.server.config.ts",
       "./sentry.edge.config.ts",
